@@ -50,7 +50,7 @@ fn dcc_types_distinguishes_catalog_support_from_zero_live_instances() {
     assert_eq!(
         value["next_action"]["command"],
         serde_json::json!([
-            "dcc-mcp-cli",
+            "meshy-dcc",
             "--output",
             "json",
             "--non-interactive",
@@ -295,7 +295,7 @@ fn dcc_types_waits_for_a_registered_but_unready_instance_before_searching() {
     assert_eq!(
         value["next_action"]["command"],
         serde_json::json!([
-            "dcc-mcp-cli",
+            "meshy-dcc",
             "--output",
             "json",
             "wait-ready",

@@ -1,4 +1,4 @@
-//! Local/remote DCC control routing for `dcc-mcp-cli`.
+//! Local/remote DCC control routing for `meshy-dcc`.
 //!
 //! The CLI has one user-facing workflow: list/search/describe/load/call a DCC
 //! instance. The built-in `local` profile uses the shared FileRegistry and the

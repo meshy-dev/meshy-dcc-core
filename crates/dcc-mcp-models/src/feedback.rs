@@ -569,7 +569,7 @@ mod tests {
     #[test]
     fn finding_v1_requires_exactly_one_bounded_repro_shape() {
         let mut value = finding();
-        value.repro.argv = vec!["dcc-mcp-cli".to_string()];
+        value.repro.argv = vec!["meshy-dcc".to_string()];
         assert_eq!(value.validate(), Err(FeedbackValidationError::InvalidRepro));
     }
 

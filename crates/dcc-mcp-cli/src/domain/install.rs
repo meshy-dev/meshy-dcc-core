@@ -532,7 +532,7 @@ impl InstallPlanner {
             InstallStep {
                 name: "install-runtime".into(),
                 description:
-                    "Install the cross-platform dcc-mcp-cli and companion runtime binaries.".into(),
+                    "Install the cross-platform meshy-dcc and companion runtime binaries.".into(),
                 action: None,
             },
             InstallStep {
@@ -587,7 +587,7 @@ impl InstallPlanner {
                     "Inspect CLI, server binary, server version, gateway profile, and default registry diagnostics."
                         .into(),
                 url: None,
-                command: Some(command(["dcc-mcp-cli", "doctor"])),
+                command: Some(command(["meshy-dcc", "doctor"])),
                 requires_live_instance: false,
             },
             InstallNextStep {
@@ -596,7 +596,7 @@ impl InstallPlanner {
                     "Confirm the {dcc_type} plugin published a direct local MCP/server instance in the shared registry."
                 ),
                 url: None,
-                command: Some(command(["dcc-mcp-cli", "list"])),
+                command: Some(command(["meshy-dcc", "list"])),
                 requires_live_instance: false,
             },
             InstallNextStep {
@@ -606,7 +606,7 @@ impl InstallPlanner {
                 ),
                 url: None,
                 command: Some(command_with_dcc(
-                    ["dcc-mcp-cli", "wait-ready", "--dcc-type"],
+                    ["meshy-dcc", "wait-ready", "--dcc-type"],
                     dcc_type,
                     [],
                 )),
@@ -619,7 +619,7 @@ impl InstallPlanner {
                 ),
                 url: None,
                 command: Some(command_with_dcc(
-                    ["dcc-mcp-cli", "search", "--dcc-type"],
+                    ["meshy-dcc", "search", "--dcc-type"],
                     dcc_type,
                     ["--query", "diagnostics"],
                 )),
@@ -632,7 +632,7 @@ impl InstallPlanner {
                 ),
                 url: None,
                 command: Some(command_with_dcc(
-                    ["dcc-mcp-cli", "marketplace", "search", "--dcc"],
+                    ["meshy-dcc", "marketplace", "search", "--dcc"],
                     dcc_type,
                     ["--query", "skills"],
                 )),
@@ -644,7 +644,7 @@ impl InstallPlanner {
                     "Inspect the selected marketplace skill package before installing it, replacing <package-name> with the chosen package."
                         .into(),
                 url: None,
-                command: Some(command(["dcc-mcp-cli", "marketplace", "inspect", "<package-name>"])),
+                command: Some(command(["meshy-dcc", "marketplace", "inspect", "<package-name>"])),
                 requires_live_instance: false,
             },
             InstallNextStep {
@@ -654,7 +654,7 @@ impl InstallPlanner {
                         .into(),
                 url: None,
                 command: Some(command_with_dcc(
-                    ["dcc-mcp-cli", "marketplace", "install", "<package-name>", "--dcc"],
+                    ["meshy-dcc", "marketplace", "install", "<package-name>", "--dcc"],
                     dcc_type,
                     [],
                 )),
@@ -667,7 +667,7 @@ impl InstallPlanner {
                 ),
                 url: None,
                 command: Some(command_with_dcc(
-                    ["dcc-mcp-cli", "reload-skills", "--dcc-type"],
+                    ["meshy-dcc", "reload-skills", "--dcc-type"],
                     dcc_type,
                     [],
                 )),

@@ -732,9 +732,9 @@ async fn gateway_update_download_rejects_manifest_without_verified_asset() {
 #[tokio::test]
 async fn gateway_update_check_reports_missing_binary_as_structured_payload() {
     let (manifest_url, shutdown) = spawn_update_manifest(json!({
-        "dcc-mcp-cli": {
+        "meshy-dcc": {
             "version": "0.19.0",
-            "url": "https://example.invalid/dcc-mcp-cli.zip",
+            "url": "https://example.invalid/meshy-dcc.zip",
             "sha256": "def456",
             "release_notes": "CLI update"
         }

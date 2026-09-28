@@ -5,7 +5,7 @@ use tempfile::TempDir;
 
 fn bundled_plan(dcc: &str) -> Value {
     let root = TempDir::new().unwrap();
-    let output = Command::new(env!("CARGO_BIN_EXE_dcc-mcp-cli"))
+    let output = Command::new(env!("CARGO_BIN_EXE_meshy-dcc"))
         .args(["install", "--dcc-type", dcc, "--offline", "--json"])
         .env("DCC_MCP_INSTALL_CACHE", root.path().join("catalog.json"))
         .env_remove("DCC_MCP_CATALOG_PATH")

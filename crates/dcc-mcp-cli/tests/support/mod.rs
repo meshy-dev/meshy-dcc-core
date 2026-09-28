@@ -600,13 +600,13 @@ pub(crate) fn spawn_gateway_fixture() -> GatewayFixture {
                         .get("current_version")
                         .map(String::as_str)
                         .unwrap_or("0.0.0");
-                    if binary == "dcc-mcp-cli" && current == env!("CARGO_PKG_VERSION") {
+                    if binary == "meshy-dcc" && current == env!("CARGO_PKG_VERSION") {
                         return (
                             StatusCode::OK,
                             Json(json!({
                                 "update_available": true,
                                 "latest_version": "99.0.0",
-                                "download_url": "https://example.invalid/dcc-mcp-cli.exe",
+                                "download_url": "https://example.invalid/meshy-dcc.exe",
                                 "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
                                 "release_notes": "CLI update"
                             })),
@@ -1146,7 +1146,7 @@ pub(crate) fn spawn_local_mcp_fixture() -> LocalMcpFixture {
 }
 
 pub(crate) fn cli_command() -> Command {
-    let mut command = Command::new(env!("CARGO_BIN_EXE_dcc-mcp-cli"));
+    let mut command = Command::new(env!("CARGO_BIN_EXE_meshy-dcc"));
     command.env("DCC_MCP_INSTALL_OFFLINE", "true");
     command.env(
         "DCC_MCP_INSTALL_CACHE",

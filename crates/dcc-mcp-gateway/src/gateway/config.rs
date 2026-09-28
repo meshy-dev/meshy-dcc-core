@@ -20,9 +20,7 @@ fn official_update_manifest_url() -> Option<String> {
     } else {
         return None;
     };
-    Some(format!(
-        "https://github.com/dcc-mcp/dcc-mcp-core/releases/latest/download/dcc-mcp-update-manifest-{platform}.json"
-    ))
+    Some(dcc_mcp_updater::meshy_release::update_manifest_url(platform))
 }
 
 /// Admin persistence configuration (SQLite + skill-path reload hook).
@@ -224,9 +222,9 @@ pub struct GatewayConfig {
     /// latest version and download URL:
     /// ```json
     /// {
-    ///   "dcc-mcp-cli": {
+    ///   "meshy-dcc": {
     ///     "version": "0.19.0",
-    ///     "url": "https://releases.example.com/dcc-mcp-cli-v0.19.0",
+    ///     "url": "https://releases.example.com/meshy-dcc-v0.19.0",
     ///     "sha256": "abc123..."
     ///   },
     ///   "dcc-mcp-server": {
@@ -329,11 +327,10 @@ mod tests {
             all(target_os = "linux", target_arch = "x86_64"),
             target_os = "macos"
         )) {
-            assert!(
-                url.unwrap().starts_with(
-                    "https://github.com/dcc-mcp/dcc-mcp-core/releases/latest/download/"
-                )
-            );
+            assert!(url.unwrap().starts_with(&format!(
+                "{}/latest/",
+                dcc_mcp_updater::meshy_release::BASE_URL
+            )));
         } else {
             assert!(url.is_none());
         }

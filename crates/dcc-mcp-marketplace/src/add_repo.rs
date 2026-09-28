@@ -1,6 +1,6 @@
 //! Direct GitHub repo installation — SKILL.md discovery, no marketplace.json needed.
 //!
-//! This module implements `dcc-mcp-cli marketplace add-repo <owner/repo>`:
+//! This module implements `meshy-dcc marketplace add-repo <owner/repo>`:
 //! - Preview the current repository contents without installing
 //! - Install only an explicitly pinned 40-character commit
 //! - Discover SKILL.md files to infer name/dcc/description

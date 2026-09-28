@@ -436,7 +436,7 @@ fn install_plan_action(dcc_type: &str, instructions_url: Option<String>) -> Disc
     DiscoveryNextAction {
         id: "plan_install".to_string(),
         command: vec![
-            "dcc-mcp-cli".to_string(),
+            "meshy-dcc".to_string(),
             "--output".to_string(),
             "json".to_string(),
             "--non-interactive".to_string(),
@@ -453,7 +453,7 @@ fn search_action(dcc_type: &str) -> DiscoveryNextAction {
     DiscoveryNextAction {
         id: "search_capabilities".to_string(),
         command: vec![
-            "dcc-mcp-cli".to_string(),
+            "meshy-dcc".to_string(),
             "--output".to_string(),
             "json".to_string(),
             "search".to_string(),
@@ -469,7 +469,7 @@ fn start_instance_action(dcc_type: &str, project: &std::path::Path) -> Discovery
     DiscoveryNextAction {
         id: "start_instance".to_string(),
         command: vec![
-            "dcc-mcp-cli".to_string(),
+            "meshy-dcc".to_string(),
             "--output".to_string(),
             "json".to_string(),
             "--non-interactive".to_string(),
@@ -490,7 +490,7 @@ fn wait_ready_action(dcc_type: &str) -> DiscoveryNextAction {
     DiscoveryNextAction {
         id: "wait_ready".to_string(),
         command: vec![
-            "dcc-mcp-cli".to_string(),
+            "meshy-dcc".to_string(),
             "--output".to_string(),
             "json".to_string(),
             "wait-ready".to_string(),
@@ -506,7 +506,7 @@ fn inspect_catalog_action() -> DiscoveryNextAction {
     DiscoveryNextAction {
         id: "inspect_catalog".to_string(),
         command: vec![
-            "dcc-mcp-cli".to_string(),
+            "meshy-dcc".to_string(),
             "--output".to_string(),
             "json".to_string(),
             "--non-interactive".to_string(),
@@ -521,7 +521,7 @@ fn doctor_action() -> DiscoveryNextAction {
     DiscoveryNextAction {
         id: "inspect_registry".to_string(),
         command: vec![
-            "dcc-mcp-cli".to_string(),
+            "meshy-dcc".to_string(),
             "--output".to_string(),
             "json".to_string(),
             "doctor".to_string(),

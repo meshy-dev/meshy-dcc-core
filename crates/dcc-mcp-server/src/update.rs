@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use crate::cli::UpdateAction;
 
-const SERVER_BINARY_NAME: &str = env!("CARGO_PKG_NAME");
+const SERVER_BINARY_NAME: &str = env!("CARGO_BIN_NAME");
 
 pub(crate) async fn run_update_cmd(gateway_port: u16, action: UpdateAction) -> anyhow::Result<()> {
     let gateway_url = format!("http://127.0.0.1:{gateway_port}");

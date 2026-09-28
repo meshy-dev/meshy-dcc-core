@@ -236,8 +236,8 @@ pub(crate) async fn skill_mgmt_dispatch(
             };
             if targets.is_empty() {
                 return (
-                    "No live DCC instances. Start dcc-mcp-server (or your DCC adapter) so the gateway can fan out skill tools. \
-Standalone `dcc-mcp-server` without `--app` registers as `dcc_type` from DCC_MCP_STANDALONE_REGISTRY_DCC_TYPE (default `python`); \
+                    "No live DCC instances. Start meshy-dcc-server (or your DCC adapter) so the gateway can fan out skill tools. \
+Standalone `meshy-dcc-server` without `--app` registers as `dcc_type` from DCC_MCP_STANDALONE_REGISTRY_DCC_TYPE (default `python`); \
 `unknown` is hidden from fan-out unless gateway `allow_unknown_tools` is enabled."
                         .to_string(),
                     true,

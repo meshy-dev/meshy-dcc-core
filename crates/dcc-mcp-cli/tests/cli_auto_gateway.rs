@@ -4,7 +4,7 @@ use serde_json::{Value, json};
 use tempfile::TempDir;
 
 fn cli_command() -> Command {
-    Command::new(env!("CARGO_BIN_EXE_dcc-mcp-cli"))
+    Command::new(env!("CARGO_BIN_EXE_meshy-dcc"))
 }
 
 fn unused_loopback_port() -> u16 {
@@ -44,7 +44,7 @@ fn list_auto_starts_builtin_local_gateway() {
     let base_url = format!("http://127.0.0.1:{port}");
     let registry = TempDir::new().unwrap();
     let registry_s = registry.path().to_string_lossy().to_string();
-    let cli_bin = env!("CARGO_BIN_EXE_dcc-mcp-cli");
+    let cli_bin = env!("CARGO_BIN_EXE_meshy-dcc");
     let envs = [
         ("DCC_MCP_REGISTRY_DIR", registry_s.as_str()),
         ("DCC_MCP_GATEWAY_IDLE_TIMEOUT_SECS", "1"),

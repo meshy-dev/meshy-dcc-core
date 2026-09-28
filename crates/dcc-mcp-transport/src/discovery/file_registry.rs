@@ -917,7 +917,7 @@ impl FileRegistry {
     ///
     /// Combines the reload-if-stale + [`Self::prune_dead_pids`] + [`Self::list_all`]
     /// dance into a single call so external readers (gateway aggregator,
-    /// gateway election (#523), `dcc-mcp-cli`, third-party tools) get
+    /// gateway election (#523), `meshy-dcc`, third-party tools) get
     /// auto-eviction at read time without re-implementing the pattern.
     ///
     /// Returns `(live_entries, evicted_count)`. `evicted_count` is `0` on the

@@ -1,6 +1,6 @@
 //! Project-bound DCC launch and wait-ready workflow.
 //!
-//! `dcc-mcp-cli start-instance` closes the zero-instance gap: with no live
+//! `meshy-dcc start-instance` closes the zero-instance gap: with no live
 //! instance for a DCC type it launches the recorded host bound to an exact
 //! project, waits for registry registration, and — with `--wait-ready` — waits
 //! for terminal readiness before returning a deterministic instance selection.

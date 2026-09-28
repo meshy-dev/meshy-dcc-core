@@ -64,7 +64,7 @@ pub struct ComponentService {
 impl ComponentService {
     pub fn for_current_process() -> anyhow::Result<Self> {
         Self::new(
-            std::env::current_exe().context("cannot resolve the dcc-mcp-cli executable")?,
+            std::env::current_exe().context("cannot resolve the meshy-dcc executable")?,
             current_target()?,
         )
     }
@@ -153,7 +153,7 @@ impl ComponentService {
         let candidate_version = validate_candidate(&candidate, Some(&manifest.version))?;
         let candidate_sha = dcc_mcp_updater::sha256_file(&candidate)?;
         dcc_mcp_updater::install_verified_sibling(
-            "dcc-mcp-cli",
+            "meshy-dcc",
             &self.current_exe,
             &candidate,
             component_file_name(),
@@ -177,7 +177,7 @@ impl ComponentService {
         Ok(self
             .current_exe
             .parent()
-            .context("dcc-mcp-cli executable has no parent directory")?
+            .context("meshy-dcc executable has no parent directory")?
             .join(component_file_name()))
     }
 }

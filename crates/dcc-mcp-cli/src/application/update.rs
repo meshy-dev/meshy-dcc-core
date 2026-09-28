@@ -11,7 +11,8 @@ pub use cache::{
     spawn_cli_update_refresh,
 };
 
-pub const CLI_BINARY_NAME: &str = env!("CARGO_PKG_NAME");
+/// Installed binary name; the crate keeps its upstream package name.
+pub const CLI_BINARY_NAME: &str = "meshy-dcc";
 pub const CLI_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 const SUCCESS_CHECK_INTERVAL_SECS: u64 = 24 * 60 * 60;
@@ -236,7 +237,7 @@ fn update_policy(binary_name: &str, manager: Option<&str>) -> Value {
     serde_json::json!({
         "requires_user_confirmation": true,
         "apply_supported_by_this_command": apply_supported,
-        "apply_command": apply_supported.then_some("dcc-mcp-cli update apply --yes"),
+        "apply_command": apply_supported.then_some("meshy-dcc update apply --yes"),
         "staged_for_next_launch": true,
         "running_server_restarted": false,
         "managed_by_package_manager": manager,
@@ -288,7 +289,7 @@ mod tests {
                 "current_version": "0.20.22",
                 "latest_version": "0.20.23",
                 "binary_name": CLI_BINARY_NAME,
-                "download_url": "https://example.invalid/dcc-mcp-cli",
+                "download_url": "https://example.invalid/meshy-dcc",
                 "sha256": "a".repeat(64),
             }),
             true,
@@ -303,7 +304,7 @@ mod tests {
         assert_eq!(payload["update_policy"]["requires_user_confirmation"], true);
         assert_eq!(
             payload["update_policy"]["apply_command"],
-            "dcc-mcp-cli update apply --yes"
+            "meshy-dcc update apply --yes"
         );
         assert_eq!(payload["update_policy"]["running_server_restarted"], false);
     }
@@ -312,11 +313,11 @@ mod tests {
     fn package_managed_checks_disable_apply() {
         let marker = crate::application::package_manager::PackageManagerMarker {
             schema_version: crate::application::package_manager::MARKER_SCHEMA_VERSION,
-            distribution: "dcc-mcp-cli".into(),
+            distribution: "meshy-dcc".into(),
             manager: "pypi".into(),
             version: "0.20.34".into(),
             platform: "windows-x86_64".into(),
-            binary: "dcc-mcp-cli-bin.exe".into(),
+            binary: "meshy-dcc-bin.exe".into(),
         };
 
         let payload = package_managed_payload(&marker);

@@ -14,7 +14,7 @@ use crate::presentation::feedback_cmd::FeedbackAction;
 #[test]
 fn require_gateway_is_a_global_fail_closed_control_flag() {
     let args = Args::try_parse_from([
-        "dcc-mcp-cli",
+        "meshy-dcc",
         "call",
         "maya.abc12345.inspect",
         "--require-gateway",
@@ -30,7 +30,7 @@ fn require_gateway_is_a_global_fail_closed_control_flag() {
 #[test]
 fn record_replay_compile_requires_explicit_review_flag_in_contract() {
     let args = Args::try_parse_from([
-        "dcc-mcp-cli",
+        "meshy-dcc",
         "--agent-session-id",
         "task-42",
         "record-replay",
@@ -62,7 +62,7 @@ fn record_replay_compile_requires_explicit_review_flag_in_contract() {
 #[test]
 fn record_replay_replay_keeps_current_approval_separate() {
     let args = Args::try_parse_from([
-        "dcc-mcp-cli",
+        "meshy-dcc",
         "record-replay",
         "replay",
         "--workflow-file",
@@ -84,7 +84,7 @@ fn record_replay_replay_keeps_current_approval_separate() {
 #[test]
 fn dcc_types_contract_accepts_a_custom_catalog() {
     let args = Args::try_parse_from([
-        "dcc-mcp-cli",
+        "meshy-dcc",
         "dcc-types",
         "--catalog",
         "studio-catalog.yml",
@@ -106,7 +106,7 @@ fn dcc_types_contract_accepts_a_custom_catalog() {
 #[test]
 fn search_contract_accepts_unquoted_positional_query_words() {
     let args = Args::try_parse_from([
-        "dcc-mcp-cli",
+        "meshy-dcc",
         "search",
         "create",
         "sphere",
@@ -135,7 +135,7 @@ fn search_contract_accepts_unquoted_positional_query_words() {
 #[test]
 fn marketplace_search_contract_accepts_positional_query_and_dcc_type_alias() {
     let args = Args::try_parse_from([
-        "dcc-mcp-cli",
+        "meshy-dcc",
         "marketplace",
         "search",
         "maya",
@@ -167,12 +167,12 @@ fn marketplace_search_contract_accepts_positional_query_and_dcc_type_alias() {
 #[test]
 fn marketplace_add_repo_requires_commit_for_install_but_not_list() {
     assert!(
-        Args::try_parse_from(["dcc-mcp-cli", "marketplace", "add-repo", "dcc-mcp/example",])
+        Args::try_parse_from(["meshy-dcc", "marketplace", "add-repo", "dcc-mcp/example",])
             .is_err()
     );
 
     let args = Args::try_parse_from([
-        "dcc-mcp-cli",
+        "meshy-dcc",
         "marketplace",
         "add-repo",
         "dcc-mcp/example",
@@ -194,7 +194,7 @@ fn marketplace_add_repo_requires_commit_for_install_but_not_list() {
 
     assert!(
         Args::try_parse_from([
-            "dcc-mcp-cli",
+            "meshy-dcc",
             "marketplace",
             "add-repo",
             "dcc-mcp/example",
@@ -207,7 +207,7 @@ fn marketplace_add_repo_requires_commit_for_install_but_not_list() {
 #[test]
 fn stats_contract_parses_composable_runtime_filters() {
     let args = Args::try_parse_from([
-        "dcc-mcp-cli",
+        "meshy-dcc",
         "stats",
         "--range",
         "7d",
@@ -251,7 +251,7 @@ fn stats_contract_parses_composable_runtime_filters() {
 fn call_batch_contract_parses_steps_and_timeout() {
     let steps = r#"[{"tool_slug":"maya.abc.capture","arguments":{}}]"#;
     let args = Args::try_parse_from([
-        "dcc-mcp-cli",
+        "meshy-dcc",
         "call",
         "--batch",
         "--steps",
@@ -280,7 +280,7 @@ fn call_batch_contract_parses_steps_and_timeout() {
 #[test]
 fn call_batch_compatibility_alias_still_parses() {
     let args = Args::try_parse_from([
-        "dcc-mcp-cli",
+        "meshy-dcc",
         "call-batch",
         "--json",
         r#"{"calls":[{"tool_slug":"maya.abc.capture","arguments":{}}]}"#,
@@ -292,7 +292,7 @@ fn call_batch_compatibility_alias_still_parses() {
 #[test]
 fn ui_control_contract_parses_a_stable_snapshot_command() {
     let args = Args::try_parse_from([
-        "dcc-mcp-cli",
+        "meshy-dcc",
         "ui-control",
         "snapshot",
         "--dcc-type",
@@ -325,7 +325,7 @@ fn ui_control_contract_parses_a_stable_snapshot_command() {
 #[test]
 fn ui_control_contract_parses_an_exact_window_recording_command() {
     let args = Args::try_parse_from([
-        "dcc-mcp-cli",
+        "meshy-dcc",
         "ui-control",
         "recording-start",
         "--dcc-type",
@@ -401,7 +401,7 @@ fn ui_control_operations_map_to_canonical_ui_control_tools() {
 #[test]
 fn ui_control_full_output_flag_preserves_the_diagnostic_escape_hatch() {
     let args = Args::try_parse_from([
-        "dcc-mcp-cli",
+        "meshy-dcc",
         "ui-control",
         "snapshot",
         "--instance-id",
@@ -722,7 +722,7 @@ fn call_reads_arguments_from_json_file() {
 #[test]
 fn call_json_file_flag_parses_without_inline_json() {
     let args = Args::try_parse_from([
-        "dcc-mcp-cli",
+        "meshy-dcc",
         "call",
         "godot_project__write_script",
         "--json-file",
@@ -1000,7 +1000,7 @@ fn gateway_endpoint_for_command_ensures_gateway_for_agent_control_commands() {
 #[test]
 fn call_parses_configurable_request_timeout() {
     let args = Args::parse_from([
-        "dcc-mcp-cli",
+        "meshy-dcc",
         "call",
         "blender.abc12345.render",
         "--timeout-secs",
@@ -1015,7 +1015,7 @@ fn call_parses_configurable_request_timeout() {
 
 #[test]
 fn call_default_timeout_is_not_treated_as_explicit() {
-    let args = Args::parse_from(["dcc-mcp-cli", "call", "blender.abc12345.render"]);
+    let args = Args::parse_from(["meshy-dcc", "call", "blender.abc12345.render"]);
 
     let Command::Call { timeout_secs, .. } = &args.command else {
         panic!("expected call command");
@@ -1027,7 +1027,7 @@ fn call_default_timeout_is_not_treated_as_explicit() {
 #[test]
 fn feedback_parses_dead_instance_correlation() {
     let args = Args::parse_from([
-        "dcc-mcp-cli",
+        "meshy-dcc",
         "feedback",
         "--tool-name",
         "houdini.ui_control__act",
@@ -1059,7 +1059,7 @@ fn feedback_parses_dead_instance_correlation() {
 
 #[test]
 fn feedback_report_still_requires_legacy_required_fields() {
-    let args = Args::try_parse_from(["dcc-mcp-cli", "feedback", "--severity", "blocked"])
+    let args = Args::try_parse_from(["meshy-dcc", "feedback", "--severity", "blocked"])
         .expect("parse feedback command before conditional validation");
     let Command::Feedback(feedback) = args.command else {
         panic!("expected feedback command");
@@ -1073,7 +1073,7 @@ fn feedback_report_still_requires_legacy_required_fields() {
 #[test]
 fn feedback_list_parses_bounded_gateway_query() {
     let args = Args::try_parse_from([
-        "dcc-mcp-cli",
+        "meshy-dcc",
         "feedback",
         "list",
         "--range",
@@ -1103,7 +1103,7 @@ fn feedback_list_parses_bounded_gateway_query() {
 
 #[test]
 fn feedback_list_accepts_finding_schema_severity_vocabulary() {
-    let args = Args::try_parse_from(["dcc-mcp-cli", "feedback", "list", "--severity", "degraded"])
+    let args = Args::try_parse_from(["meshy-dcc", "feedback", "list", "--severity", "degraded"])
         .expect("parse finding-schema severity");
 
     let Command::Feedback(feedback) = args.command else {
@@ -1118,7 +1118,7 @@ fn feedback_list_accepts_finding_schema_severity_vocabulary() {
 #[test]
 fn feedback_export_defaults_to_seven_days_and_endpoint_maximum() {
     let args =
-        Args::try_parse_from(["dcc-mcp-cli", "feedback", "export"]).expect("parse feedback export");
+        Args::try_parse_from(["meshy-dcc", "feedback", "export"]).expect("parse feedback export");
 
     let Command::Feedback(feedback) = args.command else {
         panic!("expected feedback command");
@@ -1136,7 +1136,7 @@ fn feedback_export_defaults_to_seven_days_and_endpoint_maximum() {
 #[test]
 fn feedback_route_parses_as_an_offline_json_command() {
     let args = Args::try_parse_from([
-        "dcc-mcp-cli",
+        "meshy-dcc",
         "feedback",
         "route",
         "finding.json",
@@ -1161,7 +1161,7 @@ fn feedback_route_parses_as_an_offline_json_command() {
 #[test]
 fn feedback_bundle_is_no_auto_gateway_and_enforces_tail_bounds() {
     let args = Args::try_parse_from([
-        "dcc-mcp-cli",
+        "meshy-dcc",
         "feedback",
         "bundle",
         "finding.json",
@@ -1193,7 +1193,7 @@ fn feedback_bundle_is_no_auto_gateway_and_enforces_tail_bounds() {
 
     assert!(
         Args::try_parse_from([
-            "dcc-mcp-cli",
+            "meshy-dcc",
             "feedback",
             "bundle",
             "finding.json",
@@ -1207,7 +1207,7 @@ fn feedback_bundle_is_no_auto_gateway_and_enforces_tail_bounds() {
 #[test]
 fn feedback_file_is_offline_by_default_and_requires_exclusive_decisions() {
     let args = Args::try_parse_from([
-        "dcc-mcp-cli",
+        "meshy-dcc",
         "feedback",
         "file",
         "finding.json",
@@ -1232,7 +1232,7 @@ fn feedback_file_is_offline_by_default_and_requires_exclusive_decisions() {
 
     assert!(
         Args::try_parse_from([
-            "dcc-mcp-cli",
+            "meshy-dcc",
             "feedback",
             "file",
             "finding.json",
@@ -1247,7 +1247,7 @@ fn feedback_file_is_offline_by_default_and_requires_exclusive_decisions() {
 #[test]
 fn call_contract_parses_wait_for_async_job() {
     let args = Args::parse_from([
-        "dcc-mcp-cli",
+        "meshy-dcc",
         "call",
         "unity.abc12345.run_tests",
         "--wait",
@@ -1269,7 +1269,7 @@ fn call_contract_parses_wait_for_async_job() {
 
 #[test]
 fn gateway_daemon_start_defaults_to_persistent_daemon() {
-    let args = Args::parse_from(["dcc-mcp-cli", "gateway", "daemon", "start"]);
+    let args = Args::parse_from(["meshy-dcc", "gateway", "daemon", "start"]);
 
     let Command::Gateway {
         action:
@@ -1289,7 +1289,7 @@ fn gateway_daemon_start_defaults_to_persistent_daemon() {
 
 #[test]
 fn gateway_daemon_restart_defaults_to_persistent_daemon() {
-    let args = Args::parse_from(["dcc-mcp-cli", "gateway", "daemon", "restart"]);
+    let args = Args::parse_from(["meshy-dcc", "gateway", "daemon", "restart"]);
 
     let Command::Gateway {
         action:
@@ -1311,7 +1311,7 @@ fn gateway_daemon_restart_defaults_to_persistent_daemon() {
 #[test]
 fn start_instance_accepts_the_advertised_instance_id_flag() {
     let args = Args::try_parse_from([
-        "dcc-mcp-cli",
+        "meshy-dcc",
         "start-instance",
         "--dcc-type",
         "unity",
@@ -1334,7 +1334,7 @@ fn start_instance_accepts_the_advertised_instance_id_flag() {
 #[test]
 fn start_instance_omits_instance_id_by_default() {
     let args = Args::try_parse_from([
-        "dcc-mcp-cli",
+        "meshy-dcc",
         "start-instance",
         "--dcc-type",
         "unity",

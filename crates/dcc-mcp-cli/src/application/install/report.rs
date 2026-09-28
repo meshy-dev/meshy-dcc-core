@@ -231,14 +231,14 @@ pub(super) fn success_next_steps(dcc_type: &str) -> Vec<InstallReportNextStep> {
             id: "inspect-runtime".into(),
             description: "Inspect safe local runtime diagnostics.".into(),
             why: "Diagnostics confirm the installed CLI and local gateway prerequisites.".into(),
-            command: vec!["dcc-mcp-cli".into(), "doctor".into()],
+            command: vec!["meshy-dcc".into(), "doctor".into()],
         },
         InstallReportNextStep {
             id: "confirm-readiness".into(),
             description: format!("Confirm that a live {dcc_type} adapter becomes ready."),
             why: "Host readiness is separate from local installation success.".into(),
             command: vec![
-                "dcc-mcp-cli".into(),
+                "meshy-dcc".into(),
                 "wait-ready".into(),
                 "--dcc-type".into(),
                 dcc_type.into(),
@@ -263,14 +263,14 @@ fn failure_next_steps(dcc_type: &str) -> Vec<InstallReportNextStep> {
             id: "inspect-runtime".into(),
             description: "Inspect safe local runtime diagnostics.".into(),
             why: "Diagnostics can identify a safe remediation before retrying installation.".into(),
-            command: vec!["dcc-mcp-cli".into(), "doctor".into()],
+            command: vec!["meshy-dcc".into(), "doctor".into()],
         },
         InstallReportNextStep {
             id: "review-plan".into(),
             description: format!("Review a fresh non-mutating install plan for {dcc_type}."),
             why: "The plan can be reviewed safely before another authorized execution.".into(),
             command: vec![
-                "dcc-mcp-cli".into(),
+                "meshy-dcc".into(),
                 "install".into(),
                 "--dcc-type".into(),
                 dcc_type.into(),

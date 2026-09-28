@@ -68,7 +68,7 @@ fn stage_set_rejects_missing_and_hash_mismatch_without_marker() {
 #[test]
 fn single_binary_update_rejects_tampered_staged_bytes() {
     let temp = tempfile::tempdir().unwrap();
-    let current = write_fixture(temp.path(), "dcc-mcp-cli.exe", b"old-cli");
+    let current = write_fixture(temp.path(), "meshy-dcc.exe", b"old-cli");
     let downloaded = write_fixture(temp.path(), "cli.download", b"new-cli");
     let expected_sha256 = sha256_file(&downloaded).unwrap();
     let binary_name = unique_name("tampered-single");
@@ -140,7 +140,7 @@ fn single_binary_update_rejects_staged_sibling_components() {
 #[test]
 fn clearing_a_staged_binary_update_preserves_the_current_executable() {
     let temp = tempfile::tempdir().unwrap();
-    let current = write_fixture(temp.path(), "dcc-mcp-cli.exe", b"old-cli");
+    let current = write_fixture(temp.path(), "meshy-dcc.exe", b"old-cli");
     let downloaded = write_fixture(temp.path(), "cli.download", b"new-cli");
     let expected_sha256 = sha256_file(&downloaded).unwrap();
     let binary_name = unique_name("clear-single");
@@ -168,21 +168,21 @@ fn sibling_target_rejects_windows_ads_and_ambiguous_names() {
             "unsafe sibling target was accepted: {file_name:?}"
         );
     }
-    validate_sibling_name("dcc-mcp-cli.exe").unwrap();
+    validate_sibling_name("meshy-dcc.exe").unwrap();
 }
 
 #[test]
 fn update_set_applies_server_and_cli_together() {
     let temp = tempfile::tempdir().unwrap();
     let current = write_fixture(temp.path(), "dcc-mcp-server.exe", b"old-server");
-    let host = write_fixture(temp.path(), "dcc-mcp-cli.exe", b"old-cli");
+    let host = write_fixture(temp.path(), "meshy-dcc.exe", b"old-cli");
     let server_download = write_fixture(temp.path(), "server.download", b"new-server");
     let host_download = write_fixture(temp.path(), "cli.download", b"new-cli");
     let server_sha = sha256_file(&server_download).unwrap();
     let host_sha = sha256_file(&host_download).unwrap();
     let current_target = UpdateTarget::CurrentExecutable;
     let host_target = UpdateTarget::Sibling {
-        file_name: "dcc-mcp-cli.exe".into(),
+        file_name: "meshy-dcc.exe".into(),
     };
     let binary_name = unique_name("apply");
     stage_update_set_for(
@@ -216,14 +216,14 @@ fn update_set_applies_server_and_cli_together() {
 fn update_set_rolls_back_first_component_when_second_replace_fails() {
     let temp = tempfile::tempdir().unwrap();
     let current = write_fixture(temp.path(), "dcc-mcp-server.exe", b"old-server");
-    let host = write_fixture(temp.path(), "dcc-mcp-cli.exe", b"old-cli");
+    let host = write_fixture(temp.path(), "meshy-dcc.exe", b"old-cli");
     let server_download = write_fixture(temp.path(), "server.download", b"new-server");
     let host_download = write_fixture(temp.path(), "cli.download", b"new-cli");
     let server_sha = sha256_file(&server_download).unwrap();
     let host_sha = sha256_file(&host_download).unwrap();
     let current_target = UpdateTarget::CurrentExecutable;
     let host_target = UpdateTarget::Sibling {
-        file_name: "dcc-mcp-cli.exe".into(),
+        file_name: "meshy-dcc.exe".into(),
     };
     let binary_name = unique_name("rollback");
     stage_update_set_for(
@@ -266,9 +266,9 @@ fn update_set_rolls_back_first_component_when_second_replace_fails() {
 #[test]
 fn rollback_preserves_original_before_first_rename() {
     let temp = tempfile::tempdir().unwrap();
-    let target = write_fixture(temp.path(), "dcc-mcp-cli.exe", b"old-cli");
-    let prepared = write_fixture(temp.path(), "dcc-mcp-cli.exe.dcc-mcp-new", b"new-cli");
-    let backup = temp.path().join("dcc-mcp-cli.exe.dcc-mcp-backup");
+    let target = write_fixture(temp.path(), "meshy-dcc.exe", b"old-cli");
+    let prepared = write_fixture(temp.path(), "meshy-dcc.exe.dcc-mcp-new", b"new-cli");
+    let backup = temp.path().join("meshy-dcc.exe.dcc-mcp-backup");
     let original_sha256 = sha256_file(&target).unwrap();
     let expected_sha256 = sha256_file(&prepared).unwrap();
     let journal = UpdateJournal {
@@ -292,9 +292,9 @@ fn rollback_preserves_original_before_first_rename() {
 #[test]
 fn rollback_recovers_rename_before_backup_state_is_journaled() {
     let temp = tempfile::tempdir().unwrap();
-    let target = write_fixture(temp.path(), "dcc-mcp-cli.exe", b"old-cli");
-    let prepared = write_fixture(temp.path(), "dcc-mcp-cli.exe.dcc-mcp-new", b"new-cli");
-    let backup = temp.path().join("dcc-mcp-cli.exe.dcc-mcp-backup");
+    let target = write_fixture(temp.path(), "meshy-dcc.exe", b"old-cli");
+    let prepared = write_fixture(temp.path(), "meshy-dcc.exe.dcc-mcp-new", b"new-cli");
+    let backup = temp.path().join("meshy-dcc.exe.dcc-mcp-backup");
     let original_sha256 = sha256_file(&target).unwrap();
     let expected_sha256 = sha256_file(&prepared).unwrap();
     std::fs::rename(&target, &backup).unwrap();
@@ -905,18 +905,18 @@ fn bootstrap_replaces_missing_or_stale_sibling_after_hash_check() {
         &binary_name,
         &current,
         &host_download,
-        "dcc-mcp-cli.exe",
+        "meshy-dcc.exe",
         &host_sha,
     )
     .unwrap();
-    let host = temp.path().join("dcc-mcp-cli.exe");
+    let host = temp.path().join("meshy-dcc.exe");
     assert_eq!(std::fs::read(&host).unwrap(), b"new-host");
     std::fs::write(&host, b"stale-host").unwrap();
     install_verified_sibling(
         &binary_name,
         &current,
         &host_download,
-        "dcc-mcp-cli.exe",
+        "meshy-dcc.exe",
         &host_sha,
     )
     .unwrap();

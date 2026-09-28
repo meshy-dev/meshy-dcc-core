@@ -1,4 +1,4 @@
-//! Diagnostic snapshot for `dcc-mcp-cli doctor`.
+//! Diagnostic snapshot for `meshy-dcc doctor`.
 //!
 //! Doctor is the read-only, no-launch view of the control plane: profile
 //! selection, local registry inventory, daemon health, and gateway binary
@@ -158,7 +158,7 @@ pub async fn run_doctor(request: DoctorRequest) -> anyhow::Result<Value> {
             "ok"
         },
         "cli": {
-            "name": env!("CARGO_PKG_NAME"),
+            "name": crate::application::update::CLI_BINARY_NAME,
             "version": env!("CARGO_PKG_VERSION"),
         },
         "profile": request.profile_store.summary(

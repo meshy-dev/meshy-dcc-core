@@ -187,7 +187,7 @@ async fn download() -> Result<Vec<u8>, RefreshError> {
         .map_err(invalid)?;
     let mut response = client
         .get(FEED_URL)
-        .header(reqwest::header::USER_AGENT, "dcc-mcp-cli install-catalog")
+        .header(reqwest::header::USER_AGENT, "meshy-dcc install-catalog")
         .header(reqwest::header::CACHE_CONTROL, "no-cache")
         .send()
         .await

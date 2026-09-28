@@ -439,7 +439,7 @@ impl DccMcpClient {
                         "protocolVersion": MCP_PROTOCOL_VERSION,
                         "capabilities": {},
                         "clientInfo": {
-                            "name": "dcc-mcp-cli",
+                            "name": "meshy-dcc",
                             "version": env!("CARGO_PKG_VERSION")
                         }
                     }
@@ -531,7 +531,7 @@ fn next_request_id() -> String {
 
     static COUNTER: AtomicU64 = AtomicU64::new(0);
     let counter = COUNTER.fetch_add(1, Ordering::Relaxed);
-    format!("dcc-mcp-cli-{}-{counter}", std::process::id())
+    format!("meshy-dcc-{}-{counter}", std::process::id())
 }
 
 fn validate_jsonrpc_response_id(

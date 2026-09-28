@@ -175,11 +175,11 @@ entries:
     assert!(plan["next_steps"][0]["command"].is_null());
     assert_eq!(
         plan["next_steps"][1]["command"],
-        json!(["dcc-mcp-cli", "doctor"])
+        json!(["meshy-dcc", "doctor"])
     );
     assert_eq!(
         plan["next_steps"][3]["command"],
-        json!(["dcc-mcp-cli", "wait-ready", "--dcc-type", "maya"])
+        json!(["meshy-dcc", "wait-ready", "--dcc-type", "maya"])
     );
     assert_eq!(plan["next_steps"][3]["requires_live_instance"], true);
 }
@@ -230,7 +230,7 @@ fn install_uses_bundled_adapter_metadata_and_python_override() {
     assert_eq!(
         plan["next_steps"][5]["command"],
         json!([
-            "dcc-mcp-cli",
+            "meshy-dcc",
             "search",
             "--dcc-type",
             "maya",
@@ -240,12 +240,12 @@ fn install_uses_bundled_adapter_metadata_and_python_override() {
     );
     assert_eq!(
         plan["next_steps"][7]["command"],
-        json!(["dcc-mcp-cli", "marketplace", "inspect", "<package-name>"])
+        json!(["meshy-dcc", "marketplace", "inspect", "<package-name>"])
     );
     assert_eq!(
         plan["next_steps"][8]["command"],
         json!([
-            "dcc-mcp-cli",
+            "meshy-dcc",
             "marketplace",
             "install",
             "<package-name>",
@@ -255,7 +255,7 @@ fn install_uses_bundled_adapter_metadata_and_python_override() {
     );
     assert_eq!(
         plan["next_steps"][9]["command"],
-        json!(["dcc-mcp-cli", "reload-skills", "--dcc-type", "maya"])
+        json!(["meshy-dcc", "reload-skills", "--dcc-type", "maya"])
     );
 }
 

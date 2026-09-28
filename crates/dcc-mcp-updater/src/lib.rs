@@ -20,6 +20,7 @@ use serde_json::Value;
 use sha2::{Digest, Sha256};
 use thiserror::Error;
 
+pub mod meshy_release;
 mod update_set;
 
 const MAX_UPDATE_BYTES: u64 = 256 * 1024 * 1024;
@@ -223,7 +224,7 @@ impl Updater {
     /// Create a new updater instance.
     ///
     /// * `gateway_url` — base URL of the dcc-mcp gateway (e.g. `http://127.0.0.1:9765`)
-    /// * `binary_name` — name of the binary to update (`dcc-mcp-cli` or `dcc-mcp-server`)
+    /// * `binary_name` — name of the binary to update (`meshy-dcc` or `dcc-mcp-server`)
     /// * `current_version` — the currently installed version string
     pub fn new(gateway_url: &str, binary_name: &str, current_version: &str) -> Self {
         Self {
@@ -656,8 +657,8 @@ mod tests {
 
     #[test]
     fn staging_dir_is_reasonable() {
-        let dir = staging_dir("dcc-mcp-cli").unwrap();
-        assert!(dir.to_string_lossy().contains("dcc-mcp"));
+        let dir = staging_dir("meshy-dcc").unwrap();
+        assert!(dir.to_string_lossy().contains("meshy-dcc"));
         assert!(dir.to_string_lossy().contains("update"));
     }
 
@@ -709,7 +710,7 @@ mod tests {
 
     #[tokio::test]
     async fn download_update_rejects_missing_sha256_before_network() {
-        let updater = Updater::new("http://127.0.0.1", "dcc-mcp-cli", "0.1.0");
+        let updater = Updater::new("http://127.0.0.1", "meshy-dcc", "0.1.0");
         let info = UpdateInfo {
             update_available: true,
             current_version: "0.1.0".into(),
@@ -723,7 +724,7 @@ mod tests {
 
         assert!(matches!(
             error,
-            UpdateError::MissingChecksum { binary_name } if binary_name == "dcc-mcp-cli"
+            UpdateError::MissingChecksum { binary_name } if binary_name == "meshy-dcc"
         ));
     }
 
@@ -796,17 +797,17 @@ mod tests {
         let (addr, server) = spawn_json_response(serde_json::json!({
             "update_available": true,
             "latest_version": "0.2.0",
-            "download_url": "https://example.invalid/dcc-mcp-cli",
+            "download_url": "https://example.invalid/meshy-dcc",
             "release_notes": null,
         }))
         .await;
 
-        let updater = Updater::new(&format!("http://{addr}"), "dcc-mcp-cli", "0.1.0");
+        let updater = Updater::new(&format!("http://{addr}"), "meshy-dcc", "0.1.0");
         let error = updater.check_update().await.unwrap_err();
 
         assert!(matches!(
             error,
-            UpdateError::MissingChecksum { binary_name } if binary_name == "dcc-mcp-cli"
+            UpdateError::MissingChecksum { binary_name } if binary_name == "meshy-dcc"
         ));
         server.await.unwrap();
     }
@@ -820,7 +821,7 @@ mod tests {
             "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
         }))
         .await;
-        let updater = Updater::new(&format!("http://{addr}"), "dcc-mcp-cli", "0.1.0");
+        let updater = Updater::new(&format!("http://{addr}"), "meshy-dcc", "0.1.0");
 
         let error = updater.check_update().await.unwrap_err();
 
@@ -833,13 +834,13 @@ mod tests {
         let (addr, server) = spawn_json_response(serde_json::json!({
             "update_available": true,
             "latest_version": "0.2.0",
-            "download_url": "https://example.invalid/dcc-mcp-cli",
+            "download_url": "https://example.invalid/meshy-dcc",
             "sha256": "abc123",
             "release_notes": null,
         }))
         .await;
 
-        let updater = Updater::new(&format!("http://{addr}"), "dcc-mcp-cli", "0.1.0");
+        let updater = Updater::new(&format!("http://{addr}"), "meshy-dcc", "0.1.0");
         let error = updater.check_update().await.unwrap_err();
 
         assert!(error.to_string().contains("invalid SHA-256"));
@@ -851,11 +852,11 @@ mod tests {
         let (addr, server) = spawn_json_response(serde_json::json!({
             "update_available": true,
             "latest_version": "0.2.0",
-            "download_url": "https://example.invalid/dcc-mcp-cli",
+            "download_url": "https://example.invalid/meshy-dcc",
             "sha256": null,
         }))
         .await;
-        let updater = Updater::new(&format!("http://{addr}"), "dcc-mcp-cli", "0.1.0");
+        let updater = Updater::new(&format!("http://{addr}"), "meshy-dcc", "0.1.0");
 
         let error = updater.check_update_json().await.unwrap_err();
 
@@ -874,7 +875,7 @@ mod tests {
         }))
         .await;
 
-        let updater = Updater::new(&format!("http://{addr}"), "dcc-mcp-cli", "0.1.0");
+        let updater = Updater::new(&format!("http://{addr}"), "meshy-dcc", "0.1.0");
         let info = updater.check_update().await.unwrap();
 
         assert!(!info.update_available);

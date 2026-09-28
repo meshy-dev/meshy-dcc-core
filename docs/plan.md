@@ -1,230 +1,146 @@
-# Meshy DCC Core：初始规划
+# Meshy DCC Core：Rust fork 计划
 
-日期：2026-09-22。阶段：规划；尚未实现运行时或验证 DCC 兼容性。
+日期：2026-09-28。阶段：R0（fork 骨架）。本仓库是 `dcc-mcp/dcc-mcp-core`
+（MIT）`v0.20.36` 的 Meshy 派生开发线，保留上游完整历史。
 
-## 1. 已确认的产品目标
+## 1. 方向（已确认）
 
-用户安装一次 `meshy-dcc-core`，配置一个 Agent 入口，即可发现和使用本机已接入的
-DCC 与游戏引擎。各软件所需插件、桥接进程、运行环境和连接配置由产品统一管理。
+- **技术栈**：Rust。直接改造上游 workspace，不再用 Node 包装上游二进制。
+  2026-09-22 至 28 的 Node.js 原型（0.3.30）只作为行为参考，归档在本地分支
+  `archive/js-prototype-0.3.30`，不继续开发。
+- **Agent 入口**：`meshy-dcc` CLI + `skills/meshy-dcc/SKILL.md`。不向 Agent 暴露 MCP
+  connector。Meshy API、认证、计费和下载仍由外部已发布的 `meshy-cli` 负责。
+- **改名范围**：只改产品面（二进制名、Meshy 自有状态目录与配置、Skill、文档）。
+  内部 crate、Python 模块 `dcc_mcp_core`、宿主协议保持上游命名，以便直接使用上游
+  adapter 并 cherry-pick 上游修复。
+- **DCC 范围**：Meshy 已有 Send To bridge 的 9 个 DCC。Krita 等非 Meshy DCC 不在范围。
+- **Send To 统一**：webapp 的 `POST /import` 由 core 的 gateway 接收并路由到选中的宿主
+  实例，旧端口 5324–5332 保留为兼容入口；用户每个 DCC 只装一个 Meshy 插件。先在
+  Blender 验证。
+- **Gateway 与 marketplace**：保留并改造为 Meshy 版本（见第 2 节）。
 
-先打通可扩展的 DCC Core，再在其上组合 Meshy 生成、DCC 编辑和引擎交付流程。
-首阶段不以某一条 Blender → Unreal 或 Unity 业务流程定义核心架构。
+## 2. 上游可直接复用的部分
 
-已确认仓库：`meshy-dev/meshy-dcc-core`，private，在 `meshy-integrations` 中作为独立
-submodule 管理。当前授权范围是仓库初始化和规划，运行时实现另起任务。
+上游 CLI（本仓库 `crates/dcc-mcp-cli`）已具备本产品需要的主体能力：
 
-“一个 Core”指一套面向用户的安装、连接和运维体验。部分宿主仍需原生插件、Python
-启动钩子或独立桥接进程；把这些实现收进产品管理，不要求用户自行搜寻和拼装。
-新软件通过适配器加入；能支持哪些操作仍取决于宿主 API、插件机制和实际验证结果。
+| 能力 | 上游位置 |
+|---|---|
+| 读 FileRegistry 列出实例、直连宿主 `/mcp` 的 search / describe / load-skill / call | `application/local_instance.rs`、`local_control.rs` |
+| 按项目启动宿主并等待就绪，同项目不重复启动 | `start-instance`，`application/instance_launch*` |
+| 就绪等待、异步 job 轮询、安全停止 | `wait-ready`、`call --wait`、`stop-instance` |
+| adapter 安装计划、诊断 | `install`、`doctor` |
+| 宿主内主线程调度、嵌入式 HTTP server | `dcc-mcp-host`、`dcc-mcp-http` 及 Python wheel |
 
-## 2. 从参考资料继承的设计
+### Gateway：保留为 Meshy 本地 hub
 
-KM 分享的核心是：gateway 收束连接，实例路由定位现场，Skills 承载专业能力，执行
-之后带回结果和诊断。MCP 提供连接和能力描述，生产流程仍需要明确的状态与验收。
+上游宿主 adapter 默认就会选举 gateway：各宿主抢占 9765 端口，先抢到的那个在自己进程内
+运行 gateway；它退出后其余宿主重新选举。删掉 daemon 并不能去掉 gateway，只会让它寄居
+在某个随时可能关闭的 DCC 里。常驻 daemon 反而更稳定，也正是 Send To 统一所需要的：
 
-据此采用以下方向：
+- 浏览器读不到 FileRegistry，只能访问固定的本地 HTTP 端口。gateway 可以向 webapp 列出
+  正在运行的实例（例如 "Blender — scene.blend"、"Unity — ProjectX"），把 `/import`
+  路由到用户选中的那个实例，并对 meshy.ai 来源做 origin 检查。
+- 旧端口 5324–5332 作为兼容入口转发到 gateway，webapp 可以先不改。
+- 跨实例搜索、异步 job、事件推送也放在 gateway。
 
-1. 本地统一 gateway 作为长期入口，Agent 客户端不感知每个 DCC 的端口变化。
-2. 先发现实例及当前项目，再搜索、描述、按需加载和调用能力。
-3. 少量核心工具配合 Resources 与 Prompts，避免把所有 DCC 的工具一次铺进上下文。
-4. 成功操作可沉淀成有输入、步骤和验收的 Skill；Core 不内置每条生产流程。
-5. API 优先；只有缺少可靠 API 的能力才评估受限的 UI 操作。
+Agent 的 CLI 调用两条路径都保留：local profile 直连宿主，延迟最低；经 gateway
+则可以使用聚合能力。
 
-研究目录中旧的 3D Agent v1.3 草案面向内部云端编排和薄执行代理。此次服务本地创作
-用户，先以本地 Core 为基础；云端 runtime、远程控制和工作流学习不进入首版依赖。
+### Marketplace：改为 Meshy marketplace
 
-## 3. 用户体验与核心边界
+上游 marketplace 的源就是一个 `marketplace.json` URL，包以 zip + SHA-256 校验，已实现
+安装、升级、卸载和已安装状态。改造方式：
 
-首次使用：安装 Core → 检测本机软件 → 选择接入的软件 → 安装或启用对应适配器 →
-必要时引导重启宿主 → 验证真实调用 → 为 Agent 配置同一个入口。
+- 内置源改为托管在 `cdn.meshy.ai` 上的 Meshy catalog；包和 showcase 媒体也放 CDN，
+  条目的主页链接回 meshy.ai 的对应页面。
+- 首批包是 Meshy 官方 skill：各 DCC 的导入 / PBR 重建，以及"Meshy 资产 → 可玩场景"
+  这类跨软件工作流。社区包经审核后发布到同一 catalog。
+- 上游 `dcc-mcp/marketplace` 作为可选的第二个源，默认不启用，用户需要
+  上游资产源时再添加。
+- 上游对 dcc-mcp 发布流程身份的 sigstore 校验改为 Meshy 自己的签名身份；首版可以先只做
+  SHA-256 固定。
 
-后续打开新的软件或第二个实例，它自动进入实例列表。新增一种受支持的软件只需
-在 Core 中启用对应集成；Agent 连接保持不变。需要宿主确认或管理员权限时，给出
-明确的单步提示和当前状态，完成后继续验证。
-
-| Core 负责 | 适配器负责 | Skills 负责 |
-|---|---|---|
-| 软件检测、版本选择、安装和升级协调 | 宿主路径、插件目录、启用/卸载机制 | 建模、整理、检查、导出等领域步骤 |
-| 实例登记、就绪判定、路由、生命周期 | 真实进程/场景信息、宿主主线程执行 | 输入要求、目标软件、版本与能力要求 |
-| 能力发现、schema 获取、调用入口 | 宿主 API 与已有 MCP 的接入 | 成功条件、读回检查、恢复方式 |
-| 调用关联、任务状态、结果和诊断 | 宿主支持的取消、撤销、截图与错误 | Meshy 资产到各创作流程的组合 |
-
-安装软件本体、购买许可证、制作通用 Agent、托管云端推理均不属于 Core 的首版职责。
-
-## 4. 逻辑架构与复用方向
+## 3. 架构
 
 ```text
-用户已有的 Agent
-    │ 一个 MCP 入口；CLI / REST 可访问同一运行时
-    ▼
-Meshy DCC Core
-    ├─ 统一安装、适配器目录、兼容版本与诊断
-    ├─ 本地 Gateway：实例、能力发现、调用路由
-    ├─ 任务状态、结果读回、产物引用
-    └─ 受管理的适配器
-         ├─ 宿主原生 API / 官方 MCP
-         ├─ DCC 内插件 / 主线程桥
-         └─ 现有社区适配器
+Agent → skills/meshy-dcc (SKILL.md)
+      → meshy-dcc（单个 Rust 二进制，由 dcc-mcp-cli 改造）
+          ├─ setup / doctor / repair          锁版本 + SHA-256 安装 adapter
+          ├─ start-instance / list / wait-ready / stop-instance
+          ├─ search / describe / load-skill / call   完整 instance UUID 路由
+          ├─ asset check / import             manifest / 字节 / SHA / 格式校验 + 读回
+          ├─ marketplace …                    Meshy catalog（cdn.meshy.ai）上的 skill 包
+          └─ meshy …                          透传外部 meshy-cli 的 JSON 输出
+      → 宿主内 adapter（上游固定版本）
+          └─ Meshy skill 包：导入、PBR 材质重建、读回
 
-领域 Skills 在这些能力上组合流程。
-Meshy 生成能力通过 meshy-cli 接入，复用其认证和任务机制。
+webapp Send To → gateway daemon（Meshy 本地 hub，列出实例并路由 /import）→ 宿主
 ```
 
-首选评估公开的 `dcc-mcp-core` 和已有适配器作为运行时依赖。Meshy 维护统一分发、
-安装体验、经过验证的版本组合、适配器接入和 Meshy 相关能力。无需仅为项目同名而
-重写 gateway，也不直接复制研究归档成为一个长期 fork。
+Meshy 特有能力放在各 DCC 的 skill 包中，这是上游原生的扩展点，不需要 patch
+adapter。PBR 通道与色彩空间映射沿用 Send To bridge 已验证的做法（`textures`
+分通道 URL，Unity SUP-3544 等修复）。
 
-2026-09-22 已检查公开上游 README 和 release 元数据：它已描述 gateway、CLI/REST、
-按需 Skills、多实例、主线程执行、诊断及多平台发行包；当时 latest release 为
-`v0.20.33`。这是复用候选的证据，不是本项目的兼容认证或已选依赖版本。
+## 4. 从 JS 原型保留的行为约束
 
-有实际接口漂移：归档安装文档使用 `dcc_mcp_core.install_lifecycle`，`v0.20.33`
-相应文档使用 `dcc_mcp_core.deployment`。依赖选择必须依据同一发布版本的代码、
-文档和实际宿主测试，不能混用归档、main 分支与 release 的接口。
+以下约束已在真实宿主上验证，移植为 Rust 测试，不移植 JS 实现：
 
-评估先回答四件事：
+- 发布物按 `runtime-lock` 的 SHA-256 校验后再解包；安装写 receipt，半成品不算已安装。
+- 启动前先写待核对的 launch 记录；宿主已启动但记录写入失败时，保留 PID，禁止同项目
+  直接重启或修复。
+- 调用必须带完整 live instance UUID；实例失联不改投同类实例；进程存活不等于就绪。
+- Blender 原生 dirty 标记不可靠：默认 stop 在状态未知时拒绝退出，不发信号。
+- Unity 通过 Editor API 退出并核对进程；断连时不回退到信号。
+- 资产交接复制到宿主工程内新目录并复核 SHA；结果未知时保留副本和回执，不重放导入。
+- Unity FBX 贴图只接受 manifest 明确列出的单组通道；Godot 导入就绪跟踪 reimport 信号。
 
-- 能否用受管理的发行包完成干净环境安装，而无需用户准备 Rust/Python 开发环境？
-- 能否可靠发现、路由和恢复多实例，且不与用户已有的 DCC-MCP 安装争抢配置？
-- 适配器、运行时和宿主版本能否形成一个可锁定、可升级和可回退的组合？
-- 能否通过公开扩展点完成 Meshy 需求，而不用维护大面积核心补丁？
+## 5. DCC 覆盖
 
-通过则直接组合上游；不通过则记录具体缺口，先考虑窄补丁或替换单个组件。只有
-阻碍产品目标的证据成立后才考虑自研相应核心。实现语言和包管理方案在此验证后确定。
+| DCC | 上游 adapter | 路线 | 阶段 |
+|---|---|---|---|
+| Blender | `dcc-mcp-blender` | 直接接入；首个 Send To 统一验证 | R0/R1 |
+| Unity | `dcc-mcp-unity`（C#） | 接入 + Meshy 导入/材质 skill | R1 |
+| Godot | `dcc-mcp-godot` | 接入 + 导入就绪逻辑 | R1 |
+| ZBrush | `dcc-mcp-zbrush`（需 2026.1+） | sidecar 路线 | R2 |
+| Unreal | `dcc-mcp-unreal` | 接入；macOS 需 Xcode/Metal 工具链 | R2 |
+| Roblox | 无 | 自研：Luau 插件长轮询 core，或对接 Studio 内置 MCP；资产走 Open Cloud | R2 |
+| Maya | `dcc-mcp-maya` | 接入 | 暂缓（无验证宿主） |
+| 3ds Max | `dcc-mcp-3dsmax` | 接入；仅 Windows | 暂缓 |
+| Omniverse | 无（`dcc-mcp-openusd` 为 headless USD） | 自研：Kit 扩展加载 wheel；仅 Windows/Linux | 暂缓 |
 
-用户已授权必要时 fork 参考项目。当前资料指向的公开上游为
-`dcc-mcp/dcc-mcp-core`；若验证证明必须修改其核心，可基于明确的上游 commit 建立
-Meshy 派生开发线，保留来源、历史与许可声明，并记录可回馈上游的差异。此授权
-不改变新仓库的 private 要求；具体采用 GitHub fork 或保留历史的独立派生仓库，
-取决于上游可见性与平台限制。当前初始化提交仅含规划，尚未导入上游代码。
+只有真实 OS × 宿主 × adapter 验证通过的组合才进入支持矩阵。
 
-## 5. 首版必须成立的契约
+## 6. 阶段
 
-### 5.1 安装与适配器管理
-
-受管理的适配器目录最少记录：adapter ID、版本、支持的 OS/架构/宿主版本、兼容
-runtime、可信发行来源与校验信息、安装/启用/诊断/卸载入口。先维护一份随版本发布
-的目录，不建设独立市场服务；尽可能采用上游已有 manifest。
-
-只为用户选用的软件安装所需组件。记录 Core 管理的文件与配置，保留用户已有设置。
-升级先预检兼容性，失败恢复上一安装状态。宿主锁定原生模块时延后替换并说明需重启，
-不强杀有未保存工作的 DCC。卸载只移除本产品拥有的组件。
-
-“未安装适配器”“需启用”“需重启”“启动中”“可调用”“失联”“版本不兼容”
-必须能区别。下载完成、进程存在或 HTTP 200 均不足以标记为可调用。
-
-### 5.2 实例身份与连接
-
-复用运行时实例注册机制，至少携带宿主类型/版本、适配器版本、实例 ID、进程启动
-身份、当前场景/项目、endpoint 和就绪状态。PID 重用与应用重启不得复活旧会话。
-
-客户端只记住稳定 gateway。实例端口由运行时分配并登记；多个相同软件实例不让
-用户手工编端口。调用绑定具体实例和必要的场景上下文，有歧义时先选择。失联后不得
-悄悄改投同类的另一个实例。已有上游服务的复用或隔离策略由兼容性验证确定。
-
-### 5.3 能力发现与执行
-
-优先沿用上游 `search → describe → load_skill（按需）→ call` 的有界入口；实例和
-上下文走资源或对应 REST 查询。CLI、MCP 和 REST 共用执行路径，不维护三套业务。
-
-能力描述须带输入/输出 schema、所属实例、执行条件、读写属性和支持的恢复方式。
-宿主专有功能保留自己的语义；不强造覆盖所有软件的统一建模 API。
-
-写操作在目标宿主要求的主线程上串行执行；每个实例独立排队，慢实例不阻塞其他
-实例。网络等待超时与宿主操作终止是两回事。排队取消、协作取消和不可中断执行
-分别报告；不能安全终止时保留可查询状态，不能假报“已取消”。
-
-沿用运行时请求/任务 ID 和结构化结果。结果至少能关联实例、调用、状态、错误、
-产物和读回证据。提交结果未知时先对账；不自动重放可能修改场景或消耗积分的操作。
-撤销是宿主能力，文件检查点是恢复手段，两者均不等同于跨软件事务回滚。
-
-### 5.4 本地权限与信任边界
-
-默认本地连接，对 gateway 和适配器均实施访问控制；loopback 本身不等于鉴权。
-验证调用方/来源及会话，拒绝非授权跨源访问与宿主暴露。项目文件读写显式限定范围，
-检查真实路径和符号链接，覆盖文件须符合已授权语义。
-
-Skill 和插件是可执行代码，安装来源和版本必须可信。任意脚本执行默认不作为普通
-工作流入口；若开启，要按本机代码执行权限对待，不能靠一份 allowlist 宣称沙箱安全。
-密钥不进日志；诊断和截图按需采集，不默认上传用户资产或会话数据。
-
-### 5.5 为后续资产交接保留最小信息
-
-复用现有产物引用与文件机制，记录来源任务、所在 workspace、格式、内容校验值、
-生产软件及版本。尺寸/坐标/材质等按具体导入导出操作记录并读回验证；不要求所有
-软件先统一到 USD，也不承诺 GLB/FBX/USD 能无损交换任意资产。
-
-文件存在、调用成功与目标 DCC 中正确导入是不同检查。后续流水线必须验证目标
-软件里的对象、材质、缩放等条件，截图作为补充证据。
-
-## 6. 与现有 Meshy 仓库的关系
-
-| 仓库 | 继续拥有的职责 | 与 Core 的交界 |
+| 阶段 | 交付 | 验收 |
 |---|---|---|
-| `meshy-cli` | API、认证、付费任务、轮询/恢复、下载、项目记录 | 使用公开命令和 `--output-schema v1`，接收任务/下载结果 |
-| `meshy-3d-agent` | 面向 Agent 的生成/打印指导 | 后续补充发现与调用 Core 的工作流指导 |
-| `meshy-mcp-server` | 现有 Meshy API MCP 分发 | 保持独立；统一入口可按需接入兼容能力 |
-| `meshy-dcc-core` | 本地多软件连接、管理和执行体验 | 为生成结果提供进入真实创作现场的通道 |
+| R0 fork 骨架 | 经确认的改名与上游地址改向；锁定 Blender adapter | 真实 Blender：list → search → describe → call → 读回 |
+| R1 对等 + Send To | setup/repair、asset check/import、meshy 透传、stop 保护；Unity、Godot；gateway 接收 Send To 并路由到 Blender；Meshy marketplace 首批包 | 达到 0.3.30 的主矩阵验收；webapp Send To 走 core 插件导入 Blender |
+| R2 扩宿主 | ZBrush、Unreal、Roblox | 各宿主导入、读回、保存重开 |
+| R3 评估 | 与既有 v2 对照同任务 | 单次调用延迟、turn 数、token、耗时；不夸大为质量结论 |
 
-Core 日后可把 Meshy CLI 作为受管理能力提供，从而让用户仍只接一个入口；底层的
-认证与生成逻辑由 CLI 负责。通过已发布的版本和机器输出集成，不导入 sibling 的
-内部 TypeScript 文件，不复制 OAuth 或付费任务重试逻辑。
+### R0 改造原则
 
-## 7. 实施顺序与验收
+- **默认不删除上游内容。** 没有被我们二进制依赖的 crate 不参与编译，保留没有成本；删除反而会
+  在合并上游时产生冲突。只发布需要的二进制，而不是删减源码。
+- 可能的改动只有两类：产品面改名，以及把写死的上游地址改指向 Meshy。每一项先说明用途和
+  影响，经用户逐条确认后再改。
+- 已核查并保留：`dcc-mcp-tunnel-*`（云端到本机的中继，可支撑 Meshy 网页端或托管 Agent
+  远程驱动本地 DCC，也是浏览器访问 localhost 受限时的备选通道）、`dcc-mcp-semantic`
+  （可选的向量检索 skill，marketplace 包变多后有用）、gateway daemon、marketplace。
 
-| 阶段 | 交付 | 必须提供的证据 |
-|---|---|---|
-| P0：运行时复用验证 | 固定候选发布版本，验证打包、协议、安装和扩展点，记录采用/缺口结论 | 一个真实 DCC 的发现、能力描述、调用、读回；安装与诊断记录 |
-| P1：Core 基础 | 一个入口，实例与能力发现，显式路由、任务结果和错误；支持两种宿主 | 同软件双实例不串场；第二种真实 DCC 经适配器加入，公共路由不增加宿主分支 |
-| P2：统一接入体验 | 检测、按需安装、启用、版本锁定、诊断、升级与卸载 | 干净环境按一次安装流程完成；新增适配器不改 Agent 配置；升级失败可恢复 |
-| P3：Meshy 能力接入 | 复用 CLI 认证和产物，增加领域 Skills | 从已有 Meshy 任务取得资产，在指定 DCC 导入并读回；随后再选跨软件创作流程 |
+## 7. 与上游的关系
 
-P0 即检查安装可行性，P2 完成产品体验，避免把分发问题拖到运行时开发完成之后。
-首个验证宿主建议 Blender；第二种选择开发环境中可真实运行的 DCC/引擎，用于验证
-异构扩展，尚不锁定最终业务路线。两个 Blender 实例只能证明多实例，不能替代
-第二种宿主的验证。mock 可覆盖协议故障，不计入真实 DCC 支持。
+跟踪上游 tag，按需 cherry-pick 或合并修复；产品面改名集中在少数文件，降低冲突。
+对外说明 "Evolved from dcc-mcp-core"，保留上游 MIT LICENSE 与版权声明。重新分发
+上游 adapter 或其依赖前逐一核对许可证。
 
-Core 首个可用版本的验收清单：
+## 8. 验证
 
-- 同一个 Agent 连接可看到两个同类实例与第二种宿主，准确识别场景/项目。
-- 相同能力分别调用正确实例；失联、旧实例 ID 或场景变化不会误写另一个现场。
-- 新适配器通过安装/注册即可被发现，公共调用路径和客户端配置不变。
-- 能力按需描述/加载；工具入口数量不随插件里的工具数量线性增长。
-- 一次写操作有真实状态读回，一次故意失败返回可定位的错误。
-- 慢调用、断连、重启与取消语义可验证；结果未知时不盲目重试写操作。
-- 冷启动安装、重复运行安装、升级失败和卸载均保留用户的原有配置与资产。
-- 发行只标记实际验证过的 OS × DCC × runtime × adapter 版本组合。
+```sh
+cargo build -p dcc-mcp-cli
+cargo test -p dcc-mcp-cli
+```
 
-本轮只有文档与仓库建立，不执行 DCC 安装、不运行生成任务、不消耗 Meshy 积分。
-
-## 8. 暂缓项与尚待技术验证的选择
-
-首版暂缓云端控制、多机调度、自建 Agent/模型、独立桌面壳、可视化工作流编辑器、
-独立 Skill 市场、训练数据系统及一次性覆盖所有 DCC。先使用已有诊断界面或最小
-状态入口；单入口与适配器体验通过后，再决定 UI 形态。
-
-P0 需要决策：上游组合或局部自研、首次验证的宿主与 OS、发行载体、与已有上游
-安装共存方式、版本锁定粒度。Windows 与 macOS 是目标平台，尚无已认证支持矩阵。
-下载或再分发各组件前核对相应发行物的许可和通知要求；上游 core 的 MIT 标记不能
-代替所有适配器及其 bundled dependencies 的检查。
-
-## 9. 依据与证据边界
-
-- 用户提供的 `dcc-mcp-research`：`RESEARCH.md`、两份 DCC 调研报告、
-  `3d-agent/docs/方案计划.md` 以及 `dcc-mcp-core` 源码/文档快照。归档记录 core
-  commit 为 `39f4ae9b0b934fa774d5a2ca940468577f282a61`，采集日期 2026-09-14。
-- 用户提供的本地 KM 导出：[自研 DCC-MCP：让 Agent 在游戏研发中具备生产级 DCC
-  控制能力](https://km.woa.com/articles/show/664011)，2026-06-29；本轮读取本地
-  副本，未访问内网站点。其思想用于规划，原文与内部源码不随本仓库分发。
-- 2026-09-22 通过 `gh` 核对的公开
-  [dcc-mcp-core](https://github.com/dcc-mcp/dcc-mcp-core)、
-  [v0.20.33](https://github.com/dcc-mcp/dcc-mcp-core/releases/tag/v0.20.33)、
-  [该版本安装生命周期](https://github.com/dcc-mcp/dcc-mcp-core/blob/v0.20.33/docs/guide/adapter-install-lifecycle.md)
-  及 [Blender 适配器](https://github.com/dcc-mcp/dcc-mcp-blender)；未安装或跑通上游。
-- Epic 官方 [Unreal MCP 文档](https://dev.epicgames.com/documentation/unreal-engine/unreal-mcp-in-unreal-editor)
-  已描述本地 HTTP、工具发现和 game-thread 串行执行，并标注 Experimental。
-  可作为原生能力接入候选，不据此认定本项目已兼容某个 UE 版本。
-- 现有 Meshy 子仓库的 README 及 CLI 项目、产物、下载与机器输出实现。根目录
-  `CLAUDE.md` 部分历史描述与各子仓库当前 README 有差异，规划以当前子仓库为依据。
-
-调研报告中的生态成熟度、星数和版本判断是历史研究输入，不作为本产品的支持承诺。
+真实宿主检查只启动测试自己创建的工程和进程，不触碰用户已有项目。本地开发记录在
+被忽略的 `docs/local/`，不写入本机路径、实例 UUID 或私人任务日志。

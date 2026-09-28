@@ -143,7 +143,7 @@ fn initialize_response(id: Value, server_version: &str, req: &JsonRpcRequest) ->
                 "name": SIDECAR_SERVER_NAME,
                 "version": server_version
             },
-            "instructions": "dcc-mcp-server sidecar — dispatches tools/call to a single DCC instance via its native RPC channel. Discovery happens at the gateway."
+            "instructions": "meshy-dcc-server sidecar — dispatches tools/call to a single DCC instance via its native RPC channel. Discovery happens at the gateway."
         }
     })
 }

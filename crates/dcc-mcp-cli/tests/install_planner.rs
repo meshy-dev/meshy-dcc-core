@@ -215,7 +215,7 @@ fn planner_emits_cli_next_steps_for_live_control_and_skill_install() {
         .expect("wait-ready next step");
     assert_eq!(
         wait_ready.command.as_ref().unwrap(),
-        &argv(&["dcc-mcp-cli", "wait-ready", "--dcc-type", "blender"])
+        &argv(&["meshy-dcc", "wait-ready", "--dcc-type", "blender"])
     );
     assert!(wait_ready.requires_live_instance);
 
@@ -227,7 +227,7 @@ fn planner_emits_cli_next_steps_for_live_control_and_skill_install() {
     assert_eq!(
         search_skills.command.as_ref().unwrap(),
         &argv(&[
-            "dcc-mcp-cli",
+            "meshy-dcc",
             "marketplace",
             "search",
             "--dcc",
@@ -245,7 +245,7 @@ fn planner_emits_cli_next_steps_for_live_control_and_skill_install() {
         .expect("inspect-community-skill next step");
     assert_eq!(
         inspect_skill.command.as_ref().unwrap(),
-        &argv(&["dcc-mcp-cli", "marketplace", "inspect", "<package-name>"])
+        &argv(&["meshy-dcc", "marketplace", "inspect", "<package-name>"])
     );
     assert!(!inspect_skill.requires_live_instance);
 
@@ -257,7 +257,7 @@ fn planner_emits_cli_next_steps_for_live_control_and_skill_install() {
     assert_eq!(
         install_skill.command.as_ref().unwrap(),
         &argv(&[
-            "dcc-mcp-cli",
+            "meshy-dcc",
             "marketplace",
             "install",
             "<package-name>",
@@ -274,7 +274,7 @@ fn planner_emits_cli_next_steps_for_live_control_and_skill_install() {
         .expect("reload-skills next step");
     assert_eq!(
         reload.command.as_ref().unwrap(),
-        &argv(&["dcc-mcp-cli", "reload-skills", "--dcc-type", "blender"])
+        &argv(&["meshy-dcc", "reload-skills", "--dcc-type", "blender"])
     );
     assert!(reload.requires_live_instance);
 }

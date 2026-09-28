@@ -1,4 +1,4 @@
-//! Project-bound DCC launch lifecycle contract (`dcc-mcp-cli start-instance`).
+//! Project-bound DCC launch lifecycle contract (`meshy-dcc start-instance`).
 //!
 //! Core owns the **lifecycle and readiness** contract; adapters own the
 //! **validated launch plan** they publish as a project receipt or as a
@@ -192,7 +192,7 @@ impl BlockingState {
     ) -> Value {
         let project_args = |extra: &[&str]| -> Vec<String> {
             let mut command = vec![
-                "dcc-mcp-cli".to_string(),
+                "meshy-dcc".to_string(),
                 "--output".to_string(),
                 "json".to_string(),
                 "--non-interactive".to_string(),
@@ -210,7 +210,7 @@ impl BlockingState {
         };
         let stop_command = |operation: Option<&str>| -> Vec<String> {
             let mut command = vec![
-                "dcc-mcp-cli".to_string(),
+                "meshy-dcc".to_string(),
                 "--output".to_string(),
                 "json".to_string(),
                 "--non-interactive".to_string(),
@@ -229,7 +229,7 @@ impl BlockingState {
                 "summary": "Instance is ready; continue with search/describe/call on the returned instance.",
                 "requires_consent": false,
                 "command": vec![
-                    "dcc-mcp-cli".to_string(),
+                    "meshy-dcc".to_string(),
                     "--output".to_string(),
                     "json".to_string(),
                     "search".to_string(),
@@ -266,7 +266,7 @@ impl BlockingState {
                 "summary": "The host is running but the adapter/sidecar never registered. Inspect the instance diagnostics, then retry.",
                 "requires_consent": false,
                 "command": vec![
-                    "dcc-mcp-cli".to_string(),
+                    "meshy-dcc".to_string(),
                     "--output".to_string(),
                     "json".to_string(),
                     "doctor".to_string(),
@@ -277,7 +277,7 @@ impl BlockingState {
                 "summary": "The recorded DCC executable is missing. Re-run the adapter install so the receipt points at a real executable.",
                 "requires_consent": false,
                 "command": vec![
-                    "dcc-mcp-cli".to_string(),
+                    "meshy-dcc".to_string(),
                     "--output".to_string(),
                     "json".to_string(),
                     "--non-interactive".to_string(),
@@ -297,7 +297,7 @@ impl BlockingState {
                 "summary": "Several live instances claim this project. Stop the extra instance or pass --instance-id to target one exactly.",
                 "requires_consent": true,
                 "command": vec![
-                    "dcc-mcp-cli".to_string(),
+                    "meshy-dcc".to_string(),
                     "--output".to_string(),
                     "json".to_string(),
                     "list".to_string(),
@@ -308,7 +308,7 @@ impl BlockingState {
                 "summary": "No launch plan is published for this DCC type and project. Install the adapter so it writes a validated launch plan.",
                 "requires_consent": false,
                 "command": vec![
-                    "dcc-mcp-cli".to_string(),
+                    "meshy-dcc".to_string(),
                     "--output".to_string(),
                     "json".to_string(),
                     "--non-interactive".to_string(),
@@ -340,7 +340,7 @@ impl BlockingState {
                 "summary": "The launch plan is malformed or unsafe. Re-install the adapter so it republishes a validated launch plan.",
                 "requires_consent": false,
                 "command": vec![
-                    "dcc-mcp-cli".to_string(),
+                    "meshy-dcc".to_string(),
                     "--output".to_string(),
                     "json".to_string(),
                     "--non-interactive".to_string(),
@@ -354,7 +354,7 @@ impl BlockingState {
                 "summary": "The project path does not exist or is not a directory. Pass the exact absolute project root.",
                 "requires_consent": true,
                 "command": vec![
-                    "dcc-mcp-cli".to_string(),
+                    "meshy-dcc".to_string(),
                     "--output".to_string(),
                     "json".to_string(),
                     "--non-interactive".to_string(),
@@ -371,7 +371,7 @@ impl BlockingState {
                 "summary": "The project is missing the adapter's binding markers, so it may not be the project this adapter was installed for.",
                 "requires_consent": false,
                 "command": vec![
-                    "dcc-mcp-cli".to_string(),
+                    "meshy-dcc".to_string(),
                     "--output".to_string(),
                     "json".to_string(),
                     "doctor".to_string(),

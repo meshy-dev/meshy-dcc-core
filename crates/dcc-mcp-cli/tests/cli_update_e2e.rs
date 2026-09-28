@@ -67,7 +67,7 @@ fn update_apply_requires_explicit_user_confirmation() {
     assert_eq!(update["latest_version"], "99.0.0");
     assert_eq!(
         update["update_policy"]["apply_command"],
-        "dcc-mcp-cli update apply --yes"
+        "meshy-dcc update apply --yes"
     );
     assert_eq!(update["update_policy"]["staged_for_next_launch"], true);
     assert_eq!(update["update_policy"]["running_server_restarted"], false);
@@ -118,20 +118,20 @@ fn cached_cli_update_is_agent_readable_without_a_network_check() {
         &cache_file,
         serde_json::to_vec(&serde_json::json!({
             "schema_version": 1,
-            "binary_name": "dcc-mcp-cli",
+            "binary_name": "meshy-dcc",
             "current_version": env!("CARGO_PKG_VERSION"),
             "checked_at_unix_secs": now,
             "successful": true,
             "payload": {
                 "version_status": "update_available",
-                "binary_name": "dcc-mcp-cli",
+                "binary_name": "meshy-dcc",
                 "current_version": env!("CARGO_PKG_VERSION"),
                 "latest_version": "99.0.0",
                 "update_available": true,
                 "check": {"source": "live", "cache_age_secs": 0},
                 "update_policy": {
                     "requires_user_confirmation": true,
-                    "apply_command": "dcc-mcp-cli update apply --yes",
+                    "apply_command": "meshy-dcc update apply --yes",
                     "staged_for_next_launch": true,
                     "running_server_restarted": false
                 }
@@ -180,7 +180,7 @@ fn update_check_preserves_gateway_error_payload() {
             "update",
             "check",
             "--binary",
-            "dcc-mcp-cli",
+            "meshy-dcc",
             "--current-version",
             "0.18.16",
         ])
@@ -194,9 +194,9 @@ fn update_check_preserves_gateway_error_payload() {
     let update: Value = serde_json::from_slice(&output.stdout).unwrap();
     assert_eq!(
         update["error"],
-        "binary 'dcc-mcp-cli' not found in update manifest"
+        "binary 'meshy-dcc' not found in update manifest"
     );
-    assert_eq!(update["binary_name"], "dcc-mcp-cli");
+    assert_eq!(update["binary_name"], "meshy-dcc");
     assert_eq!(update["current_version"], "0.18.16");
     assert!(
         !String::from_utf8_lossy(&output.stderr).contains("missing field"),

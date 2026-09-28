@@ -27,6 +27,14 @@ impl GitHubAttestationPolicy {
         }
     }
 
+    /// Trust release-manifest attestations created by the Meshy release workflow.
+    // ponytail: provisional workflow path; align with the Meshy release pipeline when it exists.
+    pub fn meshy_release() -> Self {
+        Self {
+            workflow_identity: "https://github.com/meshy-dev/meshy-dcc-core/.github/workflows/release.yml@refs/heads/main".into(),
+        }
+    }
+
     /// Trust release-manifest attestations created by the Core release workflow.
     pub fn official_core_release() -> Self {
         Self {

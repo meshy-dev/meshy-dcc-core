@@ -1,4 +1,4 @@
-//! Local FileRegistry + direct MCP control path for `dcc-mcp-cli`.
+//! Local FileRegistry + direct MCP control path for `meshy-dcc`.
 //!
 //! Remote profiles use the gateway REST surface. The built-in `local` profile
 //! resolves live instances from the shared FileRegistry, then talks to the
@@ -1039,7 +1039,7 @@ async fn mcp_request(
 }
 
 fn next_local_mcp_request_id() -> String {
-    format!("dcc-mcp-cli-local-{}", uuid::Uuid::new_v4())
+    format!("meshy-dcc-local-{}", uuid::Uuid::new_v4())
 }
 
 pub(crate) fn call_result_payload(result: &Value) -> Option<Value> {

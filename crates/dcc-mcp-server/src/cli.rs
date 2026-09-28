@@ -43,7 +43,7 @@ pub(crate) enum SubCmd {
 /// DCC-MCP server CLI.
 #[derive(Debug, Parser)]
 #[command(
-    name = "dcc-mcp-server",
+    name = "meshy-dcc-server",
     about,
     version,
     args_conflicts_with_subcommands = true
@@ -275,7 +275,7 @@ mod tests {
 
     #[test]
     fn no_subcommand_keeps_backwards_compatible_server_flags() {
-        let parsed = Args::try_parse_from(["dcc-mcp-server", "--app", "maya"]).unwrap();
+        let parsed = Args::try_parse_from(["meshy-dcc-server", "--app", "maya"]).unwrap();
 
         assert!(parsed.command.is_none());
         assert_eq!(parsed.server.app, "maya");
@@ -286,7 +286,7 @@ mod tests {
 
     #[test]
     fn explicit_auto_uses_the_same_server_flag_surface() {
-        let parsed = Args::try_parse_from(["dcc-mcp-server", "auto", "--app", "blender"]).unwrap();
+        let parsed = Args::try_parse_from(["meshy-dcc-server", "auto", "--app", "blender"]).unwrap();
 
         let Some(SubCmd::Auto(server)) = parsed.command else {
             panic!("expected auto subcommand");
@@ -299,7 +299,7 @@ mod tests {
     #[test]
     fn legacy_gateway_election_is_explicit_opt_in() {
         let parsed = Args::try_parse_from([
-            "dcc-mcp-server",
+            "meshy-dcc-server",
             "auto",
             "--app",
             "maya",
@@ -316,7 +316,7 @@ mod tests {
     #[test]
     fn no_ensure_gateway_is_explicit_opt_out() {
         let parsed =
-            Args::try_parse_from(["dcc-mcp-server", "serve", "--no-ensure-gateway"]).unwrap();
+            Args::try_parse_from(["meshy-dcc-server", "serve", "--no-ensure-gateway"]).unwrap();
 
         let Some(SubCmd::Serve(serve)) = parsed.command else {
             panic!("expected serve subcommand");
@@ -328,7 +328,7 @@ mod tests {
     #[test]
     fn serve_no_auto_gateway_forces_gateway_port_to_zero() {
         let parsed = Args::try_parse_from([
-            "dcc-mcp-server",
+            "meshy-dcc-server",
             "serve",
             "--no-auto-gateway",
             "--app",
@@ -347,7 +347,7 @@ mod tests {
     #[test]
     fn serve_no_auto_gateway_overrides_gateway_port() {
         let parsed = Args::try_parse_from([
-            "dcc-mcp-server",
+            "meshy-dcc-server",
             "serve",
             "--no-auto-gateway",
             "--gateway-port",
@@ -365,11 +365,11 @@ mod tests {
     #[test]
     fn update_subcommand_accepts_check_and_apply() {
         let parsed = Args::try_parse_from([
-            "dcc-mcp-server",
+            "meshy-dcc-server",
             "update",
             "check",
             "--binary",
-            "dcc-mcp-server",
+            "meshy-dcc-server",
             "--current-version",
             "0.18.16",
         ])
@@ -385,10 +385,10 @@ mod tests {
         else {
             panic!("expected update check action");
         };
-        assert_eq!(binary.as_deref(), Some("dcc-mcp-server"));
+        assert_eq!(binary.as_deref(), Some("meshy-dcc-server"));
         assert_eq!(current_version.as_deref(), Some("0.18.16"));
 
-        let parsed = Args::try_parse_from(["dcc-mcp-server", "update", "apply"]).unwrap();
+        let parsed = Args::try_parse_from(["meshy-dcc-server", "update", "apply"]).unwrap();
         let Some(SubCmd::Update {
             action: UpdateAction::Apply,
         }) = parsed.command
@@ -400,7 +400,7 @@ mod tests {
     #[test]
     fn root_server_flags_conflict_with_non_server_subcommands() {
         let error =
-            Args::try_parse_from(["dcc-mcp-server", "--app", "maya", "gateway"]).unwrap_err();
+            Args::try_parse_from(["meshy-dcc-server", "--app", "maya", "gateway"]).unwrap_err();
 
         assert_eq!(error.kind(), ErrorKind::ArgumentConflict);
     }
@@ -409,7 +409,7 @@ mod tests {
     #[cfg(feature = "gateway-daemon")]
     fn gateway_subcommand_does_not_accept_server_only_flags() {
         let error =
-            Args::try_parse_from(["dcc-mcp-server", "gateway", "--app", "maya"]).unwrap_err();
+            Args::try_parse_from(["meshy-dcc-server", "gateway", "--app", "maya"]).unwrap_err();
 
         assert_eq!(error.kind(), ErrorKind::UnknownArgument);
     }

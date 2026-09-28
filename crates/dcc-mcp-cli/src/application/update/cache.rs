@@ -62,7 +62,7 @@ pub fn just_applied_status() -> Option<Value> {
             "update_policy": {
                 "requires_user_confirmation": true,
                 "apply_supported_by_this_command": true,
-                "apply_command": "dcc-mcp-cli update apply --yes",
+                "apply_command": "meshy-dcc update apply --yes",
                 "staged_for_next_launch": true,
                 "running_server_restarted": false,
             }

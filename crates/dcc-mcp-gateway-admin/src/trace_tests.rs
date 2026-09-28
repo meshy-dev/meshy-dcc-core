@@ -240,12 +240,12 @@ fn agent_context_reads_mcp_initialize_client_info() {
 fn agent_context_reads_agent_alias_and_user_agent_platform() {
     let mut headers = HeaderMap::new();
     headers.insert("x-dcc-mcp-agent", "Studio Gateway CLI".parse().unwrap());
-    headers.insert("user-agent", "dcc-mcp-cli/0.17.37 reqwest".parse().unwrap());
+    headers.insert("user-agent", "meshy-dcc/0.17.37 reqwest".parse().unwrap());
 
     let ctx = AgentContext::from_request_parts(&headers, None, None).unwrap();
 
     assert_eq!(ctx.agent_name.as_deref(), Some("Studio Gateway CLI"));
-    assert_eq!(ctx.client_platform.as_deref(), Some("dcc-mcp-cli"));
+    assert_eq!(ctx.client_platform.as_deref(), Some("meshy-dcc"));
     assert_eq!(ctx.trust.agent_name.as_deref(), Some(TRUST_HEADER));
     assert_eq!(ctx.trust.client_platform.as_deref(), Some(TRUST_HEADER));
 }

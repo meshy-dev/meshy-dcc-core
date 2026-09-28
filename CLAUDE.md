@@ -2,45 +2,67 @@
 
 ## Scope and current stage
 
-`meshy-dcc-core` is a private, independent product repository, developed as a
-submodule of `meshy-dev/meshy-integrations`. Read `README.md` and `docs/plan.md`
-before proposing changes. The repository currently contains planning documents
-only; do not imply that a runtime or adapter has been implemented or validated.
-
-The confirmed objective is one managed DCC integration for the user. Build the
-common connection, adapter lifecycle, instance routing, and capability system
-before choosing a specific Meshy-to-game-engine workflow.
+`meshy-dcc-core` is a private Meshy product repository, developed as a submodule
+of `meshy-dev/meshy-integrations`. It is a Rust fork of `dcc-mcp/dcc-mcp-core`
+(MIT) that keeps upstream history; the fork base is tag `v0.20.36`. Stage: R0
+(fork skeleton). Read `docs/plan.md` before proposing changes; it lists the
+confirmed direction, DCC scope and phases. Upstream's own docs (`README.md`
+of upstream, `docs/`, `AI_AGENT_GUIDE.md`) describe the inherited code, not the
+Meshy product.
 
 Start new work by inspecting context and stating the intended change and checks.
 A planning request authorizes a plan; implement when the user requests it.
 
+The agent-facing entry is the `meshy-dcc` CLI (built from `crates/dcc-mcp-cli`)
+plus `skills/meshy-dcc/SKILL.md`. No MCP connector is exposed to the agent.
+Meshy API calls, authentication, billing, polling and downloads belong to the
+published `meshy-cli`; core only consumes its machine-output contract.
+
+The Node.js prototype 0.3.30 lives on the local branch
+`archive/js-prototype-0.3.30` as a behavior reference only. Port its verified
+constraints (listed in `docs/plan.md`) as Rust tests; do not revive the JS code.
+
+## Fork rules
+
+- Rename only the product surface: binary name, Meshy-owned state and config,
+  Skill, docs. Keep internal crate names, the `dcc_mcp_core` Python module,
+  `DCC_MCP_*` host protocol variables and the registry layout, so upstream
+  adapters keep working and upstream fixes can be cherry-picked.
+- Put Meshy-specific behavior in new modules or Meshy skill packs rather than
+  scattering edits through upstream files. Keep upstream `LICENSE` and notices.
+- Track upstream with the `upstream` remote; merge or cherry-pick by tag.
+- Scope is the nine DCCs with a Meshy Send To bridge (Blender, Godot, Unity,
+  Unreal, Maya, 3ds Max, Roblox, Omniverse, ZBrush). Don't add other hosts.
+
 ## Design constraints
 
-- Reuse existing public runtime, adapter, and CLI contracts before adding code.
-  Upstream `dcc-mcp-core` is a candidate dependency, not an accepted dependency yet.
-- Keep host-specific installation, main-thread dispatch, and API behavior in
-  adapters. Do not add application-name branches to common routing for each host.
-- Keep the agent-facing tool set bounded; discover and load capabilities on demand.
-- Route by a concrete live instance and project/scene context. Never silently pick
-  the first process or retry a mutation against another instance.
-- A process or endpoint being alive does not establish dispatch readiness, and an
-  accepted command does not establish that the scene was changed successfully.
-- Preserve user scenes and files. Respect explicit workspaces, protect credentials,
-  and report unknown outcomes rather than blindly replaying mutating operations.
-- Do not promise universal cancellation, rollback, or lossless asset conversion.
-  Expose the guarantees the selected host actually provides.
-- Keep Meshy authentication, billed task creation, and downloads in `meshy-cli`.
-  Integrate through its public machine-output contract, not sibling source imports.
-- Use public upstream releases for dependencies. Research archives are read-only
-  background; do not copy internal source trees, documents, or environment data.
+- Keep host-specific installation, launch, main-thread dispatch and API behavior
+  in adapters. Do not add per-host branches to common routing.
+- Route every call to a concrete live instance by full UUID and project/scene
+  context. Never pick the first process or fail over to another instance.
+- A live process or endpoint does not establish readiness, and an accepted
+  command does not establish that the scene changed. Read back after writes.
+- Preserve user scenes and files, reject path and symlink escapes, protect
+  credentials, and report unknown outcomes instead of replaying mutations.
+- Do not add Meshy API calls, OAuth, download logic or a second auth store.
+- Only list OS × host × adapter combinations in the support matrix after a real
+  host check passes; a mock or loopback fixture is not host support.
 
 ## Verification and Git
 
-There is no build system yet. Validate documentation links and Git/submodule state
-for planning changes. Runtime work needs focused runnable checks and real-host
-evidence; mock registration is not proof that a DCC can execute calls.
+Toolchain: Rust `1.95.0` (edition 2024). Focused checks:
 
-Use the authenticated `gh` CLI for GitHub operations. Keep this repository's
-commits separate from the superproject. Push a submodule commit before recording
-its pointer in the superproject; preserve unrelated sibling changes. Do not
-publish packages or change repository visibility without user authorization.
+```sh
+cargo build -p dcc-mcp-cli
+cargo test -p dcc-mcp-cli
+```
+
+Real-host checks start only test-owned projects and processes and never touch an
+existing user project. Private development records live in the ignored
+`docs/local/`; never force-add them, and keep local absolute paths, instance
+UUIDs and private task logs out of tracked files.
+
+Use the authenticated `gh` CLI for GitHub operations. Local commits are allowed;
+do not push, publish, open PRs or change repository visibility unless the user
+explicitly asks for that task. Keep this repository's commits separate from the
+superproject.

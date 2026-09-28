@@ -8,6 +8,18 @@ use serde_json::{Value, json};
 use support::*;
 
 #[test]
+fn feedback_is_disabled() {
+    let output = cli_command()
+        .args(["feedback", "list"])
+        .output()
+        .expect("run meshy-dcc feedback");
+    assert!(!output.status.success());
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(stderr.contains("feedback is disabled"), "{stderr}");
+}
+
+#[test]
+#[ignore = "feedback is disabled in meshy-dcc"]
 fn gateway_feedback_cli_works_without_discovering_a_live_instance() {
     let fixture = spawn_gateway_fixture();
     let output = cli_command()
@@ -50,6 +62,7 @@ fn gateway_feedback_cli_works_without_discovering_a_live_instance() {
 }
 
 #[test]
+#[ignore = "feedback is disabled in meshy-dcc"]
 fn gateway_feedback_list_queries_persisted_records() {
     let fixture = spawn_gateway_fixture();
     let output = cli_command()
@@ -86,6 +99,7 @@ fn gateway_feedback_list_queries_persisted_records() {
 }
 
 #[test]
+#[ignore = "feedback is disabled in meshy-dcc"]
 fn gateway_feedback_export_uses_bounded_export_default() {
     let fixture = spawn_gateway_fixture();
     let output = cli_command()
@@ -111,6 +125,7 @@ fn gateway_feedback_export_uses_bounded_export_default() {
 }
 
 #[test]
+#[ignore = "feedback is disabled in meshy-dcc"]
 fn feedback_route_resolves_adapter_issue_tracker_without_a_gateway() {
     let temp = tempfile::tempdir().unwrap();
     let finding_path = temp.path().join("finding.json");
@@ -130,7 +145,7 @@ fn feedback_route_resolves_adapter_issue_tracker_without_a_gateway() {
             "intent": "Install the Godot adapter",
             "observed": "The add-on was not enabled",
             "expected": "The adapter starts with the project",
-            "repro": {"argv": ["dcc-mcp-cli", "install", "godot"]},
+            "repro": {"argv": ["meshy-dcc", "install", "godot"]},
             "evidence": {"error_kind": "install_failed"},
             "redaction_status": {
                 "mode": "needs-review",
@@ -164,6 +179,7 @@ fn feedback_route_resolves_adapter_issue_tracker_without_a_gateway() {
 }
 
 #[test]
+#[ignore = "feedback is disabled in meshy-dcc"]
 fn feedback_bundle_assembles_public_safe_bounded_evidence() {
     let fixture = spawn_gateway_fixture();
     let temp = tempfile::tempdir().unwrap();
@@ -187,7 +203,7 @@ fn feedback_bundle_assembles_public_safe_bounded_evidence() {
             "intent": "Start the Godot adapter",
             "observed": "The bridge did not start; public support code 4321",
             "expected": "The bridge becomes ready",
-            "repro": {"argv": ["dcc-mcp-cli", "status"]},
+            "repro": {"argv": ["meshy-dcc", "status"]},
             "evidence": {
                 "request_id": "request-42",
                 "error_kind": "startup_failed",
@@ -246,7 +262,7 @@ fn feedback_bundle_assembles_public_safe_bounded_evidence() {
                 "description": "Inspect safe local runtime diagnostics.",
                 "why": "Diagnostics can identify a safe remediation before retrying installation.",
                 "command": [
-                    "dcc-mcp-cli",
+                    "meshy-dcc",
                     "doctor",
                     "--token",
                     "CLI_REVIEW_SECRET_9c2a",
@@ -375,6 +391,7 @@ fn feedback_bundle_assembles_public_safe_bounded_evidence() {
 }
 
 #[test]
+#[ignore = "feedback is disabled in meshy-dcc"]
 fn feedback_bundle_accepts_schema_additive_install_report_shapes() {
     let fixture = spawn_gateway_fixture();
     let temp = tempfile::tempdir().unwrap();
@@ -396,7 +413,7 @@ fn feedback_bundle_accepts_schema_additive_install_report_shapes() {
             "intent": "Install the Maya adapter",
             "observed": "The adapter was not ready",
             "expected": "The adapter becomes ready",
-            "repro": {"argv": ["dcc-mcp-cli", "install", "maya"]},
+            "repro": {"argv": ["meshy-dcc", "install", "maya"]},
             "evidence": {"error_kind": "install_failed"},
             "redaction_status": {
                 "mode": "public-safe",
@@ -466,6 +483,7 @@ fn feedback_bundle_accepts_schema_additive_install_report_shapes() {
 }
 
 #[test]
+#[ignore = "feedback is disabled in meshy-dcc"]
 fn feedback_bundle_rejects_invalid_install_report_before_control_plane_io() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     listener.set_nonblocking(true).unwrap();
@@ -489,7 +507,7 @@ fn feedback_bundle_rejects_invalid_install_report_before_control_plane_io() {
             "intent": "Start the Godot adapter",
             "observed": "The bridge did not start",
             "expected": "The bridge becomes ready",
-            "repro": {"argv": ["dcc-mcp-cli", "status"]},
+            "repro": {"argv": ["meshy-dcc", "status"]},
             "evidence": {"request_id": "request-42", "error_kind": "startup_failed"},
             "redaction_status": {
                 "mode": "public-safe",
@@ -517,7 +535,7 @@ fn feedback_bundle_rejects_invalid_install_report_before_control_plane_io() {
             "id": "invalid-dual-form",
             "description": "This must fail before any request.",
             "why": "The published schema requires one executable form.",
-            "command": ["dcc-mcp-cli", "doctor"]
+            "command": ["meshy-dcc", "doctor"]
         }],
         "receipt_path": null,
         "verify": {
@@ -572,6 +590,7 @@ fn feedback_bundle_rejects_invalid_install_report_before_control_plane_io() {
 }
 
 #[test]
+#[ignore = "feedback is disabled in meshy-dcc"]
 fn feedback_file_rejects_write_authorization_without_a_decision_before_io() {
     let temp = tempfile::tempdir().unwrap();
     let missing = temp.path().join("missing-finding.json");
@@ -599,6 +618,7 @@ fn feedback_file_rejects_write_authorization_without_a_decision_before_io() {
 }
 
 #[test]
+#[ignore = "feedback is disabled in meshy-dcc"]
 fn feedback_file_rejects_write_authorization_without_a_plan_binding_before_io() {
     let temp = tempfile::tempdir().unwrap();
     let missing = temp.path().join("missing-finding.json");

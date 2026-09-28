@@ -12,19 +12,18 @@ use anyhow::Context;
 use serde::Serialize;
 
 /// Gateway binary filename, platform-aware.
-const GATEWAY_BINARY_NAME: &str = "dcc-mcp-server";
+const GATEWAY_BINARY_NAME: &str = "meshy-dcc-server";
 
 #[cfg(windows)]
-const GATEWAY_BINARY_NAME_WITH_EXT: &str = "dcc-mcp-server.exe";
+const GATEWAY_BINARY_NAME_WITH_EXT: &str = "meshy-dcc-server.exe";
 #[cfg(not(windows))]
 const GATEWAY_BINARY_NAME_WITH_EXT: &str = GATEWAY_BINARY_NAME;
 
-/// Environment variable to override the GitHub Releases download base URL.
+/// Environment variable to override the release download base URL.
 const ENV_GITHUB_RELEASE_BASE: &str = "DCC_MCP_GATEWAY_DOWNLOAD_BASE";
 
-/// Default GitHub Releases base URL for gateway binary downloads.
-const DEFAULT_GITHUB_RELEASE_BASE: &str =
-    "https://github.com/dcc-mcp/dcc-mcp-core/releases/download";
+/// Default base URL for gateway binary downloads: the Meshy release channel.
+const DEFAULT_GITHUB_RELEASE_BASE: &str = dcc_mcp_updater::meshy_release::BASE_URL;
 
 /// Resolve the gateway binary using the full discovery chain:
 ///
@@ -182,7 +181,7 @@ fn probe_binary_version(path: &std::path::Path) -> (Option<String>, Option<Strin
 
 // ── Layer 1: Same-directory lookup ──────────────────────────────────────
 
-/// Look for `dcc-mcp-server` (or `.exe` on Windows) in the same directory
+/// Look for `meshy-dcc-server` (or `.exe` on Windows) in the same directory
 /// as the current executable.
 fn find_in_same_dir() -> Option<PathBuf> {
     let current_exe = std::env::current_exe().ok()?;
@@ -214,9 +213,9 @@ fn find_cached_binary() -> Option<PathBuf> {
 async fn download_from_github_releases(version: &str) -> anyhow::Result<PathBuf> {
     let target = build_release_target();
     let filename = if cfg!(windows) {
-        format!("dcc-mcp-server-{target}.exe")
+        format!("meshy-dcc-server-{target}.exe")
     } else {
-        format!("dcc-mcp-server-{target}")
+        format!("meshy-dcc-server-{target}")
     };
 
     let base = std::env::var(ENV_GITHUB_RELEASE_BASE)
@@ -247,7 +246,7 @@ async fn download_from_github_releases(version: &str) -> anyhow::Result<PathBuf>
 
     let status = response.status();
     if !status.is_success() {
-        anyhow::bail!("GitHub Releases returned HTTP {status} for {url}");
+        anyhow::bail!("release download returned HTTP {status} for {url}");
     }
 
     let bytes = response
@@ -313,11 +312,11 @@ fn build_release_target() -> String {
 /// Return the cache directory for downloaded gateway binaries.
 ///
 /// Uses the platform-standard cache directory:
-/// - Windows: `%LOCALAPPDATA%\dcc-mcp\gateway`
-/// - macOS:   `~/Library/Caches/dcc-mcp/gateway`
-/// - Linux:   `~/.cache/dcc-mcp/gateway` (respects `$XDG_CACHE_HOME`)
+/// - Windows: `%LOCALAPPDATA%\meshy-dcc\gateway`
+/// - macOS:   `~/Library/Caches/meshy-dcc/gateway`
+/// - Linux:   `~/.cache/meshy-dcc/gateway` (respects `$XDG_CACHE_HOME`)
 fn gateway_cache_dir() -> Option<PathBuf> {
-    dirs::cache_dir().map(|d| d.join("dcc-mcp").join("gateway"))
+    dirs::cache_dir().map(|d| d.join("meshy-dcc").join("gateway"))
 }
 
 #[cfg(test)]
@@ -352,7 +351,7 @@ mod tests {
 
     #[test]
     fn test_find_in_same_dir_returns_none_when_binary_missing() {
-        // Our test binary is not named dcc-mcp-server, so this should
+        // Our test binary is not named meshy-dcc-server, so this should
         // return None in test builds.
         let result = find_in_same_dir();
         // Accept both None (binary not found) and Some (coincidental match
@@ -360,7 +359,7 @@ mod tests {
         if let Some(path) = &result {
             assert!(
                 path.file_name()
-                    .map(|n| n.to_string_lossy().contains("dcc-mcp-server"))
+                    .map(|n| n.to_string_lossy().contains("meshy-dcc-server"))
                     .unwrap_or(false),
                 "unexpected found path: {}",
                 path.display()

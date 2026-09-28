@@ -1,4 +1,4 @@
-//! Launch-plan resolution for `dcc-mcp-cli start-instance`.
+//! Launch-plan resolution for `meshy-dcc start-instance`.
 //!
 //! Core consumes adapter-authored launch plans and never synthesizes a
 //! DCC-specific command line. Resolution is deterministic and most specific

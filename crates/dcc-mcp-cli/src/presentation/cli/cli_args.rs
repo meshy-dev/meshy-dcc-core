@@ -1,4 +1,4 @@
-//! CLI surface declaration and argument parsing for `dcc-mcp-cli`.
+//! CLI surface declaration and argument parsing for `meshy-dcc`.
 //!
 //! This module owns the clap command tree and the pure helpers that turn raw
 //! flag values into domain requests. Command execution stays in `cli`.
@@ -61,6 +61,7 @@ pub(crate) enum Command {
         session_id: Option<String>,
     },
     /// File structured feedback at the gateway, including after a DCC instance exits.
+    #[command(hide = true)]
     Feedback(FeedbackArgs),
     /// Report local defaults and startup diagnostics without launching services.
     Doctor {

@@ -1,4 +1,4 @@
-//! Gateway lifecycle commands for `dcc-mcp-cli`.
+//! Gateway lifecycle commands for `meshy-dcc`.
 //!
 //! Owns gateway auto-start for a command, the gateway endpoint decision, and
 //! the `gateway` subcommand tree plus its request conversions.

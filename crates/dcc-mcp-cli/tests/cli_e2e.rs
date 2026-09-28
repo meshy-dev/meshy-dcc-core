@@ -627,7 +627,7 @@ fn local_profile_controls_registered_instance_through_direct_mcp() {
         .as_str()
         .expect("local call output must expose its transport correlation id");
     let first_request_uuid = first_request_id
-        .strip_prefix("dcc-mcp-cli-local-")
+        .strip_prefix("meshy-dcc-local-")
         .expect("local call request id prefix");
     uuid::Uuid::parse_str(first_request_uuid).expect("local call request id must end in a UUID");
     assert_eq!(call["result"]["isError"], false);
@@ -640,7 +640,7 @@ fn local_profile_controls_registered_instance_through_direct_mcp() {
         .as_str()
         .expect("second local call must expose its transport correlation id");
     let second_request_uuid = second_request_id
-        .strip_prefix("dcc-mcp-cli-local-")
+        .strip_prefix("meshy-dcc-local-")
         .expect("second local call request id prefix");
     uuid::Uuid::parse_str(second_request_uuid)
         .expect("second local call request id must end in a UUID");
@@ -1458,7 +1458,7 @@ fn doctor_reports_local_defaults_without_starting_gateway() {
     let registry_s = registry.path().to_string_lossy().to_string();
     let profiles = NamedTempFile::new().unwrap();
     let profiles_s = profiles.path().to_string_lossy().to_string();
-    let cli_bin = env!("CARGO_BIN_EXE_dcc-mcp-cli");
+    let cli_bin = env!("CARGO_BIN_EXE_meshy-dcc");
     let envs = [
         ("DCC_MCP_REGISTRY_DIR", registry_s.as_str()),
         ("DCC_MCP_GATEWAY_PROFILES_FILE", profiles_s.as_str()),
@@ -1476,7 +1476,7 @@ fn doctor_reports_local_defaults_without_starting_gateway() {
     );
 
     assert_eq!(doctor["status"], "ok");
-    assert_eq!(doctor["cli"]["name"], "dcc-mcp-cli");
+    assert_eq!(doctor["cli"]["name"], "meshy-dcc");
     assert!(doctor["cli"]["version"].as_str().unwrap().starts_with("0."));
     assert_eq!(doctor["profile"]["stored_current"], "local");
     assert_eq!(doctor["profile"]["selected"]["name"], "local");
@@ -1505,7 +1505,7 @@ fn doctor_reports_local_defaults_without_starting_gateway() {
         doctor["server_binary"]["version"]
             .as_str()
             .unwrap()
-            .contains("dcc-mcp-cli")
+            .contains("meshy-dcc")
     );
 }
 
@@ -1517,7 +1517,7 @@ fn doctor_summarizes_local_direct_control_readiness() {
     let registry_s = registry.path().to_string_lossy().to_string();
     let profiles = NamedTempFile::new().unwrap();
     let profiles_s = profiles.path().to_string_lossy().to_string();
-    let cli_bin = env!("CARGO_BIN_EXE_dcc-mcp-cli");
+    let cli_bin = env!("CARGO_BIN_EXE_meshy-dcc");
     let file_registry = FileRegistry::new(registry.path()).unwrap();
 
     let mut booting = ServiceEntry::new("maya", "127.0.0.1", 18080);
@@ -1612,7 +1612,7 @@ fn update_check_auto_starts_builtin_local_gateway() {
     let base_url = format!("http://127.0.0.1:{port}");
     let registry = TempDir::new().unwrap();
     let registry_s = registry.path().to_string_lossy().to_string();
-    let cli_bin = env!("CARGO_BIN_EXE_dcc-mcp-cli");
+    let cli_bin = env!("CARGO_BIN_EXE_meshy-dcc");
     let envs = [
         ("DCC_MCP_REGISTRY_DIR", registry_s.as_str()),
         ("DCC_MCP_GATEWAY_IDLE_TIMEOUT_SECS", "1"),
@@ -1667,7 +1667,7 @@ fn update_check_auto_starts_builtin_local_gateway() {
 #[test]
 fn legacy_unsigned_update_is_quarantined_before_version_short_circuit() {
     let temp = TempDir::new().unwrap();
-    let source = std::path::Path::new(env!("CARGO_BIN_EXE_dcc-mcp-cli"));
+    let source = std::path::Path::new(env!("CARGO_BIN_EXE_meshy-dcc"));
     let cli = temp.path().join(source.file_name().unwrap());
     std::fs::copy(source, &cli).unwrap();
 
@@ -1681,7 +1681,7 @@ fn legacy_unsigned_update_is_quarantined_before_version_short_circuit() {
     #[cfg(target_os = "macos")]
     let data_root = home.join("Library").join("Application Support");
 
-    let staging = data_root.join("update").join("dcc-mcp-cli");
+    let staging = data_root.join("update").join("meshy-dcc");
     std::fs::create_dir_all(&staging).unwrap();
     std::fs::copy(source, staging.join("pending.bin")).unwrap();
     let marker = staging.join("pending.marker");
@@ -1729,7 +1729,7 @@ fn smoke_with_explicit_url_does_not_auto_start_gateway() {
     let base_url = format!("http://127.0.0.1:{port}");
     let registry = TempDir::new().unwrap();
     let registry_s = registry.path().to_string_lossy().to_string();
-    let cli_bin = env!("CARGO_BIN_EXE_dcc-mcp-cli");
+    let cli_bin = env!("CARGO_BIN_EXE_meshy-dcc");
     let envs = [
         ("DCC_MCP_REGISTRY_DIR", registry_s.as_str()),
         ("DCC_MCP_GATEWAY_IDLE_TIMEOUT_SECS", "1"),

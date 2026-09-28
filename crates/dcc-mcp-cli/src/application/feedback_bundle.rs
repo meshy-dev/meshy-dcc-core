@@ -363,7 +363,7 @@ mod tests {
             observed: "Failed".into(),
             expected: "Ready".into(),
             repro: FindingReproV1 {
-                argv: vec!["dcc-mcp-cli".into(), "status".into()],
+                argv: vec!["meshy-dcc".into(), "status".into()],
                 steps: Vec::new(),
             },
             evidence: FindingEvidenceV1 {

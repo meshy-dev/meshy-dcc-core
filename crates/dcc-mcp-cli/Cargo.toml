@@ -9,7 +9,7 @@ repository.workspace = true
 description = "Client-side control plane CLI for discovering, calling, and planning DCC-MCP installations"
 
 [[bin]]
-name = "dcc-mcp-cli"
+name = "meshy-dcc"
 path = "src/main.rs"
 
 [dependencies]

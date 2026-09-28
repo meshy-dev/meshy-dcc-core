@@ -1,24 +1,24 @@
 //! Detection for package-manager-owned installations.
 //!
-//! `dcc-mcp-cli update apply` replaces `current_exe` on the next launch. When a
+//! `meshy-dcc update apply` replaces `current_exe` on the next launch. When a
 //! package manager owns that file, replacing it fights the manager's version
-//! authority: `pip install --upgrade dcc-mcp-cli` and a self-applied binary
+//! authority: `pip install --upgrade meshy-dcc` and a self-applied binary
 //! update would keep overwriting each other. Package-managed installations must
 //! therefore upgrade through the package manager, which is what Homebrew's
 //! packaging policy requires as well.
 //!
 //! The GitHub Release build keeps self-update. The PyPI wrapper
-//! (`pkg/dcc-mcp-cli-bin`) writes a marker file next to the binary it unpacks,
+//! (`pkg/meshy-dcc-bin`) writes a marker file next to the binary it unpacks,
 //! and that marker is the contract between the two:
 //!
 //! ```json
 //! {
 //!   "schema_version": 1,
-//!   "distribution": "dcc-mcp-cli",
+//!   "distribution": "meshy-dcc",
 //!   "manager": "pypi",
 //!   "version": "0.20.34",
 //!   "platform": "windows-x86_64",
-//!   "binary": "dcc-mcp-cli-bin.exe"
+//!   "binary": "meshy-dcc-bin.exe"
 //! }
 //! ```
 //!
@@ -32,7 +32,7 @@ use std::path::{Path, PathBuf};
 use serde::{Deserialize, Serialize};
 
 /// Marker file written by package managers that install this CLI.
-pub const MARKER_FILE_NAME: &str = "dcc-mcp-cli.package-manager.json";
+pub const MARKER_FILE_NAME: &str = "meshy-dcc.package-manager.json";
 
 /// Marker schema this build understands.
 pub const MARKER_SCHEMA_VERSION: u64 = 1;
@@ -58,17 +58,17 @@ impl PackageManagerMarker {
     pub fn upgrade_hint(&self) -> String {
         match self.manager.as_str() {
             "pypi" => "upgrade it with your Python package manager, for example \
-                       `uv tool upgrade dcc-mcp-cli`, `pipx upgrade dcc-mcp-cli`, or \
-                       `pip install --upgrade dcc-mcp-cli`"
+                       `uv tool upgrade meshy-dcc`, `pipx upgrade meshy-dcc`, or \
+                       `pip install --upgrade meshy-dcc`"
                 .to_string(),
-            other => format!("upgrade it through {other} instead of `dcc-mcp-cli update apply`"),
+            other => format!("upgrade it through {other} instead of `meshy-dcc update apply`"),
         }
     }
 
-    /// Message returned by `dcc-mcp-cli update apply`.
+    /// Message returned by `meshy-dcc update apply`.
     pub fn blocked_message(&self) -> String {
         format!(
-            "dcc-mcp-cli {} is managed by the {} package manager; {}",
+            "meshy-dcc {} is managed by the {} package manager; {}",
             self.version,
             self.manager,
             self.upgrade_hint()
@@ -101,11 +101,11 @@ mod tests {
     fn marker_json(manager: &str) -> String {
         serde_json::json!({
             "schema_version": MARKER_SCHEMA_VERSION,
-            "distribution": "dcc-mcp-cli",
+            "distribution": "meshy-dcc",
             "manager": manager,
             "version": "0.20.34",
             "platform": "windows-x86_64",
-            "binary": "dcc-mcp-cli-bin.exe",
+            "binary": "meshy-dcc-bin.exe",
         })
         .to_string()
     }
@@ -113,25 +113,25 @@ mod tests {
     #[test]
     fn missing_marker_is_not_package_managed() {
         let dir = tempfile::tempdir().unwrap();
-        assert!(read_marker_for(&dir.path().join("dcc-mcp-cli")).is_none());
+        assert!(read_marker_for(&dir.path().join("meshy-dcc")).is_none());
     }
 
     #[test]
     fn marker_beside_the_executable_is_detected() {
         let dir = tempfile::tempdir().unwrap();
-        let exe = dir.path().join("dcc-mcp-cli");
+        let exe = dir.path().join("meshy-dcc");
         fs::write(dir.path().join(MARKER_FILE_NAME), marker_json("pypi")).unwrap();
 
         let marker = read_marker_for(&exe).expect("marker should be detected");
         assert_eq!(marker.manager, "pypi");
         assert_eq!(marker.version, "0.20.34");
-        assert_eq!(marker.binary, "dcc-mcp-cli-bin.exe");
+        assert_eq!(marker.binary, "meshy-dcc-bin.exe");
     }
 
     #[test]
     fn malformed_marker_is_ignored() {
         let dir = tempfile::tempdir().unwrap();
-        let exe = dir.path().join("dcc-mcp-cli");
+        let exe = dir.path().join("meshy-dcc");
         fs::write(dir.path().join(MARKER_FILE_NAME), "{not json").unwrap();
         assert!(read_marker_for(&exe).is_none());
     }
@@ -139,12 +139,12 @@ mod tests {
     #[test]
     fn marker_from_a_future_schema_is_ignored() {
         let dir = tempfile::tempdir().unwrap();
-        let exe = dir.path().join("dcc-mcp-cli");
+        let exe = dir.path().join("meshy-dcc");
         fs::write(
             dir.path().join(MARKER_FILE_NAME),
             serde_json::json!({
                 "schema_version": MARKER_SCHEMA_VERSION + 1,
-                "distribution": "dcc-mcp-cli",
+                "distribution": "meshy-dcc",
                 "manager": "pypi",
                 "version": "9.9.9",
             })
@@ -158,7 +158,7 @@ mod tests {
     fn pypi_marker_explains_how_to_upgrade() {
         let marker: PackageManagerMarker = serde_json::from_str(&marker_json("pypi")).unwrap();
         let hint = marker.upgrade_hint();
-        assert!(hint.contains("uv tool upgrade dcc-mcp-cli"), "{hint}");
+        assert!(hint.contains("uv tool upgrade meshy-dcc"), "{hint}");
         assert!(
             marker
                 .blocked_message()

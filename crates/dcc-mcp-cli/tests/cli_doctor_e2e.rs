@@ -1,4 +1,4 @@
-//! End-to-end coverage for `dcc-mcp-cli doctor` adapter import probes.
+//! End-to-end coverage for `meshy-dcc doctor` adapter import probes.
 //!
 //! Kept separate from `cli_e2e.rs` so that file stays under the repository's
 //! Rust test-file line limit.
@@ -21,7 +21,7 @@ fn doctor_adapter_imports_skip_without_an_interpreter() {
     let registry_s = registry.path().to_string_lossy().to_string();
     let profiles = NamedTempFile::new().unwrap();
     let profiles_s = profiles.path().to_string_lossy().to_string();
-    let cli_bin = env!("CARGO_BIN_EXE_dcc-mcp-cli");
+    let cli_bin = env!("CARGO_BIN_EXE_meshy-dcc");
     let file_registry = FileRegistry::new(registry.path()).unwrap();
     file_registry
         .register(ServiceEntry::new("maya", "127.0.0.1", 18080))
@@ -172,7 +172,7 @@ fn doctor_adapter_imports_report_unlaunchable_interpreters() {
     let registry_s = registry.path().to_string_lossy().to_string();
     let profiles = NamedTempFile::new().unwrap();
     let profiles_s = profiles.path().to_string_lossy().to_string();
-    let cli_bin = env!("CARGO_BIN_EXE_dcc-mcp-cli");
+    let cli_bin = env!("CARGO_BIN_EXE_meshy-dcc");
     let missing = registry.path().join("no-such-python");
     let missing_s = missing.to_string_lossy().to_string();
 

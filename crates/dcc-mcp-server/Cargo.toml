@@ -9,7 +9,7 @@ repository.workspace = true
 description = "Standalone dcc-mcp-server binary for bridge-mode DCCs (Photoshop, ZBrush, Unreal, Unity, Figma)"
 
 [[bin]]
-name = "dcc-mcp-server"
+name = "meshy-dcc-server"
 path = "src/main.rs"
 
 [dependencies]

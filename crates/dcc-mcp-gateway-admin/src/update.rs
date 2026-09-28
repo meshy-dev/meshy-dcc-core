@@ -29,7 +29,7 @@ pub fn admin_instance_update_version(
             source: "request",
         };
     }
-    if binary_name == "dcc-mcp-server"
+    if binary_name == "meshy-dcc-server"
         && let Some((version, source)) = instance_server_binary_version(instance)
     {
         return AdminInstanceUpdateVersion::Known {
@@ -84,7 +84,7 @@ mod tests {
         instance.version = Some("2024.0".to_string());
         instance.adapter_version = Some("0.3.0".to_string());
         assert_eq!(
-            admin_instance_update_version(&instance, "dcc-mcp-server", None),
+            admin_instance_update_version(&instance, "meshy-dcc-server", None),
             AdminInstanceUpdateVersion::MissingCurrentVersion
         );
         instance.metadata.insert(
@@ -92,7 +92,7 @@ mod tests {
             "0.18.0".to_string(),
         );
         assert_eq!(
-            admin_instance_update_version(&instance, "dcc-mcp-server", None),
+            admin_instance_update_version(&instance, "meshy-dcc-server", None),
             AdminInstanceUpdateVersion::Known {
                 current: "0.18.0".to_string(),
                 display: Some("0.18.0".to_string()),
@@ -109,7 +109,7 @@ mod tests {
             "0.18.0".to_string(),
         );
         assert_eq!(
-            admin_instance_update_version(&instance, "dcc-mcp-server", Some(" 0.20.8 ")),
+            admin_instance_update_version(&instance, "meshy-dcc-server", Some(" 0.20.8 ")),
             AdminInstanceUpdateVersion::Known {
                 current: "0.20.8".to_string(),
                 display: Some("0.20.8".to_string()),

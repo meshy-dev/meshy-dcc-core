@@ -500,7 +500,7 @@ fn next_step(
         .to_str()
         .ok_or(FeedbackFileServiceError::NonUnicodePath)?;
     let mut argv = vec![
-        "dcc-mcp-cli".to_string(),
+        "meshy-dcc".to_string(),
         "feedback".to_string(),
         "file".to_string(),
         finding_path.to_string(),
@@ -677,7 +677,7 @@ mod tests {
             observed: "The bridge did not start".to_string(),
             expected: "The bridge becomes ready".to_string(),
             repro: FindingReproV1 {
-                argv: vec!["dcc-mcp-cli".to_string(), "status".to_string()],
+                argv: vec!["meshy-dcc".to_string(), "status".to_string()],
                 steps: Vec::new(),
             },
             evidence: FindingEvidenceV1 {

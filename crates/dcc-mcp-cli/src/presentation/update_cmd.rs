@@ -91,12 +91,12 @@ pub(crate) fn surface_cached_cli_update(
         }
         match status["version_status"].as_str() {
             Some("update_available") => writer.diagnostic(&format!(
-                "info: dcc-mcp-cli {} -> {} is available. Ask the user before updating; after confirmation run `dcc-mcp-cli update apply --yes`. The update activates on the next CLI launch and does not restart running servers.",
+                "info: meshy-dcc {} -> {} is available. Ask the user before updating; after confirmation run `meshy-dcc update apply --yes`. The update activates on the next CLI launch and does not restart running servers.",
                 status["current_version"].as_str().unwrap_or("unknown"),
                 status["latest_version"].as_str().unwrap_or("unknown"),
             ))?,
             Some("applied") => writer.diagnostic(
-                "info: the staged dcc-mcp-cli update was applied on this launch; running servers were not restarted",
+                "info: the staged meshy-dcc update was applied on this launch; running servers were not restarted",
             )?,
             _ => {}
         }

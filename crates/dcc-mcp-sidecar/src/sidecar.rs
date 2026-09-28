@@ -29,13 +29,13 @@
 //! # Example
 //!
 //! ```bash
-//! dcc-mcp-server sidecar \
+//! meshy-dcc-server sidecar \
 //!     --dcc maya \
 //!     --host-rpc commandport://127.0.0.1:6000 \
 //!     --watch-pid 12345 \
 //!     --registry-dir ~/.cache/dcc-mcp/registry
 //!
-//! dcc-mcp-server sidecar \
+//! meshy-dcc-server sidecar \
 //!     --dcc blender \
 //!     --host-rpc ws://127.0.0.1:7100/rpc \
 //!     --watch-pid 67890
@@ -112,7 +112,7 @@ pub async fn run(args: SidecarArgs) -> anyhow::Result<()> {
         dcc = %args.dcc,
         host_rpc = %args.host_rpc,
         watch_pid = args.watch_pid,
-        "dcc-mcp-server sidecar starting"
+        "meshy-dcc-server sidecar starting"
     );
 
     let registry_dir = args

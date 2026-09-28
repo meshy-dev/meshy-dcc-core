@@ -364,7 +364,7 @@ async fn local_mcp_rejects_late_response_from_timed_out_previous_call() {
         .and_then(|value| value.strip_suffix(')'))
         .expect("timeout error must expose its request id");
     let timeout_uuid = timeout_request_id
-        .strip_prefix("dcc-mcp-cli-local-")
+        .strip_prefix("meshy-dcc-local-")
         .expect("timeout request id prefix");
     uuid::Uuid::parse_str(timeout_uuid).expect("timeout request id must end in a UUID");
 
@@ -421,7 +421,7 @@ async fn local_mcp_jsonrpc_error_exposes_its_request_id() {
         .and_then(|value| value.split(')').next())
         .expect("JSON-RPC error must expose its request id");
     let request_uuid = request_id
-        .strip_prefix("dcc-mcp-cli-local-")
+        .strip_prefix("meshy-dcc-local-")
         .expect("JSON-RPC error request id prefix");
     uuid::Uuid::parse_str(request_uuid).expect("JSON-RPC error request id must end in a UUID");
     assert!(message.contains("host failed"), "{message}");

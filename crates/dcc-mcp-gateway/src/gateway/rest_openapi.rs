@@ -171,7 +171,7 @@ pub(crate) fn build_gateway_openapi_document(server_version: &str) -> Value {
             "Check for a binary update",
             "Reads the configured update manifest and compares the requested binary against the supplied current version.",
             vec![
-                query_param("binary", true, "Binary name, for example dcc-mcp-cli or dcc-mcp-server."),
+                query_param("binary", true, "Binary name, for example meshy-dcc or meshy-dcc-server."),
                 query_param("current_version", false, "Current version string to compare against. Defaults to 0.0.0 when omitted."),
             ],
             json_response_ref("GatewayUpdateCheckResponse"),
@@ -183,7 +183,7 @@ pub(crate) fn build_gateway_openapi_document(server_version: &str) -> Value {
             &["updates"],
             "Resolve the download URL for a binary",
             "Returns the latest manifest download URL for the named binary, or a structured update error when no URL is configured.",
-            vec![path_param("binary_name", "Binary name, for example dcc-mcp-cli or dcc-mcp-server.")],
+            vec![path_param("binary_name", "Binary name, for example meshy-dcc or meshy-dcc-server.")],
             json_response_ref("GatewayUpdateDownloadResponse"),
         ),
     );

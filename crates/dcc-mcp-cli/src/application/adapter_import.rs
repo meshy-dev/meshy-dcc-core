@@ -1,4 +1,4 @@
-//! Adapter import probing for `dcc-mcp-cli doctor`.
+//! Adapter import probing for `meshy-dcc doctor`.
 //!
 //! A DCC adapter can be *installed* and still be unusable: the classic case is
 //! an editable install whose source checkout was deleted, which leaves a

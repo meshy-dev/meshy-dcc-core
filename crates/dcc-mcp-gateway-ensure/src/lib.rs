@@ -1,7 +1,7 @@
 //! Shared gateway ensure primitives.
 //!
 //! This crate provides the building blocks for gateway auto-launch in both
-//! `dcc-mcp-cli` and `dcc-mcp-sidecar`:
+//! `meshy-dcc` and `dcc-mcp-sidecar`:
 //!
 //! - Health check probes (`/health` endpoint)
 //! - File-based launch lock with stale reclaim
@@ -1028,7 +1028,7 @@ mod tests {
 
     #[test]
     fn test_default_registry_dir_honours_env_var_override() {
-        let custom = std::env::temp_dir().join("dcc-mcp-cli-registry-test");
+        let custom = std::env::temp_dir().join("meshy-dcc-registry-test");
         let _guard = EnvVarGuard::set("DCC_MCP_REGISTRY_DIR", custom.to_str());
 
         let dir = default_registry_dir();

@@ -614,7 +614,7 @@ mod tests {
             observed: "The bridge did not start".into(),
             expected: "The bridge becomes ready".into(),
             repro: FindingReproV1 {
-                argv: vec!["dcc-mcp-cli".into(), "status".into()],
+                argv: vec!["meshy-dcc".into(), "status".into()],
                 steps: Vec::new(),
             },
             evidence: FindingEvidenceV1 {
@@ -781,7 +781,7 @@ mod tests {
                     "id": "inspect-runtime",
                     "description": "Inspect safe local runtime diagnostics.",
                     "why": "Diagnostics can identify a safe remediation before retrying installation.",
-                    "command": ["dcc-mcp-cli", "doctor", "C:\\Users\\artist\\private.json"]
+                    "command": ["meshy-dcc", "doctor", "C:\\Users\\artist\\private.json"]
                 }],
                 "receipt_path": "C:\\Users\\artist\\receipt.json",
                 "verify": {
@@ -834,7 +834,7 @@ mod tests {
                         "description": "Inspect safe runtime diagnostics.",
                         "why": "Diagnostics identify the next safe action.",
                         "command": [
-                            "dcc-mcp-cli",
+                            "meshy-dcc",
                             "doctor",
                             "--token",
                             "REVIEW_SECRET_7f0a",
@@ -869,7 +869,7 @@ mod tests {
         let report = &value["components"]["install_execution_report"]["data"];
         let encoded = serde_json::to_string(report).unwrap();
 
-        assert_eq!(report["next_steps"][0]["command"][0], "dcc-mcp-cli");
+        assert_eq!(report["next_steps"][0]["command"][0], "meshy-dcc");
         assert_eq!(report["next_steps"][0]["command"][1], "doctor");
         assert_eq!(report["next_steps"][0]["command"][2], "[auth-redacted]");
         assert_eq!(report["next_steps"][0]["command"][3], "[auth-redacted]");

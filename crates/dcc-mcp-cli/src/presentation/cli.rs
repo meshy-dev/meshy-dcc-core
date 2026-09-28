@@ -68,7 +68,7 @@ const DEFAULT_WAIT_READY_TIMEOUT_SECS: u64 = 30;
 const DEFAULT_START_INSTANCE_TIMEOUT_SECS: u64 = 300;
 
 #[derive(Debug, Parser)]
-#[command(name = "dcc-mcp-cli", about, version)]
+#[command(name = "meshy-dcc", about, version)]
 pub struct Args {
     #[arg(long, global = true, env = "DCC_MCP_BASE_URL")]
     base_url: Option<String>,
@@ -136,7 +136,7 @@ fn apply_staged_update() -> bool {
 
     // Apply any staged binary update before running commands (CLI restart
     // is the user's next invocation after `update apply`).
-    match dcc_mcp_updater::Updater::apply_staged_update(env!("CARGO_PKG_NAME")) {
+    match dcc_mcp_updater::Updater::apply_staged_update(crate::application::update::CLI_BINARY_NAME) {
         Ok(true) => {
             eprintln!("info: staged binary update applied; restarting");
             true
@@ -300,7 +300,8 @@ async fn run_with_args(args: Args) -> anyhow::Result<()> {
                 })
                 .await?
         }
-        Command::Feedback(args) => args.run(&control, &doctor).await?,
+        // Feedback is off until Meshy has its own intake; nothing leaves the machine.
+        Command::Feedback(_) => anyhow::bail!("feedback is disabled in meshy-dcc"),
         Command::Doctor {
             registry_dir,
             gateway_host,
@@ -756,7 +757,7 @@ async fn run_with_args(args: Args) -> anyhow::Result<()> {
                             installed.superseded.join(", ")
                         );
                         eprintln!(
-                            "      remove them with: dcc-mcp-cli marketplace uninstall {} --dcc \
+                            "      remove them with: meshy-dcc marketplace uninstall {} --dcc \
                              <host>",
                             installed.name
                         );
@@ -888,7 +889,7 @@ async fn run_with_args(args: Args) -> anyhow::Result<()> {
             );
         }
         eprintln!(
-            "info: marketplace updates available for {}. Review and run `dcc-mcp-cli marketplace update` after confirmation.",
+            "info: marketplace updates available for {}. Review and run `meshy-dcc marketplace update` after confirmation.",
             updates.join(", ")
         );
     }

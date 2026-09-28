@@ -105,7 +105,7 @@ pub(crate) async fn fetch_update_manifest(
         dcc_mcp_attestation::verify_attested_bytes(
             &manifest_bytes,
             &bundle,
-            &dcc_mcp_attestation::GitHubAttestationPolicy::official_core_release(),
+            &dcc_mcp_attestation::GitHubAttestationPolicy::meshy_release(),
         )?;
     }
     let manifest =
@@ -170,40 +170,7 @@ async fn fetch_bounded(
 }
 
 fn official_attestation_url(url: &str) -> Option<String> {
-    let parsed = reqwest::Url::parse(url).ok()?;
-    if parsed.scheme() != "https"
-        || parsed.host_str() != Some("github.com")
-        || parsed.query().is_some()
-        || parsed.fragment().is_some()
-    {
-        return None;
-    }
-    let segments: Vec<_> = parsed.path_segments()?.collect();
-    let file = match segments.as_slice() {
-        [
-            "dcc-mcp",
-            "dcc-mcp-core",
-            "releases",
-            "latest",
-            "download",
-            file,
-        ]
-        | ["dcc-mcp", "dcc-mcp-core", "releases", "download", _, file] => *file,
-        _ => return None,
-    };
-    let platform = file
-        .strip_prefix("dcc-mcp-update-manifest-")?
-        .strip_suffix(".json")?;
-    if !matches!(
-        platform,
-        "linux-x86_64" | "windows-x86_64" | "macos-universal2"
-    ) {
-        return None;
-    }
-    let prefix = url.strip_suffix(file)?;
-    Some(format!(
-        "{prefix}dcc-mcp-update-manifest-{platform}.sigstore.json"
-    ))
+    dcc_mcp_updater::meshy_release::manifest_attestation_url(url)
 }
 
 #[cfg(test)]
@@ -217,7 +184,7 @@ mod tests {
             .route("/latest", get(|| async { Redirect::temporary("/asset") }))
             .route(
                 "/asset",
-                get(|| async { r#"{"dcc-mcp-cli":{"version":"0.20.24"}}"# }),
+                get(|| async { r#"{"meshy-dcc":{"version":"0.20.24"}}"# }),
             )
             .route("/loop", get(|| async { Redirect::temporary("/loop") }))
             .route("/missing-location", get(|| async { StatusCode::FOUND }));
@@ -229,7 +196,7 @@ mod tests {
         let missing_location =
             super::fetch_update_manifest(&format!("{base}/missing-location")).await;
         server.abort();
-        assert_eq!(manifest.unwrap()["dcc-mcp-cli"].version, "0.20.24");
+        assert_eq!(manifest.unwrap()["meshy-dcc"].version, "0.20.24");
         assert!(matches!(
             loop_result,
             Err(super::UpdateManifestError::Fetch { .. })
@@ -244,31 +211,14 @@ mod tests {
     }
 
     #[test]
-    fn official_release_manifest_requires_its_detached_attestation() {
+    fn official_manifest_requires_meshy_attestation() {
+        let url = dcc_mcp_updater::meshy_release::update_manifest_url("windows-x86_64");
+        assert!(official_attestation_url(&url).is_some());
         assert_eq!(
             official_attestation_url(
                 "https://github.com/dcc-mcp/dcc-mcp-core/releases/latest/download/dcc-mcp-update-manifest-windows-x86_64.json"
-            )
-            .as_deref(),
-            Some(
-                "https://github.com/dcc-mcp/dcc-mcp-core/releases/latest/download/dcc-mcp-update-manifest-windows-x86_64.sigstore.json"
-            )
+            ),
+            None
         );
-        assert!(official_attestation_url(
-            "https://github.com/dcc-mcp/dcc-mcp-core/releases/download/v0.21.0/dcc-mcp-update-manifest-linux-x86_64.json"
-        )
-        .is_some());
-    }
-
-    #[test]
-    fn custom_and_lookalike_manifests_remain_operator_trusted() {
-        for url in [
-            "https://studio.example/update.json",
-            "http://github.com/dcc-mcp/dcc-mcp-core/releases/latest/download/dcc-mcp-update-manifest-windows-x86_64.json",
-            "https://github.com/attacker/dcc-mcp-core/releases/latest/download/dcc-mcp-update-manifest-windows-x86_64.json",
-            "https://github.com/dcc-mcp/dcc-mcp-core/releases/latest/download/unexpected.json",
-        ] {
-            assert_eq!(official_attestation_url(url), None, "{url}");
-        }
     }
 }

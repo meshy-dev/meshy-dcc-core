@@ -342,14 +342,14 @@ async fn test_admin_instance_update_requires_binary_version_for_non_server_binar
     let (status, body) = post_json(
         router,
         &format!("/api/instances/{instance_id}/update"),
-        json!({ "binary": "dcc-mcp-cli", "apply": false }),
+        json!({ "binary": "meshy-dcc", "apply": false }),
     )
     .await;
 
     assert_eq!(status, StatusCode::BAD_REQUEST);
     assert_eq!(body["status"], "version_required");
     assert_eq!(body["error"], "current_version_required");
-    assert_eq!(body["binary_name"], "dcc-mcp-cli");
+    assert_eq!(body["binary_name"], "meshy-dcc");
     assert_eq!(body["update_available"], false);
 }
 
@@ -519,7 +519,7 @@ async fn test_admin_instance_update_is_check_only_for_non_server_binaries() {
     let _guard = UPDATE_ENV_LOCK.lock();
     let data_dir = ScopedUpdateDataDir::new();
 
-    for binary_name in ["dcc-mcp-cli", "studio-custom-tool"] {
+    for binary_name in ["meshy-dcc", "studio-custom-tool"] {
         let (manifest_url, shutdown) =
             spawn_update_manifest_with_binary(binary_name, "999.0.0", b"binary").await;
         let mut gs = make_gateway_state();

@@ -25,7 +25,7 @@ fn write_catalog(root: &TempDir, entries: Vec<Value>) -> std::path::PathBuf {
 }
 
 fn cli(catalog: &Path, dcc: &str, execute: bool) -> Output {
-    let mut command = Command::new(env!("CARGO_BIN_EXE_dcc-mcp-cli"));
+    let mut command = Command::new(env!("CARGO_BIN_EXE_meshy-dcc"));
     command
         .args(["install", "--dcc-type", dcc, "--catalog"])
         .arg(catalog)
@@ -146,7 +146,7 @@ fn discovery_does_not_advertise_revoked_or_incompatible_installations() {
         entries.push(entry);
     }
     let catalog = write_catalog(&root, entries);
-    let output = Command::new(env!("CARGO_BIN_EXE_dcc-mcp-cli"))
+    let output = Command::new(env!("CARGO_BIN_EXE_meshy-dcc"))
         .args(["dcc-types", "--catalog"])
         .arg(catalog)
         .args(["--output", "json"])
@@ -168,7 +168,7 @@ fn targeted_explicit_discovery_keeps_revoked_entries_non_installable() {
     entry["policy"] = json!({"installation": "not_available"});
     entry["install"] = json!({"type": "path", "url": "unused"});
     let catalog = write_catalog(&root, vec![entry]);
-    let output = Command::new(env!("CARGO_BIN_EXE_dcc-mcp-cli"))
+    let output = Command::new(env!("CARGO_BIN_EXE_meshy-dcc"))
         .args(["dcc-types", "--dcc-type", "photoshop", "--catalog"])
         .arg(catalog)
         .args(["--output", "json"])
@@ -189,7 +189,7 @@ fn corrupt_official_cache_reports_unavailable_without_claiming_bundled_fallback(
     let root = TempDir::new().unwrap();
     let cache = root.path().join("corrupt-cache.json");
     std::fs::write(&cache, b"not an authenticated envelope").unwrap();
-    let output = Command::new(env!("CARGO_BIN_EXE_dcc-mcp-cli"))
+    let output = Command::new(env!("CARGO_BIN_EXE_meshy-dcc"))
         .args([
             "dcc-types",
             "--dcc-type",
@@ -219,7 +219,7 @@ fn explicit_source_does_not_consume_an_unusable_official_cache() {
     let cache = root.path().join("corrupt-cache.json");
     std::fs::write(&cache, b"not an authenticated envelope").unwrap();
     let catalog = write_catalog(&root, vec![catalog_entry("blender")]);
-    let output = Command::new(env!("CARGO_BIN_EXE_dcc-mcp-cli"))
+    let output = Command::new(env!("CARGO_BIN_EXE_meshy-dcc"))
         .args(["install", "--dcc-type", "blender", "--catalog"])
         .arg(catalog)
         .arg("--json")
@@ -242,7 +242,7 @@ fn rejected_official_cache_preserves_unavailable_execution_evidence() {
     let root = TempDir::new().unwrap();
     let cache = root.path().join("corrupt-cache.json");
     std::fs::write(&cache, b"not an authenticated envelope").unwrap();
-    let output = Command::new(env!("CARGO_BIN_EXE_dcc-mcp-cli"))
+    let output = Command::new(env!("CARGO_BIN_EXE_meshy-dcc"))
         .args([
             "install",
             "--dcc-type",
