@@ -1,5 +1,33 @@
 # Changelog
 
+Meshy DCC Core release notes. The product uses its own semantic versions,
+independent of upstream dcc-mcp-core. Crates keep the fork base as their
+internal wire/compat version.
+
+## 0.1.0 (2026-09-28)
+
+First Meshy release line, built from dcc-mcp-core v0.20.36 source (MIT).
+
+### Changed
+
+- Binaries are `meshy-dcc` (CLI) and `meshy-dcc-server` (gateway/sidecar).
+  The MCP server identity `dcc-mcp-server` and `x-dcc-mcp-client-*` headers
+  are unchanged because host adapters share them.
+- Self-update and gateway download use the Meshy release channel at
+  `cdn.meshy.ai/meshy-dcc-core`. Official manifests require a Sigstore bundle
+  from the Meshy release workflow and fail closed until one is published.
+- `--version` reports the Meshy product version; `doctor` also reports the
+  internal compat version.
+
+### Removed
+
+- `feedback` is disabled; nothing is submitted off the machine.
+- Upstream GitHub workflows are not carried over.
+
+---
+
+# Upstream dcc-mcp-core changelog (through v0.20.36)
+
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),

@@ -1,7 +1,7 @@
 # Meshy DCC Core：Rust fork 计划
 
-日期：2026-09-28。阶段：R0（fork 骨架）。本仓库是 `dcc-mcp/dcc-mcp-core`
-（MIT）`v0.20.36` 的 Meshy 派生开发线，保留上游完整历史。
+日期：2026-09-28。版本：0.1.0。本仓库是独立的 Meshy 产品，源码来自 `dcc-mcp/dcc-mcp-core`
+（MIT）`v0.20.36`，不带上游 git 历史（见 `UPSTREAM.md`）。
 
 ## 1. 方向（已确认）
 
@@ -12,7 +12,7 @@
   connector。Meshy API、认证、计费和下载仍由外部已发布的 `meshy-cli` 负责。
 - **改名范围**：只改产品面（二进制名、Meshy 自有状态目录与配置、Skill、文档）。
   内部 crate、Python 模块 `dcc_mcp_core`、宿主协议保持上游命名，以便直接使用上游
-  adapter 并 cherry-pick 上游修复。
+  adapter，上游补丁也能继续套用。
 - **DCC 范围**：Meshy 已有 Send To bridge 的 9 个 DCC。Krita 等非 Meshy DCC 不在范围。
 - **Send To 统一**：webapp 的 `POST /import` 由 core 的 gateway 接收并路由到选中的宿主
   实例，旧端口 5324–5332 保留为兼容入口；用户每个 DCC 只装一个 Meshy 插件。先在
@@ -129,11 +129,14 @@ adapter。PBR 通道与色彩空间映射沿用 Send To bridge 已验证的做�
   远程驱动本地 DCC，也是浏览器访问 localhost 受限时的备选通道）、`dcc-mcp-semantic`
   （可选的向量检索 skill，marketplace 包变多后有用）、gateway daemon、marketplace。
 
-## 7. 与上游的关系
+## 7. 与上游的关系与版本
 
-跟踪上游 tag，按需 cherry-pick 或合并修复；产品面改名集中在少数文件，降低冲突。
-对外说明 "Evolved from dcc-mcp-core"，保留上游 MIT LICENSE 与版权声明。重新分发
-上游 adapter 或其依赖前逐一核对许可证。
+- 仓库与上游无 git 关联。上游修复以补丁方式引入（在本机单独的上游 clone 上生成两个 tag 之间的 diff，
+  `git apply -3` 后审查测试），整版同步时更新 `UPSTREAM.md` 的基线。
+- **产品版本**独立编号，从 0.1.0 开始，用于 `--version`、tag、Meshy 发布与自更新。
+- **内部兼容版本**：crate 版本保持导入基线（0.20.36）。gateway 选举与 adapter 最低 core 版本检查会比较
+  它，宿主里内嵌的同一运行时也参与比较，所以不跟随产品版本。
+- 保留上游 MIT LICENSE 与版权声明；重新分发上游 adapter 或其依赖前逐一核对许可证。
 
 ## 8. 验证
 

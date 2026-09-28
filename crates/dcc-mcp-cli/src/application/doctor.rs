@@ -159,7 +159,8 @@ pub async fn run_doctor(request: DoctorRequest) -> anyhow::Result<Value> {
         },
         "cli": {
             "name": crate::application::update::CLI_BINARY_NAME,
-            "version": env!("CARGO_PKG_VERSION"),
+            "version": crate::application::update::CLI_VERSION,
+            "compat_version": env!("CARGO_PKG_VERSION"),
         },
         "profile": request.profile_store.summary(
             &request.profile_path,

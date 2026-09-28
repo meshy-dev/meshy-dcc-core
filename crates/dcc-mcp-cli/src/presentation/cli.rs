@@ -68,7 +68,7 @@ const DEFAULT_WAIT_READY_TIMEOUT_SECS: u64 = 30;
 const DEFAULT_START_INSTANCE_TIMEOUT_SECS: u64 = 300;
 
 #[derive(Debug, Parser)]
-#[command(name = "meshy-dcc", about, version)]
+#[command(name = "meshy-dcc", about, version = dcc_mcp_updater::meshy_release::PRODUCT_VERSION)]
 pub struct Args {
     #[arg(long, global = true, env = "DCC_MCP_BASE_URL")]
     base_url: Option<String>,

@@ -2,13 +2,15 @@
 
 ## Scope and current stage
 
-`meshy-dcc-core` is a private Meshy product repository, developed as a submodule
-of `meshy-dev/meshy-integrations`. It is a Rust fork of `dcc-mcp/dcc-mcp-core`
-(MIT) that keeps upstream history; the fork base is tag `v0.20.36`. Stage: R0
-(fork skeleton). Read `docs/plan.md` before proposing changes; it lists the
-confirmed direction, DCC scope and phases. Upstream's own docs (`README.md`
-of upstream, `docs/`, `AI_AGENT_GUIDE.md`) describe the inherited code, not the
-Meshy product.
+`meshy-dcc-core` is a private, independent Meshy product repository, developed
+as a submodule of `meshy-dev/meshy-integrations`. Its Rust source was imported
+from `dcc-mcp/dcc-mcp-core` (MIT) `v0.20.36` without upstream git history; see
+`UPSTREAM.md`. Product version 0.1.0; crates keep 0.20.36 as the internal
+wire/compat version (gateway election and adapter checks compare it).
+
+Read `docs/plan.md` before proposing changes; it lists the confirmed direction,
+DCC scope and phases. Inherited upstream docs (`docs/`, `AI_AGENT_GUIDE.md`,
+`README_zh.md`) describe the imported code, not the Meshy product.
 
 Start new work by inspecting context and stating the intended change and checks.
 A planning request authorizes a plan; implement when the user requests it.
@@ -19,18 +21,20 @@ Meshy API calls, authentication, billing, polling and downloads belong to the
 published `meshy-cli`; core only consumes its machine-output contract.
 
 The Node.js prototype 0.3.30 lives on the local branch
-`archive/js-prototype-0.3.30` as a behavior reference only. Port its verified
-constraints (listed in `docs/plan.md`) as Rust tests; do not revive the JS code.
+`archive/js-prototype-0.3.30` as a behavior reference only; do not revive the JS
+code. Some of its constraints came from test-environment problems, so re-check
+each one on a real host before porting it as a Rust test.
 
 ## Fork rules
 
 - Rename only the product surface: binary name, Meshy-owned state and config,
   Skill, docs. Keep internal crate names, the `dcc_mcp_core` Python module,
   `DCC_MCP_*` host protocol variables and the registry layout, so upstream
-  adapters keep working and upstream fixes can be cherry-picked.
+  adapters keep working and upstream patches still apply.
 - Put Meshy-specific behavior in new modules or Meshy skill packs rather than
   scattering edits through upstream files. Keep upstream `LICENSE` and notices.
-- Track upstream with the `upstream` remote; merge or cherry-pick by tag.
+- Take upstream fixes as reviewed patches from a separate upstream clone (see
+  `UPSTREAM.md`); never add an upstream remote or merge upstream history.
 - Scope is the nine DCCs with a Meshy Send To bridge (Blender, Godot, Unity,
   Unreal, Maya, 3ds Max, Roblox, Omniverse, ZBrush). Don't add other hosts.
 
@@ -38,8 +42,8 @@ constraints (listed in `docs/plan.md`) as Rust tests; do not revive the JS code.
 
 - Keep host-specific installation, launch, main-thread dispatch and API behavior
   in adapters. Do not add per-host branches to common routing.
-- Route every call to a concrete live instance by full UUID and project/scene
-  context. Never pick the first process or fail over to another instance.
+- Route every call to a concrete live instance and project/scene context.
+  Never pick the first process or fail over to another instance.
 - A live process or endpoint does not establish readiness, and an accepted
   command does not establish that the scene changed. Read back after writes.
 - Preserve user scenes and files, reject path and symlink escapes, protect

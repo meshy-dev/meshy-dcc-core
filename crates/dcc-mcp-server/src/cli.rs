@@ -45,7 +45,7 @@ pub(crate) enum SubCmd {
 #[command(
     name = "meshy-dcc-server",
     about,
-    version,
+    version = dcc_mcp_updater::meshy_release::PRODUCT_VERSION,
     args_conflicts_with_subcommands = true
 )]
 pub(crate) struct Args {

@@ -13,7 +13,8 @@ pub use cache::{
 
 /// Installed binary name; the crate keeps its upstream package name.
 pub const CLI_BINARY_NAME: &str = "meshy-dcc";
-pub const CLI_VERSION: &str = env!("CARGO_PKG_VERSION");
+/// Meshy product version; the crate version is the internal wire/compat version.
+pub const CLI_VERSION: &str = dcc_mcp_updater::meshy_release::PRODUCT_VERSION;
 
 const SUCCESS_CHECK_INTERVAL_SECS: u64 = 24 * 60 * 60;
 const FAILURE_RETRY_INTERVAL_SECS: u64 = 60 * 60;

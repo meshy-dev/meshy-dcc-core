@@ -55,7 +55,7 @@ pub async fn resolve_gateway_bin(gateway_bin: Option<&PathBuf>) -> anyhow::Resul
     }
 
     // Layer 3: GitHub Releases download
-    let version = env!("CARGO_PKG_VERSION");
+    let version = dcc_mcp_updater::meshy_release::PRODUCT_VERSION;
     if let Ok(downloaded) = download_from_github_releases(version).await {
         return Ok(downloaded);
     }
@@ -199,7 +199,7 @@ fn find_in_same_dir() -> Option<PathBuf> {
 /// Look for a previously downloaded gateway binary in the cache directory.
 fn find_cached_binary() -> Option<PathBuf> {
     let cache_dir = gateway_cache_dir()?;
-    let version = env!("CARGO_PKG_VERSION");
+    let version = dcc_mcp_updater::meshy_release::PRODUCT_VERSION;
     let cached = cache_dir.join(version).join(GATEWAY_BINARY_NAME_WITH_EXT);
     if cached.is_file() { Some(cached) } else { None }
 }

@@ -4,8 +4,15 @@
 //! files here, so the CDN layout lives in one place. Until the Meshy release
 //! pipeline publishes these files, requests fail closed.
 
+/// Meshy DCC Core product version: `--version`, release tags, the update
+/// channel and download paths.
+///
+/// Crate versions stay at the fork base on purpose. Gateway election and
+/// adapter minimum-core checks compare that wire version with hosts that embed
+/// the same runtime, so it must not move to the product numbering.
+pub const PRODUCT_VERSION: &str = "0.1.0";
+
 /// Base URL of Meshy DCC Core release files.
-// ponytail: provisional CDN directory; confirm the final one before the first upload.
 pub const BASE_URL: &str = "https://cdn.meshy.ai/meshy-dcc-core";
 
 const MANIFEST_PREFIX: &str = "meshy-dcc-update-manifest-";

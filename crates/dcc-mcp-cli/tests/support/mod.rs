@@ -600,7 +600,7 @@ pub(crate) fn spawn_gateway_fixture() -> GatewayFixture {
                         .get("current_version")
                         .map(String::as_str)
                         .unwrap_or("0.0.0");
-                    if binary == "meshy-dcc" && current == env!("CARGO_PKG_VERSION") {
+                    if binary == "meshy-dcc" && current == dcc_mcp_updater::meshy_release::PRODUCT_VERSION {
                         return (
                             StatusCode::OK,
                             Json(json!({

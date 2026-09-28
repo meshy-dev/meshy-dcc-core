@@ -63,7 +63,7 @@ fn update_apply_requires_explicit_user_confirmation() {
     assert_eq!(update["status"], "confirmation_required");
     assert_eq!(update["error"], "confirmation_required");
     assert_eq!(update["version_status"], "update_available");
-    assert_eq!(update["current_version"], env!("CARGO_PKG_VERSION"));
+    assert_eq!(update["current_version"], dcc_mcp_updater::meshy_release::PRODUCT_VERSION);
     assert_eq!(update["latest_version"], "99.0.0");
     assert_eq!(
         update["update_policy"]["apply_command"],
@@ -119,13 +119,13 @@ fn cached_cli_update_is_agent_readable_without_a_network_check() {
         serde_json::to_vec(&serde_json::json!({
             "schema_version": 1,
             "binary_name": "meshy-dcc",
-            "current_version": env!("CARGO_PKG_VERSION"),
+            "current_version": dcc_mcp_updater::meshy_release::PRODUCT_VERSION,
             "checked_at_unix_secs": now,
             "successful": true,
             "payload": {
                 "version_status": "update_available",
                 "binary_name": "meshy-dcc",
-                "current_version": env!("CARGO_PKG_VERSION"),
+                "current_version": dcc_mcp_updater::meshy_release::PRODUCT_VERSION,
                 "latest_version": "99.0.0",
                 "update_available": true,
                 "check": {"source": "live", "cache_age_secs": 0},

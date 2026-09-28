@@ -1,43 +1,39 @@
 # meshy-dcc-core
 
-One local entry point for agents to work across a creator's DCC applications.
+One local entry point for agents to work across a creator's DCC applications
+and game engines: install adapters once, discover running instances, load
+capabilities on demand, and route every call to the right scene or project.
 
-Meshy DCC Core aims to manage application adapters, discover running instances,
-load capabilities on demand, and route work to the right scene or project.
-Users should install and configure one Meshy integration instead of finding,
-installing, and configuring a separate MCP server for every application.
+**Status: 0.1.0, early development.** Verified so far: macOS arm64 with
+Blender 5.0.1 (list, search, load-skill, describe, call, readback). Other
+hosts are not in the support matrix yet.
 
-**Status: planning. No runtime, installer, or supported-DCC release exists yet.**
+## Components
 
-## Product direction
+| Binary | Role |
+|---|---|
+| `meshy-dcc` | Agent-facing CLI: instances, capability search, calls, adapter install, marketplace |
+| `meshy-dcc-server` | Local gateway/sidecar daemon that routes to host instances |
 
-- One installation and one agent-facing connection, with adapters managed through it.
-- Explicit application, process, scene, and project identity for every operation.
-- A small discovery/dispatch surface; application capabilities load when needed.
-- Structured results, readback, diagnostics, and recoverable installation changes.
-- New DCCs join through adapters; creative workflows build on the shared core.
+Agents use the CLI together with the `meshy-dcc` Skill; no MCP connector has to
+be configured. Meshy generation, authentication and downloads stay in the
+published [`meshy-cli`](https://www.npmjs.com/package/meshy-cli).
 
-Host plugins are still necessary where an application requires them. Core owns
-their setup experience; users should not have to assemble the underlying MCP stack.
+Scope is the DCCs with a Meshy Send To bridge: Blender, Godot, Unity, Unreal,
+Maya, 3ds Max, Roblox, Omniverse and ZBrush. See [docs/plan.md](docs/plan.md)
+for the roadmap and support status.
 
-## Plan
+## Build
 
-Read [the initial design and milestones](docs/plan.md). It records the confirmed
-scope, proposed architecture, upstream reuse evaluation, and acceptance criteria.
-The first implementation milestone validates the core across multiple instances
-and two different host applications. A particular Meshy-to-engine workflow is a
-later consumer of that core.
+Requires Rust 1.95.
 
-Prefer reusing the public `dcc-mcp` runtime and adapters where they pass our
-installation, compatibility, and execution checks. That dependency decision is
-pending a runnable evaluation; this repository is not currently an upstream fork.
+```sh
+cargo build -p dcc-mcp-cli -p dcc-mcp-server   # produces meshy-dcc and meshy-dcc-server
+cargo test  -p dcc-mcp-cli
+```
 
-## Workspace
+## Origin and license
 
-This private repository is a submodule of `meshy-dev/meshy-integrations` at
-`meshy-dcc-core/`. It owns the local DCC integration product. Meshy API calls,
-authentication, generation, and downloads remain owned by `meshy-cli`; agent
-guidance remains coordinated with `meshy-3d-agent`.
-
-Development guidance lives in [CLAUDE.md](CLAUDE.md), with `AGENTS.md` pointing to
-the same file. There is no build or test command until implementation begins.
+Built from the MIT-licensed [dcc-mcp-core](https://github.com/dcc-mcp/dcc-mcp-core)
+v0.20.36 source; see [UPSTREAM.md](UPSTREAM.md) and [LICENSE](LICENSE).
+Meshy releases use their own version numbers.
