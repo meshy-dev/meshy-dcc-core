@@ -992,8 +992,11 @@ mod tests {
             service.catalog_provenance(None).source,
             CatalogSource::Bundled
         );
+        assert_eq!(
+            service.catalog_entries(None).unwrap(),
+            dcc_mcp_catalog::load_from_str(BUNDLED_CATALOG).unwrap()
+        );
         let listing = service.dcc_types(None).unwrap();
-        assert_eq!(listing.total, 9);
         let blender = listing
             .dcc_types
             .iter()

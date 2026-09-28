@@ -1149,6 +1149,29 @@ pub(crate) fn spawn_local_mcp_fixture() -> LocalMcpFixture {
 pub(crate) const UPSTREAM_CATALOG: &str =
     concat!(env!("CARGO_MANIFEST_DIR"), "/../../dcc-mcp-catalog.yml");
 
+/// The Meshy catalog bundled into `meshy-dcc`; default-catalog tests derive
+/// their expectations from it rather than hard-coding its entries.
+pub(crate) fn bundled_catalog() -> Vec<dcc_mcp_catalog::CatalogEntry> {
+    dcc_mcp_catalog::load_from_str(include_str!("../../../../meshy-dcc-catalog.yml")).unwrap()
+}
+
+/// Sorted adapter names in the bundled catalog.
+pub(crate) fn bundled_adapter_names() -> Vec<String> {
+    let mut names: Vec<String> = bundled_catalog()
+        .into_iter()
+        .filter(|entry| {
+            entry
+                .tags
+                .iter()
+                .any(|tag| tag.eq_ignore_ascii_case("adapter"))
+        })
+        .map(|entry| entry.name)
+        .collect();
+    names.sort();
+    names.dedup();
+    names
+}
+
 pub(crate) fn cli_command() -> Command {
     let mut command = Command::new(env!("CARGO_BIN_EXE_meshy-dcc"));
     command.env("DCC_MCP_INSTALL_OFFLINE", "true");

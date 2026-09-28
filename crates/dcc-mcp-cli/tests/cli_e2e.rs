@@ -1834,27 +1834,21 @@ fn dcc_types_lists_release_catalog_without_a_gateway() {
 
     assert_eq!(value["custom_types_supported"], true);
     let types = value["dcc_types"].as_array().unwrap();
-    assert_eq!(types.len(), 9);
-    for expected in [
-        "3dsmax",
-        "blender",
-        "godot",
-        "maya",
-        "omniverse",
-        "roblox",
-        "unity",
-        "unreal",
-        "zbrush",
-    ] {
-        let entry = types
-            .iter()
-            .find(|entry| entry["dcc_type"] == expected)
-            .unwrap_or_else(|| panic!("missing cataloged DCC type {expected}"));
-        let adapter = &entry["adapters"][0];
-        assert_eq!(adapter["name"], format!("meshy-dcc-{expected}"));
-        // No Meshy adapter build is published yet.
-        assert_eq!(adapter["catalog_install_available"], false, "{expected}");
-    }
+    assert_eq!(value["total"], types.len());
+    let mut listed: Vec<String> = types
+        .iter()
+        .flat_map(|entry| entry["adapters"].as_array().unwrap())
+        .map(|adapter| adapter["name"].as_str().unwrap().to_string())
+        .collect();
+    listed.sort();
+    listed.dedup();
+    assert_eq!(listed, bundled_adapter_names());
+    let blender = types
+        .iter()
+        .find(|entry| entry["dcc_type"] == "blender")
+        .unwrap();
+    assert_eq!(blender["adapters"][0]["name"], "meshy-dcc-blender");
+    assert_eq!(blender["adapters"][0]["catalog_install_available"], false);
 }
 
 #[test]
