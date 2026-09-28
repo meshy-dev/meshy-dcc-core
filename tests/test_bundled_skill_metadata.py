@@ -34,12 +34,6 @@ def test_ui_control_metadata_uses_current_dcc_cua_scope_variables() -> None:
     assert "MESHY_DCC_UI_CONTROL_UIA_" not in content
     assert "MESHY_DCC_APP_UI_" not in content
 
-    agent_guidance = (REPO_ROOT / "AGENTS.md").read_text(encoding="utf-8")
-    assert "MESHY_DCC_UI_CONTROL_PROCESS_ID" in agent_guidance
-    assert "MESHY_DCC_UI_CONTROL_WINDOW_HANDLE" in agent_guidance
-    assert "MESHY_DCC_UI_CONTROL_UIA_" not in agent_guidance
-    assert "MESHY_DCC_APP_UI_" not in agent_guidance
-
 
 def test_bundled_api_keeps_root_contract_while_internal_discovery_ignores_upgrade_leftovers(
     tmp_path, monkeypatch

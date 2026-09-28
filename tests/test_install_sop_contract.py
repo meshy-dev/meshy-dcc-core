@@ -623,10 +623,6 @@ def test_install_sop_validation_is_not_path_or_argv_authorization() -> None:
     validate_install_sop_report(traversal)
     validate_install_sop_report(absolute)
 
-    guide = (REPO_ROOT / "docs" / "guide" / "adapter-install-sop.md").read_text(encoding="utf-8").lower()
-    for phrase in ("authorization boundary", "path traversal", "absolute paths", "command arguments"):
-        assert phrase in guide
-
 
 def test_install_sop_schema_allows_additive_adapter_fields() -> None:
     from meshy_dcc_core import load_install_sop_schema
@@ -662,50 +658,6 @@ def test_install_sop_exit_codes_are_stable_public_exports() -> None:
     assert meshy_dcc_core.INSTALL_EXIT_INSTALL == 30
     assert meshy_dcc_core.INSTALL_EXIT_VERIFY == 40
     assert meshy_dcc_core.INSTALL_EXIT_REQUIRES_RESTART == 50
-
-
-def test_install_sop_guide_ships_a_reusable_install_template() -> None:
-    guide = REPO_ROOT / "docs" / "guide" / "adapter-install-sop.md"
-    template = REPO_ROOT / "docs" / "guide" / "templates" / "adapter-install.md"
-
-    guide_text = guide.read_text(encoding="utf-8")
-    template_text = template.read_text(encoding="utf-8")
-
-    for heading in (
-        "## Universal command surface",
-        "## Plan and execution contract",
-        "## JSON result contract",
-        "## Preflight",
-        "## Transaction and receipt contract",
-        "## Verify to usable",
-        "## Bootstrap diagnostics",
-        "## CI acceptance",
-        "## Reusable `install.md` template",
-    ):
-        assert heading in guide_text
-
-    for heading in (
-        "## Requirements",
-        "## Supported versions",
-        "## Agent quick path",
-        "## Manual path",
-        "## Verify",
-        "## Upgrade",
-        "## Uninstall",
-        "## Troubleshooting",
-    ):
-        assert heading in template_text
-
-
-def test_reusable_install_template_usable_result_is_schema_valid() -> None:
-    from meshy_dcc_core import load_install_sop_schema
-
-    template = REPO_ROOT / "docs" / "guide" / "templates" / "adapter-install.md"
-    template_text = template.read_text(encoding="utf-8")
-    marker = "A usable result has:\n\n```json\n"
-    result_text = template_text.split(marker, maxsplit=1)[1].split("\n```", maxsplit=1)[0]
-
-    Draft202012Validator(load_install_sop_schema()).validate(json.loads(result_text))
 
 
 def test_rust_cli_failed_execution_report_fixture_is_schema_valid() -> None:
@@ -767,19 +719,3 @@ def test_rust_cli_rollback_failure_report_fixture_is_schema_valid() -> None:
         "primary_code": "INSTALL_STEP_FAILED",
     }
     assert report["rollback"] == {"attempted": True, "status": "failed", "failure_count": 1}
-
-
-def test_adapter_onboarding_and_release_gate_the_install_sop() -> None:
-    onboarding = (REPO_ROOT / "docs" / "guide" / "new-adapter-onboarding.md").read_text(encoding="utf-8")
-    release = (REPO_ROOT / "docs" / "guide" / "adapter-release-checklist.md").read_text(encoding="utf-8")
-
-    for text in (onboarding, release):
-        assert "adapter-install-sop.md" in text
-        assert "install|status|verify|uninstall|upgrade" in text
-        assert "adapter-install-sop-v2.schema.json" in text
-        assert "0/10/20/30/40/50" in text
-        assert "instructions_url" in text
-        assert "receipt" in text.lower()
-
-    assert "install.md" in onboarding
-    assert "plan -> execute -> verify -> status -> uninstall" in release

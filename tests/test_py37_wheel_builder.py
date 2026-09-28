@@ -11,7 +11,7 @@ from scripts.build_py37_pure_wheel import _read_runtime_requirements
 
 def test_lite_wheel_inherits_project_runtime_dependencies() -> None:
     requirements = _read_runtime_requirements()
-    assert "meshy-dcc-server>=0.18.17,<1.0.0" in requirements
+    assert "meshy-dcc-server>=0.2.0,<0.3.0" in requirements
     assert not any(requirement.lower().startswith("typing-extensions") for requirement in requirements)
 
 

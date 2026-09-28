@@ -57,7 +57,7 @@ def test_finding_fingerprint_normalizes_owner_tool_and_host_major() -> None:
     )
 
     assert first == equivalent
-    assert first == "sha256:0f7545056e6e3ee9387804a6276669a21c723f8a422b59477e3587be6a8997ac"
+    assert first == "sha256:d08134c1c96fb2557c5404cd1d6f8cd583654157166def2e58e512c0a5743532"
     assert re.fullmatch(r"sha256:[0-9a-f]{64}", first)
 
 

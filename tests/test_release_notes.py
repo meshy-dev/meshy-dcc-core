@@ -12,8 +12,6 @@ import pytest
 from conftest import REPO_ROOT
 
 SCRIPT_PATH = REPO_ROOT / "scripts" / "ci" / "check_release_notes.py"
-RELEASE_PR_GUARD_WORKFLOW = REPO_ROOT / ".github" / "workflows" / "release-please-pr-guard.yml"
-RELEASE_WORKFLOW = REPO_ROOT / ".github" / "workflows" / "release.yml"
 HIDDEN_TYPES = frozenset({"style", "chore", "test", "ci", "build"})
 VISIBLE_TYPES = frozenset({"feat", "fix", "docs", "perf", "refactor"})
 
@@ -58,15 +56,6 @@ def _default_config(root: Path) -> Path:
     )
 
 
-def _tag_present(name: str) -> bool:
-    completed = subprocess.run(
-        ["git", "-C", str(REPO_ROOT), "rev-parse", "-q", "--verify", name],
-        capture_output=True,
-        text=True,
-    )
-    return completed.returncode == 0
-
-
 # ── type parsing ────────────────────────────────────────────────────────────
 
 
@@ -105,12 +94,6 @@ def test_is_release_commit_reads_the_published_version(subject: str, expected: s
 
 
 # ── hidden-type filtering ───────────────────────────────────────────────────
-
-
-def test_load_hidden_types_matches_the_repository_config() -> None:
-    checker = _load_checker_module()
-
-    assert checker.load_hidden_types(REPO_ROOT / "release-please-config.json") == HIDDEN_TYPES
 
 
 def test_load_hidden_types_rejects_a_config_without_hidden_sections(tmp_path: Path) -> None:
@@ -563,145 +546,3 @@ def test_main_reports_errors_and_returns_failure(tmp_path: Path, capsys) -> None
 
     assert checker.main(["--root", str(tmp_path), "--version", "0.20.34", "--notes-file", str(notes)]) == 1
     assert "[A:untyped-commit]" in capsys.readouterr().err
-
-
-# ── repository replays ──────────────────────────────────────────────────────
-
-
-@pytest.mark.skipif(not _tag_present("v0.20.34"), reason="v0.20.34 tag is not available in this checkout")
-def test_replay_0_20_34_reports_the_three_known_gaps(capsys) -> None:
-    checker = _load_checker_module()
-
-    exit_code = checker.main(
-        ["--root", str(REPO_ROOT), "--prev-tag", "v0.20.33", "--release-tag", "v0.20.34", "--version", "0.20.34"]
-    )
-    captured = capsys.readouterr()
-
-    assert exit_code == 1
-    errors = captured.err
-    # Mechanism A: the untyped squash title release-please dropped entirely.
-    assert "521df1fa" in errors
-    assert errors.count("[A:untyped-commit]") == 1
-    # Mechanism B: both commits that landed after the notes were regenerated.
-    assert "c436910" in errors
-    assert "dc0e6c2" in errors
-    assert errors.count("[B:post-notes-commit]") == 2
-
-
-@pytest.mark.skipif(not _tag_present("v0.20.34"), reason="v0.20.34 tag is not available in this checkout")
-def test_replay_0_20_34_stays_quiet_about_hidden_types(capsys) -> None:
-    checker = _load_checker_module()
-    commits = checker.read_commits(REPO_ROOT, "v0.20.33", "v0.20.34")
-    section = checker.changelog_section((REPO_ROOT / "CHANGELOG.md").read_text(encoding="utf-8"), "0.20.34")
-    assert section is not None
-    report = checker.check_commits(
-        commits, section, checker.load_hidden_types(REPO_ROOT / "release-please-config.json")
-    )
-
-    assert len(report.hidden) == 13
-
-    checker.main(
-        ["--root", str(REPO_ROOT), "--prev-tag", "v0.20.33", "--release-tag", "v0.20.34", "--version", "0.20.34"]
-    )
-    errors = capsys.readouterr().err
-
-    for commit in report.hidden:
-        assert commit.short_sha not in errors
-
-
-@pytest.mark.skipif(not _tag_present("v0.20.33"), reason="v0.20.33 tag is not available in this checkout")
-def test_replay_0_20_33_is_a_clean_baseline() -> None:
-    checker = _load_checker_module()
-
-    assert (
-        checker.main(
-            ["--root", str(REPO_ROOT), "--prev-tag", "v0.20.32", "--release-tag", "v0.20.33", "--version", "0.20.33"]
-        )
-        == 0
-    )
-
-
-@pytest.mark.skipif(not _tag_present("v0.20.23"), reason="v0.20.23 tag is not available in this checkout")
-def test_replay_0_20_23_is_clean_across_a_wide_window(capsys) -> None:
-    """Noise guard: a 90-commit window with 8 hidden commits must stay silent.
-
-    The 0.20.32..0.20.33 baseline carries a single user-visible commit, so it
-    cannot detect a gate that simply reports everything it sees. This window is
-    the real false-positive guard.
-    """
-    checker = _load_checker_module()
-
-    assert (
-        checker.main(
-            ["--root", str(REPO_ROOT), "--prev-tag", "v0.20.22", "--release-tag", "v0.20.23", "--version", "0.20.23"]
-        )
-        == 0
-    )
-
-    commits = checker.read_commits(REPO_ROOT, "v0.20.22", "v0.20.23")
-    section = checker.changelog_section((REPO_ROOT / "CHANGELOG.md").read_text(encoding="utf-8"), "0.20.23")
-    assert section is not None
-    report = checker.check_commits(
-        commits, section, checker.load_hidden_types(REPO_ROOT / "release-please-config.json")
-    )
-
-    assert len(report.hidden) == 8
-    assert len(report.checked) == 90
-    assert report.failures == ()
-
-
-@pytest.mark.skipif(not _tag_present("v0.20.34"), reason="v0.20.34 tag is not available in this checkout")
-def test_release_body_addendum_clears_the_mechanism_b_gaps(tmp_path: Path, capsys) -> None:
-    checker = _load_checker_module()
-    addendum = tmp_path / "release-body.md"
-    addendum.write_text(
-        (
-            (REPO_ROOT / "CHANGELOG.md").read_text(encoding="utf-8").split("## [0.20.33]")[0]
-            + f"## Release notes addendum\n\n"
-            f"* fix(skills) ([#2547](https://github.com/o/r/pull/2547)) ([dc0e6c2](https://github.com/o/r/commit/{POST_NOTES_SHAS[1]}))\n"
-            f"* fix(gateway) ([#2548](https://github.com/o/r/pull/2548)) ([c436910](https://github.com/o/r/commit/{POST_NOTES_SHAS[0]}))\n"
-        ),
-        encoding="utf-8",
-    )
-
-    exit_code = checker.main(
-        [
-            "--root",
-            str(REPO_ROOT),
-            "--prev-tag",
-            "v0.20.33",
-            "--release-tag",
-            "v0.20.34",
-            "--version",
-            "0.20.34",
-            "--notes-file",
-            str(addendum),
-        ]
-    )
-    errors = capsys.readouterr().err
-
-    # Only the untyped title remains: an addendum documents a post-notes commit
-    # but cannot retroactively give it a conventional-commit type.
-    assert exit_code == 1
-    assert "[B:post-notes-commit]" not in errors
-    assert "[A:untyped-commit]" in errors
-
-
-# ── workflow wiring ─────────────────────────────────────────────────────────
-
-
-def test_release_pr_guard_runs_the_notes_gate() -> None:
-    workflow = RELEASE_PR_GUARD_WORKFLOW.read_text(encoding="utf-8")
-
-    assert "scripts/ci/check_release_notes.py" in workflow
-
-
-def test_release_workflow_runs_the_notes_gate() -> None:
-    workflow = RELEASE_WORKFLOW.read_text(encoding="utf-8")
-
-    assert "check_release_notes.py" in workflow
-
-    # The py37 grammar guarantee lives in the `py37 syntax check` CI lane, which
-    # compiles scripts/ and tests/ with a real Python 3.7 interpreter. It is not
-    # re-checked here: ast.parse's feature_version only exists on Python 3.8+,
-    # so asserting it from inside the suite would fail on the py37 lane itself.

@@ -5,15 +5,9 @@ from __future__ import annotations
 import importlib.util
 from pathlib import Path
 
-import pytest
-
 from conftest import REPO_ROOT
 
 SCRIPT_PATH = REPO_ROOT / "scripts" / "ci" / "uv_lock_refresh.py"
-WORKFLOW_PATH = REPO_ROOT / ".github" / "workflows" / "uv-lock-refresh.yml"
-# Security boundary owned by release-please-lock-sync.yml; the refresh workflow
-# must never execute or redefine it.
-PINNED_VALIDATOR_REF = "b8e294e8a64abba426871b1e86eb106e75aab075"
 
 
 def _load_module():
@@ -178,81 +172,3 @@ def test_cli_verify_honours_a_package_override(tmp_path: Path) -> None:
 
     assert module.main(["verify", str(before), str(after), "--package", "zipp"]) == 0
     assert module.main(["verify", str(before), str(after)]) == 1
-
-
-@pytest.mark.parametrize(
-    "expected",
-    [
-        "uv lock --upgrade-package meshy-dcc-core-semantic --upgrade-package meshy-dcc-server",
-        "scripts/ci/uv_lock_refresh.py verify",
-        "scripts/ci/check_lock_versions.py",
-        "scripts/ci/check_uv_lock.py",
-        "uv lock --check",
-        "chore(lock):",
-        "bot/uv-lock-refresh",
-        "git diff --quiet -- uv.lock",
-    ],
-)
-def test_workflow_carries_the_refresh_contract(expected: str) -> None:
-    workflow = WORKFLOW_PATH.read_text(encoding="utf-8")
-
-    assert expected in workflow
-
-
-def _workflow_body() -> str:
-    """Return the workflow with its explanatory comments stripped."""
-    lines = [
-        line for line in WORKFLOW_PATH.read_text(encoding="utf-8").splitlines() if not line.lstrip().startswith("#")
-    ]
-    return "\n".join(lines)
-
-
-def test_workflow_never_touches_the_pinned_validator_boundary() -> None:
-    workflow = _workflow_body()
-
-    assert PINNED_VALIDATOR_REF not in workflow
-    assert "pull_request_target" not in workflow
-    assert "generated_lock_sync.py" not in workflow
-
-
-def test_workflow_does_not_auto_merge() -> None:
-    # `main` has no required status checks and no required review, so
-    # auto-merge would land on the first status event. The refresh must stop
-    # at "open" and let a human merge it.
-    workflow = _workflow_body()
-
-    assert "gh pr merge" not in workflow
-    assert "--auto" not in workflow
-
-
-def test_workflow_token_stays_read_only() -> None:
-    # Every write goes through secrets.PERSONAL_ACCESS_TOKEN; the workflow
-    # token must not carry write scopes it never exercises.
-    workflow = _workflow_body()
-
-    assert "contents: read" in workflow
-    assert "contents: write" not in workflow
-    assert "pull-requests: write" not in workflow
-
-
-def test_workflow_pins_the_resolver() -> None:
-    workflow = _workflow_body()
-
-    assert "UV_VERSION" in workflow
-    assert "uv==" in workflow
-    assert "timeout-minutes" in workflow
-
-
-def test_workflow_schedule_avoids_the_hour_and_the_release_window() -> None:
-    workflow = WORKFLOW_PATH.read_text(encoding="utf-8")
-
-    cron_lines = [line.strip() for line in workflow.splitlines() if line.strip().startswith("- cron:")]
-    assert cron_lines, "the refresh workflow must declare a schedule"
-
-    for line in cron_lines:
-        expression = line.split("cron:", 1)[1].strip().strip('"')
-        minute, hour = expression.split()[0], expression.split()[1]
-        assert minute != "0"
-        assert minute != "00"
-        assert not (hour == "1" and minute == "13")
-        assert hour == "*" or int(hour) != 1

@@ -21,7 +21,7 @@ PACKAGE = "meshy-dcc-maya"
 VERSION = "1.2.3"
 WHEEL_URL = "https://files.pythonhosted.org/packages/example/meshy_dcc_maya-1.2.3-py3-none-any.whl"
 PYPI_URL = "https://pypi.org/pypi/meshy-dcc-maya/1.2.3/json"
-REF_URL = "https://api.github.com/repos/meshy-dcc/meshy-dcc-maya/git/ref/tags/v1.2.3"
+REF_URL = "https://api.github.com/repos/meshy-dev/meshy-dcc-maya/git/ref/tags/v1.2.3"
 RAW_BASE = "https://raw.githubusercontent.com/meshy-dev/meshy-dcc-maya/" + RELEASE_COMMIT + "/"
 
 
@@ -207,7 +207,7 @@ def test_annotated_release_tag_and_pinned_document_fallback():
     document, transport, _ = _fixture()
     annotated_sha = "c" * 40
     transport.responses[REF_URL] = json.dumps({"object": {"type": "tag", "sha": annotated_sha}}).encode()
-    transport.responses["https://api.github.com/repos/meshy-dcc/meshy-dcc-maya/git/tags/" + annotated_sha] = json.dumps(
+    transport.responses["https://api.github.com/repos/meshy-dev/meshy-dcc-maya/git/tags/" + annotated_sha] = json.dumps(
         {"object": {"type": "commit", "sha": RELEASE_COMMIT}}
     ).encode()
     transport.responses[RAW_BASE + "install.md"] = None
@@ -328,7 +328,7 @@ def test_pinned_git_source_resolves_exact_commit_and_keeps_pin():
     document, transport, _ = _fixture()
     install = document["entries"][0]["install"]
     install.update(type="git", url="https://github.com/meshy-dev/meshy-dcc-maya.git", ref=RELEASE_COMMIT)
-    transport.responses["https://api.github.com/repos/meshy-dcc/meshy-dcc-maya/git/commits/" + RELEASE_COMMIT] = json.dumps(
+    transport.responses["https://api.github.com/repos/meshy-dev/meshy-dcc-maya/git/commits/" + RELEASE_COMMIT] = json.dumps(
         {"sha": RELEASE_COMMIT}
     ).encode()
     assert _prepare(document, transport)["entries"][0]["install"]["ref"] == RELEASE_COMMIT
@@ -370,8 +370,8 @@ def test_payload_bytes_are_deterministic_and_contain_no_signature_claim(tmp_path
     [
         "http://files.pythonhosted.org/file.whl",
         "https://evil.example/file.whl",
-        "https://token@api.github.com/repos/meshy-dcc/test",
-        "https://api.github.com:8443/repos/meshy-dcc/test",
+        "https://token@api.github.com/repos/meshy-dev/test",
+        "https://api.github.com:8443/repos/meshy-dev/test",
     ],
 )
 def test_transport_rejects_untrusted_urls_without_network(url):

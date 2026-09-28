@@ -32,22 +32,10 @@ classifiers = [
 ]
 
 dependencies = [
-    # meshy-dcc-server (Python 3.7+): provides the sidecar gateway daemon binary
-    # and the packaging toolchain for standalone Meshy DCC server bundles.
-    # Maya 2022 / Blender 2.83 embed Python 3.7; the py37-lite wheel ships
-    # pure-Python code only and users install meshy-dcc-server separately when
-    # their platform provides a compatible binary wheel.
-    #
-    # Same-batch contract: meshy-dcc-core and meshy-dcc-server ship from one
-    # release, so a deployment must pair them at the same major.minor. The
-    # floor is deliberately older than the current release because the matching
-    # wheel only exists on PyPI after release-please publishes it. The runtime
-    # enforces the pairing: the gateway bootstrap prefers the binary on PATH
-    # (the resolved environment) over the importable meshy_dcc_server package and
-    # logs a WARNING when their major.minor differs. Keep this declaration in
-    # place — a rez/venv resolve that omits meshy-dcc-server makes hosts import a
-    # workstation-local copy instead.
-    "meshy-dcc-server>=0.18.17,<1.0.0",
+    # meshy-dcc-server provides the sidecar gateway daemon binary. It ships
+    # from the same release as meshy-dcc-core, so the two must share
+    # major.minor; the gateway bootstrap warns when they differ.
+    "meshy-dcc-server>=0.2.0,<0.3.0",
 ]
 
 [project.scripts]

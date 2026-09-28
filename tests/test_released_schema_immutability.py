@@ -87,8 +87,12 @@ def _load_registry():
     except ValueError as error:
         pytest.fail(f"released schema pin registry is not valid JSON: {error}")
     pins = registry.get("pins")
-    if not isinstance(pins, dict) or not pins:
-        pytest.fail(f"released schema pin registry declares no pins: {REGISTRY_PATH}")
+    if not isinstance(pins, dict):
+        pytest.fail(f"released schema pin registry has no 'pins' object: {REGISTRY_PATH}")
+    if not pins:
+        # Pins are added when a release is tagged; before the first Meshy release
+        # there is no published schema revision to protect.
+        pytest.skip("no Meshy release has pinned schema revisions yet")
     return pins
 
 

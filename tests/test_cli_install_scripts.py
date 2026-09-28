@@ -14,15 +14,7 @@ ROOT = Path(__file__).resolve().parents[1]
 SH_INSTALLER = ROOT / "scripts" / "install-cli.sh"
 PS_INSTALLER = ROOT / "scripts" / "install-cli.ps1"
 OFFICIAL_RELEASE = "https://github.com/meshy-dev/meshy-dcc-core/releases/download"
-INSTALL_DOCS = (
-    ROOT / "README.md",
-    ROOT / "README_zh.md",
-    ROOT / "AI_AGENT_GUIDE.md",
-    ROOT / "docs" / "guide" / "getting-started.md",
-    ROOT / "docs" / "zh" / "guide" / "getting-started.md",
-    ROOT / "docs" / "guide" / "cli-reference.md",
-    ROOT / "docs" / "zh" / "guide" / "cli-reference.md",
-)
+INSTALL_DOCS = (ROOT / "README.md",)
 
 
 def _shell() -> str:

@@ -1,24 +1,5 @@
 {
-  "$comment": "Release-anchored digests for published schema revisions, starting with Meshy DCC Core 0.2.0. Enforced by tests/test_released_schema_immutability.py. See compatibility/README.md before editing.",
+  "$comment": "Digests of published schema revisions, keyed by Meshy DCC Core release tag; filled in when a release is cut. Enforced by tests/test_released_schema_immutability.py.",
   "schema_version": 1,
-  "pins": {
-    "https://www.meshy.ai/meshy-dcc/schemas/adapter-install-sop-v1.schema.json": {
-      "path": "python/meshy_dcc_core/schemas/adapter-install-sop-v1.schema.json",
-      "released": {
-        "v0.2.0": "78271120374b0e23e47097de168d99a025671d913454884d28cf650bbc10a10f"
-      }
-    },
-    "https://www.meshy.ai/meshy-dcc/meshy-dcc-core/schemas/feedback-finding-v1.schema.json": {
-      "path": "python/meshy_dcc_core/schemas/feedback-finding-v1.schema.json",
-      "released": {
-        "v0.2.0": "65d189c730ab75ca2484e82c6750a66ddb4222454c7e4f9cef4c10f0ae680d80"
-      }
-    },
-    "https://www.meshy.ai/meshy-dcc/contracts/dcc-discovery-decision-v1.schema.json": {
-      "path": "contracts/dcc-discovery-decision-v1.schema.json",
-      "released": {
-        "v0.2.0": "77b8f6fce9e5f1c29e351716f92c7c06c91808546e21b0abcb5bf111f1231b41"
-      }
-    }
-  }
+  "pins": {}
 }

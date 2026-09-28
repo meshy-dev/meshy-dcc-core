@@ -34,6 +34,8 @@ from meshy_dcc_core.constants import ENV_DISABLE_TELEMETRY
 from meshy_dcc_core.constants import ENV_PACKAGE_PROVENANCE
 from meshy_dcc_core.constants import ENV_PRODUCTION_DOMAIN
 from meshy_dcc_core.constants import ENV_PROJECT
+from meshy_dcc_core.constants import ENV_START_OPERATION_ID
+from meshy_dcc_core.constants import ENV_START_PROJECT
 from meshy_dcc_core.constants import ENV_PROMPT_PATHS
 from meshy_dcc_core.constants import ENV_RESOURCE_PATHS
 from meshy_dcc_core.constants import ENV_SEQUENCE
@@ -148,8 +150,8 @@ CONTEXT_METADATA_ENV: dict[str, str] = {
     "prompt_paths": ENV_PROMPT_PATHS,
     # Set by `start-instance` on the host it spawns; the CLI matches the
     # registry row to its project and launch operation through these keys.
-    "meshy_dcc_project": "MESHY_DCC_START_PROJECT",
-    "meshy_dcc_operation_id": "MESHY_DCC_START_OPERATION_ID",
+    "meshy_dcc_project": ENV_START_PROJECT,
+    "meshy_dcc_operation_id": ENV_START_OPERATION_ID,
 }
 
 

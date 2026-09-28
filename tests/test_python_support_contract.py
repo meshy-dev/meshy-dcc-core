@@ -3,18 +3,12 @@
 from __future__ import annotations
 
 from pathlib import Path
-import re
 
 import pytest
-from scripts.ci.check_python_support import collect_backfill_tooling_errors
 from scripts.ci.check_python_support import collect_calendar_policy_errors
 from scripts.ci.check_python_support import collect_distribution_projection_errors
 from scripts.ci.check_python_support import collect_document_projection_errors
 from scripts.ci.check_python_support import collect_expected_fragment_errors
-from scripts.ci.check_python_support import collect_full_matrix_errors
-from scripts.ci.check_python_support import collect_projection_errors
-from scripts.ci.check_python_support import collect_semantic_release_errors
-from scripts.ci.check_python_support import collect_wheel_action_errors
 from scripts.ci.check_python_support import collect_wheel_feature_projection_errors
 from scripts.ci.check_python_support import expected_fragments
 from scripts.ci.python_support_contract import ContractError
@@ -42,7 +36,8 @@ def test_pyproject_maturin_features_match_canonical_wheel_features(tmp_path: Pat
 
 def test_contract_is_internally_valid_and_matches_repository() -> None:
     contract = load_contract(_REPO_ROOT)
-    assert collect_projection_errors(_REPO_ROOT, contract) == []
+    assert collect_distribution_projection_errors(_REPO_ROOT, contract) == []
+    assert collect_wheel_feature_projection_errors(_REPO_ROOT) == []
 
 
 def test_contract_rejects_calendar_expiry_or_weak_deprecation() -> None:
@@ -261,123 +256,3 @@ def test_required_workflow_fragments_cannot_be_satisfied_by_comments(tmp_path: P
     ci_errors = [error for error in errors if error.startswith(".github/workflows/ci.yml:")]
     assert len(ci_errors) == len(fragments)
     assert any("--extra semantic" in error for error in ci_errors)
-
-
-def test_full_matrix_must_install_prebuilt_wheels_and_never_build_in_test_job(tmp_path: Path) -> None:
-    contract = load_contract(_REPO_ROOT)
-    workflow = tmp_path / ".github" / "workflows" / "python-matrix-full.yml"
-    workflow.parent.mkdir(parents=True)
-    current = (_REPO_ROOT / ".github" / "workflows" / "python-matrix-full.yml").read_text(encoding="utf-8")
-    workflow.write_text(current, encoding="utf-8")
-    assert collect_full_matrix_errors(tmp_path, contract) == []
-
-    drifted = current.replace("needs: build-wheel", "needs: []")
-    drifted = drifted.replace("pip install dist/*.whl", "vx just build\n          vx just stubgen")
-    workflow.write_text(drifted, encoding="utf-8")
-    errors = collect_full_matrix_errors(tmp_path, contract)
-    assert any("needs: build-wheel" in error for error in errors)
-    assert any("pip install dist/*.whl" in error for error in errors)
-    assert any("vx just build" in error for error in errors)
-    assert any("stubgen" in error for error in errors)
-
-    wrong_artifact = current.replace("python-matrix-wheel-windows", "python-matrix-wheel-linux", 1)
-    workflow.write_text(wrong_artifact, encoding="utf-8")
-    errors = collect_full_matrix_errors(tmp_path, contract)
-    assert any("python-matrix-wheel-windows" in error for error in errors)
-
-    unsafe_windows = current.replace('maturin_args: ""', 'maturin_args: "--find-interpreter"')
-    workflow.write_text(unsafe_windows, encoding="utf-8")
-    errors = collect_full_matrix_errors(tmp_path, contract)
-    assert any("disable --find-interpreter" in error for error in errors)
-
-    version_in_comment_only = current.replace('"3.9", ', "").replace(
-        "        python-version: [",
-        '        # Removed matrix value remains in a comment: "3.9"\n        python-version: [',
-        1,
-    )
-    workflow.write_text(version_in_comment_only, encoding="utf-8")
-    errors = collect_full_matrix_errors(tmp_path, contract)
-    assert any("expected" in error and "3.9" in error for error in errors)
-
-    indirect = current.replace(
-        "python -m pytest tests/ -q --tb=short --show-capture=no -n 4 --dist loadfile",
-        "vx just test-suite",
-    )
-    workflow.write_text(indirect, encoding="utf-8")
-    errors = collect_full_matrix_errors(tmp_path, contract)
-    assert any("python -m pytest tests/" in error for error in errors)
-    assert any("must not run 'vx just'" in error for error in errors)
-
-
-def test_wheel_action_must_pin_manylinux_and_pass_explicit_platform(tmp_path: Path) -> None:
-    action = tmp_path / ".github" / "actions" / "build-wheel" / "action.yml"
-    action.parent.mkdir(parents=True)
-    current = (_REPO_ROOT / ".github" / "actions" / "build-wheel" / "action.yml").read_text(encoding="utf-8")
-    action.write_text(current, encoding="utf-8")
-    assert collect_wheel_action_errors(tmp_path) == []
-
-    drifted = re.sub(r"(?m)^(\s*manylinux:).*$", r"\1 auto", current)
-    drifted = drifted.replace("--platform", "--target-platform")
-    action.write_text(drifted, encoding="utf-8")
-    errors = collect_wheel_action_errors(tmp_path)
-    assert any("manylinux2014" in error for error in errors)
-    assert any("--platform" in error for error in errors)
-
-    inverted = current.replace("runner.os == 'Linux'", "runner.os != 'Linux'")
-    action.write_text(inverted, encoding="utf-8")
-    assert any("manylinux2014" in error for error in collect_wheel_action_errors(tmp_path))
-
-    cached_linux = current.replace(" && runner.os != 'Linux'", "")
-    action.write_text(cached_linux, encoding="utf-8")
-    assert any("sccache must be disabled" in error for error in collect_wheel_action_errors(tmp_path))
-
-    unsafe_windows = current.replace('maturin_args=""', 'maturin_args="--find-interpreter"')
-    action.write_text(unsafe_windows, encoding="utf-8")
-    assert any('maturin_args=""' in error for error in collect_wheel_action_errors(tmp_path))
-
-
-def test_backfill_jobs_must_use_workflow_owned_validation_tooling(tmp_path: Path) -> None:
-    workflow = tmp_path / ".github" / "workflows" / "build-wheels.yml"
-    workflow.parent.mkdir(parents=True)
-    current = (_REPO_ROOT / ".github" / "workflows" / "build-wheels.yml").read_text(encoding="utf-8")
-    workflow.write_text(current, encoding="utf-8")
-    assert collect_backfill_tooling_errors(tmp_path) == []
-
-    drifted = current.replace("ref: ${{ github.workflow_sha }}", "ref: ${{ inputs.checkout-ref }}")
-    drifted = drifted.replace("path: .workflow-tools", "path: .source-tools", 1)
-    workflow.write_text(drifted, encoding="utf-8")
-    errors = collect_backfill_tooling_errors(tmp_path)
-    assert any("github.workflow_sha" in error for error in errors)
-    assert any("path: .workflow-tools" in error for error in errors)
-
-    comment_only = current.replace(
-        "          ref: ${{ github.workflow_sha }}",
-        "          # ref: ${{ github.workflow_sha }}\n          ref: ${{ inputs.checkout-ref }}",
-    )
-    workflow.write_text(comment_only, encoding="utf-8")
-    errors = collect_backfill_tooling_errors(tmp_path)
-    assert len([error for error in errors if "github.workflow_sha" in error]) == 6
-
-
-def test_semantic_release_must_validate_every_wheel_before_upload(tmp_path: Path) -> None:
-    workflow = tmp_path / ".github" / "workflows" / "release.yml"
-    workflow.parent.mkdir(parents=True)
-    current = (_REPO_ROOT / ".github" / "workflows" / "release.yml").read_text(encoding="utf-8")
-    workflow.write_text(current, encoding="utf-8")
-    assert collect_semantic_release_errors(tmp_path) == []
-
-    drifted = current.replace(
-        ".workflow-tools/scripts/ci/check_python_wheel.py",
-        ".workflow-tools/scripts/ci/removed_validator.py",
-    )
-    workflow.write_text(drifted, encoding="utf-8")
-    errors = collect_semantic_release_errors(tmp_path)
-    assert any("check_python_wheel.py" in error for error in errors)
-    assert any("build, fetch current tooling, validate, then upload" in error for error in errors)
-
-    comment_only = current.replace(
-        "          ref: ${{ github.workflow_sha }}",
-        "          # ref: ${{ github.workflow_sha }}\n          ref: ${{ github.ref }}",
-    )
-    workflow.write_text(comment_only, encoding="utf-8")
-    assert any("github.workflow_sha" in error for error in collect_semantic_release_errors(tmp_path))

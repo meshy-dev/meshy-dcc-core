@@ -19,7 +19,7 @@ def finding_context_for_server(
     options = server._options
     adapter = options.server_name or options.sidecar.display_name or f"meshy-dcc-{server._dcc_name}"
     adapter_version = options.sidecar.adapter_version or options.server_version or "unknown"
-    owning_repo = f"meshy-dcc/{adapter}" if adapter.startswith("meshy-dcc-") else adapter
+    owning_repo = f"meshy-dev/{adapter}" if adapter.startswith("meshy-dcc-") else adapter
     return FindingRuntimeContext(
         dcc_type=server._dcc_name,
         adapter=adapter,

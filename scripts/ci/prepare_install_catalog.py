@@ -263,9 +263,9 @@ def _verify_pip(transport, entry: dict) -> None:
 
 
 def _official_repo(entry: dict) -> str:
-    match = re.fullmatch(r"https://github\.com/(meshy-dcc/[A-Za-z0-9_.-]+)/?", entry.get("url", ""))
+    match = re.fullmatch(r"https://github\.com/(meshy-dev/[A-Za-z0-9_.-]+)/?", entry.get("url", ""))
     if not match:
-        raise CatalogPreparationError("install entry must own an official meshy-dcc repository")
+        raise CatalogPreparationError("install entry must own an official meshy-dev repository")
     return match.group(1)
 
 

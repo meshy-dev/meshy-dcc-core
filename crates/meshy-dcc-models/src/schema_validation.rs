@@ -17,7 +17,7 @@ const INSTALL_SOP_SCHEMA_ID: &str =
     "https://www.meshy.ai/meshy-dcc/schemas/adapter-install-sop-v2.schema.json";
 const INSTALL_SOP_SCHEMA_DIALECT: &str = "https://json-schema.org/draft/2020-12/schema";
 const INSTALL_SOP_SCHEMA_SHA256: &str =
-    "daa5840e07c956d7c9269e5709d6993a3988b905f986c06e7c4c02f5023e9422";
+    "71df77f27399d8017d43393f0376c154a8b9bd4700f38098ed66b91a33eb9275";
 const DUPLICATE_JSON_KEY: &str = "duplicate_json_object_key";
 const MAX_VALIDATION_ERRORS: usize = 32;
 const MAX_DIAGNOSTIC_BYTES: usize = 512;

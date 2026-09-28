@@ -653,7 +653,7 @@ def _default_finding_context(dcc_name: str) -> FindingRuntimeContext:
         core_version=package_version(fallback="unknown", load_core=True),
         host_version="unknown",
         os=sys.platform,
-        owning_repo=f"meshy-dcc/{adapter}",
+        owning_repo=f"meshy-dev/{adapter}",
     )
 
 

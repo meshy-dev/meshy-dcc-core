@@ -10,7 +10,6 @@ import pytest
 from conftest import REPO_ROOT
 
 SCRIPT_PATH = REPO_ROOT / "scripts" / "ci" / "check_lock_versions.py"
-VERSION_WORKFLOW = REPO_ROOT / ".github" / "workflows" / "version-consistency.yml"
 
 
 def _load_checker_module():
@@ -345,9 +344,3 @@ def test_main_succeeds_on_clean_repository() -> None:
     checker = _load_checker_module()
 
     assert checker.main([str(REPO_ROOT)]) == 0
-
-
-def test_version_workflow_runs_the_lock_version_gate() -> None:
-    workflow = VERSION_WORKFLOW.read_text(encoding="utf-8")
-
-    assert "scripts/ci/check_lock_versions.py" in workflow

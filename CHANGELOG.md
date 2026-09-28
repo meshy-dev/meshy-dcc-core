@@ -44,7 +44,7 @@ and is not runtime-compatible with it. Attribution stays in `LICENSE` and
   the operator's `--dcc-path`, and can write the start-instance launch plan.
 - `stop-instance --discard-unsaved` tells the host it may close even though
   work might be unsaved. Send it only after the user has agreed.
-- `meshy_dcc_core.safe_stop.serve_safe_stop` serves a loopback endpoint that
+- `meshy_dcc_core.host.safe_stop.serve_safe_stop` serves a loopback endpoint that
   an adapter can advertise as `safe_stop_url`. It accepts JSON bodies only.
 
 ### Fixed

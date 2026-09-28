@@ -73,7 +73,7 @@
           "member": "meshy_dcc_core/schemas/adapter-install-sop-v2.schema.json",
           "source": "python/meshy_dcc_core/schemas/adapter-install-sop-v2.schema.json",
           "canonical_url": "https://www.meshy.ai/meshy-dcc/schemas/adapter-install-sop-v2.schema.json",
-          "sha256": "daa5840e07c956d7c9269e5709d6993a3988b905f986c06e7c4c02f5023e9422",
+          "sha256": "71df77f27399d8017d43393f0376c154a8b9bd4700f38098ed66b91a33eb9275",
           "status": "current"
         }
       ]

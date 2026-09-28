@@ -8,7 +8,7 @@ from conftest import REPO_ROOT
 
 PYPROJECT = REPO_ROOT / "pyproject.toml"
 UV_LOCK = REPO_ROOT / "uv.lock"
-SERVER_BINARY_DEP = "meshy-dcc-server>=0.18.17,<1.0.0"
+SERVER_BINARY_DEP = "meshy-dcc-server>=0.2.0,<0.3.0"
 TYPING_DEP = "typing-extensions==4.7.1; python_version<'3.8'"
 
 
