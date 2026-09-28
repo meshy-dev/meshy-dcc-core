@@ -1042,6 +1042,36 @@ mod tests {
     }
 
     #[test]
+    fn every_installable_bundled_entry_passes_install_planning() {
+        let entries = dcc_mcp_catalog::load_curated(BUNDLED_CATALOG, UPSTREAM_CATALOG).unwrap();
+        let installable = entries.iter().filter(|entry| {
+            entry.install.is_some()
+                && entry
+                    .policy
+                    .as_ref()
+                    .is_none_or(|policy| policy.installation == "available")
+        });
+        let mut planned = 0;
+        for entry in installable {
+            InstallPlanner::plan(
+                &entries,
+                InstallRequest {
+                    dcc_type: entry.dcc[0].clone(),
+                    version: None,
+                    catalog_path: None,
+                    python: None,
+                    dcc_path: None,
+                    plugin_source: None,
+                    adobe_debug_root: None,
+                },
+            )
+            .unwrap_or_else(|error| panic!("{}: {error}", entry.name));
+            planned += 1;
+        }
+        assert!(planned > 0);
+    }
+
+    #[test]
     fn upstream_catalog_prefers_an_adapter_over_its_skill_pack() {
         let service = with_upstream_catalog(InstallService::new(PathBuf::from(
             "__missing_dcc_mcp_catalog__.yml",

@@ -35,7 +35,10 @@ internal wire/compat version.
   unavailable and the bundled catalog is used. The catalog cache moved to
   `meshy-dcc/`. No catalog is fetched from upstream GitHub any more.
 - The bundled catalog also includes the upstream dcc-mcp entries named in
-  `meshy-dcc-catalog.yml` under `upstream`, at upstream versions: Houdini,
+  `meshy-dcc-catalog.yml` under `upstream`. Each is pinned to its latest
+  upstream release, whose wheel URL, SHA-256, minimum core version and
+  install runbook are recorded there, since upstream's own catalog lags
+  behind: Houdini,
   Cinema 4D, Marmoset, Substance 3D Painter and Designer, Mari, OpenUSD,
   Katana, MotionBuilder, SketchUp, FreeCAD, OpenSCAD, Material Maker and
   Photoshop. Until a Meshy adapter is published, a Meshy DCC installs its

@@ -1,25 +1,86 @@
 //! A curated catalog: own entries plus named entries taken from another catalog.
 //!
 //! meshy-dcc bundles `meshy-dcc-catalog.yml`, whose top-level `upstream` list
-//! names entries to take from the upstream dcc-mcp catalog as they are. An own
+//! names entries to take from the upstream dcc-mcp catalog. An item is either a
+//! bare name (taken as it is) or a mapping that also re-pins the entry to a
+//! newer release: version, artifact url and sha256, minimum core version,
+//! install runbook, policy. Everything else still comes from upstream. An own
 //! entry that is not installable yet yields to a named upstream entry for the
 //! same DCC, so that host stays installable until the own adapter is published.
 
 use serde::Deserialize;
 
-use crate::{CatalogEntry, CatalogError, load_from_str};
+use crate::{CatalogEntry, CatalogError, CatalogPolicy, load_from_str};
 
 #[derive(Deserialize)]
 struct Selection {
     #[serde(default)]
-    upstream: Vec<String>,
+    upstream: Vec<Pick>,
+}
+
+#[derive(Deserialize)]
+#[serde(untagged)]
+enum Pick {
+    Name(String),
+    Pinned(Pin),
+}
+
+/// Fields a curated catalog may re-pin on an upstream entry.
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct Pin {
+    name: String,
+    version: Option<String>,
+    url: Option<String>,
+    sha256: Option<String>,
+    min_core_version: Option<String>,
+    instructions_url: Option<String>,
+    policy: Option<CatalogPolicy>,
+}
+
+impl Pick {
+    fn name(&self) -> &str {
+        match self {
+            Self::Name(name) => name,
+            Self::Pinned(pin) => &pin.name,
+        }
+    }
+
+    fn apply(&self, mut entry: CatalogEntry) -> CatalogEntry {
+        let Self::Pinned(pin) = self else {
+            return entry;
+        };
+        let set = |field: &mut Option<String>, value: &Option<String>| {
+            if value.is_some() {
+                field.clone_from(value);
+            }
+        };
+        set(&mut entry.version, &pin.version);
+        set(&mut entry.min_core_version, &pin.min_core_version);
+        if pin.policy.is_some() {
+            entry.policy.clone_from(&pin.policy);
+        }
+        if let Some(install) = entry.install.as_mut() {
+            set(&mut install.url, &pin.url);
+            set(&mut install.sha256, &pin.sha256);
+            set(&mut install.instructions_url, &pin.instructions_url);
+        }
+        entry
+    }
+}
+
+fn selection(curated: &str) -> Result<Vec<Pick>, CatalogError> {
+    let selection: Selection =
+        serde_yaml_ng::from_str(curated).map_err(|e| CatalogError::Parse(e.to_string()))?;
+    Ok(selection.upstream)
 }
 
 /// Names listed under the catalog's top-level `upstream` key.
 pub fn upstream_selection(curated: &str) -> Result<Vec<String>, CatalogError> {
-    let selection: Selection =
-        serde_yaml_ng::from_str(curated).map_err(|e| CatalogError::Parse(e.to_string()))?;
-    Ok(selection.upstream)
+    Ok(selection(curated)?
+        .iter()
+        .map(|pick| pick.name().to_string())
+        .collect())
 }
 
 /// Merge `curated` with the entries of `upstream` it names.
@@ -30,14 +91,14 @@ pub fn load_curated(curated: &str, upstream: &str) -> Result<Vec<CatalogEntry>, 
     let own = load_from_str(curated)?;
     let upstream_entries = load_from_str(upstream)?;
     let mut picked = Vec::new();
-    for name in upstream_selection(curated)? {
+    for pick in selection(curated)? {
         let entry = upstream_entries
             .iter()
-            .find(|entry| entry.name == name)
+            .find(|entry| entry.name == pick.name())
             .ok_or_else(|| {
-                CatalogError::Parse(format!("upstream catalog has no entry '{name}'"))
+                CatalogError::Parse(format!("upstream catalog has no entry '{}'", pick.name()))
             })?;
-        picked.push(entry.clone());
+        picked.push(pick.apply(entry.clone()));
     }
 
     let mut entries: Vec<CatalogEntry> = own
@@ -105,6 +166,35 @@ entries:
             names(curated),
             ["own-3dsmax", "own-roblox", "up-maya", "up-houdini"]
         );
+    }
+
+    #[test]
+    fn pinned_pick_overrides_only_the_listed_fields() {
+        let upstream = r#"
+entries:
+  - name: up-houdini
+    description: h
+    dcc: [houdini]
+    version: "0.31.5"
+    install: { type: pip, pip_package: up-houdini, url: https://old/up_houdini-0.31.5-py3-none-any.whl, sha256: old, entry_point: "up:main" }
+"#;
+        let curated = r#"
+upstream:
+  - name: up-houdini
+    version: "0.43.1"
+    url: https://new/up_houdini-0.43.1-py3-none-any.whl
+    sha256: new
+entries: []
+"#;
+        let entry = load_curated(curated, upstream).unwrap().remove(0);
+        assert_eq!(entry.version.as_deref(), Some("0.43.1"));
+        let install = entry.install.unwrap();
+        assert_eq!(
+            install.url.as_deref(),
+            Some("https://new/up_houdini-0.43.1-py3-none-any.whl")
+        );
+        assert_eq!(install.sha256.as_deref(), Some("new"));
+        assert_eq!(install.entry_point.as_deref(), Some("up:main"));
     }
 
     #[test]

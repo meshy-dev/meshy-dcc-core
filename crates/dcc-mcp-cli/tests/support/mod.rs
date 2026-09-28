@@ -1160,6 +1160,15 @@ pub(crate) fn bundled_catalog() -> Vec<dcc_mcp_catalog::CatalogEntry> {
     .unwrap()
 }
 
+/// Install runbook URL of the bundled entry for `dcc`.
+pub(crate) fn bundled_instructions_url(dcc: &str) -> String {
+    bundled_catalog()
+        .into_iter()
+        .find(|entry| entry.dcc.iter().any(|name| name == dcc))
+        .and_then(|entry| entry.install?.instructions_url)
+        .unwrap()
+}
+
 /// Sorted adapter names in the bundled catalog.
 pub(crate) fn bundled_adapter_names() -> Vec<String> {
     let mut names: Vec<String> = bundled_catalog()

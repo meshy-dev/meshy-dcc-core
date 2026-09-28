@@ -3,7 +3,7 @@ mod support;
 use serde_json::Value;
 use tempfile::TempDir;
 
-use support::run_json_with_env;
+use support::{bundled_catalog, run_json, run_json_with_env};
 
 const DECISION_SCHEMA: &str =
     include_str!("../../../contracts/dcc-discovery-decision-v1.schema.json");
@@ -18,6 +18,8 @@ fn game_engine_decisions_match_v1_schema_and_preserve_unknowns() {
     let cases = fixtures["cases"].as_array().unwrap();
 
     assert_eq!(cases.len(), 4);
+    let listing = run_json(&["dcc-types"]);
+    let bundled = bundled_catalog();
     for case in cases {
         let registry = TempDir::new().unwrap();
         let registry_s = registry.path().to_string_lossy().to_string();
@@ -37,9 +39,31 @@ fn game_engine_decisions_match_v1_schema_and_preserve_unknowns() {
         assert_eq!(decision["registry_registration"], "absent");
         assert_eq!(decision["exact_instance_call"], "not_run");
         assert_eq!(decision["real_host_effect"], "not_verified");
+        // Expected install guidance follows the bundled catalog, not the
+        // fixture's `expected_instructions_url`, which describes upstream.
+        let installable = listing["dcc_types"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|entry| entry["dcc_type"] == dcc_type)
+            .unwrap()["adapters"][0]["catalog_install_available"]
+            == true;
+        let instructions_url = bundled
+            .iter()
+            .find(|entry| entry.dcc.iter().any(|dcc| dcc == dcc_type))
+            .and_then(|entry| entry.install.as_ref()?.instructions_url.clone())
+            .filter(|_| installable);
+        assert_eq!(
+            decision["next_action"]["id"],
+            if installable {
+                "plan_install"
+            } else {
+                "inspect_catalog"
+            }
+        );
         assert_eq!(
             decision["next_action"]["instructions_url"],
-            case["expected_instructions_url"]
+            serde_json::json!(instructions_url)
         );
         assert!(
             decision["uncertainties"]
