@@ -150,6 +150,27 @@ pub enum InstallStepAction {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         manifest: Option<PathBuf>,
     },
+    /// Download a host-native package and install it by running host commands.
+    HostPackage {
+        /// Artifact URL declared by the catalog.
+        url: String,
+        /// Required SHA-256 of the artifact.
+        sha256: String,
+        /// Host executable every command runs; commands never go through a shell.
+        dcc_path: PathBuf,
+        /// argv templates run first, exit status ignored, so a reinstall starts clean.
+        uninstall: Vec<Vec<String>>,
+        /// argv templates that install `{package}`, run in order.
+        steps: Vec<Vec<String>>,
+    },
+    /// Write the start-instance launch plan for this host.
+    WriteLaunchPlan {
+        dcc_type: String,
+        executable: PathBuf,
+        argv: Vec<String>,
+        #[serde(default, skip_serializing_if = "Vec::is_empty")]
+        project_markers: Vec<String>,
+    },
     /// Register the DCC adapter with the gateway.
     RegisterDcc {
         /// DCC type name (e.g. "maya").
@@ -193,6 +214,8 @@ pub enum InstallPlanError {
     InvalidPipArtifact,
     #[error("requested pip version '{requested}' differs from catalog version '{catalog}'")]
     PipVersionMismatch { requested: String, catalog: String },
+    #[error("host-package install is invalid: {0}")]
+    InvalidHostPackage(&'static str),
 }
 
 // ── defaults ─────────────────────────────────────────────────────────────────────
@@ -231,6 +254,7 @@ fn validate_install_integrity(
                 return Err(InstallPlanError::InvalidArchiveChecksum);
             }
         }
+        "host-package" => validate_host_package(install)?,
         "pip" => {
             let package = install.pip_package.as_deref().unwrap_or_default().trim();
             let catalog_version = entry.version.as_deref().unwrap_or_default().trim();
@@ -302,6 +326,74 @@ fn validate_install_integrity(
         _ => {}
     }
     Ok(())
+}
+
+fn validate_host_package(install: &CatalogInstall) -> Result<(), InstallPlanError> {
+    let value = install.sha256.as_deref().unwrap_or_default().trim();
+    let checksum = value.strip_prefix("sha256:").unwrap_or(value);
+    if checksum.len() != 64 || !checksum.bytes().all(|byte| byte.is_ascii_hexdigit()) {
+        return Err(InstallPlanError::InvalidArchiveChecksum);
+    }
+    let url = install.url.as_deref().unwrap_or_default();
+    if host_package_file_name(url).is_none() {
+        return Err(InstallPlanError::InvalidHostPackage(
+            "url must be https (or http on loopback) without userinfo, query or fragment, ending in a plain file name",
+        ));
+    }
+    let host = install
+        .host
+        .as_ref()
+        .ok_or(InstallPlanError::InvalidHostPackage(
+            "missing host commands",
+        ))?;
+    if host.steps.is_empty() {
+        return Err(InstallPlanError::InvalidHostPackage("host.steps is empty"));
+    }
+    if !host
+        .steps
+        .iter()
+        .chain(&host.uninstall)
+        .all(|argv| argv.first().map(String::as_str) == Some("{dcc_path}"))
+    {
+        return Err(InstallPlanError::InvalidHostPackage(
+            "every host command must start with {dcc_path}",
+        ));
+    }
+    if host
+        .launch
+        .as_ref()
+        .is_some_and(|argv| argv.first().map(String::as_str) != Some("{executable}"))
+    {
+        return Err(InstallPlanError::InvalidHostPackage(
+            "host.launch must start with {executable}",
+        ));
+    }
+    Ok(())
+}
+
+/// File name of an allowed host-package URL: https anywhere, plain http only
+/// on loopback, no userinfo, query or fragment, and a name that cannot escape
+/// the download directory.
+pub(crate) fn host_package_file_name(url: &str) -> Option<String> {
+    let parsed = reqwest::Url::parse(url).ok()?;
+    let loopback = matches!(parsed.host_str(), Some("127.0.0.1" | "localhost" | "[::1]"));
+    if !(parsed.scheme() == "https" || (parsed.scheme() == "http" && loopback))
+        || !parsed.username().is_empty()
+        || parsed.password().is_some()
+        || parsed.query().is_some()
+        || parsed.fragment().is_some()
+    {
+        return None;
+    }
+    let name = parsed.path_segments()?.next_back()?;
+    let valid = name
+        .as_bytes()
+        .first()
+        .is_some_and(u8::is_ascii_alphanumeric)
+        && name
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'.' | b'_' | b'-'));
+    valid.then(|| name.to_string())
 }
 
 impl InstallPlanner {
@@ -415,6 +507,9 @@ impl InstallPlanner {
                     dest: adapter_dir.clone(),
                 }
             }
+            "host-package" => {
+                return Self::build_host_package_steps(entry, install, dcc_type, dcc_path);
+            }
             other => {
                 // Unknown install type — produce an info step instead.
                 return vec![InstallStep {
@@ -464,6 +559,69 @@ impl InstallPlanner {
             action: Some(InstallStepAction::Verify),
         });
 
+        steps
+    }
+
+    fn build_host_package_steps(
+        entry: &CatalogEntry,
+        install: &CatalogInstall,
+        dcc_type: &str,
+        dcc_path: Option<PathBuf>,
+    ) -> Vec<InstallStep> {
+        let host = install.host.clone().unwrap_or_default();
+        let Some(dcc_path) = dcc_path else {
+            return vec![InstallStep {
+                name: "install-host-package".into(),
+                description: format!(
+                    "Provide --dcc-path with the {dcc_type} executable to install this adapter."
+                ),
+                action: None,
+            }];
+        };
+        // The catalog's own spelling names the launch plan, so start-instance
+        // finds it under the same DCC type.
+        let plan_dcc = entry
+            .dcc
+            .first()
+            .cloned()
+            .unwrap_or_else(|| dcc_type.into());
+        let mut steps = vec![InstallStep {
+            name: "install-host-package".into(),
+            description: format!("Install the {dcc_type} adapter package with the host"),
+            action: Some(InstallStepAction::HostPackage {
+                url: install.url.clone().unwrap_or_default(),
+                sha256: install.sha256.clone().unwrap_or_default(),
+                dcc_path: dcc_path.clone(),
+                uninstall: host.uninstall,
+                steps: host.steps,
+            }),
+        }];
+        if let Some(argv) = host.launch {
+            steps.push(InstallStep {
+                name: "write-launch-plan".into(),
+                description: format!("Record how start-instance launches {dcc_type}"),
+                action: Some(InstallStepAction::WriteLaunchPlan {
+                    dcc_type: plan_dcc,
+                    executable: dcc_path.clone(),
+                    argv,
+                    project_markers: host.project_markers,
+                }),
+            });
+        }
+        steps.push(InstallStep {
+            name: "register-dcc".into(),
+            description: format!("Start {dcc_type} so the adapter self-registers"),
+            action: Some(InstallStepAction::RegisterDcc {
+                dcc_type: dcc_type.to_string(),
+                entry_point: None,
+                dcc_path: Some(dcc_path),
+            }),
+        });
+        steps.push(InstallStep {
+            name: "verify".into(),
+            description: "Verify the host executable and launch plan exist.".into(),
+            action: Some(InstallStepAction::Verify),
+        });
         steps
     }
 
@@ -781,4 +939,38 @@ pub(crate) fn normalized_dcc_key(value: &str) -> String {
         .filter(|ch| ch.is_ascii_alphanumeric())
         .flat_map(char::to_lowercase)
         .collect()
+}
+
+#[cfg(test)]
+mod host_package_tests {
+    use super::host_package_file_name;
+
+    #[test]
+    fn host_package_url_allows_https_and_loopback_http_only() {
+        let name = |url: &str| host_package_file_name(url);
+        assert_eq!(
+            name("https://cdn.meshy.ai/a/pkg-1.0.zip").as_deref(),
+            Some("pkg-1.0.zip")
+        );
+        assert_eq!(
+            name("http://127.0.0.1:8000/pkg.zip").as_deref(),
+            Some("pkg.zip")
+        );
+        assert_eq!(
+            name("http://[::1]:8000/pkg.zip").as_deref(),
+            Some("pkg.zip")
+        );
+        for rejected in [
+            "http://example.com/pkg.zip",
+            "http://127.0.0.1:80@evil.example/pkg.zip",
+            "https://user@cdn.meshy.ai/pkg.zip",
+            "https://cdn.meshy.ai/pkg.zip?x=1",
+            "https://cdn.meshy.ai/pkg.zip#x",
+            "https://cdn.meshy.ai/..%2Fpkg.zip",
+            "https://cdn.meshy.ai/",
+            "file:///tmp/pkg.zip",
+        ] {
+            assert_eq!(name(rejected), None, "{rejected}");
+        }
+    }
 }

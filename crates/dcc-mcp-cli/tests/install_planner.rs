@@ -127,6 +127,7 @@ fn planner_generates_executable_steps_for_pip_install() {
         entry_point: Some("dcc_mcp_maya.cli:main".into()),
         instructions_url: None,
         adobe: None,
+        host: None,
         sop_version: None,
         sop_schema_digest: None,
     };
@@ -322,6 +323,7 @@ fn planner_prefers_catalog_install_instructions_url() {
         entry_point: None,
         instructions_url: Some("https://example.com/custom-install.md".into()),
         adobe: None,
+        host: None,
         sop_version: None,
         sop_schema_digest: None,
     };
@@ -361,6 +363,7 @@ fn planner_generates_executable_steps_for_git_install() {
         entry_point: None,
         instructions_url: None,
         adobe: None,
+        host: None,
         sop_version: None,
         sop_schema_digest: None,
     };
@@ -405,6 +408,7 @@ fn planner_rejects_mutable_git_and_unverified_zip_installs() {
         entry_point: None,
         instructions_url: None,
         adobe: None,
+        host: None,
         sop_version: None,
         sop_schema_digest: None,
     };
@@ -466,6 +470,7 @@ fn planner_rejects_unpinned_pip_artifacts_and_version_overrides() {
         entry_point: None,
         instructions_url: None,
         adobe: None,
+        host: None,
         sop_version: None,
         sop_schema_digest: None,
     };
@@ -560,6 +565,7 @@ fn planner_prefers_requested_python_for_pip_install() {
         entry_point: None,
         instructions_url: None,
         adobe: None,
+        host: None,
         sop_version: None,
         sop_schema_digest: None,
     };
@@ -610,6 +616,7 @@ fn planner_builds_adobe_debug_link_from_operator_paths() {
             manifest_path: Some("manifest.json".into()),
             target_subpath: None,
         }),
+        host: None,
         sop_version: None,
         sop_schema_digest: None,
     };
@@ -665,6 +672,7 @@ fn planner_prefers_adapter_entry_over_skill_pack() {
         entry_point: Some("dcc_mcp_photoshop.cli:main".into()),
         instructions_url: None,
         adobe: None,
+        host: None,
         sop_version: None,
         sop_schema_digest: None,
     };

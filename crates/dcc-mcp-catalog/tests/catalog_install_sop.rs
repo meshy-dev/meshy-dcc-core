@@ -56,6 +56,7 @@ fn sop_entry(version: Option<u32>, digest: Option<&str>) -> CatalogEntry {
             sop_version: version,
             sop_schema_digest: digest.map(str::to_string),
             adobe: None,
+            host: None,
         }),
         icon: None,
         showcase: None,

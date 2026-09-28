@@ -679,7 +679,9 @@ async fn run_with_args(args: Args) -> anyhow::Result<()> {
             if execute {
                 // `--execute` is the mutation opt-in; JSON mode must never add
                 // an interactive prompt to the machine-readable contract.
-                let report = service.execute(req, non_interactive || json);
+                // Install downloads use blocking reqwest, which panics on a runtime thread.
+                let report =
+                    tokio::task::block_in_place(|| service.execute(req, non_interactive || json));
                 explicit_exit_code = Some(report.exit_code);
                 to_json(report)?
             } else {

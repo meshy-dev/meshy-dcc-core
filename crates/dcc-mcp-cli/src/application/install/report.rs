@@ -206,6 +206,8 @@ pub(super) fn stable_step_id(action: &InstallStepAction) -> String {
         InstallStepAction::ZipExtract { .. } => "install-zip",
         InstallStepAction::PathCopy { .. } => "install-path",
         InstallStepAction::AdobePluginLink { .. } => "install-adobe-debug-link",
+        InstallStepAction::HostPackage { .. } => "install-host-package",
+        InstallStepAction::WriteLaunchPlan { .. } => "write-launch-plan",
         InstallStepAction::RegisterDcc { .. } => "register-dcc",
         InstallStepAction::Verify => "verify",
     }
@@ -219,6 +221,8 @@ pub(super) fn action_failure(action: &InstallStepAction) -> (&'static str, i32, 
         }
         InstallStepAction::Verify => ("verify", 40, "VERIFY_FAILED"),
         InstallStepAction::PipInstall { .. }
+        | InstallStepAction::HostPackage { .. }
+        | InstallStepAction::WriteLaunchPlan { .. }
         | InstallStepAction::PathCopy { .. }
         | InstallStepAction::AdobePluginLink { .. }
         | InstallStepAction::RegisterDcc { .. } => ("install", 30, "INSTALL_STEP_FAILED"),

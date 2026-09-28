@@ -120,7 +120,7 @@ const MARKETPLACE_V2_SCHEMA_JSON: &str = r##"{
           "type": "object",
           "required": ["type"],
           "properties": {
-            "type":        { "type": "string", "enum": ["git", "zip", "path", "pip"] },
+            "type":        { "type": "string", "enum": ["git", "zip", "path", "pip", "host-package"] },
             "url":         { "type": "string" },
             "ref":         { "type": "string" },
             "sha256":      { "type": "string" },
@@ -144,6 +144,22 @@ const MARKETPLACE_V2_SCHEMA_JSON: &str = r##"{
                 "target_subpath": { "type": "string", "minLength": 1 }
               },
               "additionalProperties": false
+            },
+            "host": {
+              "type": "object",
+              "required": ["steps"],
+              "properties": {
+                "steps": { "type": "array", "minItems": 1, "items": { "type": "array", "minItems": 1, "prefixItems": [{ "const": "{dcc_path}" }], "items": { "type": "string" } } },
+                "uninstall": { "type": "array", "items": { "type": "array", "minItems": 1, "prefixItems": [{ "const": "{dcc_path}" }], "items": { "type": "string" } } },
+                "launch": {
+                  "type": "array",
+                  "minItems": 1,
+                  "prefixItems": [{ "const": "{executable}" }],
+                  "items": { "type": "string" }
+                },
+                "project_markers": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+              },
+              "additionalProperties": false
             }
           },
           "allOf": [
@@ -159,6 +175,16 @@ const MARKETPLACE_V2_SCHEMA_JSON: &str = r##"{
               "then": {
                 "required": ["url", "sha256"],
                 "properties": { "sha256": { "pattern": "^(sha256:)?[0-9a-fA-F]{64}$" } }
+              }
+            },
+            {
+              "if": { "properties": { "type": { "const": "host-package" } } },
+              "then": {
+                "required": ["url", "sha256", "host"],
+                "properties": {
+                  "url": { "pattern": "^https://[^?#]+$" },
+                  "sha256": { "pattern": "^(sha256:)?[0-9a-fA-F]{64}$" }
+                }
               }
             },
             {
@@ -279,4 +305,25 @@ fn entry_schema() -> Result<jsonschema::Validator, CatalogValidationError> {
         })?;
     jsonschema::validator_for(&entry_schema_value)
         .map_err(|e| CatalogValidationError::SchemaError(format!("failed to compile schema: {e}")))
+}
+
+#[cfg(test)]
+mod host_package_schema_tests {
+    use super::validate_catalog_entries;
+
+    fn entries(host: &str) -> Vec<crate::CatalogEntry> {
+        crate::load_from_str(&format!(
+            "version: \"1\"\nentries:\n  - name: meshy-dcc-blender\n    description: Blender adapter\n    dcc: [blender]\n    install:\n      type: host-package\n      url: https://cdn.meshy.ai/meshy-dcc-core/adapters/blender.zip\n      sha256: \"{}\"\n      host:\n{host}",
+            "a".repeat(64)
+        ))
+        .unwrap()
+    }
+
+    #[test]
+    fn host_package_entries_validate_only_with_dcc_path_commands() {
+        let good = "        steps: [[\"{dcc_path}\", \"-e\", \"{package}\"]]\n        launch: [\"{executable}\"]\n";
+        validate_catalog_entries(&entries(good)).unwrap();
+        let bad = "        steps: [[\"/bin/sh\", \"-c\", \"echo\"]]\n";
+        assert!(validate_catalog_entries(&entries(bad)).is_err());
+    }
 }

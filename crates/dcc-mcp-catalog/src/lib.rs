@@ -257,6 +257,32 @@ pub struct CatalogInstall {
     /// Optional Adobe host plugin installation metadata for debug-link installs.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub adobe: Option<CatalogAdobeInstall>,
+    /// Host commands for `host-package` installs.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub host: Option<CatalogHostInstall>,
+}
+
+/// Host-side commands for a `host-package` install.
+///
+/// Each command is an argv list run without a shell. `steps` and `uninstall`
+/// must start with `{dcc_path}` (the host executable the operator supplied)
+/// and may use `{package}` (the downloaded, SHA-256 verified file). `launch`
+/// is the start-instance argv template and must start with `{executable}`.
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
+pub struct CatalogHostInstall {
+    /// Commands that install the package, run in order after `uninstall`.
+    #[serde(default)]
+    pub steps: Vec<Vec<String>>,
+    /// Commands that remove a previous install. Install runs them first and
+    /// ignores their exit status, so a reinstall starts clean.
+    #[serde(default)]
+    pub uninstall: Vec<Vec<String>>,
+    /// start-instance argv template written to the launch plan.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub launch: Option<Vec<String>>,
+    /// Paths a project must contain before start-instance binds to it.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub project_markers: Vec<String>,
 }
 
 /// Adobe host-side plugin metadata.
@@ -933,6 +959,7 @@ entries:
                 entry_point: None,
                 instructions_url: Some("https://example.com/install.md".into()),
                 adobe: None,
+                host: None,
                 sop_version: None,
                 sop_schema_digest: None,
             }),
@@ -957,6 +984,7 @@ entries:
             entry_point: None,
             instructions_url: None,
             adobe: None,
+            host: None,
             sop_version: None,
             sop_schema_digest: None,
         });
@@ -981,6 +1009,7 @@ entries:
             entry_point: None,
             instructions_url: None,
             adobe: None,
+            host: None,
             sop_version: None,
             sop_schema_digest: None,
         });
@@ -1021,6 +1050,7 @@ entries:
                 entry_point: Some("dcc_mcp_maya.cli:main".into()),
                 instructions_url: None,
                 adobe: None,
+                host: None,
                 sop_version: None,
                 sop_schema_digest: None,
             }),
@@ -1112,6 +1142,7 @@ entries:
                 entry_point: None,
                 instructions_url: None,
                 adobe: None,
+                host: None,
                 sop_version: None,
                 sop_schema_digest: None,
             }),

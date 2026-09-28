@@ -366,6 +366,21 @@ fn execute_action(action: &InstallStepAction) -> Result<StepExecution, InstallEr
             ..
         } => adobe::execute_plugin_link(source, dest, product, extension_type)
             .map(StepExecution::Completed),
+        InstallStepAction::HostPackage {
+            url,
+            sha256,
+            dcc_path,
+            uninstall,
+            steps,
+        } => execute_host_package(url, sha256, dcc_path, uninstall, steps)
+            .map(StepExecution::Completed),
+        InstallStepAction::WriteLaunchPlan {
+            dcc_type,
+            executable,
+            argv,
+            project_markers,
+        } => execute_write_launch_plan(dcc_type, executable, argv, project_markers)
+            .map(StepExecution::Completed),
         InstallStepAction::RegisterDcc {
             dcc_type,
             entry_point,
@@ -596,29 +611,7 @@ fn execute_zip_extract(
         });
     }
 
-    // Download the archive
-    let response = reqwest::blocking::get(url).map_err(|e| InstallError::StepFailed {
-        step: "zip-download".into(),
-        message: format!("failed to download {url}: {e}"),
-    })?;
-
-    let bytes = response.bytes().map_err(|e| InstallError::StepFailed {
-        step: "zip-download".into(),
-        message: format!("failed to read response from {url}: {e}"),
-    })?;
-
-    use sha2::Digest;
-    let actual = sha2::Sha256::digest(&bytes);
-    let actual_hex = actual
-        .iter()
-        .map(|byte| format!("{byte:02x}"))
-        .collect::<String>();
-    if !actual_hex.eq_ignore_ascii_case(&expected) {
-        return Err(InstallError::StepFailed {
-            step: "zip-checksum".into(),
-            message: format!("SHA-256 mismatch: expected {expected}, got {actual_hex}"),
-        });
-    }
+    let bytes = download_verified(url, &expected)?;
 
     // Ensure parent directory exists
     if let Some(parent) = dest.parent() {
@@ -640,6 +633,128 @@ fn execute_zip_extract(
         })?;
 
     Ok(Some(StepRollback::RemovePath(dest.to_path_buf())))
+}
+
+/// Download `url` and return its bytes only if they match `expected` (lowercase hex).
+fn download_verified(url: &str, expected: &str) -> Result<Vec<u8>, InstallError> {
+    let bytes = reqwest::blocking::get(url)
+        .and_then(reqwest::blocking::Response::error_for_status)
+        .and_then(|response| response.bytes())
+        .map_err(|e| InstallError::StepFailed {
+            step: "download".into(),
+            message: format!("failed to download {url}: {e}"),
+        })?;
+    use sha2::Digest;
+    let actual_hex = sha2::Sha256::digest(&bytes)
+        .iter()
+        .map(|byte| format!("{byte:02x}"))
+        .collect::<String>();
+    if !actual_hex.eq_ignore_ascii_case(expected) {
+        return Err(InstallError::StepFailed {
+            step: "checksum".into(),
+            message: format!("SHA-256 mismatch: expected {expected}, got {actual_hex}"),
+        });
+    }
+    Ok(bytes.to_vec())
+}
+
+/// Replace `{dcc_path}` and `{package}` inside each argv token. Tokens are
+/// never re-split, and the program is always the operator's `dcc_path`.
+fn host_command(dcc_path: &Path, argv: &[String], package: &Path) -> Command {
+    let mut command = Command::new(dcc_path);
+    for token in argv.iter().skip(1) {
+        command.arg(
+            token
+                .replace("{dcc_path}", &dcc_path.to_string_lossy())
+                .replace("{package}", &package.to_string_lossy()),
+        );
+    }
+    command.stdout(Stdio::null()).stderr(Stdio::null());
+    command
+}
+
+fn execute_host_package(
+    url: &str,
+    sha256: &str,
+    dcc_path: &Path,
+    uninstall: &[Vec<String>],
+    steps: &[Vec<String>],
+) -> Result<Option<StepRollback>, InstallError> {
+    let fail = |message: String| InstallError::StepFailed {
+        step: "install-host-package".into(),
+        message,
+    };
+    if !dcc_path.is_absolute() || !dcc_path.is_file() {
+        return Err(fail(format!(
+            "--dcc-path must be an absolute path to the host executable: {}",
+            dcc_path.display()
+        )));
+    }
+    let name = crate::domain::install::host_package_file_name(url)
+        .ok_or_else(|| fail(format!("refusing package URL {url}")))?;
+    let expected = required_archive_sha256(Some(sha256))?;
+    let bytes = download_verified(url, &expected)?;
+    let download_dir = tempfile::tempdir()?;
+    let package = download_dir.path().join(name);
+    fs::write(&package, bytes)?;
+
+    // A failed uninstall only means nothing was installed yet.
+    for argv in uninstall {
+        let _ = host_command(dcc_path, argv, &package).status();
+    }
+    for argv in steps {
+        let status = host_command(dcc_path, argv, &package)
+            .status()
+            .map_err(|e| fail(format!("failed to launch {}: {e}", dcc_path.display())))?;
+        if !status.success() {
+            return Err(fail(format!(
+                "host command {:?} exited with {status}",
+                argv
+            )));
+        }
+    }
+    Ok(uninstall.first().map(|argv| StepRollback::Command {
+        program: dcc_path.to_string_lossy().into_owned(),
+        args: argv
+            .iter()
+            .skip(1)
+            .map(|token| token.replace("{dcc_path}", &dcc_path.to_string_lossy()))
+            .collect(),
+    }))
+}
+
+fn launch_plan_path(dcc_type: &str) -> PathBuf {
+    crate::application::gateway_ensure::default_registry_dir()
+        .join(crate::domain::start_instance::LAUNCH_PLAN_DIR_NAME)
+        .join(format!(
+            "{}.json",
+            crate::application::instance_launch::plan::normalized_dcc_key(dcc_type)
+        ))
+}
+
+fn execute_write_launch_plan(
+    dcc_type: &str,
+    executable: &Path,
+    argv: &[String],
+    project_markers: &[String],
+) -> Result<Option<StepRollback>, InstallError> {
+    let path = launch_plan_path(dcc_type);
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent)?;
+    }
+    let document = serde_json::json!({
+        "schema_version": crate::domain::start_instance::LAUNCH_PLAN_SCHEMA_VERSION,
+        "dcc_type": dcc_type,
+        "executable": executable,
+        "argv": argv,
+        "project_markers": project_markers,
+    });
+    let text = serde_json::to_string_pretty(&document).map_err(|e| InstallError::StepFailed {
+        step: "write-launch-plan".into(),
+        message: e.to_string(),
+    })?;
+    fs::write(&path, text)?;
+    Ok(Some(StepRollback::RemovePath(path)))
 }
 
 fn required_archive_sha256(sha256: Option<&str>) -> Result<String, InstallError> {
@@ -720,7 +835,12 @@ fn execute_verify(plan: &InstallPlan) -> Result<Option<StepRollback>, InstallErr
             InstallStepAction::AdobePluginLink { dest, manifest, .. } => {
                 adobe::verify_linked_plugin(dest, manifest.as_deref())?
             }
-            InstallStepAction::RegisterDcc { .. } | InstallStepAction::Verify => {}
+            InstallStepAction::WriteLaunchPlan { dcc_type, .. } => {
+                verify_installed_path(&launch_plan_path(dcc_type))?
+            }
+            InstallStepAction::HostPackage { .. }
+            | InstallStepAction::RegisterDcc { .. }
+            | InstallStepAction::Verify => {}
         }
     }
     Ok(None)
