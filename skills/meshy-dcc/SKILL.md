@@ -46,8 +46,18 @@ Each entry in `instances` has:
 Choose by host, scene or project, and PID. If more than one fits, ask the user. Never take
 the first entry.
 
-If no instance is listed, ask the user to open the host with the adapter enabled.
-`start-instance` and `install` do not work for the supported hosts yet.
+If no instance is listed, check whether the host can be launched for the
+project:
+
+```sh
+meshy-dcc dcc-types --dcc-type blender --project /absolute/project
+```
+
+- If `next_action.id` is `start_instance`, the adapter is installed and left a
+  launch plan. With the user's go-ahead to open the application, run
+  `meshy-dcc start-instance --dcc-type blender --project /absolute/project --wait-ready --yes`.
+  Then use the instance it reports.
+- Otherwise, ask the user to open the host with the Meshy adapter enabled.
 
 Name that instance explicitly in every later command:
 
@@ -104,9 +114,23 @@ meshy-dcc call SLUG --json-file args.json
 
 ## 4. Stopping a host
 
-`stop-instance` works only for instances that advertise a safe-stop hook. The supported
-hosts don't yet, so it refuses. Never kill a host process. If a host needs to close, ask
-the user to save and close it.
+`stop-instance` works only for an instance that `start-instance` launched and that
+advertises a safe-stop hook. It refuses for a host the user opened, and you should
+never kill a host process.
+
+```sh
+meshy-dcc stop-instance --operation-id OPERATION_ID
+```
+
+A host that cannot tell whether work is unsaved, such as Blender, refuses with
+`unsaved_state_unknown`. When that happens:
+
+1. Save what the user wants kept.
+2. Ask the user whether the rest may be lost.
+3. Add `--discard-unsaved` only after they agree.
+
+If a host needs to close and you cannot stop it this way, ask the user to save and close
+it.
 
 ## Meshy models
 
