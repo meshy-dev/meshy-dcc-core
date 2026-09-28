@@ -5,7 +5,7 @@ import type { Panel } from '../admin-types';
 
 /** Capture calls to window.history.replaceState. */
 function mockLocation(search: string) {
-  const href = `http://localhost:9765/admin${search}`;
+  const href = `http://localhost:19765/admin${search}`;
   const u = new URL(href);
   Object.defineProperty(window, 'location', {
     value: {
@@ -276,6 +276,6 @@ describe('hrefForAdmin with tab params', () => {
     mockLocation('?panel=traces');
     const { traceLinks } = await loadNavigation();
     const links = traceLinks('req-123');
-    expect(links.stats_url).toBe('http://localhost:9765/admin?panel=overview&range=24h&overviewTab=stats');
+    expect(links.stats_url).toBe('http://localhost:19765/admin?panel=overview&range=24h&overviewTab=stats');
   });
 });

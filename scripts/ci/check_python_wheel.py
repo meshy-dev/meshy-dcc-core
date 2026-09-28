@@ -96,13 +96,13 @@ def forbidden_runtime_dependency_errors(metadata: Any, distribution: dict[str, A
 def _core_ui_control_contract_errors(archive: zipfile.ZipFile, names: list[str]) -> list[str]:
     """Validate the post-0.19.63 Python/skill UI Control naming cutover."""
     errors: list[str] = []
-    contracts_member = "dcc_mcp_core/adapter_contracts.py"
-    skill_member = "dcc_mcp_core/skills/ui-control/SKILL.md"
-    tools_member = "dcc_mcp_core/skills/ui-control/tools.yaml"
+    contracts_member = "meshy_dcc_core/adapter_contracts.py"
+    skill_member = "meshy_dcc_core/skills/ui-control/SKILL.md"
+    tools_member = "meshy_dcc_core/skills/ui-control/tools.yaml"
     for member in (contracts_member, skill_member, tools_member):
         if member not in names:
             errors.append(f"wheel is missing required UI Control member {member!r}")
-    legacy_members = sorted(name for name in names if name.startswith("dcc_mcp_core/skills/app-ui/"))
+    legacy_members = sorted(name for name in names if name.startswith("meshy_dcc_core/skills/app-ui/"))
     if legacy_members:
         errors.append("wheel contains removed app-ui skill members")
     if errors:
@@ -165,7 +165,7 @@ def validate_wheel(
             actual_version = str(metadata.get("Version", ""))
             actual_release = _release_tuple(actual_version)
             if (
-                profile_contract["distribution"] == "dcc-mcp-core"
+                profile_contract["distribution"] == "meshy-dcc-core"
                 and actual_release is not None
                 and actual_release >= (0, 19, 63)
             ):

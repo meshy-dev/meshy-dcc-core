@@ -19,18 +19,18 @@ import threading
 
 import pytest
 
-from dcc_mcp_core import EventBus
-from dcc_mcp_core import SandboxContext
-from dcc_mcp_core import SandboxPolicy
-from dcc_mcp_core import SkillMetadata
-from dcc_mcp_core import ToolDispatcher
-from dcc_mcp_core import ToolPipeline
-from dcc_mcp_core import ToolRecorder
-from dcc_mcp_core import ToolRegistry
-from dcc_mcp_core import expand_transitive_dependencies
-from dcc_mcp_core import resolve_dependencies
-from dcc_mcp_core import scan_and_load
-from dcc_mcp_core import validate_dependencies
+from meshy_dcc_core import EventBus
+from meshy_dcc_core import SandboxContext
+from meshy_dcc_core import SandboxPolicy
+from meshy_dcc_core import SkillMetadata
+from meshy_dcc_core import ToolDispatcher
+from meshy_dcc_core import ToolPipeline
+from meshy_dcc_core import ToolRecorder
+from meshy_dcc_core import ToolRegistry
+from meshy_dcc_core import expand_transitive_dependencies
+from meshy_dcc_core import resolve_dependencies
+from meshy_dcc_core import scan_and_load
+from meshy_dcc_core import validate_dependencies
 
 # ---------------------------------------------------------------------------
 # Helpers

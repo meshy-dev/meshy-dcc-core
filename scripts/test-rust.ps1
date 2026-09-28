@@ -14,14 +14,14 @@ $ProgressPreference = 'SilentlyContinue'
 
 $suites = @(
     @('cargo', 'nextest', 'run', '--workspace', '--no-fail-fast'),
-    @('cargo', 'nextest', 'run', '-p', 'dcc-mcp-job', '--features', 'job-persist-sqlite', '--no-fail-fast'),
+    @('cargo', 'nextest', 'run', '-p', 'meshy-dcc-job', '--features', 'job-persist-sqlite', '--no-fail-fast'),
     # `--no-fail-fast` is a cargo flag on the doctest passes (before `--`): it
     # keeps the remaining crates' doctests running after one crate fails. The
     # libtest flag of the same name does not exist —
     # `cargo test --doc -- --no-fail-fast` aborts with
     # "Unrecognized option: 'no-fail-fast'" before running a single doctest.
     @('cargo', 'test', '--workspace', '--doc', '--no-fail-fast'),
-    @('cargo', 'test', '-p', 'dcc-mcp-job', '--features', 'job-persist-sqlite', '--doc', '--no-fail-fast')
+    @('cargo', 'test', '-p', 'meshy-dcc-job', '--features', 'job-persist-sqlite', '--doc', '--no-fail-fast')
 )
 
 $status = 0

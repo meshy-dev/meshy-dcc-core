@@ -33,7 +33,7 @@ def test_current_release_pr_head_uses_exact_open_branch_filter(monkeypatch: pyte
                 [
                     {
                         "head": {
-                            "ref": "release-please--branches--main--components--dcc-mcp-core",
+                            "ref": "release-please--branches--main--components--meshy-dcc-core",
                             "sha": "current-head",
                         }
                     }
@@ -45,8 +45,8 @@ def test_current_release_pr_head_uses_exact_open_branch_filter(monkeypatch: pyte
 
     assert (
         guard.current_release_pr_head(
-            "dcc-mcp/dcc-mcp-core",
-            "release-please--branches--main--components--dcc-mcp-core",
+            "meshy-dev/meshy-dcc-core",
+            "release-please--branches--main--components--meshy-dcc-core",
         )
         == "current-head"
     )
@@ -54,13 +54,13 @@ def test_current_release_pr_head_uses_exact_open_branch_filter(monkeypatch: pyte
         [
             "gh",
             "api",
-            "repos/dcc-mcp/dcc-mcp-core/pulls",
+            "repos/meshy-dcc/meshy-dcc-core/pulls",
             "--method",
             "GET",
             "-f",
             "state=open",
             "-f",
-            "head=dcc-mcp:release-please--branches--main--components--dcc-mcp-core",
+            "head=meshy-dcc:release-please--branches--main--components--meshy-dcc-core",
             "-f",
             "base=main",
             "-f",
@@ -76,8 +76,8 @@ def test_workflow_run_skips_superseded_or_closed_release_pr_heads(
 ) -> None:
     guard = _load_guard_module()
     monkeypatch.setenv("GITHUB_EVENT_NAME", "workflow_run")
-    monkeypatch.setenv("GITHUB_REPOSITORY", "dcc-mcp/dcc-mcp-core")
-    monkeypatch.setenv("PR_HEAD_REF", "release-please--branches--main--components--dcc-mcp-core")
+    monkeypatch.setenv("GITHUB_REPOSITORY", "meshy-dev/meshy-dcc-core")
+    monkeypatch.setenv("PR_HEAD_REF", "release-please--branches--main--components--meshy-dcc-core")
     monkeypatch.setenv("PR_HEAD_SHA", "old-head")
     monkeypatch.setattr(guard, "current_release_pr_head", lambda _repo, _head_ref: current_sha)
 
@@ -92,8 +92,8 @@ def test_workflow_run_skips_superseded_or_closed_release_pr_heads(
 def test_workflow_run_checks_the_current_release_pr_head(monkeypatch: pytest.MonkeyPatch) -> None:
     guard = _load_guard_module()
     monkeypatch.setenv("GITHUB_EVENT_NAME", "workflow_run")
-    monkeypatch.setenv("GITHUB_REPOSITORY", "dcc-mcp/dcc-mcp-core")
-    monkeypatch.setenv("PR_HEAD_REF", "release-please--branches--main--components--dcc-mcp-core")
+    monkeypatch.setenv("GITHUB_REPOSITORY", "meshy-dev/meshy-dcc-core")
+    monkeypatch.setenv("PR_HEAD_REF", "release-please--branches--main--components--meshy-dcc-core")
     monkeypatch.setenv("PR_HEAD_SHA", "current-head")
     monkeypatch.setattr(guard, "current_release_pr_head", lambda _repo, _head_ref: "current-head")
     checked: list[tuple[str, str]] = []
@@ -101,4 +101,4 @@ def test_workflow_run_checks_the_current_release_pr_head(monkeypatch: pytest.Mon
 
     guard.main()
 
-    assert checked == [("dcc-mcp/dcc-mcp-core", "current-head")]
+    assert checked == [("meshy-dev/meshy-dcc-core", "current-head")]

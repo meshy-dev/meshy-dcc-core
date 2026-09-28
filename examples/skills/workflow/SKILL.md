@@ -8,7 +8,7 @@ description: >-
   for those.
 license: MIT
 metadata:
-  dcc-mcp:
+  meshy-dcc:
     dcc: python
     version: "1.0.0"
     layer: infrastructure
@@ -24,7 +24,7 @@ Multi-step action chaining for DCC pipelines.
 ## Overview
 
 The `workflow__run_chain` tool lets an agent (or a human) execute a sequence
-of dcc-mcp-core actions in order. Results from earlier steps flow into later
+of meshy-dcc-core actions in order. Results from earlier steps flow into later
 steps via context merging and `{key}` parameter interpolation.
 
 ## Example: Select → Rename → Validate → Export

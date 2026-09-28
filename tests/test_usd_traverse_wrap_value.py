@@ -18,16 +18,16 @@ from __future__ import annotations
 
 import pytest
 
-from dcc_mcp_core import BooleanWrapper
-from dcc_mcp_core import FloatWrapper
-from dcc_mcp_core import IntWrapper
-from dcc_mcp_core import SdfPath
-from dcc_mcp_core import StringWrapper
-from dcc_mcp_core import UsdStage
-from dcc_mcp_core import VtValue
-from dcc_mcp_core import unwrap_parameters
-from dcc_mcp_core import unwrap_value
-from dcc_mcp_core import wrap_value
+from meshy_dcc_core import BooleanWrapper
+from meshy_dcc_core import FloatWrapper
+from meshy_dcc_core import IntWrapper
+from meshy_dcc_core import SdfPath
+from meshy_dcc_core import StringWrapper
+from meshy_dcc_core import UsdStage
+from meshy_dcc_core import VtValue
+from meshy_dcc_core import unwrap_parameters
+from meshy_dcc_core import unwrap_value
+from meshy_dcc_core import wrap_value
 
 # ---------------------------------------------------------------------------
 # Helpers

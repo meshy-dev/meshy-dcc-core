@@ -4,9 +4,9 @@
 from __future__ import annotations
 
 # Import local modules
-from dcc_mcp_core.host import BlockingDispatcher
-from dcc_mcp_core.host import QueueDispatcher
-from dcc_mcp_core.host import TickableDispatcher
+from meshy_dcc_core.host import BlockingDispatcher
+from meshy_dcc_core.host import QueueDispatcher
+from meshy_dcc_core.host import TickableDispatcher
 
 
 class _DuckDispatcher:

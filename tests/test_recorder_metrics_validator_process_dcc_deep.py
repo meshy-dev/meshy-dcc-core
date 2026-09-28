@@ -13,19 +13,19 @@ import time
 import pytest
 
 from _support.watcher import wait_for_event
-from dcc_mcp_core import DccCapabilities
-from dcc_mcp_core import DccInfo
-from dcc_mcp_core import InputValidator
-from dcc_mcp_core import PyCrashRecoveryPolicy
-from dcc_mcp_core import PyDccLauncher
-from dcc_mcp_core import PyProcessMonitor
-from dcc_mcp_core import PyProcessWatcher
-from dcc_mcp_core import RecordingGuard
-from dcc_mcp_core import SceneInfo
-from dcc_mcp_core import SceneStatistics
-from dcc_mcp_core import ScriptLanguage
-from dcc_mcp_core import ToolMetrics
-from dcc_mcp_core import ToolRecorder
+from meshy_dcc_core import DccCapabilities
+from meshy_dcc_core import DccInfo
+from meshy_dcc_core import InputValidator
+from meshy_dcc_core import PyCrashRecoveryPolicy
+from meshy_dcc_core import PyDccLauncher
+from meshy_dcc_core import PyProcessMonitor
+from meshy_dcc_core import PyProcessWatcher
+from meshy_dcc_core import RecordingGuard
+from meshy_dcc_core import SceneInfo
+from meshy_dcc_core import SceneStatistics
+from meshy_dcc_core import ScriptLanguage
+from meshy_dcc_core import ToolMetrics
+from meshy_dcc_core import ToolRecorder
 
 # ---------------------------------------------------------------------------
 # TestToolRecorder

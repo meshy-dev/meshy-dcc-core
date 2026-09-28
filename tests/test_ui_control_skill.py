@@ -18,10 +18,10 @@ from typing import ClassVar
 import pytest
 
 from conftest import REPO_ROOT
-from dcc_mcp_core import parse_skill_md
-from dcc_mcp_core._server.inprocess_executor import run_skill_script
+from meshy_dcc_core import parse_skill_md
+from meshy_dcc_core._server.inprocess_executor import run_skill_script
 
-_SKILL_DIR = REPO_ROOT / "python" / "dcc_mcp_core" / "skills" / "ui-control"
+_SKILL_DIR = REPO_ROOT / "python" / "meshy_dcc_core" / "skills" / "ui-control"
 _SCRIPTS = _SKILL_DIR / "scripts"
 
 
@@ -35,8 +35,8 @@ def test_ui_control_skill_triggers_on_cua_ui_control_and_dcc_cua() -> None:
         assert phrase in search_hint
     assert "dcc-cua 0.4.0+" in (metadata.compatibility or "")
 
-    from dcc_mcp_core import SkillCatalog
-    from dcc_mcp_core import ToolRegistry
+    from meshy_dcc_core import SkillCatalog
+    from meshy_dcc_core import ToolRegistry
 
     catalog = SkillCatalog(ToolRegistry())
     catalog.discover(extra_paths=[str(_SKILL_DIR.parent)])
@@ -74,18 +74,18 @@ def _load_entrypoint_module() -> Any:
 
 def test_ui_control_defaults_to_dcc_cua_and_keeps_mock_explicit(monkeypatch: Any) -> None:
     entrypoint = _load_entrypoint_module()
-    monkeypatch.delenv("DCC_MCP_UI_CONTROL_BACKEND", raising=False)
+    monkeypatch.delenv("MESHY_DCC_UI_CONTROL_BACKEND", raising=False)
     assert entrypoint._selected_backend() == "cua"
 
-    monkeypatch.setenv("DCC_MCP_UI_CONTROL_BACKEND", "")
+    monkeypatch.setenv("MESHY_DCC_UI_CONTROL_BACKEND", "")
     assert entrypoint._selected_backend() == "cua"
 
-    monkeypatch.setenv("DCC_MCP_UI_CONTROL_BACKEND", "mock")
+    monkeypatch.setenv("MESHY_DCC_UI_CONTROL_BACKEND", "mock")
     assert entrypoint._selected_backend() == "mock"
 
 
 def test_ui_control_entrypoint_imports_without_native_core(monkeypatch: Any) -> None:
-    monkeypatch.setitem(sys.modules, "dcc_mcp_core._core", None)
+    monkeypatch.setitem(sys.modules, "meshy_dcc_core._core", None)
     entrypoint = _load_entrypoint_module()
 
     class Backend:
@@ -114,8 +114,8 @@ def _run_tool(
     extra_env: dict[str, str] | None = None,
 ) -> dict[str, Any]:
     env = dict(os.environ)
-    env["DCC_MCP_UI_CONTROL_BACKEND"] = "mock"
-    env["DCC_MCP_UI_CONTROL_MOCK_STATE_DIR"] = str(state_dir)
+    env["MESHY_DCC_UI_CONTROL_BACKEND"] = "mock"
+    env["MESHY_DCC_UI_CONTROL_MOCK_STATE_DIR"] = str(state_dir)
     if extra_env:
         env.update(extra_env)
     python_path = str(REPO_ROOT / "python")
@@ -145,9 +145,9 @@ def test_ui_control_cua_spec_loads_isolated_host_client_state() -> None:
 
 
 def test_ui_control_skill_metadata_and_tool_names() -> None:
-    from dcc_mcp_core import SkillCatalog
-    from dcc_mcp_core import ToolRegistry
-    from dcc_mcp_core import parse_skill_md
+    from meshy_dcc_core import SkillCatalog
+    from meshy_dcc_core import ToolRegistry
+    from meshy_dcc_core import parse_skill_md
 
     meta = parse_skill_md(str(_SKILL_DIR))
     assert meta is not None
@@ -181,8 +181,8 @@ def test_ui_control_skill_metadata_and_tool_names() -> None:
 def test_ui_control_load_fails_loudly_without_persistent_executor() -> None:
     import pytest
 
-    from dcc_mcp_core import SkillCatalog
-    from dcc_mcp_core import ToolRegistry
+    from meshy_dcc_core import SkillCatalog
+    from meshy_dcc_core import ToolRegistry
 
     catalog = SkillCatalog(ToolRegistry())
     catalog.discover(extra_paths=[str(_SKILL_DIR.parent)])
@@ -192,7 +192,7 @@ def test_ui_control_load_fails_loudly_without_persistent_executor() -> None:
 
 
 def test_ui_control_tool_schema_supports_computer_use_actions() -> None:
-    from dcc_mcp_core import parse_skill_md
+    from meshy_dcc_core import parse_skill_md
 
     meta = parse_skill_md(str(_SKILL_DIR))
     assert meta is not None
@@ -318,11 +318,11 @@ def test_ui_control_entrypoints_accept_inprocess_parameters(
     monkeypatch: Any,
 ) -> None:
     """Sidecar hosts must not require subprocess stdin for bundled ui-control."""
-    monkeypatch.setenv("DCC_MCP_UI_CONTROL_BACKEND", "mock")
-    monkeypatch.setenv("DCC_MCP_UI_CONTROL_MOCK_STATE_DIR", str(tmp_path))
+    monkeypatch.setenv("MESHY_DCC_UI_CONTROL_BACKEND", "mock")
+    monkeypatch.setenv("MESHY_DCC_UI_CONTROL_MOCK_STATE_DIR", str(tmp_path))
     log_dir = tmp_path / "logs"
-    monkeypatch.setenv("DCC_MCP_LOG_DIR", str(log_dir))
-    monkeypatch.setenv("DCC_MCP_UI_CONTROL_DCC_TYPE", "unreal")
+    monkeypatch.setenv("MESHY_DCC_LOG_DIR", str(log_dir))
+    monkeypatch.setenv("MESHY_DCC_UI_CONTROL_DCC_TYPE", "unreal")
 
     snapshot = run_skill_script(
         str(_SCRIPTS / "snapshot.py"),
@@ -379,7 +379,7 @@ def test_ui_control_entrypoints_accept_inprocess_parameters(
     assert stopped["success"] is True
     assert stopped["context"]["active"] is False
 
-    log_text = next(log_dir.glob("dcc-mcp-ui-control.*.log")).read_text(encoding="utf-8")
+    log_text = next(log_dir.glob("meshy-dcc-ui-control.*.log")).read_text(encoding="utf-8")
     audit_rows = [json.loads(line.split(": ", 1)[1]) for line in log_text.splitlines()]
     assert [row["tool"] for row in audit_rows] == [
         "ui_control__snapshot",
@@ -450,8 +450,8 @@ def test_ui_control_entrypoint_reports_real_snapshot_provenance(tmp_path: Path, 
 
     monkeypatch.setattr(entrypoint, "_load_backend", lambda: Backend)
     monkeypatch.setattr(entrypoint, "_artefact_put_bytes", put_bytes)
-    monkeypatch.setenv("DCC_MCP_UI_CONTROL_BACKEND", "cua")
-    monkeypatch.setenv("DCC_MCP_DISABLE_FILE_LOGGING", "1")
+    monkeypatch.setenv("MESHY_DCC_UI_CONTROL_BACKEND", "cua")
+    monkeypatch.setenv("MESHY_DCC_DISABLE_FILE_LOGGING", "1")
 
     result = entrypoint.snapshot_tool({"session_id": "evidence"})
 
@@ -501,8 +501,8 @@ def test_ui_control_subprocess_forwards_action_to_windows_backend_without_host(t
         },
         tmp_path,
         {
-            "DCC_MCP_UI_CONTROL_BACKEND": "cua",
-            "DCC_MCP_DISABLE_FILE_LOGGING": "1",
+            "MESHY_DCC_UI_CONTROL_BACKEND": "cua",
+            "MESHY_DCC_DISABLE_FILE_LOGGING": "1",
         },
     )
 
@@ -515,9 +515,9 @@ def test_ui_control_admin_audit_records_rejection_without_sensitive_text(
     tmp_path: Path,
     monkeypatch: Any,
 ) -> None:
-    monkeypatch.setenv("DCC_MCP_UI_CONTROL_BACKEND", "mock")
-    monkeypatch.setenv("DCC_MCP_UI_CONTROL_MOCK_STATE_DIR", str(tmp_path / "state"))
-    monkeypatch.setenv("DCC_MCP_LOG_DIR", str(tmp_path / "logs"))
+    monkeypatch.setenv("MESHY_DCC_UI_CONTROL_BACKEND", "mock")
+    monkeypatch.setenv("MESHY_DCC_UI_CONTROL_MOCK_STATE_DIR", str(tmp_path / "state"))
+    monkeypatch.setenv("MESHY_DCC_LOG_DIR", str(tmp_path / "logs"))
 
     snapshot = run_skill_script(str(_SCRIPTS / "snapshot.py"), {"session_id": "denied"})
     result = run_skill_script(
@@ -533,7 +533,7 @@ def test_ui_control_admin_audit_records_rejection_without_sensitive_text(
     )
 
     assert result["success"] is False
-    log_text = next((tmp_path / "logs").glob("dcc-mcp-ui-control.*.log")).read_text(encoding="utf-8")
+    log_text = next((tmp_path / "logs").glob("meshy-dcc-ui-control.*.log")).read_text(encoding="utf-8")
     assert "never-log-this-secret" not in log_text
     row = json.loads(log_text.splitlines()[-1].split(": ", 1)[1])
     assert row["tool"] == "ui_control__act"
@@ -543,8 +543,8 @@ def test_ui_control_admin_audit_records_rejection_without_sensitive_text(
 
 def test_ui_control_admin_audit_links_state_delta_to_action(tmp_path: Path, monkeypatch: Any) -> None:
     entrypoint = _load_entrypoint_module()
-    monkeypatch.setenv("DCC_MCP_LOG_DIR", str(tmp_path))
-    monkeypatch.delenv("DCC_MCP_DISABLE_FILE_LOGGING", raising=False)
+    monkeypatch.setenv("MESHY_DCC_LOG_DIR", str(tmp_path))
+    monkeypatch.delenv("MESHY_DCC_DISABLE_FILE_LOGGING", raising=False)
 
     entrypoint._record_operation(
         "snapshot_tool",
@@ -568,7 +568,7 @@ def test_ui_control_admin_audit_links_state_delta_to_action(tmp_path: Path, monk
         },
     )
 
-    log_text = next(tmp_path.glob("dcc-mcp-ui-control.*.log")).read_text(encoding="utf-8")
+    log_text = next(tmp_path.glob("meshy-dcc-ui-control.*.log")).read_text(encoding="utf-8")
     row = json.loads(log_text.splitlines()[-1].split(": ", 1)[1])
     assert row["action_id"] == "action:test"
     assert row["state_delta"]["paths"] == ["/root/name"]
@@ -789,7 +789,7 @@ def test_ui_control_backend_router_reports_unknown_backend(tmp_path: Path) -> No
         "snapshot",
         {"session_id": "bad-backend"},
         tmp_path,
-        extra_env={"DCC_MCP_UI_CONTROL_BACKEND": "definitely-not-a-backend"},
+        extra_env={"MESHY_DCC_UI_CONTROL_BACKEND": "definitely-not-a-backend"},
     )
 
     assert result["success"] is False
@@ -818,7 +818,7 @@ def test_ui_control_non_cua_backends_reject_trajectory_recording(
         "recording_start",
         {"session_id": "no-recording-fallback", "output_dir": str(tmp_path)},
         tmp_path,
-        extra_env={"DCC_MCP_UI_CONTROL_BACKEND": backend},
+        extra_env={"MESHY_DCC_UI_CONTROL_BACKEND": backend},
     )
 
     assert result["success"] is False
@@ -992,12 +992,12 @@ class _FakeHostClient:
 def _configure_fake_host(backend: Any, monkeypatch: Any, *, raw: Optional[bool] = None) -> None:
     _FakeHostClient.instances.clear()
     monkeypatch.setattr(backend, "_HostClient", _FakeHostClient)
-    monkeypatch.setenv("DCC_MCP_UI_CONTROL_PROCESS_ID", "1234")
-    monkeypatch.delenv("DCC_MCP_UI_CONTROL_WINDOW_HANDLE", raising=False)
+    monkeypatch.setenv("MESHY_DCC_UI_CONTROL_PROCESS_ID", "1234")
+    monkeypatch.delenv("MESHY_DCC_UI_CONTROL_WINDOW_HANDLE", raising=False)
     if raw is None:
-        monkeypatch.delenv("DCC_MCP_CUA_ALLOW_RAW_INPUT", raising=False)
+        monkeypatch.delenv("MESHY_DCC_CUA_ALLOW_RAW_INPUT", raising=False)
     else:
-        monkeypatch.setenv("DCC_MCP_CUA_ALLOW_RAW_INPUT", "true" if raw else "false")
+        monkeypatch.setenv("MESHY_DCC_CUA_ALLOW_RAW_INPUT", "true" if raw else "false")
 
 
 def test_ui_control_cua_host_maps_snapshot_and_shared_image(monkeypatch: Any) -> None:
@@ -1023,10 +1023,10 @@ def test_ui_control_cua_host_uses_adapter_scope_and_title_to_select_one_window(m
     backend = _load_cua_module()
     _FakeHostClient.instances.clear()
     monkeypatch.setattr(backend, "_HostClient", _FakeHostClient)
-    monkeypatch.delenv("DCC_MCP_UI_CONTROL_DCC_TYPE", raising=False)
-    monkeypatch.delenv("DCC_MCP_UI_CONTROL_PROCESS_ID", raising=False)
-    monkeypatch.delenv("DCC_MCP_UI_CONTROL_WINDOW_HANDLE", raising=False)
-    monkeypatch.delenv("DCC_MCP_UI_CONTROL_WINDOW_TITLE", raising=False)
+    monkeypatch.delenv("MESHY_DCC_UI_CONTROL_DCC_TYPE", raising=False)
+    monkeypatch.delenv("MESHY_DCC_UI_CONTROL_PROCESS_ID", raising=False)
+    monkeypatch.delenv("MESHY_DCC_UI_CONTROL_WINDOW_HANDLE", raising=False)
+    monkeypatch.delenv("MESHY_DCC_UI_CONTROL_WINDOW_TITLE", raising=False)
 
     result = backend.snapshot_tool(
         {
@@ -1052,11 +1052,11 @@ def test_ui_control_cua_host_accepts_redundant_process_name_with_trusted_adapter
     backend = _load_cua_module()
     _FakeHostClient.instances.clear()
     monkeypatch.setattr(backend, "_HostClient", _FakeHostClient)
-    monkeypatch.delenv("DCC_MCP_UI_CONTROL_DCC_TYPE", raising=False)
-    monkeypatch.delenv("DCC_MCP_UI_CONTROL_PROCESS_ID", raising=False)
-    monkeypatch.delenv("DCC_MCP_UI_CONTROL_PROCESS_NAME", raising=False)
-    monkeypatch.delenv("DCC_MCP_UI_CONTROL_WINDOW_HANDLE", raising=False)
-    monkeypatch.delenv("DCC_MCP_UI_CONTROL_WINDOW_TITLE", raising=False)
+    monkeypatch.delenv("MESHY_DCC_UI_CONTROL_DCC_TYPE", raising=False)
+    monkeypatch.delenv("MESHY_DCC_UI_CONTROL_PROCESS_ID", raising=False)
+    monkeypatch.delenv("MESHY_DCC_UI_CONTROL_PROCESS_NAME", raising=False)
+    monkeypatch.delenv("MESHY_DCC_UI_CONTROL_WINDOW_HANDLE", raising=False)
+    monkeypatch.delenv("MESHY_DCC_UI_CONTROL_WINDOW_TITLE", raising=False)
 
     result = backend.snapshot_tool(
         {
@@ -1086,9 +1086,9 @@ def test_ui_control_cua_host_rejects_process_name_conflicting_with_trusted_ident
     backend = _load_cua_module()
     _FakeHostClient.instances.clear()
     monkeypatch.setattr(backend, "_HostClient", _FakeHostClient)
-    monkeypatch.delenv("DCC_MCP_UI_CONTROL_PROCESS_ID", raising=False)
-    monkeypatch.setenv("DCC_MCP_UI_CONTROL_PROCESS_NAME", "renderhost.exe")
-    monkeypatch.delenv("DCC_MCP_UI_CONTROL_WINDOW_HANDLE", raising=False)
+    monkeypatch.delenv("MESHY_DCC_UI_CONTROL_PROCESS_ID", raising=False)
+    monkeypatch.setenv("MESHY_DCC_UI_CONTROL_PROCESS_NAME", "renderhost.exe")
+    monkeypatch.delenv("MESHY_DCC_UI_CONTROL_WINDOW_HANDLE", raising=False)
 
     result = backend.snapshot_tool(
         {
@@ -1113,9 +1113,9 @@ def test_ui_control_cua_host_process_name_alone_does_not_mint_native_scope(monke
     backend = _load_cua_module()
     _FakeHostClient.instances.clear()
     monkeypatch.setattr(backend, "_HostClient", _FakeHostClient)
-    monkeypatch.delenv("DCC_MCP_UI_CONTROL_PROCESS_ID", raising=False)
-    monkeypatch.delenv("DCC_MCP_UI_CONTROL_PROCESS_NAME", raising=False)
-    monkeypatch.delenv("DCC_MCP_UI_CONTROL_WINDOW_HANDLE", raising=False)
+    monkeypatch.delenv("MESHY_DCC_UI_CONTROL_PROCESS_ID", raising=False)
+    monkeypatch.delenv("MESHY_DCC_UI_CONTROL_PROCESS_NAME", raising=False)
+    monkeypatch.delenv("MESHY_DCC_UI_CONTROL_WINDOW_HANDLE", raising=False)
 
     result = backend.snapshot_tool({"session_id": "name-only", "process_name": "obs64.exe"})
 
@@ -1154,10 +1154,10 @@ def test_ui_control_cua_host_recording_accepts_trusted_adapter_scope(tmp_path: P
     backend = _load_cua_module()
     _FakeHostClient.instances.clear()
     monkeypatch.setattr(backend, "_HostClient", _FakeHostClient)
-    monkeypatch.delenv("DCC_MCP_UI_CONTROL_DCC_TYPE", raising=False)
-    monkeypatch.delenv("DCC_MCP_UI_CONTROL_PROCESS_ID", raising=False)
-    monkeypatch.delenv("DCC_MCP_UI_CONTROL_WINDOW_HANDLE", raising=False)
-    monkeypatch.delenv("DCC_MCP_UI_CONTROL_WINDOW_TITLE", raising=False)
+    monkeypatch.delenv("MESHY_DCC_UI_CONTROL_DCC_TYPE", raising=False)
+    monkeypatch.delenv("MESHY_DCC_UI_CONTROL_PROCESS_ID", raising=False)
+    monkeypatch.delenv("MESHY_DCC_UI_CONTROL_WINDOW_HANDLE", raising=False)
+    monkeypatch.delenv("MESHY_DCC_UI_CONTROL_WINDOW_TITLE", raising=False)
 
     started = backend.recording_start_tool(
         {
@@ -1189,8 +1189,8 @@ def test_ui_control_cua_host_requires_operator_bound_scope(monkeypatch: Any) -> 
     backend = _load_cua_module()
     _FakeHostClient.instances.clear()
     monkeypatch.setattr(backend, "_HostClient", _FakeHostClient)
-    monkeypatch.delenv("DCC_MCP_UI_CONTROL_PROCESS_ID", raising=False)
-    monkeypatch.delenv("DCC_MCP_UI_CONTROL_WINDOW_HANDLE", raising=False)
+    monkeypatch.delenv("MESHY_DCC_UI_CONTROL_PROCESS_ID", raising=False)
+    monkeypatch.delenv("MESHY_DCC_UI_CONTROL_WINDOW_HANDLE", raising=False)
 
     result = backend.snapshot_tool({"session_id": "untrusted", "process_id": 1234})
 
@@ -1203,8 +1203,8 @@ def test_ui_control_cua_host_recording_state_without_existing_session_requires_s
     backend = _load_cua_module()
     _FakeHostClient.instances.clear()
     monkeypatch.setattr(backend, "_HostClient", _FakeHostClient)
-    monkeypatch.delenv("DCC_MCP_UI_CONTROL_PROCESS_ID", raising=False)
-    monkeypatch.delenv("DCC_MCP_UI_CONTROL_WINDOW_HANDLE", raising=False)
+    monkeypatch.delenv("MESHY_DCC_UI_CONTROL_PROCESS_ID", raising=False)
+    monkeypatch.delenv("MESHY_DCC_UI_CONTROL_WINDOW_HANDLE", raising=False)
 
     result = backend.recording_state_tool({"session_id": "untrusted-recording"})
 
@@ -1574,29 +1574,29 @@ def test_ui_control_cua_host_resume_always_round_trips_to_trusted_surface(monkey
 def test_ui_control_chrome_cdp_preset_aliases(monkeypatch: Any) -> None:
     cdp_runtime = _load_cdp_runtime_module()
 
-    monkeypatch.delenv("DCC_MCP_UI_CONTROL_CDP_PRESET", raising=False)
-    monkeypatch.delenv("DCC_MCP_UI_CONTROL_CHROME_PRESET", raising=False)
+    monkeypatch.delenv("MESHY_DCC_UI_CONTROL_CDP_PRESET", raising=False)
+    monkeypatch.delenv("MESHY_DCC_UI_CONTROL_CHROME_PRESET", raising=False)
     assert cdp_runtime.cdp_preset() == "reuse"
 
-    monkeypatch.setenv("DCC_MCP_UI_CONTROL_CDP_PRESET", "aurora")
+    monkeypatch.setenv("MESHY_DCC_UI_CONTROL_CDP_PRESET", "aurora")
     assert cdp_runtime.cdp_preset() == "auroraview"
 
-    monkeypatch.setenv("DCC_MCP_UI_CONTROL_CDP_PRESET", "temp")
+    monkeypatch.setenv("MESHY_DCC_UI_CONTROL_CDP_PRESET", "temp")
     assert cdp_runtime.cdp_preset() == "isolated"
 
-    monkeypatch.setenv("DCC_MCP_UI_CONTROL_CDP_PRESET", "msedge")
+    monkeypatch.setenv("MESHY_DCC_UI_CONTROL_CDP_PRESET", "msedge")
     assert cdp_runtime.cdp_preset() == "edge"
 
-    monkeypatch.setenv("DCC_MCP_UI_CONTROL_CDP_PRESET", "agent_browser")
+    monkeypatch.setenv("MESHY_DCC_UI_CONTROL_CDP_PRESET", "agent_browser")
     assert cdp_runtime.cdp_preset() == "agent-browser"
 
 
 def test_ui_control_auroraview_preset_uses_auroraview_port(monkeypatch: Any) -> None:
     cdp_runtime = _load_cdp_runtime_module()
 
-    monkeypatch.delenv("DCC_MCP_UI_CONTROL_CDP_URL", raising=False)
-    monkeypatch.delenv("DCC_MCP_UI_CONTROL_CHROME_CDP_URL", raising=False)
-    monkeypatch.delenv("DCC_MCP_UI_CONTROL_CDP_PORT", raising=False)
+    monkeypatch.delenv("MESHY_DCC_UI_CONTROL_CDP_URL", raising=False)
+    monkeypatch.delenv("MESHY_DCC_UI_CONTROL_CHROME_CDP_URL", raising=False)
+    monkeypatch.delenv("MESHY_DCC_UI_CONTROL_CDP_PORT", raising=False)
     monkeypatch.setenv("AURORAVIEW_CDP_PORT", "9333")
 
     assert cdp_runtime.endpoint_candidates("auroraview") == [
@@ -1608,10 +1608,10 @@ def test_ui_control_auroraview_preset_uses_auroraview_port(monkeypatch: Any) -> 
 def test_ui_control_edge_preset_uses_edge_port(monkeypatch: Any) -> None:
     cdp_runtime = _load_cdp_runtime_module()
 
-    monkeypatch.delenv("DCC_MCP_UI_CONTROL_CDP_URL", raising=False)
-    monkeypatch.delenv("DCC_MCP_UI_CONTROL_EDGE_CDP_URL", raising=False)
-    monkeypatch.delenv("DCC_MCP_UI_CONTROL_CDP_PORT", raising=False)
-    monkeypatch.setenv("DCC_MCP_UI_CONTROL_EDGE_CDP_PORT", "9444")
+    monkeypatch.delenv("MESHY_DCC_UI_CONTROL_CDP_URL", raising=False)
+    monkeypatch.delenv("MESHY_DCC_UI_CONTROL_EDGE_CDP_URL", raising=False)
+    monkeypatch.delenv("MESHY_DCC_UI_CONTROL_CDP_PORT", raising=False)
+    monkeypatch.setenv("MESHY_DCC_UI_CONTROL_EDGE_CDP_PORT", "9444")
 
     assert cdp_runtime.endpoint_candidates("edge") == [
         "http://127.0.0.1:9444",
@@ -1627,6 +1627,6 @@ def test_ui_control_agent_browser_preset_parses_cdp_url(tmp_path: Path, monkeypa
     else:
         script.write_text("#!/bin/sh\necho ws://127.0.0.1:9777/devtools/page/ci\n", encoding="utf-8")
         script.chmod(0o755)
-    monkeypatch.setenv("DCC_MCP_UI_CONTROL_AGENT_BROWSER_BIN", str(script))
+    monkeypatch.setenv("MESHY_DCC_UI_CONTROL_AGENT_BROWSER_BIN", str(script))
 
     assert cdp_runtime._agent_browser_cdp_url() == "ws://127.0.0.1:9777/devtools/page/ci"

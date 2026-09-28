@@ -7,7 +7,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from dcc_mcp_core import ui_control_server
+from meshy_dcc_core import ui_control_server
 
 
 def _required_args(tmp_path: Path) -> list[str]:
@@ -212,15 +212,15 @@ def test_main_registers_executor_before_load_and_shuts_down_in_order(
     monkeypatch.setattr(ui_control_server.threading, "Event", StoppedEvent)
     monkeypatch.setattr(ui_control_server.signal, "signal", lambda *_args: None)
     for name in (
-        "DCC_MCP_UI_CONTROL_BACKEND",
-        "DCC_MCP_CUA_BINARY",
-        "DCC_MCP_UI_CONTROL_WINDOW_HANDLE",
-        "DCC_MCP_UI_CONTROL_PROCESS_ID",
-        "DCC_MCP_DISABLE_DEFAULT_SKILL_PATHS",
-        "DCC_MCP_DISABLE_ACCUMULATED_SKILLS",
+        "MESHY_DCC_UI_CONTROL_BACKEND",
+        "MESHY_DCC_CUA_BINARY",
+        "MESHY_DCC_UI_CONTROL_WINDOW_HANDLE",
+        "MESHY_DCC_UI_CONTROL_PROCESS_ID",
+        "MESHY_DCC_DISABLE_DEFAULT_SKILL_PATHS",
+        "MESHY_DCC_DISABLE_ACCUMULATED_SKILLS",
     ):
         monkeypatch.delenv(name, raising=False)
-    monkeypatch.setenv("DCC_MCP_CUA_ALLOW_RAW_INPUT", "true")
+    monkeypatch.setenv("MESHY_DCC_CUA_ALLOW_RAW_INPUT", "true")
 
     args = _required_args(tmp_path)
     assert ui_control_server.main(args) == 0
@@ -236,7 +236,7 @@ def test_main_registers_executor_before_load_and_shuts_down_in_order(
         "server-shutdown",
         "clear-packages",
     ]
-    assert os.environ["DCC_MCP_CUA_ALLOW_RAW_INPUT"] == "true"
+    assert os.environ["MESHY_DCC_CUA_ALLOW_RAW_INPUT"] == "true"
     ready = json.loads((tmp_path / "ready.json").read_text(encoding="utf-8"))
     assert ready["status"] == "ready"
     assert ready["target_process_id"] == 42

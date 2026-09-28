@@ -21,11 +21,11 @@ from pathlib import Path
 
 import pytest
 
-from dcc_mcp_core import SkillCatalog
-from dcc_mcp_core import ToolRegistry
-from dcc_mcp_core.admin_sqlite_lane import resolve_admin_db_path
-from dcc_mcp_core.loaded_state_store import LoadedStateStore
-from dcc_mcp_core.loaded_state_store import PersistedCatalogState
+from meshy_dcc_core import SkillCatalog
+from meshy_dcc_core import ToolRegistry
+from meshy_dcc_core.admin_sqlite_lane import resolve_admin_db_path
+from meshy_dcc_core.loaded_state_store import LoadedStateStore
+from meshy_dcc_core.loaded_state_store import PersistedCatalogState
 
 
 def _write_skill(
@@ -45,7 +45,7 @@ def _write_skill(
         f"name: {name}",
         f"description: {description}",
         "metadata:",
-        "  dcc-mcp:",
+        "  meshy-dcc:",
         f"    dcc: {dcc}",
         f"    version: {version}",
     ]
@@ -63,7 +63,7 @@ def isolated_admin_env(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     monkeypatch.setenv("HOME", str(tmp_path))
     # Windows respects USERPROFILE; set both for cross-platform safety.
     monkeypatch.setenv("USERPROFILE", str(tmp_path))
-    monkeypatch.setenv("DCC_MCP_GATEWAY_ADMIN_DB", str(tmp_path / "admin.sqlite"))
+    monkeypatch.setenv("MESHY_DCC_GATEWAY_ADMIN_DB", str(tmp_path / "admin.sqlite"))
     return tmp_path
 
 
@@ -227,7 +227,7 @@ def test_catalog_replay_skips_on_version_drift(tmp_path: Path, isolated_admin_en
 
     # Persist a state that says we previously loaded v1.0.0.
     state = PersistedCatalogState()
-    from dcc_mcp_core.loaded_state_store import LoadedSkillRecord
+    from meshy_dcc_core.loaded_state_store import LoadedSkillRecord
 
     state.skills.append(LoadedSkillRecord(name="maya-render", version="1.0.0", skill_path=None, loaded_at_ms=0))
 
@@ -251,7 +251,7 @@ def test_catalog_replay_records_missing_skill(tmp_path: Path, isolated_admin_env
     _write_skill(skills_root, "maya-render", description="render bake helpers", version="1.0.0")
 
     state = PersistedCatalogState()
-    from dcc_mcp_core.loaded_state_store import LoadedSkillRecord
+    from meshy_dcc_core.loaded_state_store import LoadedSkillRecord
 
     state.skills.append(LoadedSkillRecord(name="maya-render", version="1.0.0"))
     state.skills.append(LoadedSkillRecord(name="vanished-skill", version="1.0.0"))

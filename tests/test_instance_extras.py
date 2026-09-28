@@ -6,7 +6,7 @@ WebView / bridge fields `cdp_port` (int), `url`, `window_title` and `host_dcc`.
 
 These tests cover the configuration surface end to end. The heartbeat that
 copies extras onto the FileRegistry row is exercised by the Rust tests in
-`dcc-mcp-transport` and `dcc-mcp-gateway`.
+`meshy-dcc-transport` and `meshy-dcc-gateway`.
 """
 
 from __future__ import annotations
@@ -15,7 +15,7 @@ from __future__ import annotations
 import pytest
 
 # Import local modules
-from dcc_mcp_core import McpHttpConfig
+from meshy_dcc_core import McpHttpConfig
 
 
 class TestInstanceExtrasConfigSurface:

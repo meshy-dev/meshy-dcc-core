@@ -1,6 +1,6 @@
 # Blender
 
-Verified on Blender 5.0.1, macOS arm64, with adapter `dcc-mcp-blender` 0.2.11.
+Verified on Blender 5.0.1, macOS arm64, with adapter `meshy-dcc-blender` 0.2.11.
 
 - The adapter is a Blender extension.
 - Its server starts with Blender, and each Blender process is one instance.
@@ -35,8 +35,8 @@ Some tools, `save_scene` among them, publish only `{"type": "object"}`. Their ar
 are the keyword parameters of the tool's script, which lives inside the extension:
 
 ```text
-<Blender user resources>/extensions/user_default/dcc_mcp_blender/skills/<skill>/tools.yaml
-<Blender user resources>/extensions/user_default/dcc_mcp_blender/skills/<skill>/scripts/<tool>.py
+<Blender user resources>/extensions/user_default/meshy_dcc_blender/skills/<skill>/tools.yaml
+<Blender user resources>/extensions/user_default/meshy_dcc_blender/skills/<skill>/scripts/<tool>.py
 ```
 
 On macOS the user resources directory is `~/Library/Application Support/Blender/<major.minor>/`

@@ -6,7 +6,7 @@ Validates the acceptance criterion:
 > returns the expected rendered content.
 
 The test
-1. Creates a :class:`~dcc_mcp_core.McpHttpServer` with
+1. Creates a :class:`~meshy_dcc_core.McpHttpServer` with
    ``enable_prompts = True``.
 2. Registers a prompt via ``server.prompts().register_prompt(...)``
 3. Starts the server and calls ``prompts/list`` — the prompt MUST
@@ -30,11 +30,11 @@ import urllib.request
 from conftest import McpClient
 from conftest import allocate_gateway_port
 from conftest import wait_tcp_reachable
-from dcc_mcp_core import McpHttpConfig
-from dcc_mcp_core import McpHttpServer
-from dcc_mcp_core import PromptHandle
-from dcc_mcp_core import ToolRegistry
-from dcc_mcp_core import create_skill_server
+from meshy_dcc_core import McpHttpConfig
+from meshy_dcc_core import McpHttpServer
+from meshy_dcc_core import PromptHandle
+from meshy_dcc_core import ToolRegistry
+from meshy_dcc_core import create_skill_server
 
 # ── helpers ──────────────────────────────────────────────────────────
 
@@ -128,7 +128,7 @@ def test_python_prompt_registration_e2e():
 
 
 def test_skill_examples_metadata_derives_prompt_e2e(tmp_path):
-    """Loaded skills can derive prompts from metadata.dcc-mcp.examples."""
+    """Loaded skills can derive prompts from metadata.meshy-dcc.examples."""
     skill_parent = tmp_path / "skills"
     skill_root = skill_parent / "scene-review"
     references = skill_root / "references"
@@ -140,7 +140,7 @@ description: "Scene review examples. Use when validating scene state."
 license: MIT
 compatibility: Python 3.7+
 metadata:
-  dcc-mcp:
+  meshy-dcc:
     dcc: maya
     layer: example
     examples: references/EXAMPLES.md

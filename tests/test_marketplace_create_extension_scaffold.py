@@ -6,7 +6,7 @@ import importlib.util
 from pathlib import Path
 
 from conftest import REPO_ROOT
-import dcc_mcp_core
+import meshy_dcc_core
 
 
 def _load_extension_scaffold():
@@ -30,10 +30,10 @@ def test_extension_scaffold_includes_codex_interface_metadata(tmp_path: Path) ->
         )
     )
     openai_yaml = skill_dir / "agents" / "openai.yaml"
-    interface = dcc_mcp_core.yaml_loads(openai_yaml.read_text(encoding="utf-8"))["interface"]
+    interface = meshy_dcc_core.yaml_loads(openai_yaml.read_text(encoding="utf-8"))["interface"]
 
     assert interface == {
         "display_name": "Maya Pipeline Tools",
-        "short_description": "Run a DCC-MCP marketplace extension",
-        "default_prompt": "Use $maya-pipeline-tools to complete this DCC-MCP marketplace workflow.",
+        "short_description": "Run a Meshy DCC marketplace extension",
+        "default_prompt": "Use $maya-pipeline-tools to complete this Meshy DCC marketplace workflow.",
     }

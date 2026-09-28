@@ -90,7 +90,7 @@ def _make_server(**kw) -> Any:
 
 def test_multi_instance_all_see_healthy_gateway() -> None:
     """3 instances all monitor the same gateway; nobody promotes while healthy."""
-    from dcc_mcp_core.gateway_election import DccGatewayElection
+    from meshy_dcc_core.gateway_election import DccGatewayElection
 
     httpd, thread, port = _start_gateway_httpd()
     try:
@@ -139,7 +139,7 @@ def test_gateway_health_probe_increments_failure_on_death() -> None:
     transitions so the jitter from PIP-901.2 (~0-5 s) does not make the test
     flaky.
     """
-    from dcc_mcp_core.gateway_election import DccGatewayElection
+    from meshy_dcc_core.gateway_election import DccGatewayElection
 
     httpd, thread, port = _start_gateway_httpd()
     srv = _make_server()
@@ -206,7 +206,7 @@ def test_election_promotes_exactly_one_instance() -> None:
     acquires the lock simulates the winning socket bind; all others see
     the "port" as already taken.
     """
-    from dcc_mcp_core.gateway_election import DccGatewayElection
+    from meshy_dcc_core.gateway_election import DccGatewayElection
 
     httpd, thread, port = _start_gateway_httpd()
     promote_lock = threading.Lock()
@@ -276,7 +276,7 @@ def test_new_instance_takes_over_after_old_gateway_stops() -> None:
     """An 'old' gateway responds to /health; it stops; a new sidecar detects
     the vacancy and promotes itself.
     """
-    from dcc_mcp_core.gateway_election import DccGatewayElection
+    from meshy_dcc_core.gateway_election import DccGatewayElection
 
     # Old gateway is running.
     httpd, thread, port = _start_gateway_httpd()
@@ -325,7 +325,7 @@ def test_crash_recovery_loop() -> None:
     """Gateway crashes; an instance promotes; later that gateway is brought
     back and the cycle repeats without errors.
     """
-    from dcc_mcp_core.gateway_election import DccGatewayElection
+    from meshy_dcc_core.gateway_election import DccGatewayElection
 
     # Step 1 — start a healthy gateway and a monitoring instance.
     httpd, thread, port = _start_gateway_httpd()
@@ -402,7 +402,7 @@ def test_port_free_after_all_monitors_stop() -> None:
     Each stop() call must return without hanging and the instance must report
     is_running=False afterward.
     """
-    from dcc_mcp_core.gateway_election import DccGatewayElection
+    from meshy_dcc_core.gateway_election import DccGatewayElection
 
     httpd, thread, port = _start_gateway_httpd()
     instances = []
@@ -433,7 +433,7 @@ def test_is_port_free_after_gateway_listener_stops() -> None:
     returns True.  This mirrors the 'last instance exits → gateway self-stops'
     end state from the Python-level election probe's perspective.
     """
-    from dcc_mcp_core.gateway_election import DccGatewayElection
+    from meshy_dcc_core.gateway_election import DccGatewayElection
 
     election = DccGatewayElection(
         dcc_name="port-test",

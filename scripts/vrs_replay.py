@@ -2,7 +2,7 @@
 r"""Verified Regression Suite (VRS) — replay HTTP traces against a gateway or per-DCC REST surface.
 
 Usage:
-  python scripts/vrs_replay.py --base-url http://127.0.0.1:9765 \
+  python scripts/vrs_replay.py --base-url http://127.0.0.1:19765 \
       --trace tests/vrs/traces/gateway-smoke.jsonl
 
 Environment:
@@ -327,7 +327,7 @@ def run_trace(base_url: str, trace_path: str, dry_run: bool, verbose: bool) -> i
 def main(argv: Optional[List[str]] = None) -> int:
     """CLI entry point."""
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument("--base-url", required=True, help="Gateway or per-DCC REST root (e.g. http://127.0.0.1:9765)")
+    p.add_argument("--base-url", required=True, help="Gateway or per-DCC REST root (e.g. http://127.0.0.1:19765)")
     p.add_argument("--trace", required=True, help="Path to a .jsonl trace file")
     p.add_argument("--dry-run", action="store_true", help="Print steps without sending HTTP")
     p.add_argument("-v", "--verbose", action="store_true", help="Per-step logging")

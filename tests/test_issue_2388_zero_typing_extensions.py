@@ -11,8 +11,8 @@ import typing
 import unittest
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-TYPING_MODULE = REPO_ROOT / "python" / "dcc_mcp_core" / "_typing.py"
-PYTHON_PACKAGE = REPO_ROOT / "python" / "dcc_mcp_core"
+TYPING_MODULE = REPO_ROOT / "python" / "meshy_dcc_core" / "_typing.py"
+PYTHON_PACKAGE = REPO_ROOT / "python" / "meshy_dcc_core"
 
 
 class _BlockTypingExtensions:
@@ -335,7 +335,7 @@ class PackagingBoundaryTests(unittest.TestCase):
                 if not isinstance(node, ast.ImportFrom):
                     continue
                 imported = protected_names.intersection(alias.name for alias in node.names)
-                if imported and node.module != "dcc_mcp_core._typing":
+                if imported and node.module != "meshy_dcc_core._typing":
                     direct_imports.append((path.relative_to(REPO_ROOT).as_posix(), sorted(imported)))
         self.assertEqual(direct_imports, [])
 

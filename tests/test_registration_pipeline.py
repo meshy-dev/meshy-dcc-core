@@ -3,17 +3,17 @@
 These exercise the host-agnostic core seam only: the phase base class,
 the executor's ordering / error-handling contract, and the standard phase
 list. They intentionally avoid importing ``DccServerBase`` so they stay
-stable without a built ``dcc_mcp_core._core`` binary.
+stable without a built ``meshy_dcc_core._core`` binary.
 """
 
 from __future__ import annotations
 
 import pytest
 
-from dcc_mcp_core._registration import RegistrationContext
-from dcc_mcp_core._registration import RegistrationPhase
-from dcc_mcp_core._registration import get_standard_phases
-from dcc_mcp_core._registration import run_registration_phases
+from meshy_dcc_core._registration import RegistrationContext
+from meshy_dcc_core._registration import RegistrationPhase
+from meshy_dcc_core._registration import get_standard_phases
+from meshy_dcc_core._registration import run_registration_phases
 
 
 class _RecordingPhase(RegistrationPhase):
@@ -172,8 +172,8 @@ def test_feedback_phase_uses_shared_core_forwarder_instead_of_adapter_override(m
     """Feedback registration must not dispatch host-specific legacy actions."""
     from types import SimpleNamespace
 
-    from dcc_mcp_core._registration import FeedbackToolPhase
-    import dcc_mcp_core.feedback as feedback
+    from meshy_dcc_core._registration import FeedbackToolPhase
+    import meshy_dcc_core.feedback as feedback
 
     calls = []
 
@@ -182,7 +182,7 @@ def test_feedback_phase_uses_shared_core_forwarder_instead_of_adapter_override(m
         _dcc_name = "maya"
         _server = object()
         _options = SimpleNamespace(
-            server_name="dcc-mcp-maya",
+            server_name="meshy-dcc-maya",
             sidecar=SimpleNamespace(display_name="Maya MCP", adapter_version="0.12.3"),
         )
         feedback_store = object()
@@ -207,15 +207,15 @@ def test_feedback_phase_uses_shared_core_forwarder_instead_of_adapter_override(m
     assert kwargs["instance_id_provider"]() == "maya-instance-1"
     finding_context = kwargs["finding_context_provider"]()
     assert finding_context.dcc_type == "maya"
-    assert finding_context.adapter == "dcc-mcp-maya"
+    assert finding_context.adapter == "meshy-dcc-maya"
     assert finding_context.adapter_version == "0.12.3"
     assert finding_context.host_version == "2026.2"
-    assert finding_context.owning_repo == "dcc-mcp/dcc-mcp-maya"
+    assert finding_context.owning_repo == "meshy-dev/meshy-dcc-maya"
 
 
 def test_standard_phases_accept_real_dcc_server_base(monkeypatch: pytest.MonkeyPatch) -> None:
     """The default ``DccServerBase`` hooks must keep the phase dispatcher contract."""
-    from dcc_mcp_core.server_base import DccServerBase
+    from meshy_dcc_core.server_base import DccServerBase
 
     class MinimalServer(DccServerBase):
         pass
@@ -227,9 +227,9 @@ def test_standard_phases_accept_real_dcc_server_base(monkeypatch: pytest.MonkeyP
     monkeypatch.setattr(DccServerBase, "register_builtin_actions", lambda self, **kwargs: None)
     monkeypatch.setattr(DccServerBase, "collect_skill_search_paths", lambda self, **kwargs: [])
 
-    import dcc_mcp_core.feedback as feedback
-    import dcc_mcp_core.introspect as introspect
-    import dcc_mcp_core.metadata_registration as metadata_registration
+    import meshy_dcc_core.feedback as feedback
+    import meshy_dcc_core.introspect as introspect
+    import meshy_dcc_core.metadata_registration as metadata_registration
 
     class _MetadataReport:
         ok = True

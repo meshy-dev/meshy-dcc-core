@@ -2,9 +2,9 @@
 
 import types
 
-import dcc_mcp_core._version_util as version_util
-from dcc_mcp_core._version_util import package_version
-from dcc_mcp_core._version_util import parse_semver
+import meshy_dcc_core._version_util as version_util
+from meshy_dcc_core._version_util import package_version
+from meshy_dcc_core._version_util import parse_semver
 
 
 def test_parse_semver_normalizes_supported_versions():
@@ -23,15 +23,15 @@ def test_parse_semver_rejects_invalid_numeric_core():
 
 
 def test_package_version_prefers_loaded_core(monkeypatch):
-    core = types.ModuleType("dcc_mcp_core._core")
+    core = types.ModuleType("meshy_dcc_core._core")
     core.__version__ = "9.9.9-core"
-    monkeypatch.setitem(version_util.sys.modules, "dcc_mcp_core._core", core)
+    monkeypatch.setitem(version_util.sys.modules, "meshy_dcc_core._core", core)
 
     assert package_version(fallback="unknown") == "9.9.9-core"
 
 
 def test_package_version_loads_core_only_when_allowed(monkeypatch):
-    monkeypatch.delitem(version_util.sys.modules, "dcc_mcp_core._core", raising=False)
+    monkeypatch.delitem(version_util.sys.modules, "meshy_dcc_core._core", raising=False)
     core = types.SimpleNamespace(__version__="8.8.8-core")
     imported = []
 
@@ -44,7 +44,7 @@ def test_package_version_loads_core_only_when_allowed(monkeypatch):
     assert version_util._core_version(False) is None
     assert imported == []
     assert version_util._core_version(True) == "8.8.8-core"
-    assert imported == ["dcc_mcp_core._core"]
+    assert imported == ["meshy_dcc_core._core"]
 
 
 def test_package_version_uses_distribution_metadata(monkeypatch):

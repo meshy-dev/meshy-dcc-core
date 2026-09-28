@@ -19,10 +19,10 @@ from pathlib import Path
 
 import pytest
 
-from dcc_mcp_core import SkillMetadata
-from dcc_mcp_core import ToolDeclaration
-from dcc_mcp_core import parse_skill_md
-from dcc_mcp_core import scan_and_load
+from meshy_dcc_core import SkillMetadata
+from meshy_dcc_core import ToolDeclaration
+from meshy_dcc_core import parse_skill_md
+from meshy_dcc_core import scan_and_load
 
 # Absolute path to the examples/skills directory
 _EXAMPLES_SKILLS_DIR = str(Path(__file__).parent.parent / "examples" / "skills")

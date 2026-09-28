@@ -17,12 +17,12 @@ from typing import Any
 
 import pytest
 
-import dcc_mcp_core
-from dcc_mcp_core.batch import batch_dispatch
-from dcc_mcp_core.batch import generate_batch_id
-from dcc_mcp_core.observability_query import API_VERSION
-from dcc_mcp_core.observability_query import ObservabilityQuery
-from dcc_mcp_core.observability_query import build_query_response
+import meshy_dcc_core
+from meshy_dcc_core.batch import batch_dispatch
+from meshy_dcc_core.batch import generate_batch_id
+from meshy_dcc_core.observability_query import API_VERSION
+from meshy_dcc_core.observability_query import ObservabilityQuery
+from meshy_dcc_core.observability_query import build_query_response
 
 
 class TestSessionModel:
@@ -637,8 +637,8 @@ class TestObservabilityQuery:
 
     @pytest.mark.parametrize("param", ["min_repeats", "limit", "promotion_threshold"])
     def test_non_integer_bounds_are_rejected_through_public_export(self, param: str) -> None:
-        """The public ``dcc_mcp_core.ObservabilityQuery`` export rejects them too."""
-        query = dcc_mcp_core.ObservabilityQuery(read_json_fn=lambda _sql, _params: [])
+        """The public ``meshy_dcc_core.ObservabilityQuery`` export rejects them too."""
+        query = meshy_dcc_core.ObservabilityQuery(read_json_fn=lambda _sql, _params: [])
         kwargs: dict[str, Any] = {param: 2.9}
         with pytest.raises(ValueError):
             query.get_repeated_scripts(**kwargs)

@@ -9,7 +9,7 @@ Covers:
 - get_feedback_entries: filter by tool_name and severity
 - clear_feedback: empties the store
 - Feedback entries are capped at MAX_FEEDBACK_ENTRIES
-- Public API importable from top-level dcc_mcp_core
+- Public API importable from top-level meshy_dcc_core
 """
 
 from __future__ import annotations
@@ -24,7 +24,7 @@ import pytest
 
 
 def test_extract_rationale_from_dict():
-    from dcc_mcp_core.feedback import extract_rationale
+    from meshy_dcc_core.feedback import extract_rationale
 
     params = {
         "name": "create_sphere",
@@ -35,14 +35,14 @@ def test_extract_rationale_from_dict():
 
 
 def test_extract_rationale_from_json_string():
-    from dcc_mcp_core.feedback import extract_rationale
+    from meshy_dcc_core.feedback import extract_rationale
 
     params_str = json.dumps({"_meta": {"dcc": {"rationale": "Scale check"}}})
     assert extract_rationale(params_str) == "Scale check"
 
 
 def test_extract_rationale_missing_returns_none():
-    from dcc_mcp_core.feedback import extract_rationale
+    from meshy_dcc_core.feedback import extract_rationale
 
     assert extract_rationale({}) is None
     assert extract_rationale({"_meta": {}}) is None
@@ -50,7 +50,7 @@ def test_extract_rationale_missing_returns_none():
 
 
 def test_extract_rationale_invalid_json_returns_none():
-    from dcc_mcp_core.feedback import extract_rationale
+    from meshy_dcc_core.feedback import extract_rationale
 
     assert extract_rationale("not json") is None
     assert extract_rationale(None) is None
@@ -60,15 +60,15 @@ def test_extract_rationale_invalid_json_returns_none():
 
 
 def test_make_rationale_meta_structure():
-    from dcc_mcp_core.feedback import make_rationale_meta
+    from meshy_dcc_core.feedback import make_rationale_meta
 
     meta = make_rationale_meta("Creating a sphere for scale reference.")
     assert meta == {"_meta": {"dcc": {"rationale": "Creating a sphere for scale reference."}}}
 
 
 def test_make_rationale_meta_round_trip():
-    from dcc_mcp_core.feedback import extract_rationale
-    from dcc_mcp_core.feedback import make_rationale_meta
+    from meshy_dcc_core.feedback import extract_rationale
+    from meshy_dcc_core.feedback import make_rationale_meta
 
     meta = make_rationale_meta("Test intent")
     assert extract_rationale(meta) == "Test intent"
@@ -79,15 +79,15 @@ def test_make_rationale_meta_round_trip():
 
 def setup_function():
     """Clear feedback store before each test."""
-    from dcc_mcp_core.feedback import reset_default_feedback_store_for_tests
+    from meshy_dcc_core.feedback import reset_default_feedback_store_for_tests
 
     reset_default_feedback_store_for_tests()
 
 
 def test_feedback_stores_are_isolated() -> None:
-    from dcc_mcp_core.feedback import FeedbackStore
-    from dcc_mcp_core.feedback import _handle_feedback_report
-    from dcc_mcp_core.feedback import get_feedback_entries
+    from meshy_dcc_core.feedback import FeedbackStore
+    from meshy_dcc_core.feedback import _handle_feedback_report
+    from meshy_dcc_core.feedback import get_feedback_entries
 
     maya = FeedbackStore()
     blender = FeedbackStore()
@@ -107,7 +107,7 @@ def test_feedback_stores_are_isolated() -> None:
 
 
 def test_feedback_store_flushes_each_append_to_bounded_jsonl(tmp_path) -> None:
-    from dcc_mcp_core.feedback import FeedbackStore
+    from meshy_dcc_core.feedback import FeedbackStore
 
     path = tmp_path / "feedback" / "maya-4242.jsonl"
     store = FeedbackStore(path=path, max_bytes=4096, backup_count=2)
@@ -125,7 +125,7 @@ def test_feedback_store_flushes_each_append_to_bounded_jsonl(tmp_path) -> None:
 
 
 def test_feedback_store_rotates_and_prunes_jsonl_backups(tmp_path) -> None:
-    from dcc_mcp_core.feedback import FeedbackStore
+    from meshy_dcc_core.feedback import FeedbackStore
 
     path = tmp_path / "feedback" / "houdini-5252.jsonl"
     store = FeedbackStore(path=path, max_bytes=220, backup_count=2)
@@ -148,8 +148,8 @@ def test_feedback_store_rotates_and_prunes_jsonl_backups(tmp_path) -> None:
 
 
 def test_feedback_store_fails_closed_when_one_entry_exceeds_bound(tmp_path) -> None:
-    from dcc_mcp_core.feedback import FeedbackPersistenceError
-    from dcc_mcp_core.feedback import FeedbackStore
+    from meshy_dcc_core.feedback import FeedbackPersistenceError
+    from meshy_dcc_core.feedback import FeedbackStore
 
     path = tmp_path / "feedback" / "blender-6262.jsonl"
     store = FeedbackStore(path=path, max_bytes=64, backup_count=2)
@@ -162,8 +162,8 @@ def test_feedback_store_fails_closed_when_one_entry_exceeds_bound(tmp_path) -> N
 
 
 def test_feedback_report_and_retrieve():
-    from dcc_mcp_core.feedback import _handle_feedback_report
-    from dcc_mcp_core.feedback import get_feedback_entries
+    from meshy_dcc_core.feedback import _handle_feedback_report
+    from meshy_dcc_core.feedback import get_feedback_entries
 
     params = json.dumps(
         {
@@ -186,8 +186,8 @@ def test_feedback_report_and_retrieve():
 
 
 def test_filter_by_tool_name():
-    from dcc_mcp_core.feedback import _handle_feedback_report
-    from dcc_mcp_core.feedback import get_feedback_entries
+    from meshy_dcc_core.feedback import _handle_feedback_report
+    from meshy_dcc_core.feedback import get_feedback_entries
 
     for tool in ["tool_a", "tool_b", "tool_a"]:
         _handle_feedback_report(
@@ -206,8 +206,8 @@ def test_filter_by_tool_name():
 
 
 def test_filter_by_severity():
-    from dcc_mcp_core.feedback import _handle_feedback_report
-    from dcc_mcp_core.feedback import get_feedback_entries
+    from meshy_dcc_core.feedback import _handle_feedback_report
+    from meshy_dcc_core.feedback import get_feedback_entries
 
     for severity in ["blocked", "suggestion", "blocked"]:
         _handle_feedback_report(
@@ -226,8 +226,8 @@ def test_filter_by_severity():
 
 
 def test_clear_feedback_returns_count():
-    from dcc_mcp_core.feedback import _handle_feedback_report
-    from dcc_mcp_core.feedback import clear_feedback
+    from meshy_dcc_core.feedback import _handle_feedback_report
+    from meshy_dcc_core.feedback import clear_feedback
 
     for _ in range(3):
         _handle_feedback_report(
@@ -245,7 +245,7 @@ def test_clear_feedback_returns_count():
 
 
 def test_feedback_invalid_params():
-    from dcc_mcp_core.feedback import _handle_feedback_report
+    from meshy_dcc_core.feedback import _handle_feedback_report
 
     result = json.loads(_handle_feedback_report("not valid json {"))
     assert result["success"] is False
@@ -263,13 +263,13 @@ def test_feedback_invalid_params():
     ],
 )
 def test_gateway_feedback_endpoint_uses_a_connectable_loopback(host, expected):
-    from dcc_mcp_core.feedback import _build_gateway_feedback_endpoint
+    from meshy_dcc_core.feedback import _build_gateway_feedback_endpoint
 
     assert _build_gateway_feedback_endpoint(gateway_host=host, gateway_port=19765) == expected
 
 
 def test_register_feedback_tool_registers_name():
-    from dcc_mcp_core.feedback import register_feedback_tool
+    from meshy_dcc_core.feedback import register_feedback_tool
 
     registry = MagicMock()
     server = MagicMock()
@@ -287,10 +287,10 @@ def test_register_feedback_tool_registers_name():
 
 
 def test_registered_feedback_handler_forwards_a_complete_finding_v1(monkeypatch):
-    import dcc_mcp_core.feedback as feedback_module
-    from dcc_mcp_core.feedback import FeedbackStore
-    from dcc_mcp_core.feedback import register_feedback_tool
-    from dcc_mcp_core.schemas.finding import FindingRuntimeContext
+    import meshy_dcc_core.feedback as feedback_module
+    from meshy_dcc_core.feedback import FeedbackStore
+    from meshy_dcc_core.feedback import register_feedback_tool
+    from meshy_dcc_core.schemas.finding import FindingRuntimeContext
 
     requests = []
 
@@ -323,12 +323,12 @@ def test_registered_feedback_handler_forwards_a_complete_finding_v1(monkeypatch)
         instance_id_provider=lambda: "photoshop-instance-1",
         finding_context_provider=lambda: FindingRuntimeContext(
             dcc_type="photoshop",
-            adapter="dcc-mcp-photoshop",
+            adapter="meshy-dcc-photoshop",
             adapter_version="0.9.7",
             core_version="0.20.11",
             host_version="26.4.1",
             os="windows",
-            owning_repo="dcc-mcp/dcc-mcp-photoshop",
+            owning_repo="meshy-dev/meshy-dcc-photoshop",
         ),
     )
     handler = server.register_handler.call_args.args[1]
@@ -380,10 +380,10 @@ class _GatewayResponse:
 
 @pytest.mark.parametrize("dcc_name", ["maya", "3dsmax", "houdini"])
 def test_registered_feedback_handler_forwards_through_one_gateway_implementation(monkeypatch, dcc_name):
-    import dcc_mcp_core.feedback as feedback_module
-    from dcc_mcp_core.feedback import FeedbackStore
-    from dcc_mcp_core.feedback import get_feedback_entries
-    from dcc_mcp_core.feedback import register_feedback_tool
+    import meshy_dcc_core.feedback as feedback_module
+    from meshy_dcc_core.feedback import FeedbackStore
+    from meshy_dcc_core.feedback import get_feedback_entries
+    from meshy_dcc_core.feedback import register_feedback_tool
 
     requests = []
 
@@ -452,10 +452,10 @@ def test_registered_feedback_handler_forwards_through_one_gateway_implementation
 
 
 def test_registered_feedback_handler_fails_closed_when_gateway_is_unavailable(monkeypatch):
-    import dcc_mcp_core.feedback as feedback_module
-    from dcc_mcp_core.feedback import FeedbackStore
-    from dcc_mcp_core.feedback import get_feedback_entries
-    from dcc_mcp_core.feedback import register_feedback_tool
+    import meshy_dcc_core.feedback as feedback_module
+    from meshy_dcc_core.feedback import FeedbackStore
+    from meshy_dcc_core.feedback import get_feedback_entries
+    from meshy_dcc_core.feedback import register_feedback_tool
 
     def _urlopen(*_args, **_kwargs):
         raise urllib.error.URLError("gateway offline")
@@ -486,9 +486,9 @@ def test_registered_feedback_handler_fails_closed_when_gateway_is_unavailable(mo
 
 
 def test_registered_feedback_handler_surfaces_local_persistence_failure(monkeypatch, tmp_path):
-    import dcc_mcp_core.feedback as feedback_module
-    from dcc_mcp_core.feedback import FeedbackStore
-    from dcc_mcp_core.feedback import register_feedback_tool
+    import meshy_dcc_core.feedback as feedback_module
+    from meshy_dcc_core.feedback import FeedbackStore
+    from meshy_dcc_core.feedback import register_feedback_tool
 
     def _urlopen(request, *, timeout):
         headers = {name.lower(): value for name, value in request.header_items()}
@@ -537,8 +537,8 @@ def test_registered_feedback_handler_surfaces_local_persistence_failure(monkeypa
 
 
 def test_registered_feedback_handler_rejects_desynchronized_gateway_receipt(monkeypatch):
-    import dcc_mcp_core.feedback as feedback_module
-    from dcc_mcp_core.feedback import register_feedback_tool
+    import meshy_dcc_core.feedback as feedback_module
+    from meshy_dcc_core.feedback import register_feedback_tool
 
     monkeypatch.setattr(
         feedback_module,
@@ -576,8 +576,8 @@ def test_registered_feedback_handler_rejects_desynchronized_gateway_receipt(monk
 
 
 def test_registered_feedback_handler_rejects_invalid_gateway_receipt(monkeypatch):
-    import dcc_mcp_core.feedback as feedback_module
-    from dcc_mcp_core.feedback import register_feedback_tool
+    import meshy_dcc_core.feedback as feedback_module
+    from meshy_dcc_core.feedback import register_feedback_tool
 
     def _urlopen(request, **_kwargs):
         headers = {name.lower(): value for name, value in request.header_items()}
@@ -615,8 +615,8 @@ def test_registered_feedback_handler_rejects_invalid_gateway_receipt(monkeypatch
 
 
 def test_registered_feedback_handler_rejects_mismatched_finding_fingerprint(monkeypatch):
-    import dcc_mcp_core.feedback as feedback_module
-    from dcc_mcp_core.feedback import register_feedback_tool
+    import meshy_dcc_core.feedback as feedback_module
+    from meshy_dcc_core.feedback import register_feedback_tool
 
     def _urlopen(request, **_kwargs):
         headers = {name.lower(): value for name, value in request.header_items()}
@@ -658,8 +658,8 @@ def test_registered_feedback_handler_rejects_mismatched_finding_fingerprint(monk
 def test_registered_feedback_handler_surfaces_correlated_gateway_rejection(monkeypatch):
     import io
 
-    import dcc_mcp_core.feedback as feedback_module
-    from dcc_mcp_core.feedback import register_feedback_tool
+    import meshy_dcc_core.feedback as feedback_module
+    from meshy_dcc_core.feedback import register_feedback_tool
 
     def _urlopen(request, **_kwargs):
         headers = {name.lower(): value for name, value in request.header_items()}
@@ -707,7 +707,7 @@ def test_registered_feedback_handler_surfaces_correlated_gateway_rejection(monke
 
 
 def test_registered_feedback_handler_fails_closed_for_malformed_gateway_endpoint():
-    from dcc_mcp_core.feedback import register_feedback_tool
+    from meshy_dcc_core.feedback import register_feedback_tool
 
     server = MagicMock()
     server.registry = MagicMock()
@@ -731,8 +731,8 @@ def test_registered_feedback_handler_fails_closed_for_malformed_gateway_endpoint
 
 
 def test_registered_feedback_handler_requires_bound_instance_when_provider_is_configured(monkeypatch):
-    import dcc_mcp_core.feedback as feedback_module
-    from dcc_mcp_core.feedback import register_feedback_tool
+    import meshy_dcc_core.feedback as feedback_module
+    from meshy_dcc_core.feedback import register_feedback_tool
 
     monkeypatch.setattr(
         feedback_module,
@@ -762,7 +762,7 @@ def test_registered_feedback_handler_requires_bound_instance_when_provider_is_co
 
 
 def test_register_feedback_tool_no_registry():
-    from dcc_mcp_core.feedback import register_feedback_tool
+    from meshy_dcc_core.feedback import register_feedback_tool
 
     class _NoRegistry:
         @property
@@ -779,19 +779,19 @@ def test_register_feedback_tool_no_registry():
 
 
 def test_importable_from_top_level():
-    import dcc_mcp_core
+    import meshy_dcc_core
 
-    assert hasattr(dcc_mcp_core, "extract_rationale")
-    assert hasattr(dcc_mcp_core, "make_rationale_meta")
-    assert hasattr(dcc_mcp_core, "register_feedback_tool")
-    assert hasattr(dcc_mcp_core, "get_feedback_entries")
-    assert hasattr(dcc_mcp_core, "clear_feedback")
-    assert hasattr(dcc_mcp_core, "FeedbackStore")
-    assert hasattr(dcc_mcp_core, "get_default_feedback_store")
-    assert hasattr(dcc_mcp_core, "reset_default_feedback_store_for_tests")
-    assert dcc_mcp_core.FINDING_V1_SCHEMA_VERSION == 1
-    assert hasattr(dcc_mcp_core, "FindingRuntimeContext")
-    assert hasattr(dcc_mcp_core, "FindingValidationError")
-    assert hasattr(dcc_mcp_core, "build_finding_v1")
-    assert hasattr(dcc_mcp_core, "finding_fingerprint")
-    assert hasattr(dcc_mcp_core, "finding_v1_json_schema")
+    assert hasattr(meshy_dcc_core, "extract_rationale")
+    assert hasattr(meshy_dcc_core, "make_rationale_meta")
+    assert hasattr(meshy_dcc_core, "register_feedback_tool")
+    assert hasattr(meshy_dcc_core, "get_feedback_entries")
+    assert hasattr(meshy_dcc_core, "clear_feedback")
+    assert hasattr(meshy_dcc_core, "FeedbackStore")
+    assert hasattr(meshy_dcc_core, "get_default_feedback_store")
+    assert hasattr(meshy_dcc_core, "reset_default_feedback_store_for_tests")
+    assert meshy_dcc_core.FINDING_V1_SCHEMA_VERSION == 1
+    assert hasattr(meshy_dcc_core, "FindingRuntimeContext")
+    assert hasattr(meshy_dcc_core, "FindingValidationError")
+    assert hasattr(meshy_dcc_core, "build_finding_v1")
+    assert hasattr(meshy_dcc_core, "finding_fingerprint")
+    assert hasattr(meshy_dcc_core, "finding_v1_json_schema")

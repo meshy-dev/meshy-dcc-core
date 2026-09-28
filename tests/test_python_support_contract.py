@@ -205,7 +205,7 @@ def test_calendar_policy_does_not_join_unrelated_markdown_table_rows(tmp_path: P
 def test_semantic_extra_requires_a_python37_safe_fallback_marker(tmp_path: Path) -> None:
     contract = load_contract(_REPO_ROOT)
     contract["distributions"] = {
-        "dcc-mcp-core": {
+        "meshy-dcc-core": {
             "pyproject": "pyproject.toml",
             "support_profile": "lts",
         }
@@ -230,7 +230,7 @@ def test_semantic_extra_requires_a_python37_safe_fallback_marker(tmp_path: Path)
 def test_distribution_projection_ignores_commented_metadata(tmp_path: Path) -> None:
     contract = load_contract(_REPO_ROOT)
     contract["distributions"] = {
-        "dcc-mcp-core": {
+        "meshy-dcc-core": {
             "pyproject": "pyproject.toml",
             "support_profile": "lts",
         }

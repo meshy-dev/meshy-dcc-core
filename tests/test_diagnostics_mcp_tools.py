@@ -17,10 +17,10 @@ import json
 import pytest
 
 # Import local modules
-from dcc_mcp_core import McpHttpConfig
-from dcc_mcp_core import create_skill_server
-from dcc_mcp_core import register_diagnostic_mcp_tools
-from dcc_mcp_core._server.diagnostic_state import get_default_diagnostic_state
+from meshy_dcc_core import McpHttpConfig
+from meshy_dcc_core import create_skill_server
+from meshy_dcc_core import register_diagnostic_mcp_tools
+from meshy_dcc_core._server.diagnostic_state import get_default_diagnostic_state
 
 _diagnostic_state = get_default_diagnostic_state()
 _instance_context = _diagnostic_state.instance_context
@@ -95,7 +95,7 @@ class TestRegisterDiagnosticMcpTools:
 class TestProcessStatusHandler:
     def test_reports_context(self) -> None:
         # Import local modules
-        from dcc_mcp_core.dcc_server import _handle_process_status
+        from meshy_dcc_core.dcc_server import _handle_process_status
 
         original = dict(_instance_context)
         _instance_context.update(
@@ -123,7 +123,7 @@ class TestProcessStatusHandler:
 class TestGetInstanceInfoHandler:
     def test_reports_context(self) -> None:
         # Import local modules
-        from dcc_mcp_core.dcc_server import _handle_get_instance_info
+        from meshy_dcc_core.dcc_server import _handle_get_instance_info
 
         original = dict(_instance_context)
         _instance_context.update(
@@ -151,7 +151,7 @@ class TestGetInstanceInfoHandler:
             assert payload["server_port"] is None
             assert payload["gateway_port"] is None
             # Static fields
-            assert payload["dcc_mcp_core_version"] is not None
+            assert payload["meshy_dcc_core_version"] is not None
             assert payload["python_version"] is not None
         finally:
             _instance_context.update(original)
@@ -159,7 +159,7 @@ class TestGetInstanceInfoHandler:
     def test_with_server_ref(self, server) -> None:
         """Handler returns server-attached fields when server is wired."""
         # Import local modules
-        from dcc_mcp_core.dcc_server import _handle_get_instance_info
+        from meshy_dcc_core.dcc_server import _handle_get_instance_info
 
         register_diagnostic_mcp_tools(
             server,

@@ -24,41 +24,41 @@ from unittest.mock import patch
 import pytest
 
 # Import local modules
-import dcc_mcp_core
-from dcc_mcp_core import CancelToken
-from dcc_mcp_core import ChunkedRunner
-from dcc_mcp_core import current_job_id
-from dcc_mcp_core._server.inprocess_executor import BaseDccCallableDispatcher
-from dcc_mcp_core._server.inprocess_executor import DeferredToolResult
-from dcc_mcp_core._server.inprocess_executor import HostExecutionBridge
-from dcc_mcp_core._server.inprocess_executor import InProcessExecutionContext
-from dcc_mcp_core._server.inprocess_executor import build_inprocess_executor
-from dcc_mcp_core._server.inprocess_executor import clear_script_package
-from dcc_mcp_core._server.inprocess_executor import exception_to_error_envelope
-from dcc_mcp_core._server.inprocess_executor import run_skill_script
+import meshy_dcc_core
+from meshy_dcc_core import CancelToken
+from meshy_dcc_core import ChunkedRunner
+from meshy_dcc_core import current_job_id
+from meshy_dcc_core._server.inprocess_executor import BaseDccCallableDispatcher
+from meshy_dcc_core._server.inprocess_executor import DeferredToolResult
+from meshy_dcc_core._server.inprocess_executor import HostExecutionBridge
+from meshy_dcc_core._server.inprocess_executor import InProcessExecutionContext
+from meshy_dcc_core._server.inprocess_executor import build_inprocess_executor
+from meshy_dcc_core._server.inprocess_executor import clear_script_package
+from meshy_dcc_core._server.inprocess_executor import exception_to_error_envelope
+from meshy_dcc_core._server.inprocess_executor import run_skill_script
 
 # ── public surface ───────────────────────────────────────────────────────────
 
 
 def test_base_dispatcher_exported_from_top_level() -> None:
-    assert hasattr(dcc_mcp_core, "BaseDccCallableDispatcher")
-    assert "BaseDccCallableDispatcher" in dcc_mcp_core.__all__
-    assert hasattr(dcc_mcp_core, "DeferredToolResult")
-    assert "DeferredToolResult" in dcc_mcp_core.__all__
-    assert hasattr(dcc_mcp_core, "HostExecutionBridge")
-    assert "HostExecutionBridge" in dcc_mcp_core.__all__
-    assert hasattr(dcc_mcp_core, "InProcessExecutionContext")
-    assert "InProcessExecutionContext" in dcc_mcp_core.__all__
+    assert hasattr(meshy_dcc_core, "BaseDccCallableDispatcher")
+    assert "BaseDccCallableDispatcher" in meshy_dcc_core.__all__
+    assert hasattr(meshy_dcc_core, "DeferredToolResult")
+    assert "DeferredToolResult" in meshy_dcc_core.__all__
+    assert hasattr(meshy_dcc_core, "HostExecutionBridge")
+    assert "HostExecutionBridge" in meshy_dcc_core.__all__
+    assert hasattr(meshy_dcc_core, "InProcessExecutionContext")
+    assert "InProcessExecutionContext" in meshy_dcc_core.__all__
 
 
 def test_helpers_exported_from_underscore_server() -> None:
     # Import local modules
-    from dcc_mcp_core._server import BaseDccCallableDispatcher as B
-    from dcc_mcp_core._server import DeferredToolResult as DTR
-    from dcc_mcp_core._server import HostExecutionBridge as HEB
-    from dcc_mcp_core._server import InProcessExecutionContext as IEC
-    from dcc_mcp_core._server import build_inprocess_executor as BIE
-    from dcc_mcp_core._server import run_skill_script as RSS
+    from meshy_dcc_core._server import BaseDccCallableDispatcher as B
+    from meshy_dcc_core._server import DeferredToolResult as DTR
+    from meshy_dcc_core._server import HostExecutionBridge as HEB
+    from meshy_dcc_core._server import InProcessExecutionContext as IEC
+    from meshy_dcc_core._server import build_inprocess_executor as BIE
+    from meshy_dcc_core._server import run_skill_script as RSS
 
     assert B is BaseDccCallableDispatcher
     assert DTR is DeferredToolResult
@@ -75,7 +75,7 @@ def test_public_contracts_keep_their_canonical_module() -> None:
         InProcessExecutionContext,
         exception_to_error_envelope,
     ):
-        assert contract.__module__ == "dcc_mcp_core._server.inprocess_executor"
+        assert contract.__module__ == "meshy_dcc_core._server.inprocess_executor"
 
 
 def test_protocol_is_runtime_checkable() -> None:
@@ -264,7 +264,7 @@ def test_shutdown_defers_unload_for_non_cooperative_active_call(
     monkeypatch: pytest.MonkeyPatch,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
-    import dcc_mcp_core._server.inprocess_executor as inprocess_executor
+    import meshy_dcc_core._server.inprocess_executor as inprocess_executor
 
     cleaned = tmp_path / "cleaned.txt"
     (tmp_path / "_state.py").write_text(
@@ -293,7 +293,7 @@ def test_shutdown_defers_unload_for_non_cooperative_active_call(
         assert time.monotonic() - before < 0.5
         assert not cleaned.exists()
         assert any(
-            getattr(module, "__dcc_mcp_script_dir__", None) == os.path.normcase(str(tmp_path))
+            getattr(module, "__meshy_dcc_script_dir__", None) == os.path.normcase(str(tmp_path))
             for module in sys.modules.values()
             if module is not None
         )
@@ -304,7 +304,7 @@ def test_shutdown_defers_unload_for_non_cooperative_active_call(
 
     assert cleaned.read_text(encoding="utf-8") == "yes"
     assert not any(
-        getattr(module, "__dcc_mcp_script_dir__", None) == os.path.normcase(str(tmp_path))
+        getattr(module, "__meshy_dcc_script_dir__", None) == os.path.normcase(str(tmp_path))
         for module in sys.modules.values()
         if module is not None
     )
@@ -314,7 +314,7 @@ def test_shutdown_stays_bounded_when_request_stop_blocks(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    import dcc_mcp_core._server.inprocess_executor as inprocess_executor
+    import meshy_dcc_core._server.inprocess_executor as inprocess_executor
 
     (tmp_path / "_state.py").write_text(
         "stop_release = None\n"
@@ -434,10 +434,10 @@ def test_run_skill_script_cleans_ephemeral_entry_modules(tmp_path: Path) -> None
     # Import built-in modules
     import sys
 
-    before = {k for k in sys.modules if k.startswith("_dcc_mcp_skill_") and "._entry_" in k}
+    before = {k for k in sys.modules if k.startswith("_meshy_dcc_skill_") and "._entry_" in k}
     p = _write_script(tmp_path, "def main(): return 'ok'\n")
     run_skill_script(str(p), {})
-    after = {k for k in sys.modules if k.startswith("_dcc_mcp_skill_") and "._entry_" in k}
+    after = {k for k in sys.modules if k.startswith("_meshy_dcc_skill_") and "._entry_" in k}
     assert after == before, "ephemeral entry module leaked into sys.modules"
 
 
@@ -630,7 +630,7 @@ def test_host_execution_bridge_executes_script_inline(tmp_path: Path) -> None:
 def test_host_execution_bridge_exposes_job_context_without_forwarding_meta(tmp_path: Path) -> None:
     script = _write_script(
         tmp_path,
-        "from dcc_mcp_core import current_job_id\n"
+        "from meshy_dcc_core import current_job_id\n"
         "def main(**kwargs):\n"
         "    return {'job_id': current_job_id(), 'keys': sorted(kwargs)}\n",
     )
@@ -650,7 +650,7 @@ def test_host_execution_bridge_exposes_job_context_without_forwarding_meta(tmp_p
 def test_host_execution_bridge_does_not_trust_job_id_from_params(tmp_path: Path) -> None:
     script = _write_script(
         tmp_path,
-        "from dcc_mcp_core import current_job_id\ndef main():\n    return {'job_id': current_job_id()}\n",
+        "from meshy_dcc_core import current_job_id\ndef main():\n    return {'job_id': current_job_id()}\n",
     )
     bridge = HostExecutionBridge()
 
@@ -666,7 +666,7 @@ def test_host_execution_bridge_connects_cooperative_cancel_token(tmp_path: Path)
     script = _write_script(
         tmp_path,
         "import time\n"
-        "from dcc_mcp_core import check_dcc_cancelled\n"
+        "from meshy_dcc_core import check_dcc_cancelled\n"
         "def main(started):\n"
         "    started.set()\n"
         "    while True:\n"
@@ -690,7 +690,7 @@ def test_host_execution_bridge_connects_cooperative_cancel_token(tmp_path: Path)
         result = call.result(timeout=2)
 
     assert result["success"] is False
-    assert result["error"] == "DccMcpCancelledError"
+    assert result["error"] == "MeshyDccCancelledError"
     assert current_job_id() is None
 
 
@@ -753,7 +753,7 @@ def test_hot_reload_clears_owned_helpers(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    from dcc_mcp_core.hotreload import DccSkillHotReloader
+    from meshy_dcc_core.hotreload import DccSkillHotReloader
 
     class _Watcher:
         def __init__(self, debounce_ms: int) -> None:
@@ -773,7 +773,7 @@ def test_hot_reload_clears_owned_helpers(
     assert bridge.execute_script(str(script), {}) == "old"
     helper.write_text("VALUE = 'updated-value'\n", encoding="utf-8")
 
-    monkeypatch.setattr(dcc_mcp_core, "SkillWatcher", _Watcher)
+    monkeypatch.setattr(meshy_dcc_core, "SkillWatcher", _Watcher)
     reloader = DccSkillHotReloader("test", SimpleNamespace(_execution_bridge=bridge))
     assert reloader.enable([str(tmp_path)]) is True
     assert bridge.execute_script(str(script), {}) == "updated-value"
@@ -785,7 +785,7 @@ def test_hot_reload_invalidates_an_already_dispatched_call(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    import dcc_mcp_core._server.inprocess_executor as inprocess_executor
+    import meshy_dcc_core._server.inprocess_executor as inprocess_executor
 
     cleaned = tmp_path / "cleaned.txt"
     (tmp_path / "_state.py").write_text(
@@ -871,8 +871,8 @@ def test_host_execution_bridge_routes_direct_callable_with_context() -> None:
 
 
 def test_host_execution_bridge_reuses_queue_dispatcher_for_direct_callable() -> None:
-    from dcc_mcp_core.host import QueueDispatcher
-    from dcc_mcp_core.host import StandaloneHost
+    from meshy_dcc_core.host import QueueDispatcher
+    from meshy_dcc_core.host import StandaloneHost
 
     dispatcher = QueueDispatcher()
     bridge = HostExecutionBridge(dispatcher=dispatcher)
@@ -890,7 +890,7 @@ def test_host_execution_bridge_reuses_queue_dispatcher_for_direct_callable() -> 
 
 def test_host_execution_bridge_exposes_host_ui_dispatcher_to_http_routing() -> None:
     """Core UI dispatchers must also satisfy HTTP main-affinity routing."""
-    from dcc_mcp_core import HostUiDispatcherBase
+    from meshy_dcc_core import HostUiDispatcherBase
 
     class _UiDispatcher(HostUiDispatcherBase):
         def poke_host_pump(self) -> None:
@@ -1116,7 +1116,7 @@ def test_deferred_tool_result_non_serialisable_result_is_error() -> None:
 
 
 def test_execution_binder_injects_trusted_adapter_scope_only_for_ui_control() -> None:
-    from dcc_mcp_core._server.execution_bridge import ExecutionBridgeBinder
+    from meshy_dcc_core._server.execution_bridge import ExecutionBridgeBinder
 
     owner = SimpleNamespace(
         _dcc_name="houdini",
@@ -1172,8 +1172,8 @@ def _patch_set_in_process_executor(server_base: Any, sink: list[Callable[..., An
 
 
 def test_register_host_execution_bridge_is_idempotent_for_same_bridge(tmp_path: Path) -> None:
-    from dcc_mcp_core._server.options import DccServerOptions
-    from dcc_mcp_core.server_base import DccServerBase
+    from meshy_dcc_core._server.options import DccServerOptions
+    from meshy_dcc_core.server_base import DccServerBase
 
     opts = DccServerOptions.from_env(
         "test_bridge_same",
@@ -1183,7 +1183,7 @@ def test_register_host_execution_bridge_is_idempotent_for_same_bridge(tmp_path: 
         enable_job_persistence=False,
         enable_telemetry=False,
     )
-    with patch("dcc_mcp_core.create_skill_server", return_value=MagicMock()):
+    with patch("meshy_dcc_core.create_skill_server", return_value=MagicMock()):
         base = DccServerBase(opts)
     captured: list[Callable[..., Any]] = []
     _patch_set_in_process_executor(base, captured)
@@ -1197,8 +1197,8 @@ def test_register_host_execution_bridge_is_idempotent_for_same_bridge(tmp_path: 
 
 
 def test_register_host_execution_bridge_rejects_different_active_bridge(tmp_path: Path) -> None:
-    from dcc_mcp_core._server.options import DccServerOptions
-    from dcc_mcp_core.server_base import DccServerBase
+    from meshy_dcc_core._server.options import DccServerOptions
+    from meshy_dcc_core.server_base import DccServerBase
 
     opts = DccServerOptions.from_env(
         "test_bridge_rebind",
@@ -1208,7 +1208,7 @@ def test_register_host_execution_bridge_rejects_different_active_bridge(tmp_path
         enable_job_persistence=False,
         enable_telemetry=False,
     )
-    with patch("dcc_mcp_core.create_skill_server", return_value=MagicMock()):
+    with patch("meshy_dcc_core.create_skill_server", return_value=MagicMock()):
         base = DccServerBase(opts)
     captured: list[Callable[..., Any]] = []
     _patch_set_in_process_executor(base, captured)
@@ -1224,8 +1224,8 @@ def test_register_host_execution_bridge_rejects_different_active_bridge(tmp_path
 
 def test_register_inprocess_executor_calls_underlying_setter(tmp_path: Path) -> None:
     # Import local modules
-    from dcc_mcp_core._server.options import DccServerOptions
-    from dcc_mcp_core.server_base import DccServerBase
+    from meshy_dcc_core._server.options import DccServerOptions
+    from meshy_dcc_core.server_base import DccServerBase
 
     opts = DccServerOptions.from_env(
         "test_inproc_a",
@@ -1235,7 +1235,7 @@ def test_register_inprocess_executor_calls_underlying_setter(tmp_path: Path) -> 
         enable_job_persistence=False,
         enable_telemetry=False,
     )
-    with patch("dcc_mcp_core.create_skill_server", return_value=MagicMock()):
+    with patch("meshy_dcc_core.create_skill_server", return_value=MagicMock()):
         base = DccServerBase(opts)
     captured: list[Callable[..., Any]] = []
     _patch_set_in_process_executor(base, captured)
@@ -1246,8 +1246,8 @@ def test_register_inprocess_executor_calls_underlying_setter(tmp_path: Path) -> 
 
 
 def test_register_inprocess_executor_is_idempotent_for_same_dispatcher(tmp_path: Path) -> None:
-    from dcc_mcp_core._server.options import DccServerOptions
-    from dcc_mcp_core.server_base import DccServerBase
+    from meshy_dcc_core._server.options import DccServerOptions
+    from meshy_dcc_core.server_base import DccServerBase
 
     opts = DccServerOptions.from_env(
         "test_inproc_same",
@@ -1257,7 +1257,7 @@ def test_register_inprocess_executor_is_idempotent_for_same_dispatcher(tmp_path:
         enable_job_persistence=False,
         enable_telemetry=False,
     )
-    with patch("dcc_mcp_core.create_skill_server", return_value=MagicMock()):
+    with patch("meshy_dcc_core.create_skill_server", return_value=MagicMock()):
         base = DccServerBase(opts)
     captured: list[Callable[..., Any]] = []
     _patch_set_in_process_executor(base, captured)
@@ -1275,8 +1275,8 @@ def test_register_inprocess_executor_is_idempotent_for_same_dispatcher(tmp_path:
 
 def test_register_inprocess_executor_with_dispatcher_routes(tmp_path: Path) -> None:
     # Import local modules
-    from dcc_mcp_core._server.options import DccServerOptions
-    from dcc_mcp_core.server_base import DccServerBase
+    from meshy_dcc_core._server.options import DccServerOptions
+    from meshy_dcc_core.server_base import DccServerBase
 
     opts = DccServerOptions.from_env(
         "test_inproc_b",
@@ -1286,7 +1286,7 @@ def test_register_inprocess_executor_with_dispatcher_routes(tmp_path: Path) -> N
         enable_job_persistence=False,
         enable_telemetry=False,
     )
-    with patch("dcc_mcp_core.create_skill_server", return_value=MagicMock()):
+    with patch("meshy_dcc_core.create_skill_server", return_value=MagicMock()):
         base = DccServerBase(opts)
     captured: list[Callable[..., Any]] = []
     _patch_set_in_process_executor(base, captured)
@@ -1414,8 +1414,8 @@ def test_dcc_server_base_constructor_registers_dispatcher_before_discovery(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     # Import local modules
-    from dcc_mcp_core._server.options import DccServerOptions
-    from dcc_mcp_core.server_base import DccServerBase
+    from meshy_dcc_core._server.options import DccServerOptions
+    from meshy_dcc_core.server_base import DccServerBase
 
     events: list[str] = []
 
@@ -1429,7 +1429,7 @@ def test_dcc_server_base_constructor_registers_dispatcher_before_discovery(
             return len(extra_paths)
 
     fake_server = _Server()
-    import dcc_mcp_core.server_base as server_base
+    import meshy_dcc_core.server_base as server_base
 
     monkeypatch.setattr(server_base, "create_adapter_server", lambda *_args, **_kwargs: fake_server)
 
@@ -1457,8 +1457,8 @@ def test_dcc_server_base_constructor_registers_execution_bridge_before_discovery
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     # Import local modules
-    from dcc_mcp_core._server.options import DccServerOptions
-    from dcc_mcp_core.server_base import DccServerBase
+    from meshy_dcc_core._server.options import DccServerOptions
+    from meshy_dcc_core.server_base import DccServerBase
 
     events: list[str] = []
 
@@ -1472,7 +1472,7 @@ def test_dcc_server_base_constructor_registers_execution_bridge_before_discovery
             return len(extra_paths)
 
     fake_server = _Server()
-    import dcc_mcp_core.server_base as server_base
+    import meshy_dcc_core.server_base as server_base
 
     monkeypatch.setattr(server_base, "create_adapter_server", lambda *_args, **_kwargs: fake_server)
 
@@ -1496,8 +1496,8 @@ def test_dcc_server_base_standalone_main_thread_registers_inline_executor_before
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    from dcc_mcp_core._server.options import DccServerOptions
-    from dcc_mcp_core.server_base import DccServerBase
+    from meshy_dcc_core._server.options import DccServerOptions
+    from meshy_dcc_core.server_base import DccServerBase
 
     events: list[str] = []
 
@@ -1511,7 +1511,7 @@ def test_dcc_server_base_standalone_main_thread_registers_inline_executor_before
             return len(extra_paths)
 
     fake_server = _Server()
-    import dcc_mcp_core.server_base as server_base
+    import meshy_dcc_core.server_base as server_base
 
     monkeypatch.setattr(server_base, "create_adapter_server", lambda *_args, **_kwargs: fake_server)
 
@@ -1535,9 +1535,9 @@ def test_dcc_server_base_execution_bridge_attaches_queue_dispatcher_before_disco
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    from dcc_mcp_core._server.options import DccServerOptions
-    from dcc_mcp_core.host import QueueDispatcher
-    from dcc_mcp_core.server_base import DccServerBase
+    from meshy_dcc_core._server.options import DccServerOptions
+    from meshy_dcc_core.host import QueueDispatcher
+    from meshy_dcc_core.server_base import DccServerBase
 
     events: list[str] = []
 
@@ -1555,7 +1555,7 @@ def test_dcc_server_base_execution_bridge_attaches_queue_dispatcher_before_disco
             return len(extra_paths)
 
     fake_server = _Server()
-    import dcc_mcp_core.server_base as server_base
+    import meshy_dcc_core.server_base as server_base
 
     monkeypatch.setattr(server_base, "create_adapter_server", lambda *_args, **_kwargs: fake_server)
 

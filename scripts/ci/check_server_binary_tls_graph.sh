@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Keep dcc-mcp-server release binaries free of OpenSSL-linked TLS stacks.
+# Keep meshy-dcc-server release binaries free of OpenSSL-linked TLS stacks.
 # The release job builds this crate on ubuntu-latest before packaging the
 # PyPI binary wheel and GitHub Release assets, so this graph must stay aligned
 # with the default Linux binary build.
@@ -13,12 +13,12 @@ check_absent() {
   output="$(mktemp)"
 
   if cargo tree \
-    -p dcc-mcp-server \
+    -p meshy-dcc-server \
     -e normal \
     --target "$target" \
     -i "$dep" >"$output" 2>&1; then
     cat "$output"
-    echo "::error::$dep is present in the dcc-mcp-server Linux release dependency graph"
+    echo "::error::$dep is present in the meshy-dcc-server Linux release dependency graph"
     exit 1
   fi
 
@@ -28,7 +28,7 @@ check_absent() {
     exit 1
   fi
 
-  echo "$dep is absent from the dcc-mcp-server Linux release dependency graph"
+  echo "$dep is absent from the meshy-dcc-server Linux release dependency graph"
 }
 
 check_absent native-tls

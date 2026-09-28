@@ -7,8 +7,8 @@ import json
 
 import pytest
 
-from dcc_mcp_core.skill import run_main
-from dcc_mcp_core.skill import skill_success
+from meshy_dcc_core.skill import run_main
+from meshy_dcc_core.skill import skill_success
 
 
 def test_run_main_forwards_stdin_json_to_skill(monkeypatch, capsys):

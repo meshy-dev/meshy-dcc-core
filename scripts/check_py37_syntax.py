@@ -26,12 +26,12 @@ if sys.version_info[:2] != (3, 7):
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
 _SCAN_ROOTS = (
-    _REPO_ROOT / "python" / "dcc_mcp_core",
+    _REPO_ROOT / "python" / "meshy_dcc_core",
     _REPO_ROOT / "tests",
     _REPO_ROOT / "examples",
     _REPO_ROOT / "scripts",
-    # Sources shipped inside the auxiliary PyPI distributions (dcc-mcp-server,
-    # dcc-mcp-core-semantic, dcc-mcp-cli). Each declares Requires-Python >=3.7,
+    # Sources shipped inside the auxiliary PyPI distributions (meshy-dcc-server,
+    # meshy-dcc-core-semantic, meshy-dcc-cli). Each declares Requires-Python >=3.7,
     # so a Maya 2022 host can install the wheel and import these modules.
     _REPO_ROOT / "pkg",
 )

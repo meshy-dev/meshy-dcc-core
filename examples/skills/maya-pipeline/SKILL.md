@@ -10,7 +10,7 @@ license: MIT
 compatibility: Maya 2022+, Python 3.7+, requires usd-tools and maya-geometry skills
 allowed-tools: Bash Read Write
 metadata:
-  dcc-mcp:
+  meshy-dcc:
     dcc: maya
     version: "2.0.0"
     layer: domain
@@ -22,7 +22,7 @@ metadata:
 
 # Maya Pipeline Skill (Advanced)
 
-Demonstrates the **full advanced skill layout** for `dcc-mcp-core`:
+Demonstrates the **full advanced skill layout** for `meshy-dcc-core`:
 
 ```
 maya-pipeline/

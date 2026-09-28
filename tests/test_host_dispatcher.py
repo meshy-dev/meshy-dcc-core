@@ -1,4 +1,4 @@
-"""Integration tests for :mod:`dcc_mcp_core.host`.
+"""Integration tests for :mod:`meshy_dcc_core.host`.
 
 Exercises the Rust-backed :class:`QueueDispatcher` / :class:`BlockingDispatcher`
 through the Python facade plus the pure-Python :class:`StandaloneHost`
@@ -28,11 +28,11 @@ from typing import Any
 import pytest
 
 # Import local modules — exercise the public package surface.
-from dcc_mcp_core.host import BlockingDispatcher
-from dcc_mcp_core.host import DispatchError
-from dcc_mcp_core.host import QueueDispatcher
-from dcc_mcp_core.host import StandaloneHost
-from dcc_mcp_core.host import TickOutcome
+from meshy_dcc_core.host import BlockingDispatcher
+from meshy_dcc_core.host import DispatchError
+from meshy_dcc_core.host import QueueDispatcher
+from meshy_dcc_core.host import StandaloneHost
+from meshy_dcc_core.host import TickOutcome
 
 # ---------------------------------------------------------------------------
 # Fixtures

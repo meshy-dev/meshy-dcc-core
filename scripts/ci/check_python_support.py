@@ -230,7 +230,7 @@ def collect_distribution_projection_errors(root: Path, contract: Mapping[str, An
 
     native_name = semantic_policy["native_dependency"].lower().replace("_", "-")
     if native_name not in by_name:
-        errors.append("pyproject.toml: semantic extra must include dcc-mcp-core-semantic")
+        errors.append("pyproject.toml: semantic extra must include meshy-dcc-core-semantic")
     fallback_name = semantic_policy["python_fallback_dependency"].lower().replace("_", "-")
     fallback = by_name.get(fallback_name)
     minimum = semantic_policy["fallback_minimum_python"]

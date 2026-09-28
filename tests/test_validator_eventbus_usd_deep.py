@@ -17,15 +17,15 @@ import json
 # Import third-party modules
 import pytest
 
-from dcc_mcp_core import EventBus
-from dcc_mcp_core import SdfPath
+from meshy_dcc_core import EventBus
+from meshy_dcc_core import SdfPath
 
 # Import local modules
-from dcc_mcp_core import ToolRegistry
-from dcc_mcp_core import ToolValidator
-from dcc_mcp_core import UsdStage
-from dcc_mcp_core import VtValue
-from dcc_mcp_core import scene_info_json_to_stage
+from meshy_dcc_core import ToolRegistry
+from meshy_dcc_core import ToolValidator
+from meshy_dcc_core import UsdStage
+from meshy_dcc_core import VtValue
+from meshy_dcc_core import scene_info_json_to_stage
 
 # ---------------------------------------------------------------------------
 # Helpers

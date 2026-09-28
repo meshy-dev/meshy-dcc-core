@@ -37,8 +37,8 @@ if [ -n "$LIGHTNING_PKG" ]; then
 fi
 
 vx npm --prefix admin-ui run build
-test -f crates/dcc-mcp-gateway-admin/src/generated/index.html
+test -f crates/meshy-dcc-gateway-admin/src/generated/index.html
 
 if [[ -n "${GITHUB_ENV:-}" ]]; then
-  echo "DCC_MCP_ADMIN_UI_PREBUILT=1" >> "$GITHUB_ENV"
+  echo "MESHY_DCC_ADMIN_UI_PREBUILT=1" >> "$GITHUB_ENV"
 fi

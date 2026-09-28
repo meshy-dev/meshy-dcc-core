@@ -15,9 +15,9 @@ import urllib.request
 import pytest
 
 from conftest import McpClient
-from dcc_mcp_core import McpHttpConfig
-from dcc_mcp_core import McpHttpServer
-from dcc_mcp_core import ToolRegistry
+from meshy_dcc_core import McpHttpConfig
+from meshy_dcc_core import McpHttpServer
+from meshy_dcc_core import ToolRegistry
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 EXAMPLES_SKILLS = REPO_ROOT / "examples" / "skills"
@@ -120,8 +120,8 @@ class TestSkillCatalogPythonBinding:
     """The new `SkillCatalog.search_skills(...)` Python method (issue #340)."""
 
     def test_python_binding_accepts_all_args(self, tmp_path):
-        from dcc_mcp_core import SkillCatalog
-        from dcc_mcp_core import ToolRegistry
+        from meshy_dcc_core import SkillCatalog
+        from meshy_dcc_core import ToolRegistry
 
         reg = ToolRegistry()
         cat = SkillCatalog(reg)
@@ -142,8 +142,8 @@ class TestSkillCatalogPythonBinding:
             assert s.scope == "repo"
 
     def test_python_binding_rejects_invalid_scope(self, tmp_path):
-        from dcc_mcp_core import SkillCatalog
-        from dcc_mcp_core import ToolRegistry
+        from meshy_dcc_core import SkillCatalog
+        from meshy_dcc_core import ToolRegistry
 
         reg = ToolRegistry()
         cat = SkillCatalog(reg)

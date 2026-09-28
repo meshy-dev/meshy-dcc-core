@@ -7,11 +7,11 @@ from typing import Dict
 from typing import List
 from typing import Optional
 
-from dcc_mcp_core import plan_spatial_conversion
-from dcc_mcp_core.skill import run_main
-from dcc_mcp_core.skill import skill_entry
-from dcc_mcp_core.skill import skill_error
-from dcc_mcp_core.skill import skill_success
+from meshy_dcc_core import plan_spatial_conversion
+from meshy_dcc_core.skill import run_main
+from meshy_dcc_core.skill import skill_entry
+from meshy_dcc_core.skill import skill_error
+from meshy_dcc_core.skill import skill_success
 
 
 @skill_entry

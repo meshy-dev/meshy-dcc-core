@@ -1012,7 +1012,7 @@ function App() {
 
   const instanceUpdateMessage = useCallback((payload: InstanceUpdatePayload) => {
     const latest = payload.latest_version ?? '';
-    const binary = payload.binary_name ?? 'dcc-mcp-server';
+    const binary = payload.binary_name ?? 'meshy-dcc-server';
     const detail = payload.message || payload.error || '';
     switch (payload.status) {
       case 'staged':

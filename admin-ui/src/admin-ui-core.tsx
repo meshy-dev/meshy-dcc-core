@@ -1170,7 +1170,7 @@ export function buildAgentPacket(trace: TraceDetailPayload): string {
   const agent = trace.agent_context;
   const tokens = detailTraceTokens(trace);
   return JSON.stringify({
-    purpose: 'dcc-mcp public-safe admin trace packet for LLM evaluation and issue triage',
+    purpose: 'meshy-dcc public-safe admin trace packet for LLM evaluation and issue triage',
     privacy_mode: 'public-safe',
     request_id: trace.request_id,
     method: trace.method,

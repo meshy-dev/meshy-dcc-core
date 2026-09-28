@@ -16,7 +16,7 @@ from typing import Any
 import pytest
 
 # Path to the bundled skill script
-_SKILL_DIR = Path(__file__).parent / ".." / "python" / "dcc_mcp_core" / "skills" / "workflow"
+_SKILL_DIR = Path(__file__).parent / ".." / "python" / "meshy_dcc_core" / "skills" / "workflow"
 _RUN_CHAIN = str((_SKILL_DIR / "scripts" / "run_chain.py").resolve())
 
 
@@ -43,7 +43,7 @@ def _run(steps: list, context: dict | None = None, env: dict | None = None) -> d
         capture_output=True,
         text=True,
         timeout=30,
-        env={**os.environ, **(env or {}), "DCC_MCP_IPC_ADDRESS": ""},
+        env={**os.environ, **(env or {}), "MESHY_DCC_IPC_ADDRESS": ""},
     )
     assert result.stdout.strip(), f"No stdout. stderr={result.stderr[:300]}"
     return json.loads(result.stdout.strip())
@@ -138,7 +138,7 @@ class TestRunChainBasic:
             capture_output=True,
             text=True,
             timeout=10,
-            env={**os.environ, "DCC_MCP_IPC_ADDRESS": ""},
+            env={**os.environ, "MESHY_DCC_IPC_ADDRESS": ""},
         )
         out = json.loads(result.stdout.strip())
         assert out["success"] is False
@@ -227,7 +227,7 @@ class TestRunChainSkillParsing:
         assert (_SKILL_DIR / "SKILL.md").exists()
 
     def test_skill_md_parseable(self):
-        from dcc_mcp_core import parse_skill_md
+        from meshy_dcc_core import parse_skill_md
 
         meta = parse_skill_md(str(_SKILL_DIR))
         assert meta is not None
@@ -235,14 +235,14 @@ class TestRunChainSkillParsing:
         assert meta.dcc == "python"
 
     def test_skill_has_run_chain_tool(self):
-        from dcc_mcp_core import parse_skill_md
+        from meshy_dcc_core import parse_skill_md
 
         meta = parse_skill_md(str(_SKILL_DIR))
         tool_names = [t.name for t in meta.tools]
         assert "run_chain" in tool_names
 
     def test_run_chain_tool_has_steps_schema(self):
-        from dcc_mcp_core import parse_skill_md
+        from meshy_dcc_core import parse_skill_md
 
         meta = parse_skill_md(str(_SKILL_DIR))
         tool = next(t for t in meta.tools if t.name == "run_chain")
@@ -255,8 +255,8 @@ class TestRunChainSkillParsing:
 
     def test_skill_loaded_in_catalog(self):
         """Verify workflow skill loads cleanly via SkillCatalog."""
-        from dcc_mcp_core import SkillCatalog
-        from dcc_mcp_core import ToolRegistry
+        from meshy_dcc_core import SkillCatalog
+        from meshy_dcc_core import ToolRegistry
 
         registry = ToolRegistry()
         cat = SkillCatalog(registry)
@@ -267,8 +267,8 @@ class TestRunChainSkillParsing:
 
     def test_workflow_action_registered_after_load(self):
         """After load_skill, workflow__run_chain appears in registry."""
-        from dcc_mcp_core import SkillCatalog
-        from dcc_mcp_core import ToolRegistry
+        from meshy_dcc_core import SkillCatalog
+        from meshy_dcc_core import ToolRegistry
 
         registry = ToolRegistry()
         cat = SkillCatalog(registry)
@@ -283,30 +283,30 @@ class TestRunChainBundledDiscovery:
     """Verify workflow is discoverable via get_bundled_skill_paths()."""
 
     def test_bundled_dir_contains_workflow(self):
-        from dcc_mcp_core import get_bundled_skills_dir
+        from meshy_dcc_core import get_bundled_skills_dir
 
         bundled = Path(get_bundled_skills_dir())
         assert (bundled / "workflow").is_dir()
         assert (bundled / "workflow" / "SKILL.md").exists()
 
     def test_get_bundled_skill_paths_returns_list(self):
-        from dcc_mcp_core import get_bundled_skill_paths
-        from dcc_mcp_core import get_bundled_skills_dir
+        from meshy_dcc_core import get_bundled_skill_paths
+        from meshy_dcc_core import get_bundled_skills_dir
 
         paths = get_bundled_skill_paths()
         assert isinstance(paths, list)
         assert paths == [str(Path(get_bundled_skills_dir()))]
 
     def test_get_bundled_skill_paths_opt_out(self):
-        from dcc_mcp_core import get_bundled_skill_paths
+        from meshy_dcc_core import get_bundled_skill_paths
 
         paths = get_bundled_skill_paths(include_bundled=False)
         assert paths == []
 
     def test_workflow_discoverable_via_bundled_path(self):
-        from dcc_mcp_core import SkillCatalog
-        from dcc_mcp_core import ToolRegistry
-        from dcc_mcp_core import get_bundled_skill_paths
+        from meshy_dcc_core import SkillCatalog
+        from meshy_dcc_core import ToolRegistry
+        from meshy_dcc_core import get_bundled_skill_paths
 
         paths = get_bundled_skill_paths()
         registry = ToolRegistry()

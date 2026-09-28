@@ -1,0 +1,101 @@
+[package]
+name = "meshy-dcc-gateway"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Multi-Meshy DCC gateway: aggregation, routing, capability index, REST/MCP dynamic-capability surface (#653/#654/#655) — extracted from meshy-dcc-http"
+
+[dependencies]
+# Internal
+meshy-dcc-attestation = { workspace = true }
+# Keep path overrides where this crate intentionally disables dependency defaults;
+# Cargo does not allow an inherited workspace dependency to override that setting.
+meshy-dcc-db = { path = "../meshy-dcc-db", default-features = false }
+meshy-dcc-models = { workspace = true }
+meshy-dcc-actions = { workspace = true }
+meshy-dcc-gateway-core = { workspace = true }
+meshy-dcc-gateway-admin = { workspace = true }
+# Port-holder resolution and process liveness primitives used by the
+# challenger loop when a resident gateway stays alive but stops serving
+# (issue #2405).
+meshy-dcc-gateway-ensure = { workspace = true }
+meshy-dcc-jsonrpc = { workspace = true }
+meshy-dcc-naming = { workspace = true }
+meshy-dcc-transport = { workspace = true }
+meshy-dcc-telemetry = { workspace = true, optional = true }
+meshy-dcc-skill-rest = { workspace = true }
+meshy-dcc-skills = { path = "../meshy-dcc-skills", default-features = false }
+meshy-dcc-catalog = { workspace = true }
+meshy-dcc-marketplace = { workspace = true }
+meshy-dcc-updater = { workspace = true }
+meshy-dcc-workflow = { workspace = true }
+opentelemetry = { version = "0.32", features = ["trace"], optional = true }
+prometheus = { version = "0.14", default-features = false, optional = true }
+
+# Workspace shared
+serde = { workspace = true }
+serde_json = { workspace = true }
+serde_yaml_ng = { workspace = true }
+base64 = { workspace = true }
+toon-format = { workspace = true }
+tracing = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true }
+uuid = { workspace = true }
+dashmap = { workspace = true }
+reqwest = { workspace = true }
+socket2 = { workspace = true }
+parking_lot = { workspace = true }
+rusqlite = { workspace = true }
+chrono = { version = "0.4", features = ["serde"] }
+tokio-util = { version = "0.7", features = ["rt"] }
+
+# HTTP server
+axum = { workspace = true, features = ["http1", "tokio", "ws"] }
+tower = { workspace = true, features = ["util"] }
+tower-http = { workspace = true, features = ["cors", "trace", "limit"] }
+sysinfo = { workspace = true }
+http.workspace = true
+futures.workspace = true
+futures-util = { workspace = true }
+slab = "0.4"
+tokio-stream = { version = "0.1", features = ["sync", "tokio-util"] }
+
+# `nucleo-matcher` backs fuzzy capability search via the `meshy-dcc-gateway-search`
+# crate (transitive through `meshy-dcc-gateway-core`).
+
+lru = "0.15"
+
+workspace-hack = { version = "0.1", path = "../workspace-hack" }
+
+[features]
+# No default features: the Prometheus exporter is opt-in via the root
+# `prometheus` feature (issue #2182). Keeping it out of `default` means the
+# default wheel path no longer compiles the Prometheus exporter. The OTel core
+# (opentelemetry / opentelemetry_sdk / opentelemetry-stdout) still compiles via
+# `meshy-dcc-telemetry`; opt-in gating of the OTel stack is a separate follow-up.
+default = []
+admin = ["meshy-dcc-gateway-admin/embed"]
+admin-persist-sqlite = ["admin", "meshy-dcc-gateway-admin/persist-sqlite"]
+telemetry = ["dep:meshy-dcc-telemetry", "dep:opentelemetry"]
+prometheus = ["telemetry", "meshy-dcc-telemetry/prometheus", "dep:prometheus"]
+mdns = ["meshy-dcc-transport/mdns"]
+
+[dev-dependencies]
+tempfile.workspace = true
+tokio = { workspace = true, features = ["rt-multi-thread", "macros", "test-util"] }
+criterion = { version = "0.8", features = ["html_reports"] }
+tower = { workspace = true, features = ["util"] }
+proptest = "1.5"
+meshy-dcc-test-utils = { workspace = true }
+
+[[bench]]
+name = "search_bench"
+harness = false
+
+[[bench]]
+name = "instance_query_bench"
+harness = false

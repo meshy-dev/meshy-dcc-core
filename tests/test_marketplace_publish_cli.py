@@ -32,7 +32,7 @@ name: maya-pipeline-tools
 description: >-
   Publish Maya pipeline tools.
 metadata:
-  dcc-mcp:
+  meshy-dcc:
     dcc: maya
 ---
 
@@ -76,7 +76,7 @@ def test_main_creates_a_new_entry_and_writes_the_catalog(tmp_path: Path, monkeyp
         "--marketplace_source",
         str(catalog_path),
         "--install_url",
-        "https://github.com/dcc-mcp/maya-pipeline-tools.git",
+        "https://github.com/meshy-dev/maya-pipeline-tools.git",
         "--install_ref",
         _GIT_REF,
     )
@@ -103,7 +103,7 @@ def test_main_updates_an_existing_entry_on_a_second_run(tmp_path: Path, monkeypa
         "--marketplace_source",
         str(catalog_path),
         "--install_url",
-        "https://github.com/dcc-mcp/maya-pipeline-tools.git",
+        "https://github.com/meshy-dev/maya-pipeline-tools.git",
         "--install_ref",
         _GIT_REF,
     ]
@@ -132,7 +132,7 @@ def test_main_keeps_unrelated_entries(tmp_path: Path, monkeypatch, capsys) -> No
         "--marketplace_source",
         str(catalog_path),
         "--install_url",
-        "https://github.com/dcc-mcp/maya-pipeline-tools.git",
+        "https://github.com/meshy-dev/maya-pipeline-tools.git",
         "--install_ref",
         _GIT_REF,
     )
@@ -155,7 +155,7 @@ def test_main_accepts_a_directory_as_marketplace_source(tmp_path: Path, monkeypa
         "--marketplace_source",
         str(marketplace_dir),
         "--install_url",
-        "https://github.com/dcc-mcp/maya-pipeline-tools.git",
+        "https://github.com/meshy-dev/maya-pipeline-tools.git",
         "--install_ref",
         _GIT_REF,
     )
@@ -176,7 +176,7 @@ def test_main_reports_a_commit_error_when_the_catalog_is_not_a_git_repo(tmp_path
         "--marketplace_source",
         str(catalog_path),
         "--install_url",
-        "https://github.com/dcc-mcp/maya-pipeline-tools.git",
+        "https://github.com/meshy-dev/maya-pipeline-tools.git",
         "--install_ref",
         _GIT_REF,
         "--commit",
@@ -199,7 +199,7 @@ def test_main_fails_when_the_extension_directory_is_missing(tmp_path: Path, monk
         "--marketplace_source",
         str(tmp_path / "marketplace.json"),
         "--install_url",
-        "https://github.com/dcc-mcp/example.git",
+        "https://github.com/meshy-dev/example.git",
         "--install_ref",
         _GIT_REF,
     )
@@ -220,7 +220,7 @@ def test_main_fails_when_skill_md_is_unreadable(tmp_path: Path, monkeypatch, cap
         "--marketplace_source",
         str(tmp_path / "marketplace.json"),
         "--install_url",
-        "https://github.com/dcc-mcp/example.git",
+        "https://github.com/meshy-dev/example.git",
         "--install_ref",
         _GIT_REF,
     )
@@ -240,7 +240,7 @@ def test_main_fails_on_a_git_install_without_a_full_object_id(tmp_path: Path, mo
         "--marketplace_source",
         str(tmp_path / "marketplace.json"),
         "--install_url",
-        "https://github.com/dcc-mcp/example.git",
+        "https://github.com/meshy-dev/example.git",
         "--install_ref",
         "main",
     )
@@ -259,9 +259,9 @@ def test_main_fails_when_the_marketplace_source_is_a_github_slug(tmp_path: Path,
         "--extension_dir",
         str(ext_dir),
         "--marketplace_source",
-        "dcc-mcp/marketplace",
+        "meshy-dev/marketplace",
         "--install_url",
-        "https://github.com/dcc-mcp/example.git",
+        "https://github.com/meshy-dev/example.git",
         "--install_ref",
         _GIT_REF,
     )

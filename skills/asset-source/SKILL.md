@@ -8,7 +8,7 @@ description: >-
 license: "MIT"
 allowed-tools: ["Bash", "Read"]
 metadata:
-  dcc-mcp:
+  meshy-dcc:
     dcc: python
     layer: domain
     stage: source
@@ -48,8 +48,8 @@ helpers or remote resolution on top without changing the contract.
 |------|----------|-------------|
 | `search_assets` | Query | Search the asset catalog and return matching `AssetDescriptor` entries |
 
-The skill uses `dcc_mcp_core.AssetDescriptor` (from the shared
-`dcc_mcp_core.asset_import` contract) as the wire format so every downstream
+The skill uses `meshy_dcc_core.AssetDescriptor` (from the shared
+`meshy_dcc_core.asset_import` contract) as the wire format so every downstream
 DCC adapter speaks the same shape.
 
 ## Gateway flow

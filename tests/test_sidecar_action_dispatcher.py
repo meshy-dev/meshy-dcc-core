@@ -8,21 +8,21 @@ from typing import Mapping
 
 import pytest
 
-import dcc_mcp_core
-from dcc_mcp_core.sidecar import ERROR_DISPATCH_FAILED
-from dcc_mcp_core.sidecar import ERROR_NO_SOURCE_FILE
-from dcc_mcp_core.sidecar import ERROR_PAYLOAD_MALFORMED
-from dcc_mcp_core.sidecar import ERROR_SERVER_NOT_RUNNING
-from dcc_mcp_core.sidecar import ERROR_UNKNOWN_ACTION
-from dcc_mcp_core.sidecar import SidecarActionDispatcher
-from dcc_mcp_core.sidecar import SidecarDispatchRequest
+import meshy_dcc_core
+from meshy_dcc_core.sidecar import ERROR_DISPATCH_FAILED
+from meshy_dcc_core.sidecar import ERROR_NO_SOURCE_FILE
+from meshy_dcc_core.sidecar import ERROR_PAYLOAD_MALFORMED
+from meshy_dcc_core.sidecar import ERROR_SERVER_NOT_RUNNING
+from meshy_dcc_core.sidecar import ERROR_UNKNOWN_ACTION
+from meshy_dcc_core.sidecar import SidecarActionDispatcher
+from meshy_dcc_core.sidecar import SidecarDispatchRequest
 
 
 def test_sidecar_dispatcher_exported_from_top_level() -> None:
-    assert dcc_mcp_core.SidecarActionDispatcher is SidecarActionDispatcher
-    assert dcc_mcp_core.SidecarDispatchRequest is SidecarDispatchRequest
-    assert "SidecarActionDispatcher" in dcc_mcp_core.__all__
-    assert "SidecarDispatchRequest" in dcc_mcp_core.__all__
+    assert meshy_dcc_core.SidecarActionDispatcher is SidecarActionDispatcher
+    assert meshy_dcc_core.SidecarDispatchRequest is SidecarDispatchRequest
+    assert "SidecarActionDispatcher" in meshy_dcc_core.__all__
+    assert "SidecarDispatchRequest" in meshy_dcc_core.__all__
 
 
 def test_maya_style_executor_resolves_registered_action_source(tmp_path: Path) -> None:
@@ -235,7 +235,7 @@ def test_unknown_action_from_resolver_returns_unknown_action() -> None:
 def test_any_dcc_action_resolves_for_sidecar(dcc_name: str, tmp_path: Path) -> None:
     script = tmp_path / "dna_session.py"
     script.write_text("def main(): return None\n", encoding="utf-8")
-    registry = dcc_mcp_core.ToolRegistry()
+    registry = meshy_dcc_core.ToolRegistry()
     registry.register(name="dna_io__dna_session", dcc="any", source_file=str(script))
 
     dispatcher = SidecarActionDispatcher(
@@ -264,7 +264,7 @@ def test_any_dcc_builtin_without_source_uses_server_handler() -> None:
             return {"success": True, "message": "called", "context": {"action": action, "args": args}}
 
     server = Server()
-    registry = dcc_mcp_core.ToolRegistry()
+    registry = meshy_dcc_core.ToolRegistry()
     registry.register(name="get_instance_info", dcc="any")
     dispatcher = SidecarActionDispatcher(
         "maya",

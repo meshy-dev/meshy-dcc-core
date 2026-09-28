@@ -1,7 +1,7 @@
 """Cancellable-loop skill — iterate while honouring cooperative cancellation.
 
-Reads parameters as JSON from stdin (dcc-mcp-core ``execute_script``
-protocol), runs a loop calling :func:`dcc_mcp_core.check_cancelled`
+Reads parameters as JSON from stdin (meshy-dcc-core ``execute_script``
+protocol), runs a loop calling :func:`meshy_dcc_core.check_cancelled`
 once per iteration, and prints a standard skill result dict to stdout.
 
 Parameters
@@ -19,11 +19,11 @@ import sys
 import time
 
 # Import local modules
-from dcc_mcp_core import CancelledError
-from dcc_mcp_core import check_cancelled
-from dcc_mcp_core import skill_entry
-from dcc_mcp_core import skill_error
-from dcc_mcp_core import skill_success
+from meshy_dcc_core import CancelledError
+from meshy_dcc_core import check_cancelled
+from meshy_dcc_core import skill_entry
+from meshy_dcc_core import skill_error
+from meshy_dcc_core import skill_success
 
 
 @skill_entry

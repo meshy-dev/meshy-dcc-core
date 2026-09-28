@@ -11,17 +11,17 @@ import time
 
 import pytest
 
-import dcc_mcp_core
-from dcc_mcp_core import _json_codec
-from dcc_mcp_core import skills_helper
-from dcc_mcp_core.skills_helper import HttpStatusError
-from dcc_mcp_core.skills_helper import SkillCodecError
-from dcc_mcp_core.skills_helper import SkillFileError
-from dcc_mcp_core.skills_helper import SkillHttpError
-from dcc_mcp_core.skills_helper import ToolValidator
-from dcc_mcp_core.skills_helper import normalize_tool_arguments
-from dcc_mcp_core.skills_helper import skill_error_from_exception
-from dcc_mcp_core.skills_helper import skill_success
+import meshy_dcc_core
+from meshy_dcc_core import _json_codec
+from meshy_dcc_core import skills_helper
+from meshy_dcc_core.skills_helper import HttpStatusError
+from meshy_dcc_core.skills_helper import SkillCodecError
+from meshy_dcc_core.skills_helper import SkillFileError
+from meshy_dcc_core.skills_helper import SkillHttpError
+from meshy_dcc_core.skills_helper import ToolValidator
+from meshy_dcc_core.skills_helper import normalize_tool_arguments
+from meshy_dcc_core.skills_helper import skill_error_from_exception
+from meshy_dcc_core.skills_helper import skill_success
 
 
 def test_skills_helper_json_yaml_codecs_roundtrip() -> None:
@@ -47,12 +47,12 @@ def test_skills_helper_json_codecs_fall_back_without_core(monkeypatch) -> None:
 def test_legacy_top_level_codecs_reexport_skills_helper() -> None:
     assert skills_helper.json_dumps is _json_codec.json_dumps
     assert skills_helper.json_loads is _json_codec.json_loads
-    assert dcc_mcp_core.json_dumps is skills_helper.json_dumps
-    assert dcc_mcp_core.json_loads is skills_helper.json_loads
-    assert dcc_mcp_core.yaml_dumps is skills_helper.yaml_dumps
-    assert dcc_mcp_core.yaml_loads is skills_helper.yaml_loads
+    assert meshy_dcc_core.json_dumps is skills_helper.json_dumps
+    assert meshy_dcc_core.json_loads is skills_helper.json_loads
+    assert meshy_dcc_core.yaml_dumps is skills_helper.yaml_dumps
+    assert meshy_dcc_core.yaml_loads is skills_helper.yaml_loads
 
-    assert dcc_mcp_core.json_loads(dcc_mcp_core.json_dumps({"ok": True})) == {"ok": True}
+    assert meshy_dcc_core.json_loads(meshy_dcc_core.json_dumps({"ok": True})) == {"ok": True}
 
 
 def test_skills_helper_reexports_validation_and_normalization() -> None:

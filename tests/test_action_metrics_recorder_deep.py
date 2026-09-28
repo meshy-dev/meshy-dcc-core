@@ -15,9 +15,9 @@ from __future__ import annotations
 
 import pytest
 
-from dcc_mcp_core import RecordingGuard
-from dcc_mcp_core import ToolMetrics
-from dcc_mcp_core import ToolRecorder
+from meshy_dcc_core import RecordingGuard
+from meshy_dcc_core import ToolMetrics
+from meshy_dcc_core import ToolRecorder
 
 # ---------------------------------------------------------------------------
 # Helpers

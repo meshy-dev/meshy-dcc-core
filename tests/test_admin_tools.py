@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dcc_mcp_core.admin_tools import register_admin_tools
+from meshy_dcc_core.admin_tools import register_admin_tools
 
 
 class _Registry:

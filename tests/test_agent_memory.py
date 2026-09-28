@@ -7,15 +7,15 @@ import time
 
 import pytest
 
-from dcc_mcp_core import HookContext
-from dcc_mcp_core import HookEvent
-from dcc_mcp_core import InMemoryMemoryStore
-from dcc_mcp_core import LifecycleHooks
-from dcc_mcp_core import MemoryEntry
-from dcc_mcp_core import MemoryLayer
-from dcc_mcp_core import MemoryQuery
-from dcc_mcp_core import MemoryRecorder
-from dcc_mcp_core import SqliteMemoryStore
+from meshy_dcc_core import HookContext
+from meshy_dcc_core import HookEvent
+from meshy_dcc_core import InMemoryMemoryStore
+from meshy_dcc_core import LifecycleHooks
+from meshy_dcc_core import MemoryEntry
+from meshy_dcc_core import MemoryLayer
+from meshy_dcc_core import MemoryQuery
+from meshy_dcc_core import MemoryRecorder
+from meshy_dcc_core import SqliteMemoryStore
 
 
 def _entry(

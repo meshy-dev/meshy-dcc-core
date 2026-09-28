@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Verify an immutable dcc-mcp-core GitHub Release distribution set."""
+"""Verify an immutable meshy-dcc-core GitHub Release distribution set."""
 
 from __future__ import annotations
 
@@ -49,7 +49,7 @@ def _sha256(path: Path) -> str:
 
 
 def _classify_wheel(filename: str, version: str) -> tuple[str, str]:
-    prefix = f"dcc_mcp_core-{version}-"
+    prefix = f"meshy_dcc_core-{version}-"
     if not filename.startswith(prefix) or not filename.endswith(".whl"):
         raise DistributionSetError(f"unexpected Core wheel filename {filename!r}")
     tags = filename[len(prefix) : -4]
@@ -79,8 +79,8 @@ def _validate_metadata(raw: str, version: str, filename: str) -> None:
     metadata = Parser().parsestr(raw)
     name = str(metadata.get("Name", "")).lower().replace("_", "-")
     actual_version = str(metadata.get("Version", ""))
-    if name != "dcc-mcp-core":
-        raise DistributionSetError(f"{filename}: distribution name is {name!r}, expected 'dcc-mcp-core'")
+    if name != "meshy-dcc-core":
+        raise DistributionSetError(f"{filename}: distribution name is {name!r}, expected 'meshy-dcc-core'")
     if actual_version != version:
         raise DistributionSetError(f"{filename}: metadata version is {actual_version!r}, expected {version!r}")
 
@@ -119,7 +119,7 @@ def _validate_wheels(dist_dir: Path, version: str, wheel_names: set[str]) -> Non
 
 
 def _validate_sdist(path: Path, version: str, contract: dict | None = None) -> None:
-    root = f"dcc_mcp_core-{version}"
+    root = f"meshy_dcc_core-{version}"
     pkg_info_name = f"{root}/PKG-INFO"
     try:
         with tarfile.open(path, "r:gz") as archive:
@@ -147,7 +147,7 @@ def _validate_sdist(path: Path, version: str, contract: dict | None = None) -> N
                     pkg_info = data.decode("utf-8")
             _validate_metadata(pkg_info, version, path.name)
             active_contract = contract if contract is not None else load_contract()
-            distribution = active_contract.get("distributions", {}).get("dcc-mcp-core", {})
+            distribution = active_contract.get("distributions", {}).get("meshy-dcc-core", {})
             dependency_errors = forbidden_runtime_dependency_errors(Parser().parsestr(pkg_info), distribution)
             if dependency_errors:
                 raise DistributionSetError(f"{path.name}: " + "; ".join(dependency_errors))
@@ -159,7 +159,7 @@ def _release_assets(payload: dict, version: str) -> dict[str, dict]:
     assets_payload = payload.get("assets") if isinstance(payload, dict) else None
     if not isinstance(assets_payload, list) or any(not isinstance(item, dict) for item in assets_payload):
         raise DistributionSetError("GitHub Release asset JSON is invalid")
-    prefix = f"dcc_mcp_core-{version}"
+    prefix = f"meshy_dcc_core-{version}"
     assets = {}
     for asset in assets_payload:
         name = asset.get("name")
@@ -179,7 +179,7 @@ def classify_distribution_assets(payload: dict, version: str) -> str:
     if not assets:
         return "rebuild"
 
-    sdist_name = f"dcc_mcp_core-{version}.tar.gz"
+    sdist_name = f"meshy_dcc_core-{version}.tar.gz"
     wheel_names = {name for name in assets if name.endswith(".whl")}
     observed_contracts = {_classify_wheel(name, version) for name in wheel_names}
     expected_contracts = {tuple(contract.split("/", 1)) for contract in _EXPECTED_WHEEL_CONTRACTS}
@@ -203,7 +203,7 @@ def validate_distribution_directory(dist_dir: Path, version: str) -> dict[str, i
     if len(downloaded) != len(paths):
         raise DistributionSetError("distribution directory contains duplicate filenames")
 
-    sdist_name = f"dcc_mcp_core-{version}.tar.gz"
+    sdist_name = f"meshy_dcc_core-{version}.tar.gz"
     wheel_names = {name for name in downloaded if name.endswith(".whl")}
     if set(downloaded) != {*wheel_names, sdist_name}:
         raise DistributionSetError("Core distribution set must contain six wheels and one exact-version sdist")

@@ -8,11 +8,11 @@ from typing import Any
 import urllib.request
 
 from conftest import McpClient
-import dcc_mcp_core
-from dcc_mcp_core import McpHttpConfig
-from dcc_mcp_core import McpHttpServer
-from dcc_mcp_core import ToolRegistry
-from dcc_mcp_core import register_script_materialization_tools
+import meshy_dcc_core
+from meshy_dcc_core import McpHttpConfig
+from meshy_dcc_core import McpHttpServer
+from meshy_dcc_core import ToolRegistry
+from meshy_dcc_core import register_script_materialization_tools
 
 
 def _rest_base(mcp_url: str) -> str:
@@ -38,8 +38,8 @@ def _tool_payload(body: dict[str, Any]) -> dict[str, Any]:
 
 
 def test_register_script_materialization_tool_is_exported() -> None:
-    assert dcc_mcp_core.register_script_materialization_tools is register_script_materialization_tools
-    assert "register_script_materialization_tools" in dcc_mcp_core.__all__
+    assert meshy_dcc_core.register_script_materialization_tools is register_script_materialization_tools
+    assert "register_script_materialization_tools" in meshy_dcc_core.__all__
 
 
 def test_materialize_script_tool_list_entry_stays_compact(tmp_path: Path) -> None:

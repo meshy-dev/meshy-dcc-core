@@ -6,16 +6,16 @@ import json
 import sqlite3
 from typing import Any
 
-from dcc_mcp_core.observability_query import ObservabilityQuery
-from dcc_mcp_core.skill_promotion import DECISION_MANUAL_REVIEW
-from dcc_mcp_core.skill_promotion import DECISION_PROPOSE_SKILL
-from dcc_mcp_core.skill_promotion import DEFAULT_PROMOTION_THRESHOLD
-from dcc_mcp_core.skill_promotion import RECOMMENDED_ACTION_REVIEW_ONLY
-from dcc_mcp_core.skill_promotion import SkillPromotionProposal
-from dcc_mcp_core.skill_promotion import build_skill_promotion_proposal
-from dcc_mcp_core.skill_promotion import build_skill_promotion_proposals
-from dcc_mcp_core.skill_promotion import candidate_id_for_evidence
-from dcc_mcp_core.skill_promotion import suggest_skill_name
+from meshy_dcc_core.observability_query import ObservabilityQuery
+from meshy_dcc_core.skill_promotion import DECISION_MANUAL_REVIEW
+from meshy_dcc_core.skill_promotion import DECISION_PROPOSE_SKILL
+from meshy_dcc_core.skill_promotion import DEFAULT_PROMOTION_THRESHOLD
+from meshy_dcc_core.skill_promotion import RECOMMENDED_ACTION_REVIEW_ONLY
+from meshy_dcc_core.skill_promotion import SkillPromotionProposal
+from meshy_dcc_core.skill_promotion import build_skill_promotion_proposal
+from meshy_dcc_core.skill_promotion import build_skill_promotion_proposals
+from meshy_dcc_core.skill_promotion import candidate_id_for_evidence
+from meshy_dcc_core.skill_promotion import suggest_skill_name
 
 SHA = "a" * 64
 
@@ -186,7 +186,7 @@ class TestBuildProposal:
 
     def test_threshold_validation_matches_escape_hatch_policy(self) -> None:
         """Both call sites share DEFAULT_PROMOTION_THRESHOLD and must agree."""
-        from dcc_mcp_core.escape_hatch_policy import EscapeHatchPolicy
+        from meshy_dcc_core.escape_hatch_policy import EscapeHatchPolicy
 
         for value in (0, -1, True, False, 1.9, "3", None, 3):
             try:

@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """Guard the scheduled refresh of the two published ``pkg/`` pins in ``uv.lock``.
 
-``pkg/dcc-mcp-core-semantic`` and ``pkg/dcc-mcp-server-bin`` publish PyPI wheels
+``pkg/meshy-dcc-core-semantic`` and ``pkg/meshy-dcc-server-bin`` publish PyPI wheels
 that the root project consumes as ordinary registry dependencies, so ``uv.lock``
 only moves when something asks uv to re-resolve those two names explicitly.
 Nothing did for twelve releases, which is why the pins sat on ``0.20.12`` while
 the repository shipped ``0.20.23``.
 
 ``.github/workflows/uv-lock-refresh.yml`` runs
-``uv lock --upgrade-package dcc-mcp-core-semantic --upgrade-package dcc-mcp-server``
+``uv lock --upgrade-package meshy-dcc-core-semantic --upgrade-package meshy-dcc-server``
 on a schedule. This module is the gate that runs immediately afterwards and
 decides whether the resulting lockfile is allowed to become a pull request.
 
@@ -38,7 +38,7 @@ try:
 except ModuleNotFoundError:  # pragma: no cover - exercised by the Python 3.7 CI lane
     import tomli as tomllib
 
-ALLOWED_REFRESH_PACKAGES = ("dcc-mcp-core-semantic", "dcc-mcp-server")
+ALLOWED_REFRESH_PACKAGES = ("meshy-dcc-core-semantic", "meshy-dcc-server")
 CP37_WHEEL_MARKER = "cp37"
 
 

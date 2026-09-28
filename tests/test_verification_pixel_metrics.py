@@ -4,15 +4,15 @@ from __future__ import annotations
 
 import pytest
 
-from dcc_mcp_core import ahash_64
-from dcc_mcp_core import delta_e_2000
-from dcc_mcp_core import dhash_64
-from dcc_mcp_core import edge_density
-from dcc_mcp_core import hamming_distance
-from dcc_mcp_core import phash_64
-from dcc_mcp_core import silhouette_iou
-from dcc_mcp_core import sobel_edges
-from dcc_mcp_core import ssim
+from meshy_dcc_core import ahash_64
+from meshy_dcc_core import delta_e_2000
+from meshy_dcc_core import dhash_64
+from meshy_dcc_core import edge_density
+from meshy_dcc_core import hamming_distance
+from meshy_dcc_core import phash_64
+from meshy_dcc_core import silhouette_iou
+from meshy_dcc_core import sobel_edges
+from meshy_dcc_core import ssim
 
 
 def _rgb(width: int, height: int, r: int, g: int, b: int) -> bytes:
@@ -20,7 +20,7 @@ def _rgb(width: int, height: int, r: int, g: int, b: int) -> bytes:
 
 
 def _gray_from_rgb(width: int, height: int, pixels: bytes) -> list:
-    from dcc_mcp_core.verification.pixel_metrics import _to_gray
+    from meshy_dcc_core.verification.pixel_metrics import _to_gray
 
     return _to_gray(width, height, pixels, 3)
 

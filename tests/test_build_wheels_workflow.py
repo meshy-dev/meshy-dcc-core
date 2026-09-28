@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from conftest import REPO_ROOT
-from dcc_mcp_core import yaml_loads
+from meshy_dcc_core import yaml_loads
 
 BUILD_WHEELS_WORKFLOW = REPO_ROOT / ".github" / "workflows" / "build-wheels.yml"
 BUILD_JOB_IDS = {
@@ -25,7 +25,7 @@ def test_manual_backfill_reuses_verified_github_release_assets() -> None:
     workflow = yaml_loads(BUILD_WHEELS_WORKFLOW.read_text(encoding="utf-8"))
     reuse_input = workflow["on"]["workflow_call"]["inputs"]["reuse-release-assets"]
     assert reuse_input == {
-        "description": "Reuse immutable dcc-mcp-core distributions from an existing GitHub Release",
+        "description": "Reuse immutable meshy-dcc-core distributions from an existing GitHub Release",
         "required": False,
         "type": "boolean",
         "default": False,
@@ -37,8 +37,8 @@ def test_manual_backfill_reuses_verified_github_release_assets() -> None:
     assert reuse["permissions"] == {"contents": "read"}
     commands = "\n".join(step.get("run", "") for step in reuse["steps"])
     assert "gh release download" in commands
-    assert "dcc_mcp_core-${RELEASE_VERSION}-*" in commands
-    assert "dcc_mcp_core-${RELEASE_VERSION}.tar.gz" in commands
+    assert "meshy_dcc_core-${RELEASE_VERSION}-*" in commands
+    assert "meshy_dcc_core-${RELEASE_VERSION}.tar.gz" in commands
     assert "check_release_distribution_set.py" in commands
     checkout = next(step for step in reuse["steps"] if step.get("uses") == "actions/checkout@v6")
     assert checkout["with"]["ref"] == "${{ github.workflow_sha }}"
@@ -63,7 +63,7 @@ def test_manual_backfill_rebuilds_from_tag_when_release_has_no_core_assets() -> 
     assert "--classify-assets" in classifier_commands
     assert 'if [ "$CHECKOUT_REF" != "$RELEASE_TAG" ]' in classifier_commands
     release_read = next(
-        step for step in classifier["steps"] if step.get("name") == "Read dcc-mcp-core GitHub Release assets"
+        step for step in classifier["steps"] if step.get("name") == "Read meshy-dcc-core GitHub Release assets"
     )
     assert release_read["env"]["CHECKOUT_REF"] == "${{ inputs.checkout-ref }}"
     classifier_checkout = next(step for step in classifier["steps"] if step.get("uses") == "actions/checkout@v6")

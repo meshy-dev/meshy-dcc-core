@@ -12,7 +12,7 @@ import json
 import pytest
 
 # Skip the entire module gracefully if the native extension is not compiled.
-_core = pytest.importorskip("dcc_mcp_core._core", reason="native extension not compiled")
+_core = pytest.importorskip("meshy_dcc_core._core", reason="native extension not compiled")
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────

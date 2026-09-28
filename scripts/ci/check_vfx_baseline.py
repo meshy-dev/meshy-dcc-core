@@ -5,7 +5,7 @@ The baseline lives in ``config/vfx-platform-baseline.json``. Each repository
 declares which VFX Platform year(s) it aligns to and which host it targets in
 ``pyproject.toml``::
 
-    [tool.dcc-mcp.vfx-platform]
+    [tool.meshy-dcc.vfx-platform]
     year = ["CY2026", "py37"]
     host = "core"
 
@@ -87,11 +87,11 @@ def load_pyproject(path: Path) -> dict[str, Any]:
 
 
 def declaration(pyproject: dict[str, Any]) -> dict[str, Any]:
-    """Return the ``[tool.dcc-mcp.vfx-platform]`` declaration."""
+    """Return the ``[tool.meshy-dcc.vfx-platform]`` declaration."""
     tool = pyproject.get("tool")
     if not isinstance(tool, dict):
         return {}
-    section = tool.get("dcc-mcp")
+    section = tool.get("meshy-dcc")
     if not isinstance(section, dict):
         return {}
     value = section.get("vfx-platform")
@@ -311,7 +311,7 @@ def evaluate(pyproject: dict[str, Any], baseline: dict[str, Any]) -> tuple[list[
 
     decl = declaration(pyproject)
     if not decl:
-        return ["missing declaration: add [tool.dcc-mcp.vfx-platform] with 'year' and 'host' to pyproject.toml"], []
+        return ["missing declaration: add [tool.meshy-dcc.vfx-platform] with 'year' and 'host' to pyproject.toml"], []
 
     raw_years = decl.get("year", decl.get("years"))
     if isinstance(raw_years, str):
@@ -319,7 +319,7 @@ def evaluate(pyproject: dict[str, Any], baseline: dict[str, Any]) -> tuple[list[
     elif isinstance(raw_years, list) and raw_years:
         years = [str(year) for year in raw_years]
     else:
-        return ["[tool.dcc-mcp.vfx-platform].year must name at least one baseline tier"], []
+        return ["[tool.meshy-dcc.vfx-platform].year must name at least one baseline tier"], []
 
     tiers = baseline["tiers"]
     unknown = [year for year in years if year not in tiers]
@@ -329,7 +329,7 @@ def evaluate(pyproject: dict[str, Any], baseline: dict[str, Any]) -> tuple[list[
 
     host = decl.get("host")
     if not host:
-        errors.append("[tool.dcc-mcp.vfx-platform].host is required")
+        errors.append("[tool.meshy-dcc.vfx-platform].host is required")
 
     # -- Python floor policy ------------------------------------------------
     floor_policy = baseline.get("python37_floor") or {}

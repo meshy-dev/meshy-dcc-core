@@ -23,9 +23,9 @@ import urllib.request
 import pytest
 
 from conftest import McpClient
-from dcc_mcp_core import McpHttpConfig
-from dcc_mcp_core import McpHttpServer
-from dcc_mcp_core import ToolRegistry
+from meshy_dcc_core import McpHttpConfig
+from meshy_dcc_core import McpHttpServer
+from meshy_dcc_core import ToolRegistry
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 EXAMPLES_SKILLS = REPO_ROOT / "examples" / "skills"
@@ -361,7 +361,7 @@ def stub_server_with_hint(tmp_path_factory):
         "name: with-hint\n"
         'description: "A skill that has a search hint"\n'
         "metadata:\n"
-        "  dcc-mcp:\n"
+        "  meshy-dcc:\n"
         "    dcc: python\n"
         '    search-hint: "alpha, beta, gamma"\n'
         "    tools: tools.yaml\n"
@@ -378,7 +378,7 @@ def stub_server_with_hint(tmp_path_factory):
         "name: no-hint\n"
         'description: "A skill without any search hint"\n'
         "metadata:\n"
-        "  dcc-mcp:\n"
+        "  meshy-dcc:\n"
         "    dcc: python\n"
         "    tools: tools.yaml\n"
         "---\n"

@@ -11,14 +11,14 @@ from pathlib import Path
 
 import pytest
 
-import dcc_mcp_core
-from dcc_mcp_core import BackoffKind
-from dcc_mcp_core import RetryPolicy
-from dcc_mcp_core import StepPolicy
-from dcc_mcp_core import WorkflowSpec
+import meshy_dcc_core
+from meshy_dcc_core import BackoffKind
+from meshy_dcc_core import RetryPolicy
+from meshy_dcc_core import StepPolicy
+from meshy_dcc_core import WorkflowSpec
 
 pytestmark = pytest.mark.skipif(
-    dcc_mcp_core.WorkflowSpec is None,
+    meshy_dcc_core.WorkflowSpec is None,
     reason="Built without the `workflow` Cargo feature",
 )
 

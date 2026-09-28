@@ -26,17 +26,17 @@ import pytest
 from conftest import McpClient
 
 # Import local modules
-import dcc_mcp_core
-from dcc_mcp_core import AuditLog
-from dcc_mcp_core import McpHttpConfig
-from dcc_mcp_core import McpHttpServer
-from dcc_mcp_core import SandboxContext
-from dcc_mcp_core import SandboxPolicy
-from dcc_mcp_core import ToolDispatcher
-from dcc_mcp_core import ToolPipeline
-from dcc_mcp_core import ToolRegistry
-from dcc_mcp_core import VersionConstraint
-from dcc_mcp_core import VersionedRegistry
+import meshy_dcc_core
+from meshy_dcc_core import AuditLog
+from meshy_dcc_core import McpHttpConfig
+from meshy_dcc_core import McpHttpServer
+from meshy_dcc_core import SandboxContext
+from meshy_dcc_core import SandboxPolicy
+from meshy_dcc_core import ToolDispatcher
+from meshy_dcc_core import ToolPipeline
+from meshy_dcc_core import ToolRegistry
+from meshy_dcc_core import VersionConstraint
+from meshy_dcc_core import VersionedRegistry
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -448,19 +448,19 @@ class TestLoggingMiddlewareDeep:
         pipeline, _dispatcher, _reg = _make_pipeline_with_dispatcher()
         pipeline.add_logging(log_params=log_params)
         # add_logging returns None; use LoggingMiddleware directly for attribute checks
-        lm = dcc_mcp_core.LoggingMiddleware(log_params=log_params)
+        lm = meshy_dcc_core.LoggingMiddleware(log_params=log_params)
         return pipeline, lm
 
     def test_log_params_true(self):
-        lm = dcc_mcp_core.LoggingMiddleware(log_params=True)
+        lm = meshy_dcc_core.LoggingMiddleware(log_params=True)
         assert lm.log_params is True
 
     def test_log_params_false(self):
-        lm = dcc_mcp_core.LoggingMiddleware(log_params=False)
+        lm = meshy_dcc_core.LoggingMiddleware(log_params=False)
         assert lm.log_params is False
 
     def test_log_params_type_bool(self):
-        lm = dcc_mcp_core.LoggingMiddleware(log_params=True)
+        lm = meshy_dcc_core.LoggingMiddleware(log_params=True)
         assert isinstance(lm.log_params, bool)
 
     def test_dispatch_with_logging_does_not_raise(self):
@@ -606,7 +606,7 @@ class TestMcpServerHandleDeep:
 
     def test_config_server_name_default(self):
         cfg = McpHttpConfig()
-        assert cfg.server_name == "dcc-mcp"
+        assert cfg.server_name == "meshy-dcc"
 
     def test_config_server_version_default_nonempty(self):
         cfg = McpHttpConfig()

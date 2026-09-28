@@ -6,39 +6,39 @@ from pathlib import Path
 from types import SimpleNamespace
 
 from conftest import REPO_ROOT
-import dcc_mcp_core
-from dcc_mcp_core import skill as skill_module
-from dcc_mcp_core._server import skill_discovery
+import meshy_dcc_core
+from meshy_dcc_core import skill as skill_module
+from meshy_dcc_core._server import skill_discovery
 
 SKILL_ROOTS = [
-    REPO_ROOT / "python" / "dcc_mcp_core" / "skills" / "ui-control",
-    REPO_ROOT / "python" / "dcc_mcp_core" / "skills" / "dcc-diagnostics",
-    REPO_ROOT / "python" / "dcc_mcp_core" / "skills" / "media",
-    REPO_ROOT / "python" / "dcc_mcp_core" / "skills" / "workflow",
+    REPO_ROOT / "python" / "meshy_dcc_core" / "skills" / "ui-control",
+    REPO_ROOT / "python" / "meshy_dcc_core" / "skills" / "dcc-diagnostics",
+    REPO_ROOT / "python" / "meshy_dcc_core" / "skills" / "media",
+    REPO_ROOT / "python" / "meshy_dcc_core" / "skills" / "workflow",
 ]
 
 
 def test_removed_app_ui_skill_is_not_bundled() -> None:
-    bundled = REPO_ROOT / "python" / "dcc_mcp_core" / "skills"
+    bundled = REPO_ROOT / "python" / "meshy_dcc_core" / "skills"
 
     assert (bundled / "ui-control").is_dir()
     assert not (bundled / "app-ui").exists()
 
 
 def test_ui_control_metadata_uses_current_dcc_cua_scope_variables() -> None:
-    tools_path = REPO_ROOT / "python" / "dcc_mcp_core" / "skills" / "ui-control" / "tools.yaml"
+    tools_path = REPO_ROOT / "python" / "meshy_dcc_core" / "skills" / "ui-control" / "tools.yaml"
     content = tools_path.read_text(encoding="utf-8")
 
-    assert "DCC_MCP_UI_CONTROL_PROCESS_ID" in content
-    assert "DCC_MCP_UI_CONTROL_WINDOW_HANDLE" in content
-    assert "DCC_MCP_UI_CONTROL_UIA_" not in content
-    assert "DCC_MCP_APP_UI_" not in content
+    assert "MESHY_DCC_UI_CONTROL_PROCESS_ID" in content
+    assert "MESHY_DCC_UI_CONTROL_WINDOW_HANDLE" in content
+    assert "MESHY_DCC_UI_CONTROL_UIA_" not in content
+    assert "MESHY_DCC_APP_UI_" not in content
 
     agent_guidance = (REPO_ROOT / "AGENTS.md").read_text(encoding="utf-8")
-    assert "DCC_MCP_UI_CONTROL_PROCESS_ID" in agent_guidance
-    assert "DCC_MCP_UI_CONTROL_WINDOW_HANDLE" in agent_guidance
-    assert "DCC_MCP_UI_CONTROL_UIA_" not in agent_guidance
-    assert "DCC_MCP_APP_UI_" not in agent_guidance
+    assert "MESHY_DCC_UI_CONTROL_PROCESS_ID" in agent_guidance
+    assert "MESHY_DCC_UI_CONTROL_WINDOW_HANDLE" in agent_guidance
+    assert "MESHY_DCC_UI_CONTROL_UIA_" not in agent_guidance
+    assert "MESHY_DCC_APP_UI_" not in agent_guidance
 
 
 def test_bundled_api_keeps_root_contract_while_internal_discovery_ignores_upgrade_leftovers(
@@ -67,13 +67,13 @@ def test_bundled_api_keeps_root_contract_while_internal_discovery_ignores_upgrad
 
 def test_core_runtime_skills_validate_clean() -> None:
     for skill_dir in SKILL_ROOTS:
-        report = dcc_mcp_core.validate_skill(str(skill_dir))
+        report = meshy_dcc_core.validate_skill(str(skill_dir))
         assert report.is_clean, (skill_dir, [(issue.severity, issue.message) for issue in report.issues])
 
 
 def test_bundled_tool_declarations_include_execution_and_affinity() -> None:
     for skill_dir in SKILL_ROOTS:
-        meta = dcc_mcp_core.parse_skill_md(str(skill_dir))
+        meta = meshy_dcc_core.parse_skill_md(str(skill_dir))
         assert meta is not None, skill_dir
         for tool in meta.tools:
             assert tool.execution in ("sync", "async"), (skill_dir, tool.name)

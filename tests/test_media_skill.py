@@ -14,7 +14,7 @@ import sys
 
 import pytest
 
-_SKILL_DIR = Path(__file__).parent.parent / "python" / "dcc_mcp_core" / "skills" / "media"
+_SKILL_DIR = Path(__file__).parent.parent / "python" / "meshy_dcc_core" / "skills" / "media"
 _COMMON = _SKILL_DIR / "scripts" / "_media_common.py"
 _STATS = _SKILL_DIR / "scripts" / "_media_image_stats.py"
 _SEQUENCE_SCRIPT = _SKILL_DIR / "scripts" / "sequence_to_mp4.py"
@@ -154,7 +154,7 @@ def _write_ppm(path: Path, color, size: int = 16) -> None:
 
 
 def test_media_skill_parseable_and_declares_expected_tools():
-    from dcc_mcp_core import parse_skill_md
+    from meshy_dcc_core import parse_skill_md
 
     meta = parse_skill_md(str(_SKILL_DIR))
     assert meta is not None
@@ -171,8 +171,8 @@ def test_media_skill_parseable_and_declares_expected_tools():
 
 
 def test_media_skill_discoverable_from_source_skill_path():
-    from dcc_mcp_core import SkillCatalog
-    from dcc_mcp_core import ToolRegistry
+    from meshy_dcc_core import SkillCatalog
+    from meshy_dcc_core import ToolRegistry
 
     registry = ToolRegistry()
     catalog = SkillCatalog(registry)
@@ -186,8 +186,8 @@ def test_media_skill_discoverable_from_source_skill_path():
 
 
 def test_media_tool_registers_prefixed_actions_after_load():
-    from dcc_mcp_core import SkillCatalog
-    from dcc_mcp_core import ToolRegistry
+    from meshy_dcc_core import SkillCatalog
+    from meshy_dcc_core import ToolRegistry
 
     registry = ToolRegistry()
     catalog = SkillCatalog(registry)
@@ -200,7 +200,7 @@ def test_media_tool_registers_prefixed_actions_after_load():
 
 
 def test_media_read_only_metadata_is_limited_to_probe_and_image_stats():
-    from dcc_mcp_core import parse_skill_md
+    from meshy_dcc_core import parse_skill_md
 
     meta = parse_skill_md(str(_SKILL_DIR))
     assert meta is not None
@@ -367,8 +367,8 @@ def test_run_command_bootstraps_vx_when_default_vx_is_missing(media_common, tmp_
             raise FileNotFoundError("vx")
         return Completed()
 
-    monkeypatch.delenv("DCC_MCP_MEDIA_VX_BIN", raising=False)
-    monkeypatch.delenv("DCC_MCP_MEDIA_AUTO_INSTALL_VX", raising=False)
+    monkeypatch.delenv("MESHY_DCC_MEDIA_VX_BIN", raising=False)
+    monkeypatch.delenv("MESHY_DCC_MEDIA_AUTO_INSTALL_VX", raising=False)
     monkeypatch.setattr(media_common, "_download_and_install_vx", lambda: str(downloaded_vx))
     monkeypatch.setattr(media_common.subprocess, "run", fake_run)
 
@@ -381,8 +381,8 @@ def test_run_command_can_disable_vx_bootstrap(media_common, monkeypatch):
     def fake_run(command, **kwargs):
         raise FileNotFoundError("vx")
 
-    monkeypatch.delenv("DCC_MCP_MEDIA_VX_BIN", raising=False)
-    monkeypatch.setenv("DCC_MCP_MEDIA_AUTO_INSTALL_VX", "0")
+    monkeypatch.delenv("MESHY_DCC_MEDIA_VX_BIN", raising=False)
+    monkeypatch.setenv("MESHY_DCC_MEDIA_AUTO_INSTALL_VX", "0")
     monkeypatch.setattr(media_common.subprocess, "run", fake_run)
 
     with pytest.raises(media_common.MediaToolError) as exc:
@@ -402,8 +402,8 @@ def test_probe_does_not_bootstrap_vx_when_marked_read_only(media_common, tmp_pat
     def fail_bootstrap():
         pytest.fail("read-only probe must not bootstrap vx")
 
-    monkeypatch.delenv("DCC_MCP_MEDIA_VX_BIN", raising=False)
-    monkeypatch.delenv("DCC_MCP_MEDIA_AUTO_INSTALL_VX", raising=False)
+    monkeypatch.delenv("MESHY_DCC_MEDIA_VX_BIN", raising=False)
+    monkeypatch.delenv("MESHY_DCC_MEDIA_AUTO_INSTALL_VX", raising=False)
     monkeypatch.setattr(media_common.subprocess, "run", fake_run)
     monkeypatch.setattr(media_common, "_download_and_install_vx", fail_bootstrap)
 

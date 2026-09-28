@@ -9,10 +9,10 @@ import threading
 
 import pytest
 
-from dcc_mcp_core import DccLinkFrame
-from dcc_mcp_core import GracefulIpcChannelAdapter
-from dcc_mcp_core import IpcChannelAdapter
-from dcc_mcp_core import SocketServerAdapter
+from meshy_dcc_core import DccLinkFrame
+from meshy_dcc_core import GracefulIpcChannelAdapter
+from meshy_dcc_core import IpcChannelAdapter
+from meshy_dcc_core import SocketServerAdapter
 
 # ── DccLinkFrame ──────────────────────────────────────────────────────────────
 
@@ -152,9 +152,9 @@ class TestSocketServerAdapter:
 
     def test_create_and_properties(self) -> None:
         if os.name == "nt":
-            path = f"dcc-mcp-test-{os.getpid()}-{id(object())}"
+            path = f"meshy-dcc-test-{os.getpid()}-{id(object())}"
         else:
-            path = str(pathlib.Path(tempfile.gettempdir()) / f"dcc-mcp-test-{os.getpid()}.sock")
+            path = str(pathlib.Path(tempfile.gettempdir()) / f"meshy-dcc-test-{os.getpid()}.sock")
         server = SocketServerAdapter(path=path)
         assert server.socket_path == path
         assert server.connection_count == 0

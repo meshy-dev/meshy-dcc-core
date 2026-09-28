@@ -1,6 +1,6 @@
 [run]
 branch = True
-source = dcc_mcp_core
+source = meshy_dcc_core
 
 [report]
 exclude_lines =

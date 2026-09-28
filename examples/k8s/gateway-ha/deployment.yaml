@@ -1,9 +1,9 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: dcc-mcp-gateway
+  name: meshy-dcc-gateway
   labels:
-    app.kubernetes.io/name: dcc-mcp-gateway
+    app.kubernetes.io/name: meshy-dcc-gateway
 spec:
   replicas: 2
   strategy:
@@ -13,11 +13,11 @@ spec:
       maxSurge: 1
   selector:
     matchLabels:
-      app.kubernetes.io/name: dcc-mcp-gateway
+      app.kubernetes.io/name: meshy-dcc-gateway
   template:
     metadata:
       labels:
-        app.kubernetes.io/name: dcc-mcp-gateway
+        app.kubernetes.io/name: meshy-dcc-gateway
     spec:
       terminationGracePeriodSeconds: 30
       securityContext:
@@ -28,15 +28,15 @@ spec:
           type: RuntimeDefault
       containers:
         - name: gateway
-          image: registry.example.com/dcc-mcp-server:latest
+          image: registry.example.com/meshy-dcc-server:latest
           imagePullPolicy: IfNotPresent
           args: ["--host", "0.0.0.0"]
           envFrom:
             - configMapRef:
-                name: dcc-mcp-gateway-config
+                name: meshy-dcc-gateway-config
           ports:
             - name: mcp
-              containerPort: 9765
+              containerPort: 19765
               protocol: TCP
           readinessProbe:
             httpGet: { path: /health, port: mcp }
@@ -62,9 +62,9 @@ spec:
               drop: ["ALL"]
           volumeMounts:
             - name: registry
-              mountPath: /var/lib/dcc-mcp
+              mountPath: /var/lib/meshy-dcc
             - name: logs
-              mountPath: /var/log/dcc-mcp
+              mountPath: /var/log/meshy-dcc
             - name: tmp
               mountPath: /tmp
       volumes:
@@ -73,7 +73,7 @@ spec:
         # CephFS, Longhorn RWX, …).
         - name: registry
           persistentVolumeClaim:
-            claimName: dcc-mcp-registry
+            claimName: meshy-dcc-registry
         - name: logs
           emptyDir: {}
         - name: tmp
@@ -82,7 +82,7 @@ spec:
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: dcc-mcp-registry
+  name: meshy-dcc-registry
 spec:
   accessModes: ["ReadWriteMany"]
   resources:

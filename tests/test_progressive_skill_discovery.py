@@ -20,11 +20,11 @@ from typing import Any
 
 import pytest
 
-import dcc_mcp_core
-from dcc_mcp_core import SkillCatalog
-from dcc_mcp_core import SkillMetadata
-from dcc_mcp_core import SkillSummary
-from dcc_mcp_core import ToolRegistry
+import meshy_dcc_core
+from meshy_dcc_core import SkillCatalog
+from meshy_dcc_core import SkillMetadata
+from meshy_dcc_core import SkillSummary
+from meshy_dcc_core import ToolRegistry
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -40,7 +40,7 @@ def make_skill_dir(tmp_path: Path, name: str, dcc: str = "maya") -> Path:
             "---",
             f"name: {name}",
             "metadata:",
-            "  dcc-mcp:",
+            "  meshy-dcc:",
             f"    dcc: {dcc}",
             "---",
             f"# {name}",
@@ -66,7 +66,7 @@ def make_mutable_tool_skill_dir(tmp_path: Path, name: str, dcc: str = "maya") ->
                 f"name: {name}",
                 "description: Mutable test skill",
                 "metadata:",
-                "  dcc-mcp:",
+                "  meshy-dcc:",
                 f"    dcc: {dcc}",
                 "    tools: tools.yaml",
                 "---",
@@ -263,11 +263,11 @@ class TestSkillSummaryScopeFields:
 
     def test_skill_scope_python_export_includes_team(self) -> None:
         """SkillScope is exported to Python with the full trust hierarchy."""
-        assert str(dcc_mcp_core.SkillScope.Repo) == "repo"
-        assert str(dcc_mcp_core.SkillScope.User) == "user"
-        assert str(dcc_mcp_core.SkillScope.Team) == "team"
-        assert str(dcc_mcp_core.SkillScope.System) == "system"
-        assert str(dcc_mcp_core.SkillScope.Admin) == "admin"
+        assert str(meshy_dcc_core.SkillScope.Repo) == "repo"
+        assert str(meshy_dcc_core.SkillScope.User) == "user"
+        assert str(meshy_dcc_core.SkillScope.Team) == "team"
+        assert str(meshy_dcc_core.SkillScope.System) == "system"
+        assert str(meshy_dcc_core.SkillScope.Admin) == "admin"
 
     def test_skill_summary_has_implicit_invocation_field(self, tmp_path: Path) -> None:
         """SkillSummary.implicit_invocation is a bool after discovery."""

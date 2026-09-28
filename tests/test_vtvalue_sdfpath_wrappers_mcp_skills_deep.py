@@ -15,20 +15,20 @@ from pathlib import Path
 
 import pytest
 
-from dcc_mcp_core import BooleanWrapper
-from dcc_mcp_core import FloatWrapper
-from dcc_mcp_core import IntWrapper
-from dcc_mcp_core import McpHttpConfig
-from dcc_mcp_core import McpHttpServer
-from dcc_mcp_core import SdfPath
-from dcc_mcp_core import StringWrapper
-from dcc_mcp_core import ToolRegistry
-from dcc_mcp_core import VtValue
-from dcc_mcp_core import scan_and_load
-from dcc_mcp_core import scan_and_load_lenient
-from dcc_mcp_core import unwrap_parameters
-from dcc_mcp_core import unwrap_value
-from dcc_mcp_core import wrap_value
+from meshy_dcc_core import BooleanWrapper
+from meshy_dcc_core import FloatWrapper
+from meshy_dcc_core import IntWrapper
+from meshy_dcc_core import McpHttpConfig
+from meshy_dcc_core import McpHttpServer
+from meshy_dcc_core import SdfPath
+from meshy_dcc_core import StringWrapper
+from meshy_dcc_core import ToolRegistry
+from meshy_dcc_core import VtValue
+from meshy_dcc_core import scan_and_load
+from meshy_dcc_core import scan_and_load_lenient
+from meshy_dcc_core import unwrap_parameters
+from meshy_dcc_core import unwrap_value
+from meshy_dcc_core import wrap_value
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -656,14 +656,14 @@ class TestScanAndLoad:
         assert skipped == []
 
     def test_empty_paths_returns_empty(self):
-        env_backup = os.environ.pop("DCC_MCP_SKILL_PATHS", None)
+        env_backup = os.environ.pop("MESHY_DCC_SKILL_PATHS", None)
         try:
             skills, skipped = scan_and_load(extra_paths=[])
             assert skills == []
             assert skipped == []
         finally:
             if env_backup is not None:
-                os.environ["DCC_MCP_SKILL_PATHS"] = env_backup
+                os.environ["MESHY_DCC_SKILL_PATHS"] = env_backup
 
     def test_nonexistent_path_returns_empty(self):
         skills, _ = scan_and_load(extra_paths=["/totally/nonexistent/path/xyz"])
@@ -682,13 +682,13 @@ class TestScanAndLoadLenient:
         assert len(skills_lenient) == len(skills_strict)
 
     def test_lenient_empty_path(self):
-        env_backup = os.environ.pop("DCC_MCP_SKILL_PATHS", None)
+        env_backup = os.environ.pop("MESHY_DCC_SKILL_PATHS", None)
         try:
             skills, _skipped = scan_and_load_lenient(extra_paths=[])
             assert skills == []
         finally:
             if env_backup is not None:
-                os.environ["DCC_MCP_SKILL_PATHS"] = env_backup
+                os.environ["MESHY_DCC_SKILL_PATHS"] = env_backup
 
     def test_lenient_nonexistent_path(self):
         skills, _ = scan_and_load_lenient(extra_paths=["/nonexistent/path/abc"])

@@ -1,7 +1,7 @@
 """Integration tests for ``McpHttpServer.attach_dispatcher`` (P2b).
 
 Verifies the cross-DCC main-thread dispatcher from
-:mod:`dcc_mcp_core.host` actually serves as the tools/call thread
+:mod:`meshy_dcc_core.host` actually serves as the tools/call thread
 whenever an :class:`McpHttpServer` has one attached. No DCC binary
 required — :class:`StandaloneHost` stands in as the driver.
 
@@ -36,16 +36,16 @@ import urllib.request
 import pytest
 
 from conftest import McpClient
-from dcc_mcp_core import HostExecutionBridge
-from dcc_mcp_core import HostUiDispatcherBase
+from meshy_dcc_core import HostExecutionBridge
+from meshy_dcc_core import HostUiDispatcherBase
 
 # Import local modules
-from dcc_mcp_core import McpHttpConfig
-from dcc_mcp_core import McpHttpServer
-from dcc_mcp_core import ToolRegistry
-from dcc_mcp_core.host import DispatchError
-from dcc_mcp_core.host import QueueDispatcher
-from dcc_mcp_core.host import StandaloneHost
+from meshy_dcc_core import McpHttpConfig
+from meshy_dcc_core import McpHttpServer
+from meshy_dcc_core import ToolRegistry
+from meshy_dcc_core.host import DispatchError
+from meshy_dcc_core.host import QueueDispatcher
+from meshy_dcc_core.host import StandaloneHost
 
 # ── helpers ─────────────────────────────────────────────────────────
 
@@ -71,7 +71,7 @@ def _rest_call(
     tool_slug: str,
     arguments: dict[str, Any] | None = None,
 ) -> tuple[int, dict[str, Any]]:
-    """POST ``/v1/call`` — same path the gateway and ``dcc-mcp-cli call`` use."""
+    """POST ``/v1/call`` — same path the gateway and ``meshy-dcc-cli call`` use."""
     payload = json.dumps(
         {"tool_slug": tool_slug, "arguments": arguments or {}},
     ).encode("utf-8")
@@ -506,8 +506,8 @@ def test_v1_call_reports_validation_skipped_for_empty_schema() -> None:
 def test_v1_call_routes_through_dispatcher() -> None:
     """REST ``POST /v1/call`` must honour ``thread_affinity=main`` like MCP ``tools/call``.
 
-    Gateway and ``dcc-mcp-cli call`` fan out through per-DCC ``/v1/call``. Without
-    :class:`~dcc_mcp_http_server.ThreadRoutedInvoker`, handlers run on a Tokio
+    Gateway and ``meshy-dcc-cli call`` fan out through per-DCC ``/v1/call``. Without
+    :class:`~meshy_dcc_http_server.ThreadRoutedInvoker`, handlers run on a Tokio
     worker and ``enforce_thread_affinity`` rejects the call with HTTP 409.
     """
     server, reg = _make_server("rest-thread-routing")

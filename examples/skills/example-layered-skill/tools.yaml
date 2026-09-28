@@ -1,5 +1,5 @@
 # Sibling tool declarations referenced from SKILL.md via
-# `metadata.dcc-mcp.tools: tools.yaml`. See docs/guide/skills.md for the
+# `metadata.meshy-dcc.tools: tools.yaml`. See docs/guide/skills.md for the
 # layered architecture pattern this file participates in.
 tools:
   - name: create_asset

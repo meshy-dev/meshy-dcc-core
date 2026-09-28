@@ -1,0 +1,370 @@
+# Meshy DCC Gateway — agent workflow guide
+
+**Scope:** This text is **platform-agnostic**. It explains how to use the **MCP gateway** well (tools, resources, prompts, REST twins). It does **not** teach a specific DCC SDK.
+
+**Canonical copy:** `resources/read` with `uri=gateway://docs/agent-workflows` (matches the running gateway build).
+
+---
+
+## Use MCP the way the gateway expects
+
+1. **`tools/list`** — Small, stable set: exactly **`search`**, **`describe`**, **`load_skill`**, and **`call`**. Treat it as an **index of gateway verbs**, not the full catalog of every backend action.
+2. **Discover backend work** — `search(kind="tool")` returns compact hits with an executable `next_step`. Follow it: no-schema hits go straight to **`call`** with `{}` only when compact safety hints are already present; otherwise use **`describe`** to read schema, safety hints, **`affinity`**, **`execution`**, and timeouts before **`call`**. On REST, use `/v1/search`, `/v1/describe`, `/v1/call` (or the path-style `POST /v1/dcc/{dcc}/instances/{id}/call` from **REST clients** below). Preserve the returned `next_step.arguments.meta.search_id` (or the same object as MCP `_meta`) on `describe`, `load_skill`, and `call`; this lets the gateway measure selected rank and hit rate without storing full prompts.
+3. **Chaining** — **`call({calls:[...]})`** / **`POST /v1/call_batch`** runs up to **25** ordered calls when you have several **different** validated steps. Prefer fewer, well-formed calls over chatty micro-steps.
+4. **Skills vs tools** — `search(kind="skill")` / `load_skill` load packaged workflows on a host; `search(kind="tool")` resolves a **`tool_slug`** for the dynamic surface. Keep names straight; use `describe` before calling an unfamiliar schema-bearing slug. Unloaded hits carry `load_state`, `available_groups` when known, and `next_step` with both MCP and REST call shapes.
+5. **Progressive groups** — gateway `load_skill` activates declared groups by default (`activate_groups=true` when omitted). Pass `activate_groups=false` for lazy loading, or `load_skill(..., tool_group="...")` when you only want one group.
+6. **Correlated load shortcut** — When you follow a tool search hit whose `next_step.action` is `load_skill`, keep its `target_tool_slug` and `meta.search_id`. After loading, the gateway may include `compact_schema` (`required`, `property_keys`, and compact `properties`) and return `next_step.action="call"`, saving the extra post-load describe round trip.
+
+### Capability tag taxonomy for pipeline and docs connectors
+
+Gateway search treats `tags` as a narrowing filter. Use a small shared
+vocabulary so pipeline, production-tracking, and documentation connectors rank
+and filter consistently across hosts:
+
+| Tag | Use for |
+|-----|---------|
+| `pipeline` | Studio pipeline systems, publish/intake/review automation, and production data hand-offs. |
+| `production-tracking` | Shot/asset/task/status tracking systems regardless of vendor. |
+| `shotgrid` | Autodesk Flow Production Tracking / ShotGrid-specific tools. |
+| `ftrack` | ftrack-specific tools. |
+| `docs` | Documentation, product help, reference lookup, and guide resources. |
+| `read-only` | Discovery/read operations. Also set MCP `readOnlyHint` (`annotations.read_only_hint: true` in `tools.yaml`); the tag is for search, not policy. |
+| `destructive` | Mutating or irreversible operations. Also set MCP `destructiveHint` (`annotations.destructive_hint: true` in `tools.yaml`); the tag is for search, not policy. |
+
+Current `tags` semantics are **AND**: a request containing both the `pipeline`
+and `production-tracking` tags returns records that carry both tags. Do not add
+`docs` to a production-tracking search unless the user explicitly asks for help
+or reference material. Multi-filter support is available:
+- `tags` — AND (all tags must match).
+- `tags_any` — OR (a row carrying any of these tags passes).
+- `dcc_type` + `dcc_types[]` — OR match for multi-host filtering.
+- Empty arrays behave as "no filter".
+
+Vendor tags can be added when they sharpen routing without replacing the
+canonical tags. For example, Autodesk Product Help should use `docs`,
+`read-only`, and the vendor tag `autodesk`.
+
+Pipeline tool search example:
+
+```json
+{
+  "query": "find shots assigned to lighting",
+  "dcc_type": "shotgrid",
+  "tags": ["pipeline", "production-tracking"],
+  "loaded_only": false,
+  "limit": 10
+}
+```
+
+ShotGrid-specific write-capable search example:
+
+```json
+{
+  "query": "update task status",
+  "dcc_type": "shotgrid",
+  "tags": ["pipeline", "production-tracking", "shotgrid"],
+  "loaded_only": false,
+  "limit": 10
+}
+```
+
+Documentation connector search example:
+
+```json
+{
+  "query": "Maya polySphere command reference",
+  "tags": ["docs", "autodesk", "read-only"],
+  "loaded_only": false,
+  "limit": 5
+}
+```
+
+Keep the examples separated: a default pipeline search should not include
+`docs`, and a documentation lookup should include `docs` plus `read-only` so it
+does not compete with production-tracking tools.
+
+### Pipeline and documentation backend registration
+
+Pipeline systems can register with the gateway like any other backend when
+they expose an MCP HTTP endpoint. For ShotGrid / Flow Production Tracking, use
+`dcc_type="shotgrid"` so agents can filter with `dcc_type` today and
+`dcc_types[]` later:
+
+```http
+POST /v1/instances/register HTTP/1.1
+Authorization: Bearer <gateway-token>
+Content-Type: application/json
+
+{
+  "instance_id": "9a7f2a20-3f47-4e09-9d2d-5b9e973b9f61",
+  "dcc_type": "shotgrid",
+  "mcp_url": "https://pipeline.example.com/shotgrid/mcp",
+  "adapter_version": "1.0.0",
+  "scene": "show=KAI; project=robot-short",
+  "ttl_secs": 90
+}
+```
+
+The canonical tags live on that backend's skills and tools, not on the
+registration envelope. A ShotGrid backend should tag its skills with
+`pipeline`, `production-tracking`, and `shotgrid`; individual read tools should
+also carry `read-only`, while mutating publish/update tools should carry
+`destructive` when applicable.
+
+Autodesk Product Help should be an explicit opt-in documentation connector,
+disabled by default in operator config. The remote MCP server advertises
+read-only skills tagged for documentation lookup:
+
+```yaml
+# Connector deployment record (example; keep disabled unless an operator opts in)
+enabled: false
+name: autodesk-product-help
+dcc_type: autodesk-help
+mcp_url: https://developer.api.autodesk.com/knowledge/public/v1/mcp
+tags: [docs, autodesk, read-only, infrastructure]
+```
+
+```yaml
+# SKILL.md metadata on the remote connector
+metadata:
+  meshy-dcc:
+    dcc: autodesk-help
+    layer: infrastructure
+    tags: [docs, autodesk, read-only, infrastructure]
+    search-hint: "Autodesk Product Help, Maya help, 3ds Max help, API reference"
+    tools: tools.yaml
+```
+
+When enabled, register it through the same HTTP plane:
+
+```json
+{
+  "instance_id": "3ab2ec8b-8c1d-4fd9-b8f4-7f5163f3ad55",
+  "dcc_type": "autodesk-help",
+  "mcp_url": "https://developer.api.autodesk.com/knowledge/public/v1/mcp",
+  "adapter_version": "docs-connector-1.0.0",
+  "scene": "read-only product help",
+  "ttl_secs": 300
+}
+```
+
+Studio note: public documentation connectors are optional internet
+dependencies. Use Autodesk Product Help for best-effort reference lookup only;
+offline or tightly controlled studios should leave it disabled and provide an
+approved internal docs connector instead.
+
+### Telemetry correlation
+
+When you use a `next_step` from `search`, keep its `meta.search_id` as REST
+`meta.search_id` or MCP `_meta.search_id` on `describe`, `load_skill`, `call`,
+and batched `call` requests. The gateway emits `gateway.search`,
+`gateway.describe`, `gateway.load_skill`, `gateway.call`, and
+`gateway.call_batch` OTLP spans with bounded `meshy_dcc.*` attributes, including
+selected rank, score, match reasons, policy outcome, and success/failure kind.
+Only explicit bounded `agent_context` fields are exported; do not send hidden
+reasoning, secrets, or raw prompt bodies as telemetry metadata. Gateway MCP
+also carries bounded `initialize.params.clientInfo` forward per
+`Mcp-Session-Id` so later `tools/call` rows show client name/version; REST
+clients that omit `client_platform` fall back to the first `User-Agent` product
+token.
+
+If a call is denied, throttled, or unexpectedly redacted, inspect
+`resources/read uri=gateway://governance` (or `GET /v1/debug/governance`)
+before retrying. It reports the effective read-only
+policy, DCC/skill/tool allowlists, traffic capture mode and redaction paths,
+middleware quota pressure, and recent allow/deny/throttle/capture decisions.
+Use `GET /v1/debug/traffic` when the admin Traffic panel shows no rows: its
+`capture_status.state` distinguishes genuine `no_traffic` from
+`capture_disabled`, `capture_unavailable`, or filtered capture, and retained
+frames are metadata-only by default.
+
+### Demonstration record and replay
+
+Use record-replay only when the user wants a repeated workflow learned from a
+demonstration. It is a semantic compiler, not raw timing playback:
+
+1. Start with `POST /v1/recordings/start` (or
+   `meshy-dcc-cli record-replay start`) and a bounded
+   `x-meshy-dcc-agent-session-id` / `--agent-session-id`.
+2. Demonstrate through normal `search` -> `describe` -> `call`; use scoped UI
+   Control only when structured tools cannot reach the semantic UI.
+3. Stop and review the caller-scoped, redacted timeline. Another session
+   cannot read or stop it. Calls are appended to the existing Admin
+   `session_events` timeline as they occur; after a gateway restart, an
+   unfinished recording is reviewable as `interrupted` and is never resumed
+   automatically.
+4. Compile only with explicit `reviewed=true`. The compiler resolves current
+   tools and schemas, removes failed exploration and recorded approvals, and
+   emits a local Skill plus `WorkflowSpec`.
+5. Replay requires separate current approval. Stop on schema ambiguity,
+   approval, desktop, target, observation, confidence, DPI, geometry, or
+   topology drift.
+
+Never record or reuse raw prompts, credentials, grants, approvals, instance
+ids as authority, stale accessibility ids, or global coordinates. Prefer a
+fresh semantic `snapshot` -> `find` -> one `act` -> verification loop; visual
+anchors are an exact-window-bounded last resort.
+
+### Host / connector wrappers (common mistakes)
+
+If your IDE or orchestration layer exposes **non-standard** tool names (for example `defer_execute_tool`, `get_sessions`, `tool_search`), they **must** map onto the gateway verbs above — those names are **not** part of `meshy-dcc-gateway`’s native `tools/list`.
+
+| Wrong assumption | Use instead |
+|------------------|-------------|
+| `get_sessions` / “list MCP sessions” for routing | **`resources/read`** with `uri=gateway://instances` (MCP), or **`GET /v1/instances`**, **`GET /v1/context`** (REST). Rows carry `instance_id`, `dcc_type`, `mcp_url`. |
+| Wrapper that only accepts `code` at the top level | Gateway **`call`** always needs **`tool_slug`** + optional **`arguments`** (see below). |
+| Guessing `tool_slug` segments | Run **`search(kind="tool")`** (or **`POST /v1/search`**) after you know `dcc_type` / `instance_id` from **`gateway://instances`**. |
+
+### Skills-first before `execute_python` / raw MEL (Maya-oriented)
+
+For Maya behind the gateway, prefer **`search(kind="skill")`** → **`load_skill`** → a **typed** tool from `tools.yaml` (for example primitives / mesh / **interchange**):
+
+- Many cubes / spheres / transforms → `maya-primitives` (not a giant `execute_python` loop).
+- FBX / OBJ / scene save to disk → `maya-geometry` (`export_fbx`, `import_fbx`, `save_scene`, …) — **avoid** hand-rolled `FBXExport` MEL unless no skill fits.
+- Only when no packaged tool exists: `maya-scripting` → `execute_python` / `execute_mel`, preferably **`file_path`** to a `.py` / `.mel` the **Maya process host** can read (see next section).
+
+### `tool_slug` shape (and why it is not slash-separated yet)
+
+- Every `search(kind="tool")` hit includes **`rank`**, **`tool_slug`**, and bounded **`match_reasons`**. Treat `tool_slug` as an opaque **routing token**: copy it **verbatim** into `describe` and `call` (and into REST `POST /v1/describe` / `/v1/call` bodies as the `tool_slug` field).
+- Format: **`<dcc_type>.<instance_prefix_or_uuid>.<backend_tool>`** — three dot-separated routing segments. Example: `maya.277685a7.maya_primitives__create_sphere`. This encodes the same tuple a path-style URL would use (`/<dcc>/<instance>/<backend_tool>`); the final `backend_tool` segment is the client-safe MCP name such as `project_save` or `maya_primitives__create_sphere`.
+- **Common agent mistake:** calling `call` with only `code` / `python` / `mel` at the **top level**. That shape belongs to **specific backend tools** inside **`arguments`**, only when their schema says so — the gateway wrapper **always** requires **`tool_slug`** plus optional **`arguments`** / **`meta`**.
+
+### Maya rendering & visualization intent routing
+
+When the user asks to produce visual output from a Maya scene, discover the
+typed rendering tools through `search(kind="tool")` or
+`search(query="render ...", dcc_type="maya")` and call them directly. Do not
+hand-roll `execute_python` or `execute_mel` for rendering — the typed tools
+carry schema validation, timeout hints, and next-tool chains.
+
+| User intent | First-choice tool | Fallback |
+|-------------|-------------------|----------|
+| Render final frame (production quality) | `maya_render__render_frame` | — |
+| Debug scene snapshot (quick viewport grab) | `maya_render__debug_scene_snapshot` | `render_frame(preview=True)` — lower quality but always available |
+| Record viewport animation as MP4 | `maya_render__playblast_to_mp4` | Chain `capture_playblast_sequence` → assemble frames with media tools |
+
+**VP2 viewport capture fallback:** When `capture_viewport` fails (e.g. VP2
+renderer unavailable, incompatible scene state, or GPU driver issues), do not
+retry the same call. Instead:
+
+1. Read diagnostics: `dcc_diagnostics__screenshot` or `resources/read` with
+   the adapter's diagnostics URI.
+2. If the scene is otherwise renderable, fall back to
+   `maya_render__render_frame(preview=True)` for a render-view still.
+3. Report the original VP2 failure to the user so they know the viewport
+   pipeline needs attention.
+
+---
+
+## Resources and prompts (read before guessing)
+
+- **`resources/list`** on the gateway — Merges **gateway-native** pointers with **per-backend** entries. **Copy URIs exactly** (including `dcc://…` or instance-prefixed forms). Do not rewrite or strip prefixes; the gateway routes `resources/read` by URI.
+- **`resources/read`** — Primary way to pull **registry views**, **diagnostics**, **catalog**, **this guide**, and **host-published help** (documentation blobs, scene snapshots, cmd help, etc., when the adapter exposes them).
+- **`prompts/list`** / **`prompts/get`** — Use when the gateway aggregates prompt templates from backends; same rule: use **returned names and URIs as-is**.
+
+**Gateway-native pointers you should know:**
+
+| URI | Purpose |
+|-----|---------|
+| `gateway://instances` | Live DCC rows: `dcc_type`, `mcp_url`, health — use when routing or when the user names a product (Maya, Photoshop, Blender, …): map the name to **`dcc_type`** / a concrete instance, not to extra `tools/list` entries. |
+| `gateway://instances/{id}` | One row (full UUID or unique prefix). |
+| `gateway://diagnostics/*` | Gateway/backend health signals for operators and agents. |
+| `gateway://instances` rows | Each instance may include a `diagnostics` object (`readiness` bits from `/v1/readyz`, `last_error` from the most recent failed gateway-proxied call). Readiness includes `process`, `dcc`, `skill_catalog`, `dispatcher`, `host_execution_bridge`, and `main_thread_executor`. |
+| `gateway://experiments` | Reproducible experiment list. Read `gateway://experiments/{experiment_id}` for runs, Session DAG links, metrics, and evidence-only Judge results. |
+| `gateway://governance` | Effective allowlists, capture/redaction state, quota pressure, and recent governance decisions. |
+
+When a gateway-proxied `call` / `POST /v1/call` fails with `thread-affinity-violation`, read `error.backend` for the selected instance id, direct `mcp_url` vs `gateway_mcp_url`, readiness (`process` / `dcc` / `skill_catalog` / `dispatcher` / `host_execution_bridge` / `main_thread_executor`), and the backend's structured `context` before retrying.
+| `gateway://catalog` | Public package index (optional discovery). |
+| `gateway://docs/agent-workflows` | **This** guide — re-fetch when instructions drift in a long session. |
+
+**Help and documentation from DCC hosts:** Adapters often expose **read-only** resources (e.g. command help, API signatures, scene snapshots). They appear in **`resources/list`** with stable schemes. Always **`resources/read`** the **exact** URI from the list — do not fabricate paths. If a `describe` response points to follow-up resources, prefer those over web search for DCC-accurate text.
+
+**Debugging an agent chain:** When Admin telemetry is enabled, prefer
+`GET /v1/debug/workflows` for a session-level view of `search` -> `describe`
+-> `load_skill` -> `call`. The payload reuses retained search telemetry,
+dispatch traces, and audit rows, so it shows selected rank, zero-result
+searches, time-to-first-success, and per-step trace/debug-bundle/issue-report
+links without exposing hidden reasoning or raw prompts.
+
+---
+
+## Efficiency (without a separate “bulk” playbook)
+
+- One **`describe`** per returned describe step; cache the schema mentally for the rest of the task. A no-schema hit calls directly only when search already surfaced its safety hints.
+- After a correlated `load_skill`, prefer the returned `compact_schema` when present instead of immediately calling `describe` again.
+- One **`search(kind="tool")`** with a tight `query` and correct **`dcc_type`** / **`instance_id`** when the user names a host or you see multiple live rows in `gateway://instances`.
+- Prefer **structured arguments** (paths, flags, IDs) in a single **`call`** when the schema supports it, instead of many tiny speculative calls.
+- Use **`call({calls:[...]})`** only when you truly have a **short sequence of different** tools—not as a default hammer.
+
+---
+
+## Iteration Playbook (re-run, re-parameterize, resume)
+
+Most wasted tokens in a long session come from re-sending work the host already
+has. Three moves cover it:
+
+1. **Re-run a script — reuse the materialized path.** Call the backend
+   `materialize_script` tool with `reuse=true` and a stable `reuse_key`. The
+   path is derived (`{reuse_key}_{sha256[:12]}` under
+   `~/.meshy-dcc/<dcc_type>/temp/<instance_id>/<session_id>/`), so a
+   byte-identical repeat returns the same `file_path` with `reused=true`.
+   Pass **only** `file_path` to the execution tool afterwards — never the
+   source. A changed byte yields a new script id on purpose.
+2. **Change a value — send new `params` with the same `file_path`.** The
+   execution contract is `params` delivered to `main(**params)`; there is no
+   CLI flag and no params file. Do not re-materialize just to change an
+   argument, and do not inline `code` again.
+3. **Recover a dead multi-step run — `workflows_resume`.** Send `workflow_id`
+   plus optional `force_steps`, `expected_spec_hash`, and `strict`. It
+   re-drives the persisted run from the first non-completed step. The handler
+   exists only when the executor was built with `WorkflowStorage` and the
+   `job-persist-sqlite` feature, so a `tools/list` entry is not proof it will
+   run — fall back to `workflows_run` and report the interruption.
+
+Normative text: `docs/guide/agents-reference.md#iteration-playbook`.
+
+---
+
+## Execution hints: affinity, async, timeouts
+
+`describe` (and tool metadata) may declare **`affinity`** (e.g. main thread vs worker), **`execution`** (sync vs async), **`jobStrategy`**, and **timeout** hints. **Follow them:** `chunked` means bounded host-event-loop steps, `isolated` means a durable process/service-owned operation, and absent/`monolithic` means one indivisible call. Never infer that arbitrary script code can be split. Main-thread tools must not be “worked around” from the client; async tools return a core job handle—poll the instance-routable `jobs_get_status`. Ignoring these hints produces duplicate or flaky work that looks like a gateway bug but is a contract violation.
+
+---
+
+## REST clients
+
+Where the gateway mounts them, mirror MCP with **`POST /v1/search`**, **`/v1/describe`**, **`/v1/call`**, **`/v1/call_batch`**, and **`/v1/resources*`** / **`/v1/prompts*`**. Same discovery order and same URI hygiene as MCP.
+
+`POST /v1/search`, `/v1/describe`, `/v1/call`, direct per-instance describe/call routes, and `/v1/call_batch` return compact TOON by default. REST agents that need legacy JSON can set `Accept: application/json` or `response_format: "json"`; operators can temporarily restore a JSON-first rollout with `MESHY_DCC_GATEWAY_RESPONSE_FORMAT=json`. Use `response_format: "toon"` or `compact: true` to force compact output when an `Accept` header prefers JSON. Compact-capable responses include `x-meshy-dcc-token-estimator`, original/returned byte and token counts, and savings headers so an agent can budget repeated discovery, schema, and invocation calls. Compact batch responses also include per-result `token_accounting` metadata.
+
+MCP agents request the same compact TOON payloads through request metadata instead of HTTP `Accept`: compact-capable clients should set `params._meta.response_format="toon"` or `params._meta.compact=true` after `initialize` advertises `capabilities.experimental["meshy-dcc"].compactResponses`, and can set `params._meta.response_format="json"` to opt out for one request. Legacy clients that omit the metadata keep normal JSON results. The outer JSON-RPC envelope stays JSON. `tools/call` keeps the MCP `CallToolResult` shape and adds `mimeType: "application/toon"` to compact text content; JSON-RPC errors stay normal `error` objects.
+
+### Gateway handoff signals
+
+When a gateway accepts a cooperative `/gateway/yield`, connected SSE clients receive `notifications/gateway/handoff` before the listener shuts down. Treat it as a short retry window: pause new requests until `deadline_unix_secs`, refresh `gateway://instances`, then retry through the same stable endpoint. The gateway also marks its `__gateway__` sentinel as `shutting_down`, so registry readers can distinguish graceful handoff from a crash-driven failover.
+
+### Path-style invocation (optional; for curl / service accounts)
+
+- **Gateway:** `POST /v1/dcc/{dcc_type}/instances/{instance_id}/call` with JSON `{ "backend_tool": "<name>", "arguments": {...}, "meta": {...} }` (aliases: `tool`, `action` for `backend_tool`). Same routing as `POST /v1/call` after composing the dotted `tool_slug`; use when you already know `dcc_type` + **`instance_id`** from **`GET /v1/instances`** or **`GET /v1/context`** (`instances` array mirrors `/v1/instances`).
+- **Gateway:** `GET /v1/dcc/{dcc_type}/instances/{instance_id}/describe?backend_tool=...` (aliases `tool`, `action` query keys) — same JSON as `GET /v1/tools/{tool_slug}` without assembling the dotted slug.
+- **Per-DCC HTTP server (skill-rest):** `POST /v1/dcc/{dcc_type}/call` with the same body — no instance segment because one process owns one session.
+
+### Long `execute_python` / MEL without giant JSON strings
+
+- **Long `execute_python` payloads** — Prefer a typed skill first. If no typed tool fits, materialize the script on the **DCC host filesystem** and call the backend tool with `file_path`. Core exposes `meshy_dcc_core.materialize_script(...)` / `meshy_dcc_core.script_materialization.materialize_script(...)`, returning `{file_ref, file_path, sha256, bytes, ttl, dcc_type, instance_id, session_id, tool_call_id, correlation_id}`. The default root is `~/.meshy-dcc/<dcc_type>/temp/<instance_id>/<session_id>/...` and can be overridden with `MESHY_DCC_SCRIPT_MATERIALIZATION_ROOT`.
+- **Agent API** — Most `DccServerBase` adapters expose a `materialize_script` tool. Discover it with `search_tools(query="materialize script")`, call it with `content`/`code`, then call the execution tool with the returned `file_path`. The response is descriptor metadata only; raw source is not echoed, and gateway trace input capture redacts script-source fields by default.
+- **Policy boundary** — Core helpers use `script_materialization_policy = off | auto | require`. `auto` materializes inline `code` before execution, `require` rejects raw inline code unless a trusted `file_path` / `script_path` is supplied, and `off` is a compatibility escape hatch. Successful script execution should return `context.materialized_script` with path, FileRef, hash, byte length, and reuse metadata.
+- **Compatibility wrapper** — `write_temp_file` (skill) and `write_temp_script(...)` still work, but they are compatibility helpers over the materialization store. Prefer the structured descriptor when you need audit, reuse, TTL cleanup, or FileRef metadata.
+- **Remote agents** — A path written only on the agent laptop is not executable by a remote studio Maya/Photoshop/Blender process. Use an in-host writer/API or a synced workspace before passing `file_path`.
+- **Maya adapter auto-spill** — Some adapter versions may copy very long **inline** `code` strings to a host-local temp file before `exec`, and return a legacy context key such as `host_spilled_inline_script_path`. Treat that as a migration alias; explicit materialize -> execute by path is the auditable contract.
+
+### After a DCC crash or reconnect
+
+The **`instance_id`** in the registry usually **changes**. Cached **`tool_slug`** values from an earlier `search` run may fail with `unknown-slug` / `instance-offline` / 404-style errors.
+
+1. Keep any returned `job_id`. A transport timeout is not proof of failure or cancellation, so do not submit duplicate work.
+2. Refresh **`GET /v1/instances?include_stale=true&include_dead=true`** or **`resources/read` `gateway://instances?include_stale=true&include_dead=true`**. An `unreachable` row with a live owner/TTL is retained; retry discovery/status with bounded backoff.
+3. If the same instance recovers, search for its indexed `jobs_get_status` and query the original core job. Use the typed status tool returned by an isolated operation for adapter-owned durable jobs.
+4. If owner/PID death or remote TTL expiry removed the row, wait for the DCC to be restarted explicitly, then rediscover by `dcc_type` plus scene/project metadata. Do not auto-launch a DCC unless the user has granted that authority.
+5. Run **`search(kind="tool")`** / **`POST /v1/search`** again and use the **new** `instance_id`; never reuse old slugs or direct MCP URLs. Re-**`describe`** schemas as needed.
+6. Core persistent jobs that were running at process death recover as `interrupted`. Resume only through an explicit tool contract — a persisted workflow re-drives from `workflows_resume` (see Iteration Playbook); otherwise report interruption instead of silently replaying mutations.

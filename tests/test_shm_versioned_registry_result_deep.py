@@ -19,17 +19,17 @@ import threading
 
 import pytest
 
-from dcc_mcp_core import PyBufferPool
-from dcc_mcp_core import PySceneDataKind
-from dcc_mcp_core import PySharedBuffer
-from dcc_mcp_core import PySharedSceneBuffer
-from dcc_mcp_core import SemVer
-from dcc_mcp_core import VersionConstraint
-from dcc_mcp_core import VersionedRegistry
-from dcc_mcp_core import error_result
-from dcc_mcp_core import from_exception
-from dcc_mcp_core import success_result
-from dcc_mcp_core import validate_action_result
+from meshy_dcc_core import PyBufferPool
+from meshy_dcc_core import PySceneDataKind
+from meshy_dcc_core import PySharedBuffer
+from meshy_dcc_core import PySharedSceneBuffer
+from meshy_dcc_core import SemVer
+from meshy_dcc_core import VersionConstraint
+from meshy_dcc_core import VersionedRegistry
+from meshy_dcc_core import error_result
+from meshy_dcc_core import from_exception
+from meshy_dcc_core import success_result
+from meshy_dcc_core import validate_action_result
 
 # ---------------------------------------------------------------------------
 # TestPySharedSceneBuffer
@@ -679,7 +679,7 @@ class TestValidateActionResult:
         assert r.success is True
 
     def test_returns_action_result_model_type(self):
-        from dcc_mcp_core import ToolResult
+        from meshy_dcc_core import ToolResult
 
         r = validate_action_result(None)
         assert isinstance(r, ToolResult)
@@ -739,7 +739,7 @@ class TestFromException:
         assert r.context["error_type"] == "Exception"
 
     def test_returns_action_result_model_type(self):
-        from dcc_mcp_core import ToolResult
+        from meshy_dcc_core import ToolResult
 
         r = from_exception("my error")
         assert isinstance(r, ToolResult)

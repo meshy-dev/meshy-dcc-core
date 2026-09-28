@@ -11,107 +11,107 @@ from __future__ import annotations
 
 import pytest
 
-import dcc_mcp_core
+import meshy_dcc_core
 
 # ── SemVer Tests ──────────────────────────────────────────────────────────────
 
 
 class TestSemVer:
     def test_create_basic(self) -> None:
-        v = dcc_mcp_core.SemVer(1, 2, 3)
+        v = meshy_dcc_core.SemVer(1, 2, 3)
         assert v.major == 1
         assert v.minor == 2
         assert v.patch == 3
 
     def test_str_representation(self) -> None:
-        v = dcc_mcp_core.SemVer(1, 2, 3)
+        v = meshy_dcc_core.SemVer(1, 2, 3)
         assert str(v) == "1.2.3"
 
     def test_str_zero_patch(self) -> None:
-        v = dcc_mcp_core.SemVer(2, 0, 0)
+        v = meshy_dcc_core.SemVer(2, 0, 0)
         assert str(v) == "2.0.0"
 
     def test_parse_standard(self) -> None:
-        v = dcc_mcp_core.SemVer.parse("1.2.3")
+        v = meshy_dcc_core.SemVer.parse("1.2.3")
         assert v.major == 1
         assert v.minor == 2
         assert v.patch == 3
 
     def test_parse_with_v_prefix(self) -> None:
-        v = dcc_mcp_core.SemVer.parse("v2.0.0")
+        v = meshy_dcc_core.SemVer.parse("v2.0.0")
         assert v.major == 2
         assert v.minor == 0
         assert v.patch == 0
 
     def test_parse_two_component(self) -> None:
-        v = dcc_mcp_core.SemVer.parse("v2.0")
+        v = meshy_dcc_core.SemVer.parse("v2.0")
         assert v.major == 2
         assert v.minor == 0
         assert v.patch == 0
 
     def test_parse_with_prerelease(self) -> None:
         # Prerelease part is stripped but should not raise
-        v = dcc_mcp_core.SemVer.parse("1.0.0-alpha")
+        v = meshy_dcc_core.SemVer.parse("1.0.0-alpha")
         assert v.major == 1
         assert v.minor == 0
         assert v.patch == 0
 
     def test_equality(self) -> None:
-        v1 = dcc_mcp_core.SemVer(1, 2, 3)
-        v2 = dcc_mcp_core.SemVer(1, 2, 3)
+        v1 = meshy_dcc_core.SemVer(1, 2, 3)
+        v2 = meshy_dcc_core.SemVer(1, 2, 3)
         assert v1 == v2
 
     def test_inequality_major(self) -> None:
-        v1 = dcc_mcp_core.SemVer(1, 0, 0)
-        v2 = dcc_mcp_core.SemVer(2, 0, 0)
+        v1 = meshy_dcc_core.SemVer(1, 0, 0)
+        v2 = meshy_dcc_core.SemVer(2, 0, 0)
         assert v1 != v2
 
     def test_less_than(self) -> None:
-        v1 = dcc_mcp_core.SemVer(1, 0, 0)
-        v2 = dcc_mcp_core.SemVer(2, 0, 0)
+        v1 = meshy_dcc_core.SemVer(1, 0, 0)
+        v2 = meshy_dcc_core.SemVer(2, 0, 0)
         assert v1 < v2
 
     def test_less_than_minor(self) -> None:
-        v1 = dcc_mcp_core.SemVer(1, 0, 0)
-        v2 = dcc_mcp_core.SemVer(1, 1, 0)
+        v1 = meshy_dcc_core.SemVer(1, 0, 0)
+        v2 = meshy_dcc_core.SemVer(1, 1, 0)
         assert v1 < v2
 
     def test_less_than_patch(self) -> None:
-        v1 = dcc_mcp_core.SemVer(1, 0, 0)
-        v2 = dcc_mcp_core.SemVer(1, 0, 1)
+        v1 = meshy_dcc_core.SemVer(1, 0, 0)
+        v2 = meshy_dcc_core.SemVer(1, 0, 1)
         assert v1 < v2
 
     def test_greater_than(self) -> None:
-        v1 = dcc_mcp_core.SemVer(2, 0, 0)
-        v2 = dcc_mcp_core.SemVer(1, 0, 0)
+        v1 = meshy_dcc_core.SemVer(2, 0, 0)
+        v2 = meshy_dcc_core.SemVer(1, 0, 0)
         assert v1 > v2
 
     def test_less_than_or_equal_equal(self) -> None:
-        v1 = dcc_mcp_core.SemVer(1, 0, 0)
-        v2 = dcc_mcp_core.SemVer(1, 0, 0)
+        v1 = meshy_dcc_core.SemVer(1, 0, 0)
+        v2 = meshy_dcc_core.SemVer(1, 0, 0)
         assert v1 <= v2
 
     def test_less_than_or_equal_less(self) -> None:
-        v1 = dcc_mcp_core.SemVer(1, 0, 0)
-        v2 = dcc_mcp_core.SemVer(2, 0, 0)
+        v1 = meshy_dcc_core.SemVer(1, 0, 0)
+        v2 = meshy_dcc_core.SemVer(2, 0, 0)
         assert v1 <= v2
 
     def test_greater_than_or_equal_equal(self) -> None:
-        v1 = dcc_mcp_core.SemVer(1, 0, 0)
-        v2 = dcc_mcp_core.SemVer(1, 0, 0)
+        v1 = meshy_dcc_core.SemVer(1, 0, 0)
+        v2 = meshy_dcc_core.SemVer(1, 0, 0)
         assert v1 >= v2
 
     def test_greater_than_or_equal_greater(self) -> None:
-        v1 = dcc_mcp_core.SemVer(2, 0, 0)
-        v2 = dcc_mcp_core.SemVer(1, 0, 0)
+        v1 = meshy_dcc_core.SemVer(2, 0, 0)
+        v2 = meshy_dcc_core.SemVer(1, 0, 0)
         assert v1 >= v2
 
     def test_sort_order(self) -> None:
         versions = [
-            dcc_mcp_core.SemVer(2, 0, 0),
-            dcc_mcp_core.SemVer(1, 0, 0),
-            dcc_mcp_core.SemVer(1, 5, 0),
-            dcc_mcp_core.SemVer(1, 5, 3),
+            meshy_dcc_core.SemVer(2, 0, 0),
+            meshy_dcc_core.SemVer(1, 0, 0),
+            meshy_dcc_core.SemVer(1, 5, 0),
+            meshy_dcc_core.SemVer(1, 5, 3),
         ]
         sorted_versions = sorted(versions)
         assert str(sorted_versions[0]) == "1.0.0"
@@ -120,17 +120,17 @@ class TestSemVer:
         assert str(sorted_versions[3]) == "2.0.0"
 
     def test_repr(self) -> None:
-        v = dcc_mcp_core.SemVer(1, 2, 3)
+        v = meshy_dcc_core.SemVer(1, 2, 3)
         r = repr(v)
         assert "1" in r and "2" in r and "3" in r
 
     def test_parse_invalid_raises(self) -> None:
         with pytest.raises((ValueError, Exception)):
-            dcc_mcp_core.SemVer.parse("not-a-version")
+            meshy_dcc_core.SemVer.parse("not-a-version")
 
     def test_parse_empty_raises(self) -> None:
         with pytest.raises((ValueError, Exception)):
-            dcc_mcp_core.SemVer.parse("")
+            meshy_dcc_core.SemVer.parse("")
 
 
 # ── VersionConstraint Tests ───────────────────────────────────────────────────
@@ -138,76 +138,76 @@ class TestSemVer:
 
 class TestVersionConstraint:
     def test_wildcard_matches_any(self) -> None:
-        c = dcc_mcp_core.VersionConstraint.parse("*")
-        assert c.matches(dcc_mcp_core.SemVer(0, 0, 1))
-        assert c.matches(dcc_mcp_core.SemVer(1, 0, 0))
-        assert c.matches(dcc_mcp_core.SemVer(99, 99, 99))
+        c = meshy_dcc_core.VersionConstraint.parse("*")
+        assert c.matches(meshy_dcc_core.SemVer(0, 0, 1))
+        assert c.matches(meshy_dcc_core.SemVer(1, 0, 0))
+        assert c.matches(meshy_dcc_core.SemVer(99, 99, 99))
 
     def test_exact_match(self) -> None:
-        c = dcc_mcp_core.VersionConstraint.parse("=1.2.3")
-        assert c.matches(dcc_mcp_core.SemVer(1, 2, 3))
-        assert not c.matches(dcc_mcp_core.SemVer(1, 2, 4))
-        assert not c.matches(dcc_mcp_core.SemVer(1, 3, 0))
+        c = meshy_dcc_core.VersionConstraint.parse("=1.2.3")
+        assert c.matches(meshy_dcc_core.SemVer(1, 2, 3))
+        assert not c.matches(meshy_dcc_core.SemVer(1, 2, 4))
+        assert not c.matches(meshy_dcc_core.SemVer(1, 3, 0))
 
     def test_greater_than_or_equal(self) -> None:
-        c = dcc_mcp_core.VersionConstraint.parse(">=1.2.0")
-        assert c.matches(dcc_mcp_core.SemVer(1, 2, 0))
-        assert c.matches(dcc_mcp_core.SemVer(1, 5, 0))
-        assert c.matches(dcc_mcp_core.SemVer(2, 0, 0))
-        assert not c.matches(dcc_mcp_core.SemVer(1, 1, 9))
-        assert not c.matches(dcc_mcp_core.SemVer(0, 9, 9))
+        c = meshy_dcc_core.VersionConstraint.parse(">=1.2.0")
+        assert c.matches(meshy_dcc_core.SemVer(1, 2, 0))
+        assert c.matches(meshy_dcc_core.SemVer(1, 5, 0))
+        assert c.matches(meshy_dcc_core.SemVer(2, 0, 0))
+        assert not c.matches(meshy_dcc_core.SemVer(1, 1, 9))
+        assert not c.matches(meshy_dcc_core.SemVer(0, 9, 9))
 
     def test_strictly_greater_than(self) -> None:
-        c = dcc_mcp_core.VersionConstraint.parse(">1.2.0")
-        assert c.matches(dcc_mcp_core.SemVer(1, 2, 1))
-        assert c.matches(dcc_mcp_core.SemVer(2, 0, 0))
-        assert not c.matches(dcc_mcp_core.SemVer(1, 2, 0))
-        assert not c.matches(dcc_mcp_core.SemVer(1, 0, 0))
+        c = meshy_dcc_core.VersionConstraint.parse(">1.2.0")
+        assert c.matches(meshy_dcc_core.SemVer(1, 2, 1))
+        assert c.matches(meshy_dcc_core.SemVer(2, 0, 0))
+        assert not c.matches(meshy_dcc_core.SemVer(1, 2, 0))
+        assert not c.matches(meshy_dcc_core.SemVer(1, 0, 0))
 
     def test_less_than_or_equal(self) -> None:
-        c = dcc_mcp_core.VersionConstraint.parse("<=2.0.0")
-        assert c.matches(dcc_mcp_core.SemVer(2, 0, 0))
-        assert c.matches(dcc_mcp_core.SemVer(1, 9, 9))
-        assert not c.matches(dcc_mcp_core.SemVer(2, 0, 1))
-        assert not c.matches(dcc_mcp_core.SemVer(3, 0, 0))
+        c = meshy_dcc_core.VersionConstraint.parse("<=2.0.0")
+        assert c.matches(meshy_dcc_core.SemVer(2, 0, 0))
+        assert c.matches(meshy_dcc_core.SemVer(1, 9, 9))
+        assert not c.matches(meshy_dcc_core.SemVer(2, 0, 1))
+        assert not c.matches(meshy_dcc_core.SemVer(3, 0, 0))
 
     def test_strictly_less_than(self) -> None:
-        c = dcc_mcp_core.VersionConstraint.parse("<2.0.0")
-        assert c.matches(dcc_mcp_core.SemVer(1, 9, 9))
-        assert c.matches(dcc_mcp_core.SemVer(0, 0, 1))
-        assert not c.matches(dcc_mcp_core.SemVer(2, 0, 0))
-        assert not c.matches(dcc_mcp_core.SemVer(2, 0, 1))
+        c = meshy_dcc_core.VersionConstraint.parse("<2.0.0")
+        assert c.matches(meshy_dcc_core.SemVer(1, 9, 9))
+        assert c.matches(meshy_dcc_core.SemVer(0, 0, 1))
+        assert not c.matches(meshy_dcc_core.SemVer(2, 0, 0))
+        assert not c.matches(meshy_dcc_core.SemVer(2, 0, 1))
 
     def test_caret_same_major(self) -> None:
-        c = dcc_mcp_core.VersionConstraint.parse("^1.0.0")
-        assert c.matches(dcc_mcp_core.SemVer(1, 0, 0))
-        assert c.matches(dcc_mcp_core.SemVer(1, 5, 0))
-        assert c.matches(dcc_mcp_core.SemVer(1, 9, 9))
-        assert not c.matches(dcc_mcp_core.SemVer(2, 0, 0))
-        assert not c.matches(dcc_mcp_core.SemVer(0, 9, 9))
+        c = meshy_dcc_core.VersionConstraint.parse("^1.0.0")
+        assert c.matches(meshy_dcc_core.SemVer(1, 0, 0))
+        assert c.matches(meshy_dcc_core.SemVer(1, 5, 0))
+        assert c.matches(meshy_dcc_core.SemVer(1, 9, 9))
+        assert not c.matches(meshy_dcc_core.SemVer(2, 0, 0))
+        assert not c.matches(meshy_dcc_core.SemVer(0, 9, 9))
 
     def test_caret_minor_version(self) -> None:
-        c = dcc_mcp_core.VersionConstraint.parse("^1.2.0")
-        assert c.matches(dcc_mcp_core.SemVer(1, 2, 0))
-        assert c.matches(dcc_mcp_core.SemVer(1, 5, 3))
-        assert not c.matches(dcc_mcp_core.SemVer(2, 0, 0))
-        assert not c.matches(dcc_mcp_core.SemVer(1, 1, 9))
+        c = meshy_dcc_core.VersionConstraint.parse("^1.2.0")
+        assert c.matches(meshy_dcc_core.SemVer(1, 2, 0))
+        assert c.matches(meshy_dcc_core.SemVer(1, 5, 3))
+        assert not c.matches(meshy_dcc_core.SemVer(2, 0, 0))
+        assert not c.matches(meshy_dcc_core.SemVer(1, 1, 9))
 
     def test_tilde_same_major_minor(self) -> None:
-        c = dcc_mcp_core.VersionConstraint.parse("~1.2.3")
-        assert c.matches(dcc_mcp_core.SemVer(1, 2, 3))
-        assert c.matches(dcc_mcp_core.SemVer(1, 2, 9))
-        assert not c.matches(dcc_mcp_core.SemVer(1, 3, 0))
-        assert not c.matches(dcc_mcp_core.SemVer(2, 0, 0))
-        assert not c.matches(dcc_mcp_core.SemVer(1, 2, 2))
+        c = meshy_dcc_core.VersionConstraint.parse("~1.2.3")
+        assert c.matches(meshy_dcc_core.SemVer(1, 2, 3))
+        assert c.matches(meshy_dcc_core.SemVer(1, 2, 9))
+        assert not c.matches(meshy_dcc_core.SemVer(1, 3, 0))
+        assert not c.matches(meshy_dcc_core.SemVer(2, 0, 0))
+        assert not c.matches(meshy_dcc_core.SemVer(1, 2, 2))
 
     def test_invalid_operator_raises(self) -> None:
         with pytest.raises((ValueError, Exception)):
-            dcc_mcp_core.VersionConstraint.parse("??1.0.0")
+            meshy_dcc_core.VersionConstraint.parse("??1.0.0")
 
     def test_empty_constraint_raises(self) -> None:
         with pytest.raises((ValueError, Exception)):
-            dcc_mcp_core.VersionConstraint.parse("")
+            meshy_dcc_core.VersionConstraint.parse("")
 
 
 # ── VersionedRegistry Tests ───────────────────────────────────────────────────
@@ -215,48 +215,48 @@ class TestVersionConstraint:
 
 class TestVersionedRegistryBasics:
     def test_create_empty(self) -> None:
-        vr = dcc_mcp_core.VersionedRegistry()
+        vr = meshy_dcc_core.VersionedRegistry()
         assert vr.total_entries() == 0
 
     def test_register_single_version(self) -> None:
-        vr = dcc_mcp_core.VersionedRegistry()
+        vr = meshy_dcc_core.VersionedRegistry()
         vr.register_versioned("create_sphere", "maya", "1.0.0")
         assert vr.total_entries() == 1
 
     def test_register_multiple_versions(self) -> None:
-        vr = dcc_mcp_core.VersionedRegistry()
+        vr = meshy_dcc_core.VersionedRegistry()
         vr.register_versioned("create_sphere", "maya", "1.0.0")
         vr.register_versioned("create_sphere", "maya", "1.5.0")
         vr.register_versioned("create_sphere", "maya", "2.0.0")
         assert vr.total_entries() == 3
 
     def test_register_different_actions(self) -> None:
-        vr = dcc_mcp_core.VersionedRegistry()
+        vr = meshy_dcc_core.VersionedRegistry()
         vr.register_versioned("create_sphere", "maya", "1.0.0")
         vr.register_versioned("delete_mesh", "maya", "1.0.0")
         assert vr.total_entries() == 2
 
     def test_register_different_dccs(self) -> None:
-        vr = dcc_mcp_core.VersionedRegistry()
+        vr = meshy_dcc_core.VersionedRegistry()
         vr.register_versioned("create_sphere", "maya", "1.0.0")
         vr.register_versioned("create_sphere", "blender", "1.0.0")
         assert vr.total_entries() == 2
 
     def test_overwrite_same_version(self) -> None:
-        vr = dcc_mcp_core.VersionedRegistry()
+        vr = meshy_dcc_core.VersionedRegistry()
         vr.register_versioned("create_sphere", "maya", "1.0.0", description="v1")
         vr.register_versioned("create_sphere", "maya", "1.0.0", description="v1 updated")
         # Same triple overwrites, total_entries stays 1
         assert vr.total_entries() == 1
 
     def test_repr(self) -> None:
-        vr = dcc_mcp_core.VersionedRegistry()
+        vr = meshy_dcc_core.VersionedRegistry()
         r = repr(vr)
         assert isinstance(r, str)
         assert len(r) > 0
 
     def test_register_with_all_params(self) -> None:
-        vr = dcc_mcp_core.VersionedRegistry()
+        vr = meshy_dcc_core.VersionedRegistry()
         vr.register_versioned(
             "create_sphere",
             "maya",
@@ -274,7 +274,7 @@ class TestVersionedRegistryBasics:
 
 class TestVersionedRegistryVersions:
     def test_versions_returns_sorted(self) -> None:
-        vr = dcc_mcp_core.VersionedRegistry()
+        vr = meshy_dcc_core.VersionedRegistry()
         vr.register_versioned("act", "maya", "2.0.0")
         vr.register_versioned("act", "maya", "1.0.0")
         vr.register_versioned("act", "maya", "1.5.0")
@@ -282,12 +282,12 @@ class TestVersionedRegistryVersions:
         assert vs == ["1.0.0", "1.5.0", "2.0.0"]
 
     def test_versions_empty_for_unknown(self) -> None:
-        vr = dcc_mcp_core.VersionedRegistry()
+        vr = meshy_dcc_core.VersionedRegistry()
         vs = vr.versions("unknown_action", "maya")
         assert vs == []
 
     def test_versions_different_dcc_isolation(self) -> None:
-        vr = dcc_mcp_core.VersionedRegistry()
+        vr = meshy_dcc_core.VersionedRegistry()
         vr.register_versioned("act", "maya", "1.0.0")
         vr.register_versioned("act", "maya", "2.0.0")
         vr.register_versioned("act", "blender", "3.0.0")
@@ -297,7 +297,7 @@ class TestVersionedRegistryVersions:
         assert blender_vs == ["3.0.0"]
 
     def test_latest_version_basic(self) -> None:
-        vr = dcc_mcp_core.VersionedRegistry()
+        vr = meshy_dcc_core.VersionedRegistry()
         vr.register_versioned("act", "maya", "1.0.0")
         vr.register_versioned("act", "maya", "2.5.0")
         vr.register_versioned("act", "maya", "1.9.0")
@@ -305,19 +305,19 @@ class TestVersionedRegistryVersions:
         assert latest == "2.5.0"
 
     def test_latest_version_single(self) -> None:
-        vr = dcc_mcp_core.VersionedRegistry()
+        vr = meshy_dcc_core.VersionedRegistry()
         vr.register_versioned("act", "maya", "1.2.3")
         assert vr.latest_version("act", "maya") == "1.2.3"
 
     def test_latest_version_none_for_unknown(self) -> None:
-        vr = dcc_mcp_core.VersionedRegistry()
+        vr = meshy_dcc_core.VersionedRegistry()
         result = vr.latest_version("nonexistent", "maya")
         assert result is None
 
 
 class TestVersionedRegistryResolve:
     def test_resolve_wildcard_returns_latest(self) -> None:
-        vr = dcc_mcp_core.VersionedRegistry()
+        vr = meshy_dcc_core.VersionedRegistry()
         vr.register_versioned("act", "maya", "1.0.0")
         vr.register_versioned("act", "maya", "1.5.0")
         vr.register_versioned("act", "maya", "2.0.0")
@@ -327,7 +327,7 @@ class TestVersionedRegistryResolve:
         assert "version" in result
 
     def test_resolve_caret_returns_best_match(self) -> None:
-        vr = dcc_mcp_core.VersionedRegistry()
+        vr = meshy_dcc_core.VersionedRegistry()
         vr.register_versioned("act", "maya", "1.0.0")
         vr.register_versioned("act", "maya", "1.5.0")
         vr.register_versioned("act", "maya", "2.0.0")
@@ -337,7 +337,7 @@ class TestVersionedRegistryResolve:
         assert result["version"] == "1.5.0"
 
     def test_resolve_exact_version(self) -> None:
-        vr = dcc_mcp_core.VersionedRegistry()
+        vr = meshy_dcc_core.VersionedRegistry()
         vr.register_versioned("act", "maya", "1.0.0")
         vr.register_versioned("act", "maya", "2.0.0")
         result = vr.resolve("act", "maya", "=1.0.0")
@@ -345,7 +345,7 @@ class TestVersionedRegistryResolve:
         assert result["version"] == "1.0.0"
 
     def test_resolve_gte_constraint(self) -> None:
-        vr = dcc_mcp_core.VersionedRegistry()
+        vr = meshy_dcc_core.VersionedRegistry()
         vr.register_versioned("act", "maya", "1.0.0")
         vr.register_versioned("act", "maya", "1.8.0")
         vr.register_versioned("act", "maya", "2.5.0")
@@ -355,24 +355,24 @@ class TestVersionedRegistryResolve:
         assert result["version"] in ["1.8.0", "2.5.0"]
 
     def test_resolve_no_match_returns_none(self) -> None:
-        vr = dcc_mcp_core.VersionedRegistry()
+        vr = meshy_dcc_core.VersionedRegistry()
         vr.register_versioned("act", "maya", "1.0.0")
         result = vr.resolve("act", "maya", ">=2.0.0")
         assert result is None
 
     def test_resolve_unknown_action_returns_none(self) -> None:
-        vr = dcc_mcp_core.VersionedRegistry()
+        vr = meshy_dcc_core.VersionedRegistry()
         result = vr.resolve("nonexistent", "maya", "*")
         assert result is None
 
     def test_resolve_unknown_dcc_returns_none(self) -> None:
-        vr = dcc_mcp_core.VersionedRegistry()
+        vr = meshy_dcc_core.VersionedRegistry()
         vr.register_versioned("act", "maya", "1.0.0")
         result = vr.resolve("act", "blender", "*")
         assert result is None
 
     def test_resolve_result_contains_metadata(self) -> None:
-        vr = dcc_mcp_core.VersionedRegistry()
+        vr = meshy_dcc_core.VersionedRegistry()
         vr.register_versioned(
             "act",
             "maya",
@@ -392,7 +392,7 @@ class TestVersionedRegistryResolve:
 
 class TestVersionedRegistryResolveAll:
     def test_resolve_all_wildcard_returns_all(self) -> None:
-        vr = dcc_mcp_core.VersionedRegistry()
+        vr = meshy_dcc_core.VersionedRegistry()
         vr.register_versioned("act", "maya", "1.0.0")
         vr.register_versioned("act", "maya", "1.5.0")
         vr.register_versioned("act", "maya", "2.0.0")
@@ -400,7 +400,7 @@ class TestVersionedRegistryResolveAll:
         assert len(results) == 3
 
     def test_resolve_all_sorted_ascending(self) -> None:
-        vr = dcc_mcp_core.VersionedRegistry()
+        vr = meshy_dcc_core.VersionedRegistry()
         vr.register_versioned("act", "maya", "2.0.0")
         vr.register_versioned("act", "maya", "1.0.0")
         vr.register_versioned("act", "maya", "1.5.0")
@@ -411,7 +411,7 @@ class TestVersionedRegistryResolveAll:
         assert results[2]["version"] == "2.0.0"
 
     def test_resolve_all_caret_filters_major(self) -> None:
-        vr = dcc_mcp_core.VersionedRegistry()
+        vr = meshy_dcc_core.VersionedRegistry()
         vr.register_versioned("act", "maya", "1.0.0")
         vr.register_versioned("act", "maya", "1.5.0")
         vr.register_versioned("act", "maya", "2.0.0")
@@ -421,18 +421,18 @@ class TestVersionedRegistryResolveAll:
         assert all(r["version"].startswith("1.") for r in results)
 
     def test_resolve_all_no_match_returns_empty(self) -> None:
-        vr = dcc_mcp_core.VersionedRegistry()
+        vr = meshy_dcc_core.VersionedRegistry()
         vr.register_versioned("act", "maya", "1.0.0")
         results = vr.resolve_all("act", "maya", ">=5.0.0")
         assert results == []
 
     def test_resolve_all_unknown_action_returns_empty(self) -> None:
-        vr = dcc_mcp_core.VersionedRegistry()
+        vr = meshy_dcc_core.VersionedRegistry()
         results = vr.resolve_all("nonexistent", "maya", "*")
         assert results == []
 
     def test_resolve_all_tilde_range(self) -> None:
-        vr = dcc_mcp_core.VersionedRegistry()
+        vr = meshy_dcc_core.VersionedRegistry()
         vr.register_versioned("act", "maya", "1.2.0")
         vr.register_versioned("act", "maya", "1.2.5")
         vr.register_versioned("act", "maya", "1.3.0")
@@ -450,7 +450,7 @@ class TestVersionedRegistryIntegration:
 
     def test_agents_md_example(self) -> None:
         """Reproduce the exact example from AGENTS.md."""
-        vr = dcc_mcp_core.VersionedRegistry()
+        vr = meshy_dcc_core.VersionedRegistry()
         vr.register_versioned("create_sphere", "maya", "1.0.0")
         vr.register_versioned("create_sphere", "maya", "1.5.0")
         vr.register_versioned("create_sphere", "maya", "2.0.0")
@@ -460,7 +460,7 @@ class TestVersionedRegistryIntegration:
         assert result["version"] == "1.5.0"
 
     def test_multi_dcc_isolation(self) -> None:
-        vr = dcc_mcp_core.VersionedRegistry()
+        vr = meshy_dcc_core.VersionedRegistry()
         for dcc in ["maya", "blender", "houdini", "max"]:
             vr.register_versioned("render_scene", dcc, "1.0.0")
             vr.register_versioned("render_scene", dcc, "2.0.0")
@@ -471,15 +471,15 @@ class TestVersionedRegistryIntegration:
 
     def test_semver_with_version_constraint(self) -> None:
         """Direct SemVer + VersionConstraint interaction."""
-        c = dcc_mcp_core.VersionConstraint.parse("^1.0.0")
-        v_match = dcc_mcp_core.SemVer(1, 5, 0)
-        v_no_match = dcc_mcp_core.SemVer(2, 0, 0)
+        c = meshy_dcc_core.VersionConstraint.parse("^1.0.0")
+        v_match = meshy_dcc_core.SemVer(1, 5, 0)
+        v_no_match = meshy_dcc_core.SemVer(2, 0, 0)
         assert c.matches(v_match)
         assert not c.matches(v_no_match)
 
     def test_version_upgrade_scenario(self) -> None:
         """Simulate Maya plugin upgrade: old client uses ^1.x, new client uses ^2.x."""
-        vr = dcc_mcp_core.VersionedRegistry()
+        vr = meshy_dcc_core.VersionedRegistry()
         # Initial versions
         vr.register_versioned("export_fbx", "maya", "1.0.0", description="Basic FBX export")
         vr.register_versioned("export_fbx", "maya", "1.2.0", description="FBX with materials")
@@ -501,7 +501,7 @@ class TestVersionedRegistryIntegration:
         assert latest == "2.0.0"
 
     def test_total_entries_across_multiple_actions_and_dccs(self) -> None:
-        vr = dcc_mcp_core.VersionedRegistry()
+        vr = meshy_dcc_core.VersionedRegistry()
         actions = ["create_mesh", "delete_mesh", "render_scene"]
         dccs = ["maya", "blender"]
         versions = ["1.0.0", "2.0.0"]
@@ -517,7 +517,7 @@ class TestVersionedRegistryRemove:
     """Tests for VersionedRegistry.remove() — previously untested."""
 
     def test_remove_exact_version(self) -> None:
-        vr = dcc_mcp_core.VersionedRegistry()
+        vr = meshy_dcc_core.VersionedRegistry()
         vr.register_versioned("act", "maya", "1.0.0")
         vr.register_versioned("act", "maya", "2.0.0")
         removed = vr.remove("act", "maya", "=1.0.0")
@@ -527,7 +527,7 @@ class TestVersionedRegistryRemove:
         assert vr.resolve("act", "maya", "=2.0.0") is not None
 
     def test_remove_wildcard_removes_all(self) -> None:
-        vr = dcc_mcp_core.VersionedRegistry()
+        vr = meshy_dcc_core.VersionedRegistry()
         vr.register_versioned("act", "maya", "1.0.0")
         vr.register_versioned("act", "maya", "2.0.0")
         vr.register_versioned("act", "maya", "3.0.0")
@@ -536,7 +536,7 @@ class TestVersionedRegistryRemove:
         assert vr.total_entries() == 0
 
     def test_remove_caret_removes_matching_major(self) -> None:
-        vr = dcc_mcp_core.VersionedRegistry()
+        vr = meshy_dcc_core.VersionedRegistry()
         vr.register_versioned("act", "maya", "1.0.0")
         vr.register_versioned("act", "maya", "1.5.0")
         vr.register_versioned("act", "maya", "2.0.0")
@@ -546,20 +546,20 @@ class TestVersionedRegistryRemove:
         assert vr.resolve("act", "maya", "=2.0.0") is not None
 
     def test_remove_returns_zero_for_no_match(self) -> None:
-        vr = dcc_mcp_core.VersionedRegistry()
+        vr = meshy_dcc_core.VersionedRegistry()
         vr.register_versioned("act", "maya", "1.0.0")
         removed = vr.remove("act", "maya", "=9.9.9")
         assert removed == 0
         assert vr.total_entries() == 1
 
     def test_remove_unknown_action_returns_zero(self) -> None:
-        vr = dcc_mcp_core.VersionedRegistry()
+        vr = meshy_dcc_core.VersionedRegistry()
         removed = vr.remove("nonexistent", "maya", "*")
         assert removed == 0
 
     def test_remove_dcc_isolation(self) -> None:
         """Removing from one DCC must not affect another DCC."""
-        vr = dcc_mcp_core.VersionedRegistry()
+        vr = meshy_dcc_core.VersionedRegistry()
         vr.register_versioned("act", "maya", "1.0.0")
         vr.register_versioned("act", "blender", "1.0.0")
         removed = vr.remove("act", "maya", "*")
@@ -568,7 +568,7 @@ class TestVersionedRegistryRemove:
 
     def test_remove_then_reregister(self) -> None:
         """After removal, the same version can be registered again."""
-        vr = dcc_mcp_core.VersionedRegistry()
+        vr = meshy_dcc_core.VersionedRegistry()
         vr.register_versioned("act", "maya", "1.0.0")
         vr.remove("act", "maya", "*")
         assert vr.total_entries() == 0
@@ -577,7 +577,7 @@ class TestVersionedRegistryRemove:
         assert vr.resolve("act", "maya", "=1.0.0") is not None
 
     def test_remove_gte_constraint(self) -> None:
-        vr = dcc_mcp_core.VersionedRegistry()
+        vr = meshy_dcc_core.VersionedRegistry()
         vr.register_versioned("act", "maya", "1.0.0")
         vr.register_versioned("act", "maya", "2.0.0")
         vr.register_versioned("act", "maya", "3.0.0")
@@ -591,11 +591,11 @@ class TestVersionedRegistryKeys:
     """Tests for VersionedRegistry.keys() — previously untested."""
 
     def test_keys_empty_registry(self) -> None:
-        vr = dcc_mcp_core.VersionedRegistry()
+        vr = meshy_dcc_core.VersionedRegistry()
         assert vr.keys() == []
 
     def test_keys_single_entry(self) -> None:
-        vr = dcc_mcp_core.VersionedRegistry()
+        vr = meshy_dcc_core.VersionedRegistry()
         vr.register_versioned("act", "maya", "1.0.0")
         keys = vr.keys()
         assert len(keys) == 1
@@ -603,7 +603,7 @@ class TestVersionedRegistryKeys:
 
     def test_keys_multiple_versions_same_action_single_key(self) -> None:
         """Multiple versions of the same (name, dcc) produce only one key."""
-        vr = dcc_mcp_core.VersionedRegistry()
+        vr = meshy_dcc_core.VersionedRegistry()
         vr.register_versioned("act", "maya", "1.0.0")
         vr.register_versioned("act", "maya", "2.0.0")
         vr.register_versioned("act", "maya", "3.0.0")
@@ -612,7 +612,7 @@ class TestVersionedRegistryKeys:
         assert ("act", "maya") in keys
 
     def test_keys_different_dccs_produce_separate_keys(self) -> None:
-        vr = dcc_mcp_core.VersionedRegistry()
+        vr = meshy_dcc_core.VersionedRegistry()
         vr.register_versioned("act", "maya", "1.0.0")
         vr.register_versioned("act", "blender", "1.0.0")
         vr.register_versioned("act", "houdini", "1.0.0")
@@ -623,7 +623,7 @@ class TestVersionedRegistryKeys:
         assert ("act", "houdini") in keys
 
     def test_keys_different_actions_produce_separate_keys(self) -> None:
-        vr = dcc_mcp_core.VersionedRegistry()
+        vr = meshy_dcc_core.VersionedRegistry()
         vr.register_versioned("act_a", "maya", "1.0.0")
         vr.register_versioned("act_b", "maya", "1.0.0")
         keys = vr.keys()
@@ -632,7 +632,7 @@ class TestVersionedRegistryKeys:
         assert ("act_b", "maya") in keys
 
     def test_keys_cleared_after_remove_all(self) -> None:
-        vr = dcc_mcp_core.VersionedRegistry()
+        vr = meshy_dcc_core.VersionedRegistry()
         vr.register_versioned("act", "maya", "1.0.0")
         vr.register_versioned("act", "maya", "2.0.0")
         vr.remove("act", "maya", "*")

@@ -17,7 +17,7 @@ These tests start real McpHttpServer instances, then exercise them through
 Requirements:
     MCPCALL_CMD="vx mcpcall" (requires vx >= 0.9.0), mcpcall binary available
     in PATH, or MCPCALL_BIN pointing to the binary
-    dcc_mcp_core Python package installed (Rust wheel)
+    meshy_dcc_core Python package installed (Rust wheel)
 
 The tests are skipped automatically when ``mcpcall`` is not found.
 
@@ -51,10 +51,10 @@ from conftest import allocate_gateway_port
 from conftest import wait_tcp_reachable
 
 # Import local modules
-import dcc_mcp_core
-from dcc_mcp_core import McpHttpConfig
-from dcc_mcp_core import McpHttpServer
-from dcc_mcp_core import ToolRegistry
+import meshy_dcc_core
+from meshy_dcc_core import McpHttpConfig
+from meshy_dcc_core import McpHttpServer
+from meshy_dcc_core import ToolRegistry
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 EXAMPLES_SKILLS_DIR = str(REPO_ROOT / "examples" / "skills")
@@ -334,7 +334,7 @@ def simple_server(tmp_path_factory):
     server = McpHttpServer(reg, config)
     server.register_handler("ping_action", lambda params: {"pong": True, "echo": params})
     server.register_handler("list_objects", lambda params: {"objects": ["cube", "sphere", "camera"]})
-    dcc_mcp_core.register_script_materialization_tools(
+    meshy_dcc_core.register_script_materialization_tools(
         server,
         dcc_name="test",
         instance_id="mcpcall",

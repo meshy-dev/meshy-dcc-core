@@ -1,11 +1,11 @@
-"""E2E test for real Sentry ingest through dcc-mcp-server.
+"""E2E test for real Sentry ingest through meshy-dcc-server.
 
-Exercises the Rust `init_sentry()` path compiled into `dcc-mcp-server`:
-initialise from ``DCC_MCP_SENTRY_DSN``, capture a probe message, and flush
+Exercises the Rust `init_sentry()` path compiled into `meshy-dcc-server`:
+initialise from ``MESHY_DCC_SENTRY_DSN``, capture a probe message, and flush
 the transport to the configured Sentry project.
 
 Requirements:
-    ``DCC_MCP_SENTRY_DSN`` — Sentry project DSN (GitHub Actions secret in CI)
+    ``MESHY_DCC_SENTRY_DSN`` — Sentry project DSN (GitHub Actions secret in CI)
 
 The test is skipped automatically when the DSN is absent so local ``pytest
 tests/`` runs stay zero-config.
@@ -25,7 +25,7 @@ import sys
 import pytest
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-SENTRY_DSN = os.environ.get("DCC_MCP_SENTRY_DSN", "").strip()
+SENTRY_DSN = os.environ.get("MESHY_DCC_SENTRY_DSN", "").strip()
 
 
 def _vx_cmd() -> tuple[str, ...]:
@@ -33,19 +33,19 @@ def _vx_cmd() -> tuple[str, ...]:
     return tuple(shlex.split(cmd, posix=sys.platform != "win32"))
 
 
-@pytest.mark.skipif(not SENTRY_DSN, reason="DCC_MCP_SENTRY_DSN not set")
+@pytest.mark.skipif(not SENTRY_DSN, reason="MESHY_DCC_SENTRY_DSN not set")
 def test_sentry_real_ingest_via_rust_probe() -> None:
     """Run the Rust sentry_real_ingest_e2e probe (single-threaded)."""
     env = os.environ.copy()
-    env.setdefault("DCC_MCP_SENTRY_ENVIRONMENT", "ci-e2e")
-    env.setdefault("DCC_MCP_SENTRY_SAMPLE_RATE", "1.0")
+    env.setdefault("MESHY_DCC_SENTRY_ENVIRONMENT", "ci-e2e")
+    env.setdefault("MESHY_DCC_SENTRY_SAMPLE_RATE", "1.0")
 
     cmd = (
         *_vx_cmd(),
         "cargo",
         "test",
         "-p",
-        "dcc-mcp-server",
+        "meshy-dcc-server",
         "--features",
         "sentry",
         "sentry_init::tests::sentry_real_ingest_e2e",

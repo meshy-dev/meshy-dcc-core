@@ -1,0 +1,1236 @@
+//! Standalone `meshy-dcc-server` — Meshy DCC server with daemon-backed gateway.
+//!
+//! In the default daemon-backed mode, every per-DCC instance starts its own
+//! MCP endpoint, ensures one machine-wide `meshy-dcc-server gateway` exists,
+//! and registers itself in the shared `FileRegistry`. The legacy first-wins
+//! embedded gateway can still be enabled with `--legacy-gateway-election`.
+//!
+//! ## Why this matters
+//!
+//! You can start N DCC servers without any extra configuration:
+//!
+//! ```bash
+//! # Terminal 1 — Maya, gets OS-assigned port :18812, ensures gateway :19765
+//! meshy-dcc-server --app maya
+//!
+//! # Terminal 2 — Maya, gets :18813, registers behind the same gateway
+//! meshy-dcc-server --app maya
+//!
+//! # Terminal 3 — Photoshop, gets :18814, also registers as a backend
+//! meshy-dcc-server --app photoshop
+//! ```
+//!
+//! ```bash
+//! # Agent always talks to one endpoint regardless of how many DCCs are running
+//! curl http://localhost:19765/instances           # → [maya@18812, maya@18813, photoshop@18814]
+//! curl -X POST http://localhost:19765/mcp \       # → read the gateway://instances resource
+//!      -d '{"jsonrpc":"2.0","id":1,"method":"resources/read","params":{"uri":"gateway://instances"}}'
+//! ```
+//!
+//! ## Gateway behaviour
+//!
+//! The gateway publishes the live DCC registry as the
+//! `gateway://instances` MCP resource (read it via `resources/read`). Each
+//! entry carries `mcp_url`, so a client can connect directly without any
+//! follow-up tool call. The dynamic-capability surface
+//! (`search_tools` / `describe_tool` / `call_tool`) and lease verbs
+//! (`acquire_dcc_instance` / `release_dcc_instance`) are the only
+//! gateway-published tools — every per-DCC backend tool is reached through
+//! `call_tool` instead of being fanned out into `tools/list`.
+//!
+//! It also proxies tool calls transparently:
+//!
+//! ```
+//! POST /mcp                    → discovery tools (no proxy)
+//! POST /mcp/{instance_id}      → proxy to that DCC instance
+//! POST /mcp/dcc/{dcc_type}     → proxy to best instance of that type
+//! GET  /instances              → JSON list of all live instances (REST)
+//! GET  /health                 → {"ok": true}
+//! ```
+//!
+//! ## Python API
+//!
+//! The Python `McpHttpServer` gains `gateway_port` config so Maya/Blender
+//! plugins can also participate in the gateway:
+//!
+//! ```python
+//! from meshy_dcc_core import McpHttpServer, McpHttpConfig
+//! config = McpHttpConfig(port=0, server_name="maya")
+//! config.gateway_port = 19765   # join the gateway; 0 = disabled
+//! server = McpHttpServer(registry, config)
+//! server.start()
+//! ```
+//!
+//! ## Environment variables
+//!
+//! Operator-facing configuration details live in `docs/guide/cli-reference.md`.
+
+#[cfg(feature = "telemetry")]
+use std::collections::HashMap;
+use std::path::PathBuf;
+use std::process::{Command, Stdio};
+use std::sync::Arc;
+use std::time::Duration;
+
+use clap::Parser;
+use cli::{Args, CatalogAction, ServerArgs, SubCmd};
+use meshy_dcc_actions::{ToolDispatcher, ToolRegistry};
+#[cfg(feature = "gateway-auto")]
+use meshy_dcc_gateway::{AdminPersistConfig, GatewayConfig, GatewayRunner, SkillPathEntry};
+use meshy_dcc_http::{McpHttpConfig, McpHttpServer};
+use meshy_dcc_logging::file_logging::prune_old_logs;
+#[cfg(feature = "gateway-daemon")]
+use meshy_dcc_sidecar::gateway_daemon;
+use meshy_dcc_skills::SkillCatalog;
+use meshy_dcc_skills::constants::resolve_registry_dcc_type;
+#[cfg(feature = "gateway-auto")]
+use meshy_dcc_skills::constants::{ENV_SKILL_PATHS, app_skill_paths_env_key};
+#[cfg(feature = "gateway-auto")]
+use meshy_dcc_transport::discovery::types::{
+    INSTANCE_TYPE_METADATA_KEY, SERVER_BINARY_VERSION_METADATA_KEY, ServiceEntry,
+};
+#[cfg(feature = "telemetry")]
+use serde::Deserialize;
+use sysinfo::{Pid, ProcessesToUpdate, System};
+mod capture;
+mod cli;
+mod event_webhooks;
+#[cfg(feature = "sentry")]
+mod sentry_init;
+mod translate;
+mod update;
+
+#[cfg(feature = "gateway-auto")]
+pub(crate) const GATEWAY_RUNTIME_MODE_METADATA_KEY: &str = "gateway_runtime_mode";
+#[cfg(feature = "gateway-auto")]
+pub(crate) const GATEWAY_GUARDIAN_ENABLED_METADATA_KEY: &str = "gateway_guardian_enabled";
+#[cfg(feature = "gateway-auto")]
+pub(crate) const GATEWAY_RECOVERY_DRIVER_METADATA_KEY: &str = "gateway_recovery_driver";
+#[cfg(feature = "gateway-auto")]
+pub(crate) const REGISTRATION_REFRESH_MODE_METADATA_KEY: &str = "registration_refresh_mode";
+#[cfg(feature = "gateway-auto")]
+pub(crate) const GATEWAY_RECOVERY_DRIVER_DAEMON_GUARDIAN: &str = "daemon_guardian";
+
+#[cfg(feature = "telemetry")]
+const ENV_MESHY_DCC_ETC_DIR: &str = "MESHY_DCC_ETC_DIR";
+#[cfg(feature = "telemetry")]
+const DEFAULT_OTLP_CONFIG_FILE: &str = "otlp.json";
+
+#[cfg(feature = "telemetry")]
+#[derive(Debug, Default, Deserialize)]
+struct LocalOtlpConfig {
+    endpoint: Option<String>,
+    service_name: Option<String>,
+    headers: Option<String>,
+}
+
+#[cfg(feature = "telemetry")]
+#[derive(Debug)]
+struct ResolvedOtlpConfig {
+    endpoint: Option<String>,
+    service_name: String,
+    headers: Option<String>,
+}
+#[cfg(feature = "gateway-auto")]
+pub(crate) const GATEWAY_RECOVERY_DRIVER_EMBEDDED_ELECTION: &str = "embedded_election";
+#[cfg(feature = "gateway-auto")]
+pub(crate) const GATEWAY_RECOVERY_DRIVER_NONE: &str = "none";
+#[cfg(feature = "gateway-auto")]
+pub(crate) const REGISTRATION_REFRESH_MODE_FILE_REGISTRY_HEARTBEAT: &str =
+    "file_registry_heartbeat";
+
+#[derive(Debug, Default)]
+struct FileLoggingCliOptions {
+    no_log_file: bool,
+    log_dir: Option<PathBuf>,
+    log_max_size: Option<u64>,
+    log_max_files: Option<usize>,
+    log_rotation: Option<String>,
+    log_file_prefix: Option<String>,
+    log_retention_days: Option<u32>,
+    log_max_total_size_mb: Option<u32>,
+}
+
+impl From<&ServerArgs> for FileLoggingCliOptions {
+    fn from(args: &ServerArgs) -> Self {
+        Self {
+            no_log_file: args.no_log_file,
+            log_dir: args.log_dir.clone(),
+            log_max_size: args.log_max_size,
+            log_max_files: args.log_max_files,
+            log_rotation: args.log_rotation.clone(),
+            log_file_prefix: args.log_file_prefix.clone(),
+            log_retention_days: args.log_retention_days,
+            log_max_total_size_mb: args.log_max_total_size_mb,
+        }
+    }
+}
+
+fn should_enable_file_logging(opts: &FileLoggingCliOptions, enabled_by_env: bool) -> bool {
+    !opts.no_log_file
+        || opts.log_dir.is_some()
+        || opts.log_max_size.is_some()
+        || opts.log_max_files.is_some()
+        || opts.log_rotation.is_some()
+        || opts.log_file_prefix.is_some()
+        || opts.log_retention_days.is_some()
+        || opts.log_max_total_size_mb.is_some()
+        || enabled_by_env
+}
+
+fn run_catalog_cmd(action: &CatalogAction) -> anyhow::Result<()> {
+    let catalog_path = if let Ok(p) = std::env::var("MESHY_DCC_CATALOG_PATH") {
+        PathBuf::from(p)
+    } else {
+        PathBuf::from("meshy-dcc-catalog.yml")
+    };
+
+    let entries = meshy_dcc_catalog::load_from_file(&catalog_path)?;
+
+    match action {
+        CatalogAction::Search { query } => {
+            let hits = meshy_dcc_catalog::search(&entries, query);
+            println!("{}", serde_json::to_string_pretty(&hits)?);
+        }
+        CatalogAction::Describe { name } => match meshy_dcc_catalog::describe(&entries, name) {
+            Some(entry) => println!("{}", serde_json::to_string_pretty(&entry)?),
+            None => {
+                eprintln!("catalog entry '{}' not found", name);
+                std::process::exit(1);
+            }
+        },
+    }
+    Ok(())
+}
+
+struct PidFileGuard {
+    path: PathBuf,
+}
+
+impl Drop for PidFileGuard {
+    fn drop(&mut self) {
+        if let Err(error) = std::fs::remove_file(&self.path)
+            && error.kind() != std::io::ErrorKind::NotFound
+        {
+            tracing::warn!(path = %self.path.display(), %error, "failed to remove PID file");
+        }
+    }
+}
+
+impl PidFileGuard {
+    fn remove_now(&mut self) {
+        if let Err(error) = std::fs::remove_file(&self.path)
+            && error.kind() != std::io::ErrorKind::NotFound
+        {
+            tracing::warn!(path = %self.path.display(), %error, "failed to remove PID file");
+        }
+    }
+}
+
+pub(crate) fn is_process_alive(pid: u32) -> bool {
+    let mut sys = System::new();
+    sys.refresh_processes(ProcessesToUpdate::Some(&[Pid::from_u32(pid)]), true);
+    sys.process(Pid::from_u32(pid)).is_some()
+}
+
+pub(crate) fn acquire_pid_file(
+    path: &std::path::Path,
+    force: bool,
+) -> anyhow::Result<PidFileGuard> {
+    let current_pid = std::process::id();
+
+    if path.exists() {
+        let existing = std::fs::read_to_string(path)
+            .ok()
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty());
+
+        if let Some(raw_pid) = existing {
+            if let Ok(existing_pid) = raw_pid.parse::<u32>() {
+                let alive = existing_pid == current_pid || is_process_alive(existing_pid);
+                if alive && !force {
+                    return Err(anyhow::anyhow!(
+                        "PID file '{}' already points to a running process ({existing_pid}); use --force to overwrite",
+                        path.display()
+                    ));
+                }
+                if alive {
+                    tracing::warn!(
+                        path = %path.display(),
+                        existing_pid,
+                        "overwriting live PID file because --force was set"
+                    );
+                } else {
+                    tracing::warn!(
+                        path = %path.display(),
+                        existing_pid,
+                        "overwriting stale PID file"
+                    );
+                }
+            } else {
+                tracing::warn!(path = %path.display(), "overwriting invalid PID file contents");
+            }
+        }
+    }
+
+    if let Some(parent) = path.parent()
+        && !parent.as_os_str().is_empty()
+    {
+        std::fs::create_dir_all(parent)?;
+    }
+
+    spawn_pid_cleanup_watcher(path, current_pid);
+    std::fs::write(path, format!("{current_pid}\n"))?;
+    Ok(PidFileGuard {
+        path: path.to_path_buf(),
+    })
+}
+
+pub(crate) fn spawn_pid_cleanup_watcher(path: &std::path::Path, pid: u32) {
+    let Ok(exe) = std::env::current_exe() else {
+        tracing::warn!("failed to resolve current executable for PID cleanup watcher");
+        return;
+    };
+
+    let mut cmd = Command::new(exe);
+    cmd.arg("--pid-cleanup-watch")
+        .arg(path)
+        .arg("--watch-pid")
+        .arg(pid.to_string())
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null());
+
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+        const DETACHED_PROCESS: u32 = 0x0000_0008;
+        const CREATE_NEW_PROCESS_GROUP: u32 = 0x0000_0200;
+        cmd.creation_flags(CREATE_NO_WINDOW | DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP);
+    }
+
+    if let Err(error) = cmd.spawn() {
+        tracing::warn!(path = %path.display(), %error, "failed to start PID cleanup watcher");
+    }
+}
+
+#[cfg(all(feature = "gateway-auto", feature = "gateway-daemon"))]
+fn resolve_registry_dir(configured: Option<&PathBuf>) -> PathBuf {
+    configured
+        .cloned()
+        .or_else(|| {
+            std::env::var("MESHY_DCC_REGISTRY_DIR")
+                .ok()
+                .map(PathBuf::from)
+        })
+        .unwrap_or_else(|| std::env::temp_dir().join("meshy-dcc-registry"))
+}
+
+#[cfg(all(feature = "gateway-auto", feature = "gateway-daemon"))]
+fn should_start_gateway_daemon_guardian(args: &ServerArgs) -> bool {
+    args.gateway_port > 0 && !args.no_ensure_gateway && !args.legacy_gateway_election
+}
+
+#[cfg(all(feature = "gateway-auto", feature = "gateway-daemon"))]
+fn server_gateway_runtime_mode(args: &ServerArgs) -> &'static str {
+    if args.gateway_port == 0 {
+        "not_configured"
+    } else if args.no_ensure_gateway {
+        "failover_disabled_by_adapter"
+    } else if args.legacy_gateway_election {
+        "embedded-fallback"
+    } else {
+        "daemon-backed"
+    }
+}
+
+#[cfg(all(feature = "gateway-auto", not(feature = "gateway-daemon")))]
+fn server_gateway_runtime_mode(args: &ServerArgs) -> &'static str {
+    if args.gateway_port == 0 {
+        "not_configured"
+    } else if args.no_ensure_gateway {
+        "failover_disabled_by_adapter"
+    } else {
+        "daemon-unavailable"
+    }
+}
+
+#[cfg(all(feature = "gateway-auto", feature = "gateway-daemon"))]
+fn server_gateway_guardian_enabled(args: &ServerArgs) -> bool {
+    should_start_gateway_daemon_guardian(args)
+}
+
+#[cfg(all(feature = "gateway-auto", not(feature = "gateway-daemon")))]
+fn server_gateway_guardian_enabled(_args: &ServerArgs) -> bool {
+    false
+}
+
+#[cfg(feature = "gateway-auto")]
+fn gateway_recovery_driver(runtime_mode: &str, guardian_enabled: bool) -> &'static str {
+    if guardian_enabled {
+        GATEWAY_RECOVERY_DRIVER_DAEMON_GUARDIAN
+    } else if runtime_mode == "embedded-fallback" {
+        GATEWAY_RECOVERY_DRIVER_EMBEDDED_ELECTION
+    } else {
+        GATEWAY_RECOVERY_DRIVER_NONE
+    }
+}
+
+#[cfg(feature = "gateway-auto")]
+fn stamp_server_gateway_runtime_metadata(entry: &mut ServiceEntry, args: &ServerArgs) {
+    let runtime_mode = server_gateway_runtime_mode(args);
+    let guardian_enabled = server_gateway_guardian_enabled(args);
+    entry.metadata.insert(
+        SERVER_BINARY_VERSION_METADATA_KEY.to_string(),
+        env!("CARGO_PKG_VERSION").to_string(),
+    );
+    entry.metadata.insert(
+        INSTANCE_TYPE_METADATA_KEY.to_string(),
+        "standalone".to_string(),
+    );
+    entry.metadata.insert(
+        GATEWAY_RUNTIME_MODE_METADATA_KEY.to_string(),
+        runtime_mode.to_string(),
+    );
+    entry.metadata.insert(
+        GATEWAY_GUARDIAN_ENABLED_METADATA_KEY.to_string(),
+        guardian_enabled.to_string(),
+    );
+    entry.metadata.insert(
+        GATEWAY_RECOVERY_DRIVER_METADATA_KEY.to_string(),
+        gateway_recovery_driver(runtime_mode, guardian_enabled).to_string(),
+    );
+    entry.metadata.insert(
+        REGISTRATION_REFRESH_MODE_METADATA_KEY.to_string(),
+        REGISTRATION_REFRESH_MODE_FILE_REGISTRY_HEARTBEAT.to_string(),
+    );
+}
+
+#[cfg(all(feature = "gateway-auto", feature = "gateway-daemon"))]
+fn build_server_gateway_daemon_options(
+    args: &ServerArgs,
+    registry_dir_path: Option<&PathBuf>,
+) -> gateway_daemon::EnsureGatewayOptions {
+    let gateway_host = args
+        .gateway_host
+        .clone()
+        .unwrap_or_else(|| args.host.clone());
+    gateway_daemon::EnsureGatewayOptions {
+        host: gateway_host,
+        port: args.gateway_port,
+        name: args
+            .gateway_name
+            .clone()
+            .or_else(|| Some(format!("gateway-for-{}", args.server_name))),
+        registry_dir: resolve_registry_dir(registry_dir_path),
+        remote_host: args.gateway_remote_host.clone(),
+        remote_port: args.gateway_remote_port,
+        crate_version: Some(env!("CARGO_PKG_VERSION").to_string()),
+        adapter_version: None,
+        adapter_dcc: None,
+        gateway_idle_timeout_secs: std::env::var("MESHY_DCC_GATEWAY_IDLE_TIMEOUT_SECS")
+            .ok()
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(meshy_dcc_sidecar::gateway_daemon::AUTO_ENSURE_GATEWAY_IDLE_TIMEOUT_SECS),
+    }
+}
+
+fn run_pid_cleanup_watcher(path: PathBuf, pid: u32) {
+    loop {
+        if !is_process_alive(pid) {
+            let owns_file = std::fs::read_to_string(&path)
+                .ok()
+                .and_then(|raw| raw.trim().parse::<u32>().ok())
+                == Some(pid);
+            if owns_file
+                && let Err(error) = std::fs::remove_file(&path)
+                && error.kind() != std::io::ErrorKind::NotFound
+            {
+                tracing::warn!(path = %path.display(), %error, "PID cleanup watcher failed to remove file");
+            }
+            break;
+        }
+        std::thread::sleep(Duration::from_millis(200));
+    }
+}
+
+// ── WebSocket bridge (unchanged from original) ────────────────────────────────
+
+async fn run_ws_bridge(port: u16, server_name: String, server_version: String) {
+    use futures_util::{SinkExt, StreamExt};
+    use meshy_dcc_protocols::bridge::{BridgeHelloAck, BridgeMessage};
+    use tokio::net::TcpListener;
+    use tokio_tungstenite::tungstenite::Message;
+
+    let listener = match TcpListener::bind(format!("127.0.0.1:{port}")).await {
+        Ok(l) => l,
+        Err(e) => {
+            tracing::error!("Failed to bind WebSocket bridge on port {port}: {e}");
+            return;
+        }
+    };
+    tracing::info!("WebSocket bridge listening on ws://127.0.0.1:{port}");
+
+    loop {
+        match listener.accept().await {
+            Ok((stream, addr)) => {
+                let sn = server_name.clone();
+                let sv = server_version.clone();
+                tokio::spawn(async move {
+                    let ws = match tokio_tungstenite::accept_async(stream).await {
+                        Ok(w) => w,
+                        Err(e) => {
+                            tracing::warn!("WS handshake failed for {addr}: {e}");
+                            return;
+                        }
+                    };
+                    let (mut sink, mut stream) = ws.split();
+                    while let Some(Ok(msg)) = stream.next().await {
+                        match msg {
+                            Message::Text(t) => {
+                                if let Ok(BridgeMessage::Hello(h)) =
+                                    serde_json::from_str::<BridgeMessage>(&t)
+                                {
+                                    let ack = serde_json::to_string(&BridgeMessage::HelloAck(
+                                        BridgeHelloAck {
+                                            server: sn.clone(),
+                                            version: sv.clone(),
+                                            session_id: uuid::Uuid::new_v4().to_string(),
+                                        },
+                                    ))
+                                    .unwrap_or_default();
+                                    let _ = sink.send(Message::Text(ack.into())).await;
+                                    tracing::info!(
+                                        "DCC connected from {addr}: {} {}",
+                                        h.client,
+                                        h.version
+                                    );
+                                }
+                            }
+                            Message::Close(_) => break,
+                            _ => {}
+                        }
+                    }
+                    tracing::debug!("DCC plugin {addr} disconnected");
+                });
+            }
+            Err(e) => tracing::warn!("WS bridge accept error: {e}"),
+        }
+    }
+}
+
+// ── shutdown signals ─────────────────────────────────────────────────────────
+
+pub(crate) async fn select_shutdown_signal() -> anyhow::Result<&'static str> {
+    #[cfg(unix)]
+    {
+        use tokio::signal::unix::{SignalKind, signal};
+        let mut sigterm = signal(SignalKind::terminate())?;
+        let mut sighup = signal(SignalKind::hangup())?;
+        tokio::select! {
+            result = tokio::signal::ctrl_c() => {
+                result?;
+                Ok("ctrl_c")
+            }
+            _ = sigterm.recv() => Ok("sigterm"),
+            _ = sighup.recv() => Ok("sighup"),
+        }
+    }
+    #[cfg(windows)]
+    {
+        let mut ctrl_break = tokio::signal::windows::ctrl_break()?;
+        let mut ctrl_shutdown = tokio::signal::windows::ctrl_shutdown()?;
+        tokio::select! {
+            result = tokio::signal::ctrl_c() => {
+                result?;
+                Ok("ctrl_c")
+            }
+            _ = ctrl_break.recv() => Ok("ctrl_break"),
+            _ = ctrl_shutdown.recv() => Ok("ctrl_shutdown"),
+        }
+    }
+    #[cfg(not(any(unix, windows)))]
+    {
+        tokio::signal::ctrl_c().await?;
+        Ok("ctrl_c")
+    }
+}
+
+#[cfg(feature = "telemetry")]
+fn resolved_otlp_config() -> ResolvedOtlpConfig {
+    let local = match read_local_otlp_config() {
+        Ok(config) => config,
+        Err(err) => {
+            tracing::warn!(error = %err, "local OTLP config ignored");
+            None
+        }
+    };
+
+    let endpoint = env_string("OTEL_EXPORTER_OTLP_ENDPOINT").or_else(|| {
+        local
+            .as_ref()
+            .and_then(|config| clean_string(config.endpoint.as_deref()))
+    });
+    let service_name = env_string("OTEL_SERVICE_NAME")
+        .or_else(|| {
+            local
+                .as_ref()
+                .and_then(|config| clean_string(config.service_name.as_deref()))
+        })
+        .unwrap_or_else(|| "meshy-dcc-server".into());
+    let headers = env_string("OTEL_EXPORTER_OTLP_HEADERS").or_else(|| {
+        local
+            .as_ref()
+            .and_then(|config| clean_string(config.headers.as_deref()))
+    });
+
+    ResolvedOtlpConfig {
+        endpoint,
+        service_name,
+        headers,
+    }
+}
+
+#[cfg(feature = "telemetry")]
+fn read_local_otlp_config() -> anyhow::Result<Option<LocalOtlpConfig>> {
+    let Some(path) = default_otlp_config_path() else {
+        return Ok(None);
+    };
+    if !path.exists() {
+        return Ok(None);
+    }
+    let raw = std::fs::read_to_string(&path)?;
+    let config = serde_json::from_str(&raw)?;
+    Ok(Some(config))
+}
+
+#[cfg(feature = "telemetry")]
+fn default_otlp_config_path() -> Option<PathBuf> {
+    integration_etc_dir().map(|dir| dir.join(DEFAULT_OTLP_CONFIG_FILE))
+}
+
+#[cfg(feature = "telemetry")]
+fn integration_etc_dir() -> Option<PathBuf> {
+    if let Some(path) = std::env::var_os(ENV_MESHY_DCC_ETC_DIR).filter(|value| !value.is_empty()) {
+        return Some(PathBuf::from(path));
+    }
+    home_dir().map(|home| home.join("meshy-dcc").join("etc"))
+}
+
+#[cfg(feature = "telemetry")]
+fn home_dir() -> Option<PathBuf> {
+    std::env::var_os("USERPROFILE")
+        .filter(|value| !value.is_empty())
+        .map(PathBuf::from)
+        .or_else(|| {
+            let drive = std::env::var_os("HOMEDRIVE")?;
+            let path = std::env::var_os("HOMEPATH")?;
+            Some(PathBuf::from(format!(
+                "{}{}",
+                drive.to_string_lossy(),
+                path.to_string_lossy()
+            )))
+        })
+        .or_else(|| {
+            std::env::var_os("HOME")
+                .filter(|value| !value.is_empty())
+                .map(PathBuf::from)
+        })
+}
+
+#[cfg(feature = "telemetry")]
+fn env_string(key: &str) -> Option<String> {
+    std::env::var(key)
+        .ok()
+        .and_then(|value| clean_string(Some(value.as_str())))
+}
+
+#[cfg(feature = "telemetry")]
+fn clean_string(value: Option<&str>) -> Option<String> {
+    value
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(ToOwned::to_owned)
+}
+
+#[cfg(feature = "telemetry")]
+fn parse_otlp_headers(raw: &str) -> HashMap<String, String> {
+    raw.split(',')
+        .filter_map(|pair| {
+            let (key, value) = pair.split_once('=')?;
+            let key = key.trim();
+            if key.is_empty() {
+                return None;
+            }
+            Some((key.to_string(), value.trim().to_string()))
+        })
+        .collect()
+}
+
+// ── main ──────────────────────────────────────────────────────────────────────
+
+fn main() -> anyhow::Result<()> {
+    tokio::runtime::Builder::new_multi_thread()
+        .enable_all()
+        .build()?
+        .block_on(async_main())
+}
+
+async fn async_main() -> anyhow::Result<()> {
+    // Install the shared subscriber (stderr fmt-layer + reload slot for the
+    // optional file-logging layer). Safe to call multiple times.
+    meshy_dcc_logging::init_logging();
+
+    // ── Auto-init telemetry from OTEL_EXPORTER_OTLP_ENDPOINT ─────────────
+    // If the standard OTel env var is present, wire up the OTLP gRPC exporter.
+    // Otherwise, install a minimal no-op provider to suppress OTel warnings.
+    #[cfg(feature = "telemetry")]
+    {
+        let otlp = resolved_otlp_config();
+        if let Some(headers) = otlp.headers.as_deref() {
+            tracing::info!(
+                headers_configured = !headers.trim().is_empty(),
+                "OTLP headers loaded from configuration; exporter support remains provider-specific"
+            );
+        }
+        let telemetry_cfg = if let Some(ref endpoint) = otlp.endpoint {
+            tracing::info!(endpoint, "OTLP endpoint detected — enabling OTLP telemetry");
+            let mut builder =
+                meshy_dcc_telemetry::types::TelemetryConfig::builder(otlp.service_name)
+                    .with_otlp_exporter(endpoint.clone());
+            if let Some(headers) = otlp.headers.as_deref() {
+                builder = builder.with_otlp_headers(parse_otlp_headers(headers));
+            }
+            builder.build()
+        } else {
+            meshy_dcc_telemetry::types::TelemetryConfig {
+                enable_metrics: true,
+                enable_tracing: false,
+                exporter: meshy_dcc_telemetry::types::ExporterBackend::Noop,
+                ..meshy_dcc_telemetry::types::TelemetryConfig::default()
+            }
+        };
+        if let Err(e) = meshy_dcc_telemetry::provider::init(&telemetry_cfg) {
+            tracing::warn!(%e, "telemetry init skipped");
+        }
+    }
+    #[cfg(not(feature = "telemetry"))]
+    {
+        // No telemetry crate compiled in — nothing to do.
+    }
+
+    // ── Auto-init Sentry from MESHY_DCC_SENTRY_DSN ─────────────────────────
+    #[cfg(feature = "sentry")]
+    let _sentry_guard = sentry_init::init_sentry();
+
+    let args = Args::parse();
+
+    // ── Dispatch to subcommands ───────────────────────────────────────────
+    // Extract values needed by the Update subcommand before the match
+    // to avoid a partial move conflict when borrowing `args` later.
+    let _update_gateway_port = args.server.gateway_port;
+    match args.command {
+        Some(SubCmd::Auto(server_args)) => run_server(server_args).await,
+        Some(SubCmd::Serve(serve_args)) => run_server(serve_args.into_server_args()).await,
+        Some(SubCmd::Translate(translate_args)) => translate::run(translate_args).await,
+        Some(SubCmd::Catalog { action }) => run_catalog_cmd(&action),
+        #[cfg(feature = "gateway-auto")]
+        Some(SubCmd::Sidecar(sidecar_args)) => meshy_dcc_sidecar::run(sidecar_args).await,
+        #[cfg(feature = "gateway-daemon")]
+        Some(SubCmd::Gateway(gateway_args)) => {
+            if gateway_args.restart {
+                return gateway_daemon::restart_gateway(&gateway_args).await;
+            }
+            gateway_daemon::run(gateway_args).await
+        }
+        Some(SubCmd::Update { action }) => {
+            update::run_update_cmd(_update_gateway_port, action).await
+        }
+        Some(SubCmd::Capture { action }) => capture::run(action).await,
+        None => run_server(args.server).await,
+    }
+}
+
+// Without the `server` feature, the early `return Err(...)` below makes the
+// rest of the function provably unreachable. That is intentional for
+// gateway-only builds, so silence the lint only for that feature combination.
+#[cfg_attr(not(feature = "server"), allow(unreachable_code, unused_variables))]
+async fn run_server(args: ServerArgs) -> anyhow::Result<()> {
+    // When this binary is built without the `server` feature, the default
+    // (no-subcommand) path has nothing useful to do — print help and exit
+    // cleanly so callers get a clear signal instead of opening a port.
+    #[cfg(not(feature = "server"))]
+    {
+        use clap::CommandFactory as _;
+        let mut cmd = Args::command();
+        cmd.print_long_help().ok();
+        return Err(anyhow::anyhow!(
+            "this build was compiled without the `server` feature; \
+             use a subcommand such as `gateway` to invoke the binary"
+        ));
+    }
+
+    if let (Some(path), Some(pid)) = (args.pid_cleanup_watch.clone(), args.watch_pid) {
+        run_pid_cleanup_watcher(path, pid);
+        return Ok(());
+    }
+
+    if update::apply_staged_update()? {
+        return update::restart_after_update();
+    }
+
+    // Wire up rolling-file logging by default unless --no-log-file is passed.
+    // Any explicit MESHY_DCC_LOG_* env var or CLI flag also enables it.
+    let file_logging_cli = FileLoggingCliOptions::from(&args);
+    if should_enable_file_logging(
+        &file_logging_cli,
+        meshy_dcc_logging::FileLoggingConfig::enabled_by_env(),
+    ) {
+        let mut cfg = meshy_dcc_logging::FileLoggingConfig::from_env_with_defaults()
+            .map_err(|e| anyhow::anyhow!("invalid file-logging env vars: {e}"))?;
+        if let Some(dir) = args.log_dir.clone() {
+            cfg.directory = Some(dir);
+        }
+        if let Some(size) = args.log_max_size {
+            cfg.max_size_bytes = size;
+        }
+        if let Some(n) = args.log_max_files {
+            cfg.max_files = n;
+        }
+        if let Some(ref rot) = args.log_rotation {
+            cfg.rotation = meshy_dcc_logging::RotationPolicy::parse(rot)
+                .map_err(|e| anyhow::anyhow!("invalid --log-rotation: {e}"))?;
+        }
+        if let Some(ref prefix) = args.log_file_prefix {
+            if !prefix.trim().is_empty() {
+                cfg.file_name_prefix = prefix.clone();
+            }
+        } else {
+            // PID-based naming for multi-instance debugging.
+            cfg.file_name_prefix = format!("meshy-dcc-server.{}", std::process::id());
+        }
+        if let Some(days) = args.log_retention_days {
+            cfg.retention_days = days;
+        }
+        if let Some(mb) = args.log_max_total_size_mb {
+            cfg.max_total_size_mb = mb;
+        }
+        // Save retention settings before cfg is moved into init_file_logging.
+        let retention = cfg.retention_days;
+        let max_size = cfg.max_total_size_mb;
+        let prefix = cfg.file_name_prefix.clone();
+        match meshy_dcc_logging::init_file_logging(cfg) {
+            Ok(dir) => {
+                tracing::info!(
+                    path = %dir.display(),
+                    "rolling file logging enabled",
+                );
+                // Prune old log files on startup (issue #558).
+                prune_old_logs(&dir, &prefix, retention, max_size);
+            }
+            Err(e) => {
+                tracing::warn!(%e, "failed to enable file logging; continuing with stderr only")
+            }
+        }
+    }
+
+    let mut pid_file_guard = args
+        .pid_file
+        .as_deref()
+        .map(|path| acquire_pid_file(path, args.force))
+        .transpose()?;
+
+    // ── Collect skill paths ───────────────────────────────────────────────
+
+    let registry_dir_path: Option<PathBuf> = args.registry_dir.as_deref().map(PathBuf::from);
+
+    #[cfg(all(feature = "gateway-auto", feature = "gateway-daemon"))]
+    let server_gateway_daemon_options = if should_start_gateway_daemon_guardian(&args) {
+        Some(build_server_gateway_daemon_options(
+            &args,
+            registry_dir_path.as_ref(),
+        ))
+    } else {
+        None
+    };
+
+    #[cfg(all(feature = "gateway-auto", feature = "gateway-daemon"))]
+    if let Some(opts) = server_gateway_daemon_options.as_ref() {
+        gateway_daemon::ensure_gateway_running(opts)
+            .await
+            .map_err(|e| anyhow::anyhow!("ensuring standalone gateway is running: {e}"))?;
+        tracing::info!(
+            port = args.gateway_port,
+            "standalone gateway ensured; this server will register as a backend"
+        );
+    }
+
+    #[cfg(feature = "gateway-auto")]
+    let embedded_gateway_election = {
+        #[cfg(feature = "gateway-daemon")]
+        {
+            args.legacy_gateway_election
+        }
+        #[cfg(not(feature = "gateway-daemon"))]
+        {
+            true
+        }
+    };
+
+    // `skill_paths_snapshot` is fed straight into the gateway admin UI's
+    // `AdminPersistConfig`. Slim builds without `gateway-auto` drop the
+    // entire admin pipeline, so we skip building the snapshot too.
+    #[cfg(feature = "gateway-auto")]
+    let mut skill_paths_snapshot: Vec<SkillPathEntry> = Vec::new();
+    #[cfg(feature = "gateway-auto")]
+    for p in &args.skill_paths {
+        skill_paths_snapshot.push(SkillPathEntry {
+            path: p.display().to_string(),
+            source: "cli".into(),
+        });
+    }
+
+    let mut skill_paths: Vec<PathBuf> = args.skill_paths.clone();
+    let default_skill_paths_disabled = meshy_dcc_skills::constants::default_skill_paths_disabled();
+    skill_paths.extend(
+        meshy_dcc_skills::paths::get_skill_paths_from_env()
+            .into_iter()
+            .inspect(|_s| {
+                #[cfg(feature = "gateway-auto")]
+                skill_paths_snapshot.push(SkillPathEntry {
+                    path: _s.clone(),
+                    source: format!("env:{ENV_SKILL_PATHS}"),
+                });
+            })
+            .map(PathBuf::from),
+    );
+    if !args.app.is_empty() {
+        #[cfg(feature = "gateway-auto")]
+        let env_key = app_skill_paths_env_key(&args.app);
+        skill_paths.extend(
+            meshy_dcc_skills::paths::get_app_skill_paths_from_env(&args.app)
+                .into_iter()
+                .inspect(|_s| {
+                    #[cfg(feature = "gateway-auto")]
+                    skill_paths_snapshot.push(SkillPathEntry {
+                        path: _s.clone(),
+                        source: format!("env:{env_key}"),
+                    });
+                })
+                .map(PathBuf::from),
+        );
+        if !default_skill_paths_disabled
+            && let Ok(local_default) =
+                meshy_dcc_skills::paths::get_local_skills_dir(Some(&args.app))
+        {
+            match std::fs::create_dir_all(&local_default) {
+                Ok(()) => {
+                    let p = PathBuf::from(&local_default);
+                    #[cfg(feature = "gateway-auto")]
+                    skill_paths_snapshot.push(SkillPathEntry {
+                        path: local_default.clone(),
+                        source: "local_default".into(),
+                    });
+                    if !skill_paths.iter().any(|x| x == &p) {
+                        skill_paths.push(p);
+                    }
+                }
+                Err(err) => {
+                    tracing::warn!(
+                        path = %local_default,
+                        error = %err,
+                        "could not initialise local default skill directory"
+                    );
+                }
+            }
+        }
+    }
+    if !default_skill_paths_disabled
+        && let Ok(bundled) = meshy_dcc_skills::paths::get_skills_dir(None)
+    {
+        let p = PathBuf::from(&bundled);
+        if p.exists() {
+            #[cfg(feature = "gateway-auto")]
+            skill_paths_snapshot.push(SkillPathEntry {
+                path: bundled.clone(),
+                source: "bundled".into(),
+            });
+            skill_paths.push(p);
+        }
+    }
+
+    #[cfg(feature = "gateway-auto")]
+    let skill_paths_for_catalog_reload = skill_paths.clone();
+
+    #[cfg(feature = "gateway-auto")]
+    let admin_db =
+        meshy_dcc_gateway::gateway::admin::resolve_admin_db_path(None, registry_dir_path.as_ref());
+    #[cfg(feature = "gateway-auto")]
+    if !default_skill_paths_disabled {
+        for p in meshy_dcc_gateway::gateway::admin::sqlite_lane::read_custom_skill_paths_for_startup(
+            &admin_db,
+        ) {
+            if p.exists() {
+                skill_paths_snapshot.push(SkillPathEntry {
+                    path: p.display().to_string(),
+                    source: "admin_custom".into(),
+                });
+                if !skill_paths.iter().any(|x| x == &p) {
+                    skill_paths.push(p);
+                }
+            }
+        }
+    }
+
+    // ── Build registry + catalog ──────────────────────────────────────────
+
+    let action_registry = Arc::new(ToolRegistry::new());
+    let dispatcher = Arc::new(ToolDispatcher::new((*action_registry).clone()));
+    let catalog = Arc::new(SkillCatalog::new_with_dispatcher(
+        action_registry.clone(),
+        dispatcher.clone(),
+    ));
+    let _event_webhook_runtime =
+        event_webhooks::EventWebhookRuntime::from_env(dispatcher.event_bus())?;
+
+    let app_hint = if args.app.is_empty() {
+        None
+    } else {
+        Some(args.app.as_str())
+    };
+    let extra_dirs: Option<Vec<String>> = if skill_paths.is_empty() {
+        None
+    } else {
+        Some(
+            skill_paths
+                .iter()
+                .filter(|p| p.exists())
+                .map(|p| p.display().to_string())
+                .collect(),
+        )
+    };
+
+    let n = catalog.discover(extra_dirs.as_deref(), app_hint);
+    tracing::info!("Discovered {} skill(s) in catalog", n);
+
+    #[cfg(feature = "gateway-auto")]
+    let catalog_discover_hook: Arc<dyn Fn() + Send + Sync> = {
+        let catalog = catalog.clone();
+        let base_dirs = skill_paths_for_catalog_reload.clone();
+        let admin_db_path = admin_db.clone();
+        let app_owned = args.app.clone();
+        let include_admin_custom = !default_skill_paths_disabled;
+        Arc::new(move || {
+            let mut merged = base_dirs.clone();
+            if include_admin_custom {
+                for p in meshy_dcc_gateway::gateway::admin::read_custom_skill_paths_for_startup(
+                    &admin_db_path,
+                ) {
+                    if p.exists() && !merged.iter().any(|x| x == &p) {
+                        merged.push(p);
+                    }
+                }
+            }
+            let extra: Vec<String> = merged
+                .into_iter()
+                .filter(|p| p.exists())
+                .map(|p| p.display().to_string())
+                .collect();
+            let hint = if app_owned.is_empty() {
+                None
+            } else {
+                Some(app_owned.as_str())
+            };
+            let discovered = catalog.rediscover(Some(&extra), hint);
+            tracing::info!(
+                discovered,
+                "catalog.rediscover after admin skill-path change (hook)"
+            );
+        })
+    };
+
+    // ── Start MCP HTTP server (DCC-specific tools) ────────────────────────
+
+    let mut config = McpHttpConfig::default();
+    config.server.port = args.mcp_port;
+    config = config.with_name(args.server_name.clone()).with_cors();
+    config.server.host = args
+        .host
+        .parse()
+        .map_err(|e| anyhow::anyhow!("Invalid --host '{}': {e}", args.host))?;
+
+    let mcp_server = McpHttpServer::with_catalog(action_registry.clone(), catalog.clone(), config)
+        .with_dispatcher(dispatcher.clone());
+
+    let handle = mcp_server.start().await?;
+
+    let registry_dcc =
+        resolve_registry_dcc_type((!args.app.is_empty()).then_some(args.app.as_str()));
+    let instance_id = uuid::Uuid::new_v4();
+
+    tracing::info!(
+        "MCP server listening on http://{}:{}/mcp  (app={})",
+        args.host,
+        handle.port,
+        registry_dcc,
+    );
+
+    #[cfg(feature = "mdns")]
+    let _mdns_advertiser = if args.advertise_mdns {
+        let mut short = instance_id.simple().to_string();
+        short.truncate(8);
+        let advertisement = meshy_dcc_transport::discovery::mdns::MdnsAdvertisement::new(
+            registry_dcc.as_str(),
+            instance_id,
+            format!("meshy-dcc-{short}"),
+            handle.port,
+        )
+        .with_version(Some(env!("CARGO_PKG_VERSION").to_string()))
+        .with_adapter(Some(args.server_name.clone()))
+        .with_auth(Some("none".to_string()))
+        .with_mcp_path("/mcp");
+        let advertiser = meshy_dcc_transport::discovery::mdns::MdnsAdvertiser::start(advertisement)
+            .map_err(|err| anyhow::anyhow!("advertising MCP endpoint via mDNS: {err}"))?;
+        tracing::info!(
+            fullname = %advertiser.fullname(),
+            "mDNS advertisement enabled"
+        );
+        Some(advertiser)
+    } else {
+        None
+    };
+
+    // ── Register + gateway competition (via library) ──────────────────────
+
+    #[cfg(feature = "gateway-auto")]
+    let gw_handle = {
+        let admin_retention = std::env::var("MESHY_DCC_GATEWAY_ADMIN_RETENTION_DAYS")
+            .ok()
+            .and_then(|s| s.parse::<u32>().ok())
+            .unwrap_or(30)
+            .clamp(1, 3650);
+
+        let gateway_host = args
+            .gateway_host
+            .clone()
+            .unwrap_or_else(|| args.host.clone());
+
+        let gateway_cfg = GatewayConfig {
+            host: gateway_host,
+            gateway_port: if embedded_gateway_election {
+                args.gateway_port
+            } else {
+                0
+            },
+            remote_host: Some(args.gateway_remote_host.clone()),
+            remote_gateway_port: args.gateway_remote_port,
+            stale_timeout_secs: args.stale_timeout_secs,
+            heartbeat_secs: args.heartbeat_secs,
+            server_name: args.server_name.clone(),
+            gateway_name: args.gateway_name.clone(),
+            server_version: env!("CARGO_PKG_VERSION").to_string(),
+            registry_dir: registry_dir_path,
+            // Issue #2405: when this process launched the gateway it recorded
+            // the PID here. Recovery from a live-but-service-dead port holder
+            // only terminates a holder whose PID this deployment can prove it
+            // started, and the pidfile is one of those two proofs.
+            pidfile: args.pid_file.clone(),
+            // Issue maya#137: standalone server has no adapter package, so
+            // the election treats it as the lowest tier and yields to any
+            // real DCC adapter at equal crate version.
+            adapter_dcc: if args.app.is_empty() {
+                None
+            } else {
+                Some(args.app.clone())
+            },
+            admin_enabled: !args.no_admin,
+            admin_path: args.admin_path.clone(),
+            admin_persist: AdminPersistConfig {
+                sqlite_path: std::env::var_os("MESHY_DCC_GATEWAY_ADMIN_DB").map(PathBuf::from),
+                sqlite_retention_days: admin_retention,
+                skill_paths_snapshot,
+                skill_paths_reload: Some(catalog_discover_hook),
+                // #2297-A3: `None` defers to MESHY_DCC_SCRIPT_PROMOTION_MIN_REPEATS
+                // and then to the default of 3.
+                script_promotion_min_repeats: None,
+            },
+            ..GatewayConfig::default()
+        };
+
+        let runner = GatewayRunner::new(gateway_cfg)
+            .map_err(|e| anyhow::anyhow!("Failed to create GatewayRunner: {e}"))?;
+
+        let mut entry = ServiceEntry::new(registry_dcc.as_str(), &args.host, handle.port);
+        entry.instance_id = instance_id;
+        entry.version = args.app_version.clone();
+        entry.scene = args.scene.clone();
+        entry
+            .metadata
+            .insert("server_name".to_string(), args.server_name.clone());
+        entry.metadata.insert(
+            "mcp_url".to_string(),
+            format!("http://{}:{}/mcp", args.host, handle.port),
+        );
+        stamp_server_gateway_runtime_metadata(&mut entry, &args);
+
+        // Standalone binary: scene is fixed at launch; no live provider needed.
+        runner
+            .start(entry, None)
+            .await
+            .map_err(|e| anyhow::anyhow!("Failed to start gateway: {e}"))?
+    };
+    #[cfg(feature = "gateway-auto")]
+    let is_gateway = gw_handle.is_gateway;
+    #[cfg(not(feature = "gateway-auto"))]
+    let _ = (&registry_dir_path, &registry_dcc);
+
+    #[cfg(all(feature = "gateway-auto", feature = "gateway-daemon"))]
+    let gateway_guardian_handle = server_gateway_daemon_options.clone().map(|opts| {
+        gateway_daemon::spawn_gateway_guardian(
+            opts,
+            gateway_daemon::GatewayGuardianSettings::from_env(),
+        )
+    });
+
+    // ── Start WebSocket bridge (optional) ─────────────────────────────────
+
+    if !args.no_bridge {
+        let ws_port = args.ws_port;
+        let sn = args.server_name.clone();
+        let sv = env!("CARGO_PKG_VERSION").to_string();
+        tokio::spawn(async move { run_ws_bridge(ws_port, sn, sv).await });
+    }
+
+    // ── Wait for shutdown signal ──────────────────────────────────────────
+
+    let shutdown_reason = select_shutdown_signal().await?;
+    tracing::info!(shutdown_reason, "Shutdown signal received");
+
+    #[cfg(all(feature = "gateway-auto", feature = "gateway-daemon"))]
+    if let Some(handle) = gateway_guardian_handle {
+        handle.abort();
+    }
+
+    #[cfg(feature = "gateway-auto")]
+    {
+        if is_gateway {
+            tracing::info!("Gateway port released");
+        }
+        // gw_handle dropped here — aborts heartbeat, cleanup, and gateway tasks automatically
+        drop(gw_handle);
+    }
+
+    let deadline = Duration::from_secs(args.shutdown_timeout_secs);
+    match tokio::time::timeout(deadline, handle.shutdown()).await {
+        Ok(()) => tracing::info!("Graceful shutdown complete"),
+        Err(_) => tracing::error!(?deadline, "Graceful shutdown exceeded deadline, exiting"),
+    }
+    if let Some(guard) = pid_file_guard.as_mut() {
+        guard.remove_now();
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod main_tests;

@@ -12,7 +12,7 @@ gateway surfaces backend resources correctly:
   one (fail-soft).
 
 Mirrors the Rust integration coverage in
-``crates/dcc-mcp-http/tests/http/gateway_resources.rs`` but drives the
+``crates/meshy-dcc-http/tests/http/gateway_resources.rs`` but drives the
 surface entirely over HTTP from Python, the way an AI client actually
 consumes the gateway.
 """
@@ -32,9 +32,9 @@ import pytest
 from conftest import McpClient
 from conftest import allocate_gateway_port
 from conftest import register_shutdown_handle
-from dcc_mcp_core import McpHttpConfig
-from dcc_mcp_core import McpHttpServer
-from dcc_mcp_core import ToolRegistry
+from meshy_dcc_core import McpHttpConfig
+from meshy_dcc_core import McpHttpServer
+from meshy_dcc_core import ToolRegistry
 
 
 def _pick_free_port() -> int:

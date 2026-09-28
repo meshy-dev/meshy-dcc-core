@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import pytest
 
-from dcc_mcp_core import SceneSpecResult
-from dcc_mcp_core import validate_scene_vs_spec
+from meshy_dcc_core import SceneSpecResult
+from meshy_dcc_core import validate_scene_vs_spec
 
 
 def _scene(**overrides):

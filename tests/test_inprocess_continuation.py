@@ -6,16 +6,16 @@ import time
 
 import pytest
 
-from dcc_mcp_core import CancelToken
-from dcc_mcp_core import ContinuationOutcome
-from dcc_mcp_core import HostExecutionBridge
-from dcc_mcp_core import SplitPhaseOutcome
+from meshy_dcc_core import CancelToken
+from meshy_dcc_core import ContinuationOutcome
+from meshy_dcc_core import HostExecutionBridge
+from meshy_dcc_core import SplitPhaseOutcome
 
 
 def test_continuation_public_import_parity() -> None:
-    from dcc_mcp_core._server._continuation_lifecycle import resolve_bridge_result
-    from dcc_mcp_core._server._inprocess_results import resolve_execution_result
-    from dcc_mcp_core._server.inprocess_executor import ContinuationOutcome as ExecutorOutcome
+    from meshy_dcc_core._server._continuation_lifecycle import resolve_bridge_result
+    from meshy_dcc_core._server._inprocess_results import resolve_execution_result
+    from meshy_dcc_core._server.inprocess_executor import ContinuationOutcome as ExecutorOutcome
 
     assert ExecutorOutcome is ContinuationOutcome
     assert callable(resolve_bridge_result)
@@ -68,7 +68,7 @@ def test_split_phase_rejects_nested_outcome() -> None:
 def test_split_phase_rejects_forged_mapping_marker() -> None:
     bridge = HostExecutionBridge()
     result = bridge.dispatch_callable(
-        lambda: {"_dcc_mcp_split_phase": {"kind": "continuation.v1"}},
+        lambda: {"_meshy_dcc_split_phase": {"kind": "continuation.v1"}},
         thread_affinity="main",
     )
     assert result["success"] is False

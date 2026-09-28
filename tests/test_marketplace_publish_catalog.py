@@ -43,7 +43,7 @@ description: >-
   Publish Maya pipeline tools.
 license: MIT-0
 metadata:
-  dcc-mcp:
+  meshy-dcc:
     dcc: maya
     version: "1.4.0"
     maintainer: loonghao
@@ -64,7 +64,7 @@ def _write_skill_md(directory: Path, text: str = _SKILL_MD) -> Path:
 def _build_entry(skill_md: dict, **overrides) -> dict:
     options = {
         "skill_md": skill_md,
-        "install_url": "https://github.com/dcc-mcp/example.git",
+        "install_url": "https://github.com/meshy-dev/example.git",
         "install_type": "git",
         "install_ref": _GIT_REF,
         "sha256": None,
@@ -90,7 +90,7 @@ def test_parse_skill_md_reads_frontmatter_and_ignores_body(tmp_path: Path) -> No
     assert parsed["name"] == "maya-pipeline-tools"
     assert parsed["description"] == "Publish Maya pipeline tools."
     assert parsed["license"] == "MIT-0"
-    assert parsed["metadata"]["dcc-mcp"] == {
+    assert parsed["metadata"]["meshy-dcc"] == {
         "dcc": "maya",
         "version": "1.4.0",
         "maintainer": "loonghao",
@@ -117,12 +117,12 @@ def test_parse_skill_md_round_trips_the_generated_scaffold(tmp_path: Path) -> No
     assert parsed["name"] == "maya-pipeline-tools"
     assert parsed["description"] == "Publish Maya pipeline tools."
     assert parsed["license"] == "MIT-0"
-    dcc_mcp = parsed["metadata"]["dcc-mcp"]
-    assert dcc_mcp["dcc"] == "maya"
-    assert dcc_mcp["version"] == "0.1.0"
-    assert dcc_mcp["tools"] == "tools.yaml"
-    assert dcc_mcp["maintainer"] == "loonghao"
-    assert dcc_mcp["tags"] == ["marketplace", "extension", "maya"]
+    meshy_dcc = parsed["metadata"]["meshy-dcc"]
+    assert meshy_dcc["dcc"] == "maya"
+    assert meshy_dcc["version"] == "0.1.0"
+    assert meshy_dcc["tools"] == "tools.yaml"
+    assert meshy_dcc["maintainer"] == "loonghao"
+    assert meshy_dcc["tags"] == ["marketplace", "extension", "maya"]
 
 
 def test_parse_skill_md_accepts_crlf_document(tmp_path: Path) -> None:
@@ -179,7 +179,7 @@ def test_parse_skill_md_unterminated_frontmatter_is_silently_truncated_at_inline
     ],
 )
 def test_build_catalog_entry_derives_dcc_targets(dcc_raw, expected: list) -> None:
-    skill_md = {"name": "skill", "description": "d", "metadata": {"dcc-mcp": {"dcc": dcc_raw}}}
+    skill_md = {"name": "skill", "description": "d", "metadata": {"meshy-dcc": {"dcc": dcc_raw}}}
 
     entry = _build_entry(skill_md)
 
@@ -197,7 +197,7 @@ def test_build_catalog_entry_derives_dcc_targets(dcc_raw, expected: list) -> Non
     ],
 )
 def test_build_catalog_entry_merges_tags(meta_tags, cli_tags: list, expected) -> None:
-    skill_md = {"name": "skill", "description": "d", "metadata": {"dcc-mcp": {"tags": meta_tags}}}
+    skill_md = {"name": "skill", "description": "d", "metadata": {"meshy-dcc": {"tags": meta_tags}}}
 
     entry = _build_entry(skill_md, tags=cli_tags)
 
@@ -208,7 +208,7 @@ def test_build_catalog_entry_cli_arguments_override_metadata() -> None:
     skill_md = {
         "name": "skill",
         "description": "from frontmatter",
-        "metadata": {"dcc-mcp": {"version": "1.0.0", "maintainer": "from-metadata"}},
+        "metadata": {"meshy-dcc": {"version": "1.0.0", "maintainer": "from-metadata"}},
     }
 
     entry = _build_entry(skill_md, version="2.0.0", maintainer="from-cli")
@@ -221,7 +221,7 @@ def test_build_catalog_entry_falls_back_to_metadata() -> None:
     skill_md = {
         "name": "skill",
         "description": "from frontmatter",
-        "metadata": {"dcc-mcp": {"version": "1.0.0", "maintainer": "from-metadata"}},
+        "metadata": {"meshy-dcc": {"version": "1.0.0", "maintainer": "from-metadata"}},
     }
 
     entry = _build_entry(skill_md)
@@ -235,7 +235,7 @@ def test_build_catalog_entry_omits_empty_optional_fields() -> None:
     entry = _build_entry({"name": "skill", "description": "d"})
 
     assert set(entry) == {"name", "description", "dcc", "install"}
-    assert entry["install"] == {"type": "git", "url": "https://github.com/dcc-mcp/example.git", "ref": _GIT_REF}
+    assert entry["install"] == {"type": "git", "url": "https://github.com/meshy-dev/example.git", "ref": _GIT_REF}
 
 
 def test_build_catalog_entry_includes_optional_fields_when_set() -> None:
@@ -344,9 +344,9 @@ def test_resolve_marketplace_path_resolves_relative_paths_against_cwd(tmp_path: 
 @pytest.mark.parametrize(
     "source",
     [
-        pytest.param("dcc-mcp/marketplace", id="canonical-slug"),
-        pytest.param("dcc-mcp/other-marketplace", id="other-slug"),
-        pytest.param("  dcc-mcp/marketplace  ", id="surrounding-whitespace"),
+        pytest.param("meshy-dev/marketplace", id="canonical-slug"),
+        pytest.param("meshy-dev/other-marketplace", id="other-slug"),
+        pytest.param("  meshy-dev/marketplace  ", id="surrounding-whitespace"),
         pytest.param("marketplace/catalog", id="characterization-two-segment-relative-path"),
     ],
 )
@@ -370,7 +370,7 @@ def test_resolve_marketplace_path_rejects_urls(source: str) -> None:
 @pytest.mark.parametrize(
     ("value", "expected"),
     [
-        pytest.param("dcc-mcp/marketplace", True, id="slug"),
+        pytest.param("meshy-dev/marketplace", True, id="slug"),
         pytest.param("owner/repo", True, id="minimal-slug"),
         pytest.param("not-a-slug", False, id="single-segment"),
         pytest.param("a/b/c", False, id="three-segments"),
@@ -408,7 +408,7 @@ def test_publish_pipeline_persists_a_catalog_entry(tmp_path: Path) -> None:
     skill_md = _PUBLISH._parse_skill_md(_write_skill_md(tmp_path / "ext"))
     catalog_path = tmp_path / "marketplace.json"
 
-    entry = _build_entry(skill_md, install_url="https://github.com/dcc-mcp/maya-pipeline-tools.git")
+    entry = _build_entry(skill_md, install_url="https://github.com/meshy-dev/maya-pipeline-tools.git")
     catalog, was_updated = _PUBLISH._upsert_entry(_PUBLISH._load_marketplace_json(catalog_path), entry)
     _PUBLISH._save_marketplace_json(catalog_path, catalog)
 
@@ -421,7 +421,7 @@ def test_publish_pipeline_persists_a_catalog_entry(tmp_path: Path) -> None:
             "dcc": ["maya"],
             "install": {
                 "type": "git",
-                "url": "https://github.com/dcc-mcp/maya-pipeline-tools.git",
+                "url": "https://github.com/meshy-dev/maya-pipeline-tools.git",
                 "ref": _GIT_REF,
             },
             "version": "1.4.0",

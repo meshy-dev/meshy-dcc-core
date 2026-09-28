@@ -1,4 +1,4 @@
-# dcc-mcp-core development commands
+# meshy-dcc-core development commands
 # Usage: just <recipe>  (or: just --list)
 #
 # All CI jobs use these recipes — local and CI are identical.
@@ -11,7 +11,7 @@ set shell := ["sh", "-cu"]
 # and every recipe below — as well as CI workflows invoking `just build-*` —
 # will pick them up automatically.
 OPT_FEATURES := "workflow,scheduler,prometheus,job-persist-sqlite,admin,mcp-2026-07-28"
-CLI_BIN := if os_family() == "windows" { ".\\target\\release\\dcc-mcp-cli.exe" } else { "./target/release/dcc-mcp-cli" }
+CLI_BIN := if os_family() == "windows" { ".\\target\\release\\meshy-dcc-cli.exe" } else { "./target/release/meshy-dcc-cli" }
 
 # Feature set for `maturin develop` (no abi3, extension-module linkage)
 DEV_FEATURES := "python-bindings,ext-module," + OPT_FEATURES
@@ -54,10 +54,10 @@ print-wheel-features-py37:
 
 # ── Admin UI ──────────────────────────────────────────────────────────────────
 #
-# The Vite bundle is written to crates/dcc-mcp-gateway-admin/src/generated/
+# The Vite bundle is written to crates/meshy-dcc-gateway-admin/src/generated/
 # and is intentionally gitignored. It is rebuilt automatically whenever Cargo compiles
-# `dcc-mcp-gateway` with the `admin` feature (wheel builds, local `cargo check`, etc.);
-# `crates/dcc-mcp-gateway-admin/build.rs` installs dependencies with `vx npm`
+# `meshy-dcc-gateway` with the `admin` feature (wheel builds, local `cargo check`, etc.);
+# `crates/meshy-dcc-gateway-admin/build.rs` installs dependencies with `vx npm`
 # and builds with the vx-managed Node runtime.
 #
 # Use these recipes when you iterate on JSX/CSS only and want fast rebuilds without
@@ -128,14 +128,14 @@ rust-cov:
 
 # Run criterion benchmarks for IPC transport
 bench:
-    cargo bench -p dcc-mcp-transport
+    cargo bench -p meshy-dcc-transport
 
 budget-args := ""
 
 # Run the MCP request-path stage benchmark and write pipeline-bench.json
 # (extra report args: just bench-pipeline budget-args="--budget route_tool=0.05")
 bench-pipeline:
-    cargo run --release -p dcc-mcp-telemetry --example pipeline_bench -- \
+    cargo run --release -p meshy-dcc-telemetry --example pipeline_bench -- \
         --iterations 500 --output target/pipeline-bench-raw.json
     python scripts/bench_pipeline_report.py {{ budget-args }}
 
@@ -149,58 +149,58 @@ hakari-verify:
 
 # ── Standalone binaries ─────────────────────────────────────────────────────
 
-# Build dcc-mcp-cli for the current platform
+# Build meshy-dcc-cli for the current platform
 build-cli:
-    cargo build --release -p dcc-mcp-cli
+    cargo build --release -p meshy-dcc-cli
 
-# Build dcc-mcp-cli universal2 binary for macOS (requires both targets installed)
+# Build meshy-dcc-cli universal2 binary for macOS (requires both targets installed)
 [unix]
 build-cli-universal:
     #!/usr/bin/env sh
     set -eu
     rustup target add x86_64-apple-darwin aarch64-apple-darwin 2>/dev/null || true
-    cargo build --release -p dcc-mcp-cli --target x86_64-apple-darwin
-    cargo build --release -p dcc-mcp-cli --target aarch64-apple-darwin
-    lipo -create -output dcc-mcp-cli-macos-universal2 \
-        target/x86_64-apple-darwin/release/dcc-mcp-cli \
-        target/aarch64-apple-darwin/release/dcc-mcp-cli
-    echo "Built: dcc-mcp-cli-macos-universal2"
+    cargo build --release -p meshy-dcc-cli --target x86_64-apple-darwin
+    cargo build --release -p meshy-dcc-cli --target aarch64-apple-darwin
+    lipo -create -output meshy-dcc-cli-macos-universal2 \
+        target/x86_64-apple-darwin/release/meshy-dcc-cli \
+        target/aarch64-apple-darwin/release/meshy-dcc-cli
+    echo "Built: meshy-dcc-cli-macos-universal2"
 
-# Build dcc-mcp-server for the current platform
+# Build meshy-dcc-server for the current platform
 build-server:
-    cargo build --release -p dcc-mcp-server
+    cargo build --release -p meshy-dcc-server
 
-# Build dcc-mcp-server universal2 binary for macOS (requires both targets installed)
+# Build meshy-dcc-server universal2 binary for macOS (requires both targets installed)
 [unix]
 build-server-universal:
     #!/usr/bin/env sh
     set -eu
     rustup target add x86_64-apple-darwin aarch64-apple-darwin 2>/dev/null || true
-    cargo build --release -p dcc-mcp-server --target x86_64-apple-darwin
-    cargo build --release -p dcc-mcp-server --target aarch64-apple-darwin
-    lipo -create -output dcc-mcp-server-macos-universal2 \
-        target/x86_64-apple-darwin/release/dcc-mcp-server \
-        target/aarch64-apple-darwin/release/dcc-mcp-server
-    echo "Built: dcc-mcp-server-macos-universal2"
+    cargo build --release -p meshy-dcc-server --target x86_64-apple-darwin
+    cargo build --release -p meshy-dcc-server --target aarch64-apple-darwin
+    lipo -create -output meshy-dcc-server-macos-universal2 \
+        target/x86_64-apple-darwin/release/meshy-dcc-server \
+        target/aarch64-apple-darwin/release/meshy-dcc-server
+    echo "Built: meshy-dcc-server-macos-universal2"
 
-# Run the server locally (auto-discovers skills, competes for gateway :9765)
+# Run the server locally (auto-discovers skills, competes for gateway :19765)
 run-server *ARGS:
-    cargo run --release -p dcc-mcp-server -- {{ARGS}}
+    cargo run --release -p meshy-dcc-server -- {{ARGS}}
 
 # Run two server instances to demo auto-gateway (open two terminals)
-# Terminal 1: just demo-gateway-maya   → wins gateway :9765
+# Terminal 1: just demo-gateway-maya   → wins gateway :19765
 # Terminal 2: just demo-gateway-maya2  → plain instance
 demo-gateway-maya:
-    cargo run -p dcc-mcp-server -- --app maya --scene shot01.ma
+    cargo run -p meshy-dcc-server -- --app maya --scene shot01.ma
 
 demo-gateway-photoshop:
-    cargo run -p dcc-mcp-server -- --app photoshop --scene poster.psd
+    cargo run -p meshy-dcc-server -- --app photoshop --scene poster.psd
 
 # ── Python ────────────────────────────────────────────────────────────────────
 
 # Build and install wheel in dev/editable mode.
 # Always run maturin with *this repo's* .venv interpreter. If another project
-# (e.g. dcc-mcp-maya) left VIRTUAL_ENV active, the old recipe used that Python
+# (e.g. meshy-dcc-maya) left VIRTUAL_ENV active, the old recipe used that Python
 # and produced the wrong wheel ABI (e.g. cp312) for Maya's embedded runtime.
 [unix]
 dev:
@@ -224,7 +224,7 @@ dev:
 install:
     just stubgen
     maturin build --release --out dist --features {{WHEEL_FEATURES}}
-    pip install --force-reinstall --no-index --find-links dist dcc-mcp-core
+    pip install --force-reinstall --no-index --find-links dist meshy-dcc-core
 
 # Build abi3-py38 release wheel (dist/ only, no install).
 # EXTRA is forwarded to maturin — used by CI to pass --sdist,
@@ -266,7 +266,7 @@ test-suite:
 
 # Run Python tests with coverage report
 test-cov:
-    pytest tests/ -q --tb=short --show-capture=no --cov=dcc_mcp_core --cov-report=term --cov-report=xml:coverage.xml
+    pytest tests/ -q --tb=short --show-capture=no --cov=meshy_dcc_core --cov-report=term --cov-report=xml:coverage.xml
 
 # Run mcpcall MCP end-to-end tests (set MCPCALL_CMD="vx mcpcall" for vx-managed local runs)
 test-e2e:
@@ -274,8 +274,8 @@ test-e2e:
 
 # Replay a Verified Regression Suite trace (HTTP against gateway REST /v1/*).
 # Example: `just vrs-replay`
-# Example: `just vrs-replay BASE=http://127.0.0.1:9765 TRACE=tests/vrs/traces/maya-215-execute-python-regression.jsonl`
-vrs-replay BASE="http://127.0.0.1:9765" TRACE="tests/vrs/traces/gateway-smoke.jsonl":
+# Example: `just vrs-replay BASE=http://127.0.0.1:19765 TRACE=tests/vrs/traces/maya-215-execute-python-regression.jsonl`
+vrs-replay BASE="http://127.0.0.1:19765" TRACE="tests/vrs/traces/gateway-smoke.jsonl":
     python scripts/vrs_replay.py --base-url "{{BASE}}" --trace "{{TRACE}}"
 
 # Lightweight standalone server idle-memory smoke (#1354).
@@ -284,7 +284,7 @@ idle-memory-smoke:
 
 # ── Type stubs (pyo3-stub-gen) ───────────────────────────────────────────
 
-# Generate python/dcc_mcp_core/_core.pyi from annotated Rust code.
+# Generate python/meshy_dcc_core/_core.pyi from annotated Rust code.
 # Also run automatically as part of `build`, `dev`, and `install`.
 # Note: use `vx cargo` to ensure vx's cargo wrapper is used (CI fix).
 stubgen:
@@ -322,12 +322,12 @@ docs-lint-playbook:
 
 # Lint Python source (ruff check only)
 lint-py:
-    ruff check python/dcc_mcp_core/ tests/ examples/ scripts/
-    ruff format --check python/dcc_mcp_core/ tests/ examples/ scripts/
+    ruff check python/meshy_dcc_core/ tests/ examples/ scripts/
+    ruff format --check python/meshy_dcc_core/ tests/ examples/ scripts/
 
 # Lint bundled, example, and fixture skills with the built production CLI
 lint-skills: build-cli
-    {{CLI_BIN}} lint --max-depth 4 python/dcc_mcp_core/skills examples/skills examples/remote-server/skills examples/rez-skills tests/fixtures/skills tests/fixtures/prompts_skills
+    {{CLI_BIN}} lint --max-depth 4 python/meshy_dcc_core/skills examples/skills examples/remote-server/skills examples/rez-skills tests/fixtures/skills tests/fixtures/prompts_skills
 
 # Verify pure-Python sources parse on Python 3.7 (cp37 wheel parity).
 check-py37-syntax:
@@ -343,8 +343,8 @@ check-vfx-baseline:
 
 # Auto-fix Python lint issues and format
 lint-py-fix:
-    ruff check --fix python/dcc_mcp_core/ tests/ examples/ scripts/
-    ruff format python/dcc_mcp_core/ tests/ examples/ scripts/
+    ruff check --fix python/meshy_dcc_core/ tests/ examples/ scripts/
+    ruff format python/meshy_dcc_core/ tests/ examples/ scripts/
 
 # Lint everything: Rust (clippy + fmt-check) + Python (ruff) + skills
 lint: clippy fmt-check lint-py lint-skills

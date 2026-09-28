@@ -14,14 +14,14 @@ from pathlib import Path
 
 import pytest
 
-from dcc_mcp_core import InputValidator
-from dcc_mcp_core import PyProcessWatcher
-from dcc_mcp_core import SandboxContext
-from dcc_mcp_core import SandboxPolicy
-from dcc_mcp_core import SkillWatcher
-from dcc_mcp_core import TelemetryConfig
-from dcc_mcp_core import ToolRecorder
-import dcc_mcp_core._core as core
+from meshy_dcc_core import InputValidator
+from meshy_dcc_core import PyProcessWatcher
+from meshy_dcc_core import SandboxContext
+from meshy_dcc_core import SandboxPolicy
+from meshy_dcc_core import SkillWatcher
+from meshy_dcc_core import TelemetryConfig
+from meshy_dcc_core import ToolRecorder
+import meshy_dcc_core._core as core
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -196,8 +196,8 @@ class TestTelemetryConfigConstruction:
         assert tc is not None
 
     def test_service_name_stored(self):
-        tc = TelemetryConfig("dcc-mcp-test")
-        assert tc.service_name == "dcc-mcp-test"
+        tc = TelemetryConfig("meshy-dcc-test")
+        assert tc.service_name == "meshy-dcc-test"
 
     def test_enable_tracing_default_true(self):
         tc = TelemetryConfig("svc")

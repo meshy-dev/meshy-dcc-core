@@ -5,10 +5,10 @@ PyPI enforces a default 10 GB total-size limit per project
 (https://docs.pypi.org/project-management/storage-limits). When a project
 is at the limit, the upload fails MID-STREAM: twine uploads distributions
 one by one, so the release is left partially published. Both v0.19.0 and
-v0.20.6 of dcc-mcp-core shipped only the cp37 wheels to PyPI this way; the
+v0.20.6 of meshy-dcc-core shipped only the cp37 wheels to PyPI this way; the
 macOS abi3 wheel was rejected with '400 Project size too large', which
 broke downstream consumers that resolve platform wheels from PyPI (for
-example dcc-mcp-blender's addon packaging).
+example meshy-dcc-blender's addon packaging).
 
 This preflight mirrors the 'skip-existing: true' behaviour of
 pypa/gh-action-pypi-publish: artifacts whose filenames already exist on

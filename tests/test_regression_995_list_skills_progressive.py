@@ -14,9 +14,9 @@ These tests boot an :class:`McpHttpServer` against
 The same scenarios are exercised over HTTP through
 ``tests/vrs/traces/core-995-list-skills-respects-limit.jsonl``.
 
-Requires a freshly built ``dcc_mcp_core`` wheel (``maturin develop`` /
+Requires a freshly built ``meshy_dcc_core`` wheel (``maturin develop`` /
 ``vx just dev``) so ``list_skills`` routes through the Rust projection
-helper in ``dcc-mcp-skills``.
+helper in ``meshy-dcc-skills``.
 """
 
 # Import future modules
@@ -32,9 +32,9 @@ import pytest
 
 # Import local modules
 from conftest import McpClient
-from dcc_mcp_core import McpHttpConfig
-from dcc_mcp_core import McpHttpServer
-from dcc_mcp_core import ToolRegistry
+from meshy_dcc_core import McpHttpConfig
+from meshy_dcc_core import McpHttpServer
+from meshy_dcc_core import ToolRegistry
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 EXAMPLES_SKILLS = REPO_ROOT / "examples" / "skills"

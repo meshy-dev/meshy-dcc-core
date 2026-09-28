@@ -1,4 +1,4 @@
-"""Tests for :mod:`dcc_mcp_core.cancellation`."""
+"""Tests for :mod:`meshy_dcc_core.cancellation`."""
 
 from __future__ import annotations
 
@@ -11,40 +11,40 @@ import time
 import pytest
 
 # Import local modules
-from dcc_mcp_core import CancellationProbe
-from dcc_mcp_core import CancelledError
-from dcc_mcp_core import CancelToken
-from dcc_mcp_core import DccMcpCancelledError
-from dcc_mcp_core import JobHandle
-from dcc_mcp_core import check_cancelled
-from dcc_mcp_core import check_dcc_cancelled
-from dcc_mcp_core import current_cancel_token
-from dcc_mcp_core import current_job
-from dcc_mcp_core import current_job_id
-from dcc_mcp_core import reset_cancel_token
-from dcc_mcp_core import reset_current_job
-from dcc_mcp_core import set_cancel_token
-from dcc_mcp_core import set_current_job
+from meshy_dcc_core import CancellationProbe
+from meshy_dcc_core import CancelledError
+from meshy_dcc_core import CancelToken
+from meshy_dcc_core import MeshyDccCancelledError
+from meshy_dcc_core import JobHandle
+from meshy_dcc_core import check_cancelled
+from meshy_dcc_core import check_dcc_cancelled
+from meshy_dcc_core import current_cancel_token
+from meshy_dcc_core import current_job
+from meshy_dcc_core import current_job_id
+from meshy_dcc_core import reset_cancel_token
+from meshy_dcc_core import reset_current_job
+from meshy_dcc_core import set_cancel_token
+from meshy_dcc_core import set_current_job
 
 
 def test_exports_available() -> None:
     """All five public symbols must be importable from the top-level package."""
     # Import local modules
-    import dcc_mcp_core
+    import meshy_dcc_core
 
     for name in (
         "CancelToken",
         "CancelledError",
         "CancellationProbe",
-        "DccMcpCancelledError",
+        "MeshyDccCancelledError",
         "check_cancelled",
         "current_cancel_token",
         "current_job_id",
         "reset_cancel_token",
         "set_cancel_token",
     ):
-        assert hasattr(dcc_mcp_core, name), name
-        assert name in dcc_mcp_core.__all__
+        assert hasattr(meshy_dcc_core, name), name
+        assert name in meshy_dcc_core.__all__
 
 
 def test_no_op_outside_context() -> None:
@@ -65,7 +65,7 @@ def test_raises_when_cancelled() -> None:
         check_cancelled()  # not cancelled yet → no raise
         token.cancel()
         assert token.cancelled is True
-        with pytest.raises(DccMcpCancelledError):
+        with pytest.raises(MeshyDccCancelledError):
             check_cancelled()
     finally:
         reset_cancel_token(reset)
@@ -141,7 +141,7 @@ def test_two_concurrent_contexts_do_not_leak() -> None:
         try:
             check_cancelled()
             return False
-        except DccMcpCancelledError:
+        except MeshyDccCancelledError:
             return True
 
     assert ctx_a.run(_check_raises) is True
@@ -208,14 +208,14 @@ def test_explicit_none_clears_inherited_token() -> None:
 
 def test_cancellation_error_name_and_compatibility_alias() -> None:
     """The canonical name is unambiguous and the old alias remains compatible."""
-    assert DccMcpCancelledError.__name__ == "DccMcpCancelledError"
-    assert CancelledError is DccMcpCancelledError
-    assert issubclass(DccMcpCancelledError, Exception)
+    assert MeshyDccCancelledError.__name__ == "MeshyDccCancelledError"
+    assert CancelledError is MeshyDccCancelledError
+    assert issubclass(MeshyDccCancelledError, Exception)
     # Ensure @skill_entry's `except Exception` branch can catch it.
     try:
-        raise DccMcpCancelledError("x")
+        raise MeshyDccCancelledError("x")
     except Exception as exc:
-        assert isinstance(exc, DccMcpCancelledError)
+        assert isinstance(exc, MeshyDccCancelledError)
 
 
 # ── check_dcc_cancelled / JobHandle (issue #522) ───────────────────────────
@@ -231,7 +231,7 @@ class _FakeJob:
 def test_dcc_exports_available() -> None:
     """The four new per-job symbols must be re-exported from the top level."""
     # Import local modules
-    import dcc_mcp_core
+    import meshy_dcc_core
 
     for name in (
         "JobHandle",
@@ -240,8 +240,8 @@ def test_dcc_exports_available() -> None:
         "set_current_job",
         "reset_current_job",
     ):
-        assert hasattr(dcc_mcp_core, name), name
-        assert name in dcc_mcp_core.__all__
+        assert hasattr(meshy_dcc_core, name), name
+        assert name in meshy_dcc_core.__all__
 
 
 def test_check_dcc_cancelled_no_op_without_either_layer() -> None:
@@ -255,7 +255,7 @@ def test_check_dcc_cancelled_honours_mcp_token() -> None:
     reset_token = set_cancel_token(token)
     try:
         token.cancel()
-        with pytest.raises(DccMcpCancelledError, match="Request cancelled"):
+        with pytest.raises(MeshyDccCancelledError, match="Request cancelled"):
             check_dcc_cancelled()
     finally:
         reset_cancel_token(reset_token)
@@ -268,7 +268,7 @@ def test_check_dcc_cancelled_honours_per_job_handle() -> None:
     try:
         check_dcc_cancelled()  # not yet cancelled → no-op
         job.cancelled = True
-        with pytest.raises(DccMcpCancelledError, match="Job cancelled by dispatcher"):
+        with pytest.raises(MeshyDccCancelledError, match="Job cancelled by dispatcher"):
             check_dcc_cancelled()
     finally:
         reset_current_job(reset)
@@ -286,7 +286,7 @@ def test_check_dcc_cancelled_clears_per_thread() -> None:
             # New OS thread → fresh contextvar copy is empty → no-op.
             try:
                 check_dcc_cancelled()
-            except DccMcpCancelledError:
+            except MeshyDccCancelledError:
                 seen.append(False)
             else:
                 seen.append(True)
@@ -327,7 +327,7 @@ def test_check_dcc_cancelled_token_takes_priority_over_job() -> None:
     reset_t = set_cancel_token(token)
     reset_j = set_current_job(job)
     try:
-        with pytest.raises(DccMcpCancelledError, match="Request cancelled"):
+        with pytest.raises(MeshyDccCancelledError, match="Request cancelled"):
             check_dcc_cancelled()
     finally:
         reset_current_job(reset_j)

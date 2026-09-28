@@ -18,11 +18,11 @@ from __future__ import annotations
 
 import pytest
 
-from dcc_mcp_core import ToolResult
-from dcc_mcp_core import error_result
-from dcc_mcp_core import from_exception
-from dcc_mcp_core import success_result
-from dcc_mcp_core import validate_action_result
+from meshy_dcc_core import ToolResult
+from meshy_dcc_core import error_result
+from meshy_dcc_core import from_exception
+from meshy_dcc_core import success_result
+from meshy_dcc_core import validate_action_result
 
 # ---------------------------------------------------------------------------
 # success_result()

@@ -9,11 +9,11 @@ import urllib.request
 
 import pytest
 
-from dcc_mcp_core import McpHttpConfig
-from dcc_mcp_core import McpHttpServer
-from dcc_mcp_core import ToolRegistry
+from meshy_dcc_core import McpHttpConfig
+from meshy_dcc_core import McpHttpServer
+from meshy_dcc_core import ToolRegistry
 
-_FIXTURE = Path(__file__).resolve().parents[1] / "crates/dcc-mcp-jsonrpc/tests/fixtures/modern_request_cases.json"
+_FIXTURE = Path(__file__).resolve().parents[1] / "crates/meshy-dcc-jsonrpc/tests/fixtures/modern_request_cases.json"
 _CASES = [case for case in json.loads(_FIXTURE.read_text(encoding="utf-8")) if case.get("route") != "legacy"]
 
 

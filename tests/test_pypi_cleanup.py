@@ -22,7 +22,7 @@ def project_payload() -> dict:
         "releases": {
             "0.19.3": [
                 {
-                    "filename": "dcc_mcp_core-0.19.3.tar.gz",
+                    "filename": "meshy_dcc_core-0.19.3.tar.gz",
                     "size": 11,
                     "url": "https://files.pythonhosted.org/0.19.3.tar.gz",
                     "digests": {"sha256": "a" * 64},
@@ -30,7 +30,7 @@ def project_payload() -> dict:
             ],
             "0.19.4": [
                 {
-                    "filename": "dcc_mcp_core-0.19.4.tar.gz",
+                    "filename": "meshy_dcc_core-0.19.4.tar.gz",
                     "size": 13,
                     "url": "https://files.pythonhosted.org/0.19.4.tar.gz",
                     "digests": {"sha256": "b" * 64},
@@ -38,7 +38,7 @@ def project_payload() -> dict:
             ],
             "0.19.45": [
                 {
-                    "filename": "dcc_mcp_core-0.19.45.tar.gz",
+                    "filename": "meshy_dcc_core-0.19.45.tar.gz",
                     "size": 17,
                     "url": "https://files.pythonhosted.org/0.19.45.tar.gz",
                     "digests": {"sha256": "c" * 64},
@@ -46,7 +46,7 @@ def project_payload() -> dict:
             ],
             "0.19.89": [
                 {
-                    "filename": "dcc_mcp_core-0.19.89.tar.gz",
+                    "filename": "meshy_dcc_core-0.19.89.tar.gz",
                     "size": 19,
                     "url": "https://files.pythonhosted.org/0.19.89.tar.gz",
                     "digests": {"sha256": "d" * 64},
@@ -54,7 +54,7 @@ def project_payload() -> dict:
             ],
             "0.19.90": [
                 {
-                    "filename": "dcc_mcp_core-0.19.90.tar.gz",
+                    "filename": "meshy_dcc_core-0.19.90.tar.gz",
                     "size": 23,
                     "url": "https://files.pythonhosted.org/0.19.90.tar.gz",
                     "digests": {"sha256": "e" * 64},
@@ -62,7 +62,7 @@ def project_payload() -> dict:
             ],
             "0.20.7": [
                 {
-                    "filename": "dcc_mcp_core-0.20.7.tar.gz",
+                    "filename": "meshy_dcc_core-0.20.7.tar.gz",
                     "size": 29,
                     "url": "https://files.pythonhosted.org/0.20.7.tar.gz",
                     "digests": {"sha256": "f" * 64},
@@ -77,16 +77,16 @@ def github_release_payload(sha256: str = "d" * 64) -> list[dict]:
     return [
         {
             "tag_name": "v0.19.89",
-            "html_url": "https://github.com/dcc-mcp/dcc-mcp-core/releases/tag/v0.19.89",
+            "html_url": "https://github.com/meshy-dev/meshy-dcc-core/releases/tag/v0.19.89",
             "draft": False,
             "assets": [
                 {
                     "id": 123,
-                    "name": "dcc_mcp_core-0.19.89.tar.gz",
+                    "name": "meshy_dcc_core-0.19.89.tar.gz",
                     "size": 19,
                     "digest": f"sha256:{sha256}",
                     "browser_download_url": (
-                        "https://github.com/dcc-mcp/dcc-mcp-core/releases/download/v0.19.89/dcc_mcp_core-0.19.89.tar.gz"
+                        "https://github.com/meshy-dev/meshy-dcc-core/releases/download/v0.19.89/meshy_dcc_core-0.19.89.tar.gz"
                     ),
                 }
             ],
@@ -95,20 +95,20 @@ def github_release_payload(sha256: str = "d" * 64) -> list[dict]:
 
 
 def test_parse_project_state_preserves_file_evidence() -> None:
-    state = parse_project_state("dcc-mcp-core", project_payload())
+    state = parse_project_state("meshy-dcc-core", project_payload())
     assert state.latest_version == "0.20.7"
     assert state.total_bytes == 112
     release = state.releases["0.19.89"]
     assert release.total_bytes == 19
-    assert release.files[0].filename == "dcc_mcp_core-0.19.89.tar.gz"
+    assert release.files[0].filename == "meshy_dcc_core-0.19.89.tar.gz"
     assert release.files[0].sha256 == "d" * 64
 
 
 def test_parse_project_state_rejects_missing_metadata() -> None:
     with pytest.raises(CleanupError, match="missing release metadata"):
-        parse_project_state("dcc-mcp-core", {"info": {}, "releases": {}})
+        parse_project_state("meshy-dcc-core", {"info": {}, "releases": {}})
     with pytest.raises(CleanupError, match="missing release metadata"):
-        parse_project_state("dcc-mcp-core", [])  # type: ignore[arg-type]
+        parse_project_state("meshy-dcc-core", [])  # type: ignore[arg-type]
 
 
 @pytest.mark.parametrize(
@@ -124,14 +124,14 @@ def test_parse_project_state_rejects_invalid_file_evidence(field: str, value: ob
     payload = project_payload()
     payload["releases"]["0.19.89"][0][field] = value
     with pytest.raises(CleanupError, match="invalid file evidence"):
-        parse_project_state("dcc-mcp-core", payload)
+        parse_project_state("meshy-dcc-core", payload)
 
 
 def test_parse_project_state_rejects_non_object_file_entries() -> None:
     payload = project_payload()
     payload["releases"]["0.19.89"].append("not-an-object")
     with pytest.raises(CleanupError, match="invalid files payload"):
-        parse_project_state("dcc-mcp-core", payload)
+        parse_project_state("meshy-dcc-core", payload)
 
 
 def test_select_versions_delete_below_with_explicit_anchors() -> None:
@@ -167,25 +167,25 @@ def test_version_key_orders_numeric_segments() -> None:
 
 
 def test_build_plan_includes_projected_storage_and_hashes() -> None:
-    state = parse_project_state("dcc-mcp-core", project_payload())
+    state = parse_project_state("meshy-dcc-core", project_payload())
     plan = build_plan(state, ["0.19.89"], {"0.19.3", "0.19.4", "0.19.45"})
     assert plan["selected_release_count"] == 1
     assert plan["generated_at"].endswith("Z")
     assert plan["selected_total_bytes"] == 19
     assert plan["projected_total_bytes"] == 93
     assert plan["selected_releases"][0]["files"][0]["sha256"] == "d" * 64
-    assert plan["management_url"].endswith("/manage/project/dcc-mcp-core/releases/")
+    assert plan["management_url"].endswith("/manage/project/meshy-dcc-core/releases/")
 
 
 def test_main_writes_auditable_manifest(monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys) -> None:
-    state = parse_project_state("dcc-mcp-core", project_payload())
+    state = parse_project_state("meshy-dcc-core", project_payload())
     monkeypatch.setattr(pypi_cleanup, "fetch_project_state", lambda _package: state)
     output = tmp_path / "cleanup-plan.json"
 
     result = pypi_cleanup.main(
         [
             "--package",
-            "dcc-mcp-core",
+            "meshy-dcc-core",
             "--delete-below",
             "0.19.90",
             "--keep-version",
@@ -209,13 +209,13 @@ def test_main_writes_auditable_manifest(monkeypatch: pytest.MonkeyPatch, tmp_pat
 
 
 def test_main_rejects_unknown_keep_anchor(monkeypatch: pytest.MonkeyPatch) -> None:
-    state = parse_project_state("dcc-mcp-core", project_payload())
+    state = parse_project_state("meshy-dcc-core", project_payload())
     monkeypatch.setattr(pypi_cleanup, "fetch_project_state", lambda _package: state)
     with pytest.raises(CleanupError, match="absent from PyPI"):
         pypi_cleanup.main(
             [
                 "--package",
-                "dcc-mcp-core",
+                "meshy-dcc-core",
                 "--delete-below",
                 "0.19.90",
                 "--keep-version",
@@ -225,13 +225,13 @@ def test_main_rejects_unknown_keep_anchor(monkeypatch: pytest.MonkeyPatch) -> No
 
 
 def test_main_checks_expected_count_before_max_delete_cap(monkeypatch: pytest.MonkeyPatch) -> None:
-    state = parse_project_state("dcc-mcp-core", project_payload())
+    state = parse_project_state("meshy-dcc-core", project_payload())
     monkeypatch.setattr(pypi_cleanup, "fetch_project_state", lambda _package: state)
     with pytest.raises(CleanupError, match=r"expected 1 selected release.*found 4"):
         pypi_cleanup.main(
             [
                 "--package",
-                "dcc-mcp-core",
+                "meshy-dcc-core",
                 "--delete-below",
                 "0.19.90",
                 "--max-deletes",
@@ -243,13 +243,13 @@ def test_main_checks_expected_count_before_max_delete_cap(monkeypatch: pytest.Mo
 
 
 def test_main_rejects_delete_cap_that_truncates_expected_scope(monkeypatch: pytest.MonkeyPatch) -> None:
-    state = parse_project_state("dcc-mcp-core", project_payload())
+    state = parse_project_state("meshy-dcc-core", project_payload())
     monkeypatch.setattr(pypi_cleanup, "fetch_project_state", lambda _package: state)
     with pytest.raises(CleanupError, match=r"expected 4 selected release.*delete cap retained 1"):
         pypi_cleanup.main(
             [
                 "--package",
-                "dcc-mcp-core",
+                "meshy-dcc-core",
                 "--delete-below",
                 "0.19.90",
                 "--max-deletes",
@@ -261,13 +261,13 @@ def test_main_rejects_delete_cap_that_truncates_expected_scope(monkeypatch: pyte
 
 
 def test_main_rejects_unexpected_selected_bytes(monkeypatch: pytest.MonkeyPatch) -> None:
-    state = parse_project_state("dcc-mcp-core", project_payload())
+    state = parse_project_state("meshy-dcc-core", project_payload())
     monkeypatch.setattr(pypi_cleanup, "fetch_project_state", lambda _package: state)
     with pytest.raises(CleanupError, match=r"expected 20 selected byte.*found 19"):
         pypi_cleanup.main(
             [
                 "--package",
-                "dcc-mcp-core",
+                "meshy-dcc-core",
                 "--delete-below",
                 "0.19.90",
                 "--keep-version",
@@ -283,7 +283,7 @@ def test_main_rejects_unexpected_selected_bytes(monkeypatch: pytest.MonkeyPatch)
 
 
 def test_main_rejects_github_backup_digest_drift(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    state = parse_project_state("dcc-mcp-core", project_payload())
+    state = parse_project_state("meshy-dcc-core", project_payload())
     monkeypatch.setattr(pypi_cleanup, "fetch_project_state", lambda _package: state)
     monkeypatch.setattr(
         pypi_cleanup,
@@ -297,7 +297,7 @@ def test_main_rejects_github_backup_digest_drift(monkeypatch: pytest.MonkeyPatch
         pypi_cleanup.main(
             [
                 "--package",
-                "dcc-mcp-core",
+                "meshy-dcc-core",
                 "--delete-below",
                 "0.19.90",
                 "--keep-version",
@@ -307,7 +307,7 @@ def test_main_rejects_github_backup_digest_drift(monkeypatch: pytest.MonkeyPatch
                 "--keep-version",
                 "0.19.45",
                 "--github-repository",
-                "dcc-mcp/dcc-mcp-core",
+                "meshy-dev/meshy-dcc-core",
                 "--output-json",
                 str(output),
             ]
@@ -316,7 +316,7 @@ def test_main_rejects_github_backup_digest_drift(monkeypatch: pytest.MonkeyPatch
 
 
 def test_main_records_verified_github_backup_evidence(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    state = parse_project_state("dcc-mcp-core", project_payload())
+    state = parse_project_state("meshy-dcc-core", project_payload())
     monkeypatch.setattr(pypi_cleanup, "fetch_project_state", lambda _package: state)
     monkeypatch.setattr(pypi_cleanup, "fetch_github_releases", lambda _repository: github_release_payload())
     output = tmp_path / "cleanup-plan.json"
@@ -324,7 +324,7 @@ def test_main_records_verified_github_backup_evidence(monkeypatch: pytest.Monkey
     result = pypi_cleanup.main(
         [
             "--package",
-            "dcc-mcp-core",
+            "meshy-dcc-core",
             "--delete-below",
             "0.19.90",
             "--keep-version",
@@ -334,7 +334,7 @@ def test_main_records_verified_github_backup_evidence(monkeypatch: pytest.Monkey
             "--keep-version",
             "0.19.45",
             "--github-repository",
-            "dcc-mcp/dcc-mcp-core",
+            "meshy-dev/meshy-dcc-core",
             "--output-json",
             str(output),
         ]
@@ -352,13 +352,13 @@ def test_main_records_verified_github_backup_evidence(monkeypatch: pytest.Monkey
 
 
 def test_main_refuses_to_select_latest(monkeypatch: pytest.MonkeyPatch) -> None:
-    state = parse_project_state("dcc-mcp-core", project_payload())
+    state = parse_project_state("meshy-dcc-core", project_payload())
     monkeypatch.setattr(pypi_cleanup, "fetch_project_state", lambda _package: state)
     with pytest.raises(CleanupError, match="current latest release"):
         pypi_cleanup.main(
             [
                 "--package",
-                "dcc-mcp-core",
+                "meshy-dcc-core",
                 "--delete-below",
                 "1.0.0",
             ]
@@ -366,13 +366,13 @@ def test_main_refuses_to_select_latest(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_cli_has_no_execute_or_credential_options(monkeypatch: pytest.MonkeyPatch) -> None:
-    state = parse_project_state("dcc-mcp-core", project_payload())
+    state = parse_project_state("meshy-dcc-core", project_payload())
     monkeypatch.setattr(pypi_cleanup, "fetch_project_state", lambda _package: state)
     with pytest.raises(SystemExit) as exc_info:
         pypi_cleanup.main(
             [
                 "--package",
-                "dcc-mcp-core",
+                "meshy-dcc-core",
                 "--delete-below",
                 "0.19.90",
                 "--execute",

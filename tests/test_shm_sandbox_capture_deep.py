@@ -1,7 +1,7 @@
 """Deep tests for PySharedBuffer, PySharedSceneBuffer, PyBufferPool,
 SandboxContext, AuditLog, AuditEntry, InputValidator, Capturer, ScriptResult.
 
-All APIs verified against installed dcc-mcp-core 0.12.12.
+All APIs verified against installed meshy-dcc-core 0.12.12.
 """
 
 from __future__ import annotations
@@ -11,15 +11,15 @@ import json
 
 import pytest
 
-from dcc_mcp_core import Capturer
-from dcc_mcp_core import InputValidator
-from dcc_mcp_core import PyBufferPool
-from dcc_mcp_core import PySceneDataKind
-from dcc_mcp_core import PySharedBuffer
-from dcc_mcp_core import PySharedSceneBuffer
-from dcc_mcp_core import SandboxContext
-from dcc_mcp_core import SandboxPolicy
-from dcc_mcp_core import ScriptResult
+from meshy_dcc_core import Capturer
+from meshy_dcc_core import InputValidator
+from meshy_dcc_core import PyBufferPool
+from meshy_dcc_core import PySceneDataKind
+from meshy_dcc_core import PySharedBuffer
+from meshy_dcc_core import PySharedSceneBuffer
+from meshy_dcc_core import SandboxContext
+from meshy_dcc_core import SandboxPolicy
+from meshy_dcc_core import ScriptResult
 
 # ---------------------------------------------------------------------------
 # Helpers

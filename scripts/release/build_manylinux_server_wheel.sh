@@ -6,12 +6,12 @@ cd "$repo_root"
 
 docker run --rm \
   -v "$PWD:/io" \
-  -e DCC_MCP_ADMIN_UI_PREBUILT=1 \
+  -e MESHY_DCC_ADMIN_UI_PREBUILT=1 \
   -e CARGO_TARGET_DIR=/io/target-manylinux2014 \
-  -w /io/pkg/dcc-mcp-server-bin \
+  -w /io/pkg/meshy-dcc-server-bin \
   ghcr.io/pyo3/maturin:v1.13.3 \
   build --release --manylinux 2014 --out wheels
 
 if command -v sudo >/dev/null 2>&1; then
-  sudo chown -R "$(id -u):$(id -g)" pkg/dcc-mcp-server-bin/wheels
+  sudo chown -R "$(id -u):$(id -g)" pkg/meshy-dcc-server-bin/wheels
 fi

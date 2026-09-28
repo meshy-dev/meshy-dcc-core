@@ -17,12 +17,12 @@ from scripts.ci import prepare_install_catalog as publisher
 
 REVISION = "a" * 40
 RELEASE_COMMIT = "b" * 40
-PACKAGE = "dcc-mcp-maya"
+PACKAGE = "meshy-dcc-maya"
 VERSION = "1.2.3"
-WHEEL_URL = "https://files.pythonhosted.org/packages/example/dcc_mcp_maya-1.2.3-py3-none-any.whl"
-PYPI_URL = "https://pypi.org/pypi/dcc-mcp-maya/1.2.3/json"
-REF_URL = "https://api.github.com/repos/dcc-mcp/dcc-mcp-maya/git/ref/tags/v1.2.3"
-RAW_BASE = "https://raw.githubusercontent.com/dcc-mcp/dcc-mcp-maya/" + RELEASE_COMMIT + "/"
+WHEEL_URL = "https://files.pythonhosted.org/packages/example/meshy_dcc_maya-1.2.3-py3-none-any.whl"
+PYPI_URL = "https://pypi.org/pypi/meshy-dcc-maya/1.2.3/json"
+REF_URL = "https://api.github.com/repos/meshy-dcc/meshy-dcc-maya/git/ref/tags/v1.2.3"
+RAW_BASE = "https://raw.githubusercontent.com/meshy-dev/meshy-dcc-maya/" + RELEASE_COMMIT + "/"
 
 
 class FakeTransport:
@@ -39,10 +39,10 @@ class FakeTransport:
 def _wheel(name=PACKAGE, version=VERSION, requires_python=">=3.7", extra=None, compression=zipfile.ZIP_STORED):
     stream = io.BytesIO()
     with zipfile.ZipFile(stream, "w", compression=compression) as archive:
-        archive.writestr("dcc_mcp_maya/__init__.py", "raise RuntimeError('must never execute')\n")
-        archive.writestr("dcc_mcp_maya/cli.py", "def main(): pass\n")
+        archive.writestr("meshy_dcc_maya/__init__.py", "raise RuntimeError('must never execute')\n")
+        archive.writestr("meshy_dcc_maya/cli.py", "def main(): pass\n")
         archive.writestr(
-            "dcc_mcp_maya-1.2.3.dist-info/METADATA",
+            "meshy_dcc_maya-1.2.3.dist-info/METADATA",
             f"Metadata-Version: 2.1\nName: {name}\nVersion: {version}\nRequires-Python: {requires_python}\n\n",
         )
         for member, data in (extra or {}).items():
@@ -62,15 +62,15 @@ def _fixture(data=None):
                 "dcc": ["maya"],
                 "tags": ["adapter", "official"],
                 "version": VERSION,
-                "url": "https://github.com/dcc-mcp/dcc-mcp-maya",
+                "url": "https://github.com/meshy-dev/meshy-dcc-maya",
                 "min_core_version": "0.20.0",
                 "install": {
                     "type": "pip",
                     "pip_package": PACKAGE,
                     "url": WHEEL_URL,
                     "sha256": digest,
-                    "entry_point": "dcc_mcp_maya.cli:main",
-                    "instructions_url": "https://raw.githubusercontent.com/dcc-mcp/dcc-mcp-maya/main/README.md",
+                    "entry_point": "meshy_dcc_maya.cli:main",
+                    "instructions_url": "https://raw.githubusercontent.com/meshy-dev/meshy-dcc-maya/main/README.md",
                 },
             }
         ],
@@ -207,7 +207,7 @@ def test_annotated_release_tag_and_pinned_document_fallback():
     document, transport, _ = _fixture()
     annotated_sha = "c" * 40
     transport.responses[REF_URL] = json.dumps({"object": {"type": "tag", "sha": annotated_sha}}).encode()
-    transport.responses["https://api.github.com/repos/dcc-mcp/dcc-mcp-maya/git/tags/" + annotated_sha] = json.dumps(
+    transport.responses["https://api.github.com/repos/meshy-dcc/meshy-dcc-maya/git/tags/" + annotated_sha] = json.dumps(
         {"object": {"type": "commit", "sha": RELEASE_COMMIT}}
     ).encode()
     transport.responses[RAW_BASE + "install.md"] = None
@@ -271,7 +271,7 @@ def test_crc_failure_is_detected_even_when_catalog_and_pypi_hash_match_corrupt_b
 
 def test_declared_entry_point_must_exist_in_wheel_without_execution():
     document, transport, _ = _fixture()
-    document["entries"][0]["install"]["entry_point"] = "dcc_mcp_maya.missing:main"
+    document["entries"][0]["install"]["entry_point"] = "meshy_dcc_maya.missing:main"
     with pytest.raises(publisher.CatalogPreparationError, match="entry-point module"):
         _prepare(document, transport)
 
@@ -327,8 +327,8 @@ def test_zip_sources_preserve_checksum_and_are_validated():
 def test_pinned_git_source_resolves_exact_commit_and_keeps_pin():
     document, transport, _ = _fixture()
     install = document["entries"][0]["install"]
-    install.update(type="git", url="https://github.com/dcc-mcp/dcc-mcp-maya.git", ref=RELEASE_COMMIT)
-    transport.responses["https://api.github.com/repos/dcc-mcp/dcc-mcp-maya/git/commits/" + RELEASE_COMMIT] = json.dumps(
+    install.update(type="git", url="https://github.com/meshy-dev/meshy-dcc-maya.git", ref=RELEASE_COMMIT)
+    transport.responses["https://api.github.com/repos/meshy-dcc/meshy-dcc-maya/git/commits/" + RELEASE_COMMIT] = json.dumps(
         {"sha": RELEASE_COMMIT}
     ).encode()
     assert _prepare(document, transport)["entries"][0]["install"]["ref"] == RELEASE_COMMIT
@@ -370,8 +370,8 @@ def test_payload_bytes_are_deterministic_and_contain_no_signature_claim(tmp_path
     [
         "http://files.pythonhosted.org/file.whl",
         "https://evil.example/file.whl",
-        "https://token@api.github.com/repos/dcc-mcp/test",
-        "https://api.github.com:8443/repos/dcc-mcp/test",
+        "https://token@api.github.com/repos/meshy-dcc/test",
+        "https://api.github.com:8443/repos/meshy-dcc/test",
     ],
 )
 def test_transport_rejects_untrusted_urls_without_network(url):
@@ -421,7 +421,7 @@ def _with_yanked_obs(document, transport, pypi):
     document["entries"].append(broken)
     yanked = json.loads(json.dumps(pypi).replace("maya", "obs"))
     yanked["urls"][0]["yanked"] = True
-    transport.responses["https://pypi.org/pypi/dcc-mcp-obs/1.2.3/json"] = json.dumps(yanked).encode()
+    transport.responses["https://pypi.org/pypi/meshy-dcc-obs/1.2.3/json"] = json.dumps(yanked).encode()
     return broken
 
 
@@ -475,10 +475,10 @@ def test_archive_and_stream_failures_cannot_block_healthy_entries_or_revocation(
     data[offset] = 7  # A reserved DEFLATE block type with an otherwise valid ZIP directory.
     broken_url = "https://files.pythonhosted.org/packages/example/broken.zip"
     broken = copy.deepcopy(document["entries"][0])
-    broken.update(name="dcc-mcp-blender", dcc=["blender"])
+    broken.update(name="meshy-dcc-blender", dcc=["blender"])
     broken["install"] = {"type": "zip", "url": broken_url, "sha256": hashlib.sha256(data).hexdigest()}
     revoked = copy.deepcopy(document["entries"][0])
-    revoked.update(name="dcc-mcp-obs", dcc=["obs"], policy={"installation": "not_available"})
+    revoked.update(name="meshy-dcc-obs", dcc=["obs"], policy={"installation": "not_available"})
     document["entries"].extend([broken, revoked])
     fixture_transport.responses[broken_url] = bytes(data)
 

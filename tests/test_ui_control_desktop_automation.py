@@ -18,17 +18,17 @@ from typing import Any
 import pytest
 
 from conftest import REPO_ROOT
-from dcc_mcp_core.adapter_contracts import UiActionKind
-from dcc_mcp_core.adapter_contracts import UiControlPolicy
+from meshy_dcc_core.adapter_contracts import UiActionKind
+from meshy_dcc_core.adapter_contracts import UiControlPolicy
 
 # The ui-control skill directory contains a hyphen, which prevents standard
 # Python imports.  Use importlib to load the script modules by file path.
-_SCRIPTS_DIR = REPO_ROOT / "python" / "dcc_mcp_core" / "skills" / "ui-control" / "scripts"
+_SCRIPTS_DIR = REPO_ROOT / "python" / "meshy_dcc_core" / "skills" / "ui-control" / "scripts"
 
 
 def _load_backend() -> Any:
     """Dynamically load _backend.py."""
-    module_name = "dcc_mcp_core_ui_control_backend"
+    module_name = "meshy_dcc_core_ui_control_backend"
     spec = importlib.util.spec_from_file_location(
         module_name,
         _SCRIPTS_DIR / "_backend.py",
@@ -42,7 +42,7 @@ def _load_backend() -> Any:
 
 def _load_scenario() -> Any:
     """Dynamically load _scenario.py."""
-    module_name = "dcc_mcp_core_ui_control_scenario"
+    module_name = "meshy_dcc_core_ui_control_scenario"
     spec = importlib.util.spec_from_file_location(
         module_name,
         _SCRIPTS_DIR / "_scenario.py",
@@ -81,7 +81,7 @@ _JUSTFILE = REPO_ROOT / "justfile"
 
 
 class _MockState:
-    """Context manager that sets DCC_MCP_UI_CONTROL_MOCK_STATE_DIR for the
+    """Context manager that sets MESHY_DCC_UI_CONTROL_MOCK_STATE_DIR for the
     duration of the block and cleans it up on exit.
 
     Usage::
@@ -94,17 +94,17 @@ class _MockState:
     def __init__(self, state_dir: Path):
         self._state_dir = state_dir
         self._state_dir.mkdir(parents=True, exist_ok=True)
-        self._old = os.environ.get("DCC_MCP_UI_CONTROL_MOCK_STATE_DIR")
+        self._old = os.environ.get("MESHY_DCC_UI_CONTROL_MOCK_STATE_DIR")
 
     def __enter__(self) -> Path:
-        os.environ["DCC_MCP_UI_CONTROL_MOCK_STATE_DIR"] = str(self._state_dir)
+        os.environ["MESHY_DCC_UI_CONTROL_MOCK_STATE_DIR"] = str(self._state_dir)
         return self._state_dir
 
     def __exit__(self, *args: Any) -> None:
         if self._old is None:
-            os.environ.pop("DCC_MCP_UI_CONTROL_MOCK_STATE_DIR", None)
+            os.environ.pop("MESHY_DCC_UI_CONTROL_MOCK_STATE_DIR", None)
         else:
-            os.environ["DCC_MCP_UI_CONTROL_MOCK_STATE_DIR"] = self._old
+            os.environ["MESHY_DCC_UI_CONTROL_MOCK_STATE_DIR"] = self._old
 
 
 def _setup_state(state_dir: Path, session_id: str, **overrides: Any) -> None:
@@ -122,10 +122,10 @@ def _run_tool(
     extra_env: dict[str, str] | None = None,
 ) -> dict[str, Any]:
     """Run a ui-control tool subprocess against the mock backend."""
-    scripts = REPO_ROOT / "python" / "dcc_mcp_core" / "skills" / "ui-control" / "scripts"
+    scripts = REPO_ROOT / "python" / "meshy_dcc_core" / "skills" / "ui-control" / "scripts"
     env = dict(os.environ)
-    env["DCC_MCP_UI_CONTROL_BACKEND"] = "mock"
-    env["DCC_MCP_UI_CONTROL_MOCK_STATE_DIR"] = str(state_dir)
+    env["MESHY_DCC_UI_CONTROL_BACKEND"] = "mock"
+    env["MESHY_DCC_UI_CONTROL_MOCK_STATE_DIR"] = str(state_dir)
     if extra_env:
         env.update(extra_env)
     python_path = str(REPO_ROOT / "python")
@@ -810,7 +810,7 @@ class TestCiIntegration:
         """No test in this module sets the backend to windows-uia or chrome."""
         source = Path(__file__).read_text(encoding="utf-8")
         # Verify no subprocess test sets the backend to a real desktop backend
-        lines_with_backend = [line for line in source.splitlines() if "DCC_MCP_UI_CONTROL_BACKEND" in line]
+        lines_with_backend = [line for line in source.splitlines() if "MESHY_DCC_UI_CONTROL_BACKEND" in line]
         for line in lines_with_backend:
             assert "windows-uia" not in line, f"Found windows-uia backend: {line.strip()}"
             assert "chrome" not in line, f"Found chrome backend: {line.strip()}"

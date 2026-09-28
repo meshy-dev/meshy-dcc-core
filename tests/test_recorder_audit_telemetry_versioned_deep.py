@@ -11,16 +11,16 @@ import time
 
 import pytest
 
-import dcc_mcp_core
-from dcc_mcp_core import SandboxContext
-from dcc_mcp_core import SandboxPolicy
-from dcc_mcp_core import SemVer
-from dcc_mcp_core import TelemetryConfig
-from dcc_mcp_core import ToolRecorder
-from dcc_mcp_core import VersionConstraint
-from dcc_mcp_core import VersionedRegistry
-from dcc_mcp_core import is_telemetry_initialized
-from dcc_mcp_core import shutdown_telemetry
+import meshy_dcc_core
+from meshy_dcc_core import SandboxContext
+from meshy_dcc_core import SandboxPolicy
+from meshy_dcc_core import SemVer
+from meshy_dcc_core import TelemetryConfig
+from meshy_dcc_core import ToolRecorder
+from meshy_dcc_core import VersionConstraint
+from meshy_dcc_core import VersionedRegistry
+from meshy_dcc_core import is_telemetry_initialized
+from meshy_dcc_core import shutdown_telemetry
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

@@ -23,18 +23,18 @@ import json
 # Import third-party modules
 import pytest
 
-from dcc_mcp_core import McpHttpConfig
-from dcc_mcp_core import McpHttpServer
-from dcc_mcp_core import McpServerHandle
-from dcc_mcp_core import SemVer
+from meshy_dcc_core import McpHttpConfig
+from meshy_dcc_core import McpHttpServer
+from meshy_dcc_core import McpServerHandle
+from meshy_dcc_core import SemVer
 
 # Import local modules
-from dcc_mcp_core import ToolDispatcher
-from dcc_mcp_core import ToolPipeline
-from dcc_mcp_core import ToolRegistry
-from dcc_mcp_core import UsdStage
-from dcc_mcp_core import VersionConstraint
-from dcc_mcp_core import VtValue
+from meshy_dcc_core import ToolDispatcher
+from meshy_dcc_core import ToolPipeline
+from meshy_dcc_core import ToolRegistry
+from meshy_dcc_core import UsdStage
+from meshy_dcc_core import VersionConstraint
+from meshy_dcc_core import VtValue
 
 # ── fixtures ──────────────────────────────────────────────────────────────────
 

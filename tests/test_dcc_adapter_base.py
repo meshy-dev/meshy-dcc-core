@@ -49,10 +49,10 @@ def _make_mock_server(is_running: bool = False, is_gateway: bool = False):
 
 
 class TestDccSkillHotReloader:
-    """Tests for dcc_mcp_core.hotreload.DccSkillHotReloader."""
+    """Tests for meshy_dcc_core.hotreload.DccSkillHotReloader."""
 
     def _make_reloader(self, dcc_name: str = "test-dcc"):
-        from dcc_mcp_core.hotreload import DccSkillHotReloader
+        from meshy_dcc_core.hotreload import DccSkillHotReloader
 
         return DccSkillHotReloader(dcc_name=dcc_name, server=_make_mock_server())
 
@@ -95,7 +95,7 @@ class TestDccSkillHotReloader:
     def test_enable_with_mock_watcher(self, tmp_path):
         """When SkillWatcher is available, enable() should succeed."""
         reloader = self._make_reloader()
-        with patch("dcc_mcp_core.hotreload.DccSkillHotReloader.enable", return_value=True) as mock_enable:
+        with patch("meshy_dcc_core.hotreload.DccSkillHotReloader.enable", return_value=True) as mock_enable:
             reloader.enable(skill_paths=[str(tmp_path)])
             # We mocked enable, so just check it was called
             mock_enable.assert_called_once()
@@ -107,10 +107,10 @@ class TestDccSkillHotReloader:
 
 
 class TestDccGatewayElection:
-    """Tests for dcc_mcp_core.gateway_election.DccGatewayElection."""
+    """Tests for meshy_dcc_core.gateway_election.DccGatewayElection."""
 
     def _make_election(self, server=None, gateway_port: int = 19876):
-        from dcc_mcp_core.gateway_election import DccGatewayElection
+        from meshy_dcc_core.gateway_election import DccGatewayElection
 
         if server is None:
             server = _make_mock_server()
@@ -263,7 +263,7 @@ class TestDccGatewayElection:
 
     def test_on_promote_kwarg_is_stored(self):
         """on_promote passed via __init__ is stored and used."""
-        from dcc_mcp_core.gateway_election import DccGatewayElection
+        from meshy_dcc_core.gateway_election import DccGatewayElection
 
         cb = MagicMock(return_value=True)
         election = DccGatewayElection(
@@ -391,7 +391,7 @@ class _FakeConfig:
 
 
 class TestDccServerBase:
-    """Tests for dcc_mcp_core.server_base.DccServerBase."""
+    """Tests for meshy_dcc_core.server_base.DccServerBase."""
 
     def _make_server(self, tmp_path, dcc_name="fake-dcc"):
         """Create a DccServerBase without calling the real __init__ (no Rust deps)."""
@@ -437,7 +437,7 @@ class TestDccServerBase:
     def test_start_logs_server_version(self, tmp_path, caplog):
         server = self._make_server(tmp_path)
 
-        with caplog.at_level(logging.INFO, logger="dcc_mcp_core._server.lifecycle_controller"):
+        with caplog.at_level(logging.INFO, logger="meshy_dcc_core._server.lifecycle_controller"):
             server.start()
 
         assert "[fake-dcc] MCP server v0.1.0 started at http://127.0.0.1:18765/mcp" in caplog.text
@@ -495,9 +495,9 @@ class TestDccServerBase:
         failure_site,
         auxiliary_error_type,
     ):
-        from dcc_mcp_core.feedback import FeedbackStore
-        from dcc_mcp_core.host_errors import _HostErrorCapture
-        from dcc_mcp_core.schemas.finding import FindingRuntimeContext
+        from meshy_dcc_core.feedback import FeedbackStore
+        from meshy_dcc_core.host_errors import _HostErrorCapture
+        from meshy_dcc_core.schemas.finding import FindingRuntimeContext
 
         class _UnprintableStartupError(RuntimeError):
             def __str__(self):
@@ -509,12 +509,12 @@ class TestDccServerBase:
 
         context = FindingRuntimeContext(
             dcc_type="photoshop",
-            adapter="dcc-mcp-photoshop",
+            adapter="meshy-dcc-photoshop",
             adapter_version="0.4.0",
             core_version="0.20.15",
             host_version="26.4.1",
             os="win32",
-            owning_repo="dcc-mcp/dcc-mcp-photoshop",
+            owning_repo="meshy-dev/meshy-dcc-photoshop",
         )
         store = FeedbackStore(path=tmp_path / "feedback.jsonl")
 
@@ -570,13 +570,13 @@ class TestDccServerBase:
             assert len(store.recent()) == 1
 
     def test_host_error_capture_wires_startup_finding_context_and_store(self, tmp_path):
-        from dcc_mcp_core.feedback import FeedbackStore
+        from meshy_dcc_core.feedback import FeedbackStore
 
         server = self._make_server(tmp_path, dcc_name="photoshop")
         server._feedback_store = FeedbackStore(path=tmp_path / "feedback.jsonl")
         server._log_dir = str(tmp_path)
         server._options = SimpleNamespace(
-            server_name="dcc-mcp-photoshop",
+            server_name="meshy-dcc-photoshop",
             server_version="0.4.0",
             sidecar=SimpleNamespace(display_name=None, adapter_version="0.4.0"),
         )
@@ -594,7 +594,7 @@ class TestDccServerBase:
         )
 
         [finding] = server.feedback_store.recent()
-        assert finding["adapter"] == "dcc-mcp-photoshop"
+        assert finding["adapter"] == "meshy-dcc-photoshop"
         assert finding["adapter_version"] == "0.4.0"
         assert finding["host_version"] == "26.4.1"
         assert finding["core_version"] == "0.20.15"
@@ -670,7 +670,7 @@ class TestDccServerBase:
     def test_start_installs_weak_atexit_hook(self, tmp_path, monkeypatch):
         import atexit as atexit_module
 
-        from dcc_mcp_core._server.lifecycle_controller import LifecycleController
+        from meshy_dcc_core._server.lifecycle_controller import LifecycleController
 
         server = self._make_server(tmp_path)
         registrations = []
@@ -685,16 +685,16 @@ class TestDccServerBase:
 
     def test_init_registers_builtin_skills(self, tmp_path, monkeypatch):
         """Verify that __init__ calls register_all_builtin_skills."""
-        from dcc_mcp_core._server.options import DccServerOptions
-        from dcc_mcp_core.server_base import DccServerBase
+        from meshy_dcc_core._server.options import DccServerOptions
+        from meshy_dcc_core.server_base import DccServerBase
 
         calls = []
 
         def mock_register(*args, **kwargs):
             calls.append((args, kwargs))
 
-        monkeypatch.setattr("dcc_mcp_core._server.skill_discovery.register_all_builtin_skills", mock_register)
-        monkeypatch.setattr("dcc_mcp_core.server_base.create_adapter_server", MagicMock())
+        monkeypatch.setattr("meshy_dcc_core._server.skill_discovery.register_all_builtin_skills", mock_register)
+        monkeypatch.setattr("meshy_dcc_core.server_base.create_adapter_server", MagicMock())
 
         opts = DccServerOptions.from_env("maya", tmp_path, port=0, gateway_port=19765)
         _ = DccServerBase(opts)
@@ -723,9 +723,9 @@ class TestDccServerBase:
             def stop(self):
                 pass
 
-        monkeypatch.setattr("dcc_mcp_core._server.runtime.DccGatewayElection", _FakeElection)
+        monkeypatch.setattr("meshy_dcc_core._server.runtime.DccGatewayElection", _FakeElection)
         monkeypatch.setattr(
-            "dcc_mcp_core._server.runtime.ensure_gateway_daemon",
+            "meshy_dcc_core._server.runtime.ensure_gateway_daemon",
             lambda **_kwargs: {"ok": False, "reason": "spawn_failed"},
         )
 
@@ -751,9 +751,9 @@ class TestDccServerBase:
             def stop(self):
                 pass
 
-        monkeypatch.setattr("dcc_mcp_core._server.runtime.DccGatewayElection", _FakeElection)
+        monkeypatch.setattr("meshy_dcc_core._server.runtime.DccGatewayElection", _FakeElection)
         monkeypatch.setattr(
-            "dcc_mcp_core._server.runtime.ensure_gateway_daemon",
+            "meshy_dcc_core._server.runtime.ensure_gateway_daemon",
             lambda **_kwargs: {"ok": True, "reason": "already_healthy"},
         )
 
@@ -775,7 +775,7 @@ class TestDccServerBase:
             def status(self):
                 return {"ok": True, "reason": "guardian_started"}
 
-        monkeypatch.setattr("dcc_mcp_core._server.runtime.GatewayDaemonGuardian", _FakeGuardian)
+        monkeypatch.setattr("meshy_dcc_core._server.runtime.GatewayDaemonGuardian", _FakeGuardian)
 
         server.start()
 
@@ -813,7 +813,7 @@ class TestDccServerBase:
             def start(self):
                 raise RuntimeError("boom")
 
-        monkeypatch.setattr("dcc_mcp_core._server.runtime.DccGatewayElection", _BrokenElection)
+        monkeypatch.setattr("meshy_dcc_core._server.runtime.DccGatewayElection", _BrokenElection)
 
         server.start()
 
@@ -923,12 +923,12 @@ class TestDccServerBase:
         """Patch skill-path helpers to return empty / None values.
 
         server_base.py imports these helpers at module import time, so patch
-        the symbols on ``dcc_mcp_core.server_base``.
+        the symbols on ``meshy_dcc_core.server_base``.
         """
-        with patch("dcc_mcp_core._server.skill_discovery.get_app_skill_paths_from_env", return_value=[]), patch(
-            "dcc_mcp_core._server.skill_discovery.get_skill_paths_from_env", return_value=[]
-        ), patch("dcc_mcp_core._server.skill_discovery.get_local_skills_dir", return_value=None), patch(
-            "dcc_mcp_core._server.skill_discovery.get_skills_dir", return_value=None
+        with patch("meshy_dcc_core._server.skill_discovery.get_app_skill_paths_from_env", return_value=[]), patch(
+            "meshy_dcc_core._server.skill_discovery.get_skill_paths_from_env", return_value=[]
+        ), patch("meshy_dcc_core._server.skill_discovery.get_local_skills_dir", return_value=None), patch(
+            "meshy_dcc_core._server.skill_discovery.get_skills_dir", return_value=None
         ):
             yield
 
@@ -975,13 +975,13 @@ class TestDccServerBase:
         assert nonexistent in paths
 
     def test_collect_skill_search_paths_includes_local_default(self, tmp_path, monkeypatch):
-        monkeypatch.delenv("DCC_MCP_DISABLE_DEFAULT_SKILL_PATHS", raising=False)
+        monkeypatch.delenv("MESHY_DCC_DISABLE_DEFAULT_SKILL_PATHS", raising=False)
         server = self._make_server(tmp_path)
-        local_default = tmp_path / ".dcc-mcp" / "fake-dcc" / "skills"
-        with patch("dcc_mcp_core._server.skill_discovery.get_app_skill_paths_from_env", return_value=[]), patch(
-            "dcc_mcp_core._server.skill_discovery.get_skill_paths_from_env", return_value=[]
-        ), patch("dcc_mcp_core._server.skill_discovery.get_local_skills_dir", return_value=str(local_default)), patch(
-            "dcc_mcp_core._server.skill_discovery.get_skills_dir", return_value=None
+        local_default = tmp_path / ".meshy-dcc" / "fake-dcc" / "skills"
+        with patch("meshy_dcc_core._server.skill_discovery.get_app_skill_paths_from_env", return_value=[]), patch(
+            "meshy_dcc_core._server.skill_discovery.get_skill_paths_from_env", return_value=[]
+        ), patch("meshy_dcc_core._server.skill_discovery.get_local_skills_dir", return_value=str(local_default)), patch(
+            "meshy_dcc_core._server.skill_discovery.get_skills_dir", return_value=None
         ):
             paths = server.collect_skill_search_paths(include_bundled=False, filter_existing=True)
 
@@ -989,11 +989,11 @@ class TestDccServerBase:
         assert local_default.is_dir()
 
     def test_collect_skill_search_paths_includes_marketplace_root(self, tmp_path, monkeypatch):
-        monkeypatch.delenv("DCC_MCP_DISABLE_DEFAULT_SKILL_PATHS", raising=False)
+        monkeypatch.delenv("MESHY_DCC_DISABLE_DEFAULT_SKILL_PATHS", raising=False)
         server = self._make_server(tmp_path)
         marketplace_dcc_dir = tmp_path / "marketplace" / "fake-dcc"
         marketplace_dcc_dir.mkdir(parents=True)
-        monkeypatch.setenv("DCC_MCP_MARKETPLACE_INSTALL_ROOT", str(tmp_path / "marketplace"))
+        monkeypatch.setenv("MESHY_DCC_MARKETPLACE_INSTALL_ROOT", str(tmp_path / "marketplace"))
 
         paths = server.collect_skill_search_paths(include_bundled=False, filter_existing=True)
 
@@ -1001,13 +1001,13 @@ class TestDccServerBase:
 
     def test_collect_skill_search_paths_includes_host_neutral_marketplace_dir(self, tmp_path, monkeypatch):
         """Host-neutral entries install into ``<marketplace_root>/any`` and must be discoverable."""
-        monkeypatch.delenv("DCC_MCP_DISABLE_DEFAULT_SKILL_PATHS", raising=False)
+        monkeypatch.delenv("MESHY_DCC_DISABLE_DEFAULT_SKILL_PATHS", raising=False)
         server = self._make_server(tmp_path)
         marketplace_root = tmp_path / "marketplace"
         host_neutral_dir = marketplace_root / "any"
         host_neutral_dir.mkdir(parents=True)
-        (host_neutral_dir / "dcc-mcp-cache-inspector").mkdir()
-        monkeypatch.setenv("DCC_MCP_MARKETPLACE_INSTALL_ROOT", str(marketplace_root))
+        (host_neutral_dir / "meshy-dcc-cache-inspector").mkdir()
+        monkeypatch.setenv("MESHY_DCC_MARKETPLACE_INSTALL_ROOT", str(marketplace_root))
 
         paths = server.collect_skill_search_paths(include_bundled=False, filter_existing=True)
 
@@ -1015,11 +1015,11 @@ class TestDccServerBase:
 
     def test_collect_skill_search_paths_omits_absent_host_neutral_marketplace_dir(self, tmp_path, monkeypatch):
         """``<marketplace_root>/any`` is not added when it does not exist."""
-        monkeypatch.delenv("DCC_MCP_DISABLE_DEFAULT_SKILL_PATHS", raising=False)
+        monkeypatch.delenv("MESHY_DCC_DISABLE_DEFAULT_SKILL_PATHS", raising=False)
         server = self._make_server(tmp_path)
         marketplace_root = tmp_path / "marketplace"
         marketplace_root.mkdir(parents=True)
-        monkeypatch.setenv("DCC_MCP_MARKETPLACE_INSTALL_ROOT", str(marketplace_root))
+        monkeypatch.setenv("MESHY_DCC_MARKETPLACE_INSTALL_ROOT", str(marketplace_root))
 
         paths = server.collect_skill_search_paths(include_bundled=False, filter_existing=True)
 
@@ -1027,14 +1027,14 @@ class TestDccServerBase:
 
     def test_collect_skill_search_paths_prefers_host_specific_marketplace_dir(self, tmp_path, monkeypatch):
         """Host-specific marketplace skills keep priority over host-neutral ones."""
-        monkeypatch.delenv("DCC_MCP_DISABLE_DEFAULT_SKILL_PATHS", raising=False)
+        monkeypatch.delenv("MESHY_DCC_DISABLE_DEFAULT_SKILL_PATHS", raising=False)
         server = self._make_server(tmp_path)
         marketplace_root = tmp_path / "marketplace"
         host_dir = marketplace_root / "fake-dcc"
         host_neutral_dir = marketplace_root / "any"
         host_dir.mkdir(parents=True)
         host_neutral_dir.mkdir(parents=True)
-        monkeypatch.setenv("DCC_MCP_MARKETPLACE_INSTALL_ROOT", str(marketplace_root))
+        monkeypatch.setenv("MESHY_DCC_MARKETPLACE_INSTALL_ROOT", str(marketplace_root))
 
         paths = server.collect_skill_search_paths(include_bundled=False, filter_existing=True)
 
@@ -1044,25 +1044,25 @@ class TestDccServerBase:
 
     def test_collect_skill_search_paths_host_neutral_dir_deduplicated_for_any_host(self, tmp_path, monkeypatch):
         """A host literally named ``any`` must not register the same directory twice."""
-        monkeypatch.delenv("DCC_MCP_DISABLE_DEFAULT_SKILL_PATHS", raising=False)
+        monkeypatch.delenv("MESHY_DCC_DISABLE_DEFAULT_SKILL_PATHS", raising=False)
         server = self._make_server(tmp_path, dcc_name="any")
         marketplace_root = tmp_path / "marketplace"
         host_neutral_dir = marketplace_root / "any"
         host_neutral_dir.mkdir(parents=True)
-        monkeypatch.setenv("DCC_MCP_MARKETPLACE_INSTALL_ROOT", str(marketplace_root))
+        monkeypatch.setenv("MESHY_DCC_MARKETPLACE_INSTALL_ROOT", str(marketplace_root))
 
         paths = server.collect_skill_search_paths(include_bundled=False, filter_existing=True)
 
         assert paths.count(str(host_neutral_dir)) == 1
 
     def test_collect_skill_search_paths_hermetic_mode_excludes_host_neutral_dir(self, tmp_path, monkeypatch):
-        """``DCC_MCP_DISABLE_DEFAULT_SKILL_PATHS=1`` also hides the host-neutral directory."""
+        """``MESHY_DCC_DISABLE_DEFAULT_SKILL_PATHS=1`` also hides the host-neutral directory."""
         server = self._make_server(tmp_path)
         marketplace_root = tmp_path / "marketplace"
         host_neutral_dir = marketplace_root / "any"
         host_neutral_dir.mkdir(parents=True)
-        monkeypatch.setenv("DCC_MCP_DISABLE_DEFAULT_SKILL_PATHS", "1")
-        monkeypatch.setenv("DCC_MCP_MARKETPLACE_INSTALL_ROOT", str(marketplace_root))
+        monkeypatch.setenv("MESHY_DCC_DISABLE_DEFAULT_SKILL_PATHS", "1")
+        monkeypatch.setenv("MESHY_DCC_MARKETPLACE_INSTALL_ROOT", str(marketplace_root))
 
         paths = server.collect_skill_search_paths(include_bundled=False, filter_existing=True)
 
@@ -1079,36 +1079,36 @@ class TestDccServerBase:
         for path in (explicit, env_root, local, platform, marketplace, admin):
             path.mkdir(parents=True)
 
-        monkeypatch.setenv("DCC_MCP_DISABLE_DEFAULT_SKILL_PATHS", "1")
-        monkeypatch.setenv("DCC_MCP_MARKETPLACE_INSTALL_ROOT", str(tmp_path / "marketplace"))
+        monkeypatch.setenv("MESHY_DCC_DISABLE_DEFAULT_SKILL_PATHS", "1")
+        monkeypatch.setenv("MESHY_DCC_MARKETPLACE_INSTALL_ROOT", str(tmp_path / "marketplace"))
         with ExitStack() as stack:
             stack.enter_context(
                 patch(
-                    "dcc_mcp_core._server.skill_discovery.get_app_skill_paths_from_env",
+                    "meshy_dcc_core._server.skill_discovery.get_app_skill_paths_from_env",
                     return_value=[str(env_root)],
                 )
             )
             stack.enter_context(
                 patch(
-                    "dcc_mcp_core._server.skill_discovery.get_skill_paths_from_env",
+                    "meshy_dcc_core._server.skill_discovery.get_skill_paths_from_env",
                     return_value=[],
                 )
             )
             stack.enter_context(
                 patch(
-                    "dcc_mcp_core._server.skill_discovery.get_local_skills_dir",
+                    "meshy_dcc_core._server.skill_discovery.get_local_skills_dir",
                     return_value=str(local),
                 )
             )
             stack.enter_context(
                 patch(
-                    "dcc_mcp_core._server.skill_discovery.get_skills_dir",
+                    "meshy_dcc_core._server.skill_discovery.get_skills_dir",
                     return_value=str(platform),
                 )
             )
             stack.enter_context(
                 patch(
-                    "dcc_mcp_core.admin_sqlite_lane.read_custom_skill_paths",
+                    "meshy_dcc_core.admin_sqlite_lane.read_custom_skill_paths",
                     return_value=[str(admin)],
                 )
             )
@@ -1124,7 +1124,7 @@ class TestDccServerBase:
 
     def test_enable_hot_reload_creates_reloader(self, tmp_path):
         server = self._make_server(tmp_path)
-        with patch("dcc_mcp_core.hotreload.DccSkillHotReloader.enable", return_value=True):
+        with patch("meshy_dcc_core.hotreload.DccSkillHotReloader.enable", return_value=True):
             result = server.enable_hot_reload(skill_paths=[str(tmp_path)])
         assert result is True
         assert server._hot_reloader is not None
@@ -1245,7 +1245,7 @@ class TestDccServerBase:
 
     def test_election_promotes_server_end_to_end(self, tmp_path):
         """DccGatewayElection._attempt_election → DccServerBase._upgrade_to_gateway."""
-        from dcc_mcp_core.gateway_election import DccGatewayElection
+        from meshy_dcc_core.gateway_election import DccGatewayElection
 
         server = self._make_server(tmp_path)
         server._config.gateway_port = 19876
@@ -1281,7 +1281,7 @@ class TestDccServerBase:
 
     def test_subclass_minimal(self, tmp_path):
         """A minimal subclass should work out of the box."""
-        from dcc_mcp_core.server_base import DccServerBase
+        from meshy_dcc_core.server_base import DccServerBase
 
         skills_dir = tmp_path / "skills"
         skills_dir.mkdir()
@@ -1306,8 +1306,8 @@ class TestDccServerBase:
         assert not srv.is_running
 
     def test_init_uses_version_string_for_gateway_metadata(self, tmp_path):
-        from dcc_mcp_core._server.options import DccServerOptions
-        from dcc_mcp_core.server_base import DccServerBase
+        from meshy_dcc_core._server.options import DccServerOptions
+        from meshy_dcc_core.server_base import DccServerBase
 
         skills_dir = tmp_path / "skills"
         skills_dir.mkdir()
@@ -1317,14 +1317,14 @@ class TestDccServerBase:
                 return "20.5.1"
 
         opts = DccServerOptions.from_env("houdini", skills_dir, port=0, gateway_port=0)
-        with patch("dcc_mcp_core.server_base.create_adapter_server", return_value=_FakeDccServer()):
+        with patch("meshy_dcc_core.server_base.create_adapter_server", return_value=_FakeDccServer()):
             server = HoudiniMcpServer(opts)
 
         assert server._config.dcc_version == "20.5.1"
 
     def test_init_explicit_dcc_version_overrides_version_string(self, tmp_path):
-        from dcc_mcp_core._server.options import DccServerOptions
-        from dcc_mcp_core.server_base import DccServerBase
+        from meshy_dcc_core._server.options import DccServerOptions
+        from meshy_dcc_core.server_base import DccServerBase
 
         skills_dir = tmp_path / "skills"
         skills_dir.mkdir()
@@ -1340,7 +1340,7 @@ class TestDccServerBase:
             gateway_port=0,
             dcc_version="19.5.0",
         )
-        with patch("dcc_mcp_core.server_base.create_adapter_server", return_value=_FakeDccServer()):
+        with patch("meshy_dcc_core.server_base.create_adapter_server", return_value=_FakeDccServer()):
             server = HoudiniMcpServer(opts)
 
         assert server._config.dcc_version == "19.5.0"
@@ -1352,10 +1352,10 @@ class TestDccServerBase:
 
 
 class TestCreateDccServer:
-    """Tests for dcc_mcp_core.factory.create_dcc_server and make_start_stop."""
+    """Tests for meshy_dcc_core.factory.create_dcc_server and make_start_stop."""
 
     def _server_class(self, tmp_path):
-        from dcc_mcp_core.server_base import DccServerBase
+        from meshy_dcc_core.server_base import DccServerBase
 
         skills_dir = tmp_path / "skills"
         skills_dir.mkdir(exist_ok=True)
@@ -1378,7 +1378,7 @@ class TestCreateDccServer:
         return _TestServer
 
     def test_create_dcc_server_returns_handle(self, tmp_path):
-        from dcc_mcp_core.factory import create_dcc_server
+        from meshy_dcc_core.factory import create_dcc_server
 
         cls = self._server_class(tmp_path)
         holder = [None]
@@ -1394,7 +1394,7 @@ class TestCreateDccServer:
         assert holder[0] is not None
 
     def test_create_dcc_server_returns_same_instance(self, tmp_path):
-        from dcc_mcp_core.factory import create_dcc_server
+        from meshy_dcc_core.factory import create_dcc_server
 
         cls = self._server_class(tmp_path)
         holder = [None]
@@ -1405,7 +1405,7 @@ class TestCreateDccServer:
         assert h1 is h2
 
     def test_make_start_stop(self, tmp_path):
-        from dcc_mcp_core.factory import make_start_stop
+        from meshy_dcc_core.factory import make_start_stop
 
         cls = self._server_class(tmp_path)
         start_fn, stop_fn = make_start_stop(cls)
@@ -1415,14 +1415,14 @@ class TestCreateDccServer:
         stop_fn()
 
     def test_get_server_instance_none_initially(self):
-        from dcc_mcp_core.factory import get_server_instance
+        from meshy_dcc_core.factory import get_server_instance
 
         holder = [None]
         assert get_server_instance(holder) is None
 
     def test_get_server_instance_after_creation(self, tmp_path):
-        from dcc_mcp_core.factory import create_dcc_server
-        from dcc_mcp_core.factory import get_server_instance
+        from meshy_dcc_core.factory import create_dcc_server
+        from meshy_dcc_core.factory import get_server_instance
 
         cls = self._server_class(tmp_path)
         holder = [None]
@@ -1438,40 +1438,40 @@ class TestCreateDccServer:
 
 
 class TestPublicExports:
-    """Verify the new symbols are reachable via dcc_mcp_core top-level imports."""
+    """Verify the new symbols are reachable via meshy_dcc_core top-level imports."""
 
     def test_dcc_server_base_importable(self):
-        from dcc_mcp_core import DccServerBase
+        from meshy_dcc_core import DccServerBase
 
         assert DccServerBase is not None
 
     def test_dcc_skill_hot_reloader_importable(self):
-        from dcc_mcp_core import DccSkillHotReloader
+        from meshy_dcc_core import DccSkillHotReloader
 
         assert DccSkillHotReloader is not None
 
     def test_dcc_gateway_election_importable(self):
-        from dcc_mcp_core import DccGatewayElection
+        from meshy_dcc_core import DccGatewayElection
 
         assert DccGatewayElection is not None
 
     def test_create_dcc_server_importable(self):
-        from dcc_mcp_core import create_dcc_server
+        from meshy_dcc_core import create_dcc_server
 
         assert create_dcc_server is not None
 
     def test_make_start_stop_importable(self):
-        from dcc_mcp_core import make_start_stop
+        from meshy_dcc_core import make_start_stop
 
         assert make_start_stop is not None
 
     def test_get_server_instance_importable(self):
-        from dcc_mcp_core import get_server_instance
+        from meshy_dcc_core import get_server_instance
 
         assert get_server_instance is not None
 
     def test_all_in___all__(self):
-        import dcc_mcp_core
+        import meshy_dcc_core
 
         for name in [
             "DccServerBase",
@@ -1482,7 +1482,7 @@ class TestPublicExports:
             "get_server_instance",
             "ensure_gateway_daemon",
         ]:
-            assert name in dcc_mcp_core.__all__, f"{name!r} missing from __all__"
+            assert name in meshy_dcc_core.__all__, f"{name!r} missing from __all__"
 
 
 # ── Cross-DCC gateway runtime mode regression (PIP-488) ────────────────────────
@@ -1498,35 +1498,35 @@ class TestGatewayRuntimeModeCrossDcc:
     @pytest.mark.parametrize("dcc_name", ["maya", "blender", "photoshop"])
     def test_default_auto_launch_is_daemon_backed(self, tmp_path, dcc_name):
         """Any DCC with gateway_port > 0 gets the daemon-backed auto-launch."""
-        from dcc_mcp_core._server.config import build_mcp_http_config
-        from dcc_mcp_core._server.options import DccServerOptions
+        from meshy_dcc_core._server.config import build_mcp_http_config
+        from meshy_dcc_core._server.options import DccServerOptions
 
-        opts = DccServerOptions.from_env(dcc_name, tmp_path, port=0, gateway_port=9765)
+        opts = DccServerOptions.from_env(dcc_name, tmp_path, port=0, gateway_port=19765)
         config = build_mcp_http_config(opts, package_version="0.0.0", version_provider=lambda: "unused")
 
-        assert config.gateway_port == 9765, f"{dcc_name}: gateway_port should propagate from options"
+        assert config.gateway_port == 19765, f"{dcc_name}: gateway_port should propagate from options"
         assert config.dcc_type == dcc_name, f"{dcc_name}: dcc_type must match the adapter identity"
 
     @pytest.mark.parametrize("dcc_name", ["houdini", "zbrush"])
     def test_build_config_preserves_dcc_specific_fields(self, tmp_path, dcc_name):
         """dcc_type and server_name are always DCC-specific, never 'maya'-only."""
-        from dcc_mcp_core._server.config import build_mcp_http_config
-        from dcc_mcp_core._server.options import DccServerOptions
+        from meshy_dcc_core._server.config import build_mcp_http_config
+        from meshy_dcc_core._server.options import DccServerOptions
 
-        opts = DccServerOptions.from_env(dcc_name, tmp_path, port=0, gateway_port=9765)
+        opts = DccServerOptions.from_env(dcc_name, tmp_path, port=0, gateway_port=19765)
         config = build_mcp_http_config(opts, package_version="9.9.9", version_provider=lambda: "unused")
 
         assert config.dcc_type == dcc_name, f"{dcc_name}: dcc_type must match adapter identity"
         assert config.server_name == f"{dcc_name}-mcp", f"{dcc_name}: server_name must be derived from dcc_name"
         assert config.server_version == "9.9.9", f"{dcc_name}: server_version must propagate"
-        assert config.gateway_port == 9765, f"{dcc_name}: explicit gateway_port should propagate"
+        assert config.gateway_port == 19765, f"{dcc_name}: explicit gateway_port should propagate"
 
     def test_gateway_options_persist_flag_is_env_readable(self, monkeypatch):
-        """DCC_MCP_GATEWAY_PERSIST env var is defined and parseable."""
-        monkeypatch.setenv("DCC_MCP_GATEWAY_PERSIST", "1")
+        """MESHY_DCC_GATEWAY_PERSIST env var is defined and parseable."""
+        monkeypatch.setenv("MESHY_DCC_GATEWAY_PERSIST", "1")
         # The env var is read inside gateway_daemon::run() — not options layer.
         # Verify setenv doesn't crash and the value is accessible.
         import os
 
-        v = os.environ.get("DCC_MCP_GATEWAY_PERSIST", "")
+        v = os.environ.get("MESHY_DCC_GATEWAY_PERSIST", "")
         assert v == "1"

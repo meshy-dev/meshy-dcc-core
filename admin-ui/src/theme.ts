@@ -8,7 +8,7 @@ export const THEMES = ['light', 'dark', 'system'] as const;
 export type ThemeMode = (typeof THEMES)[number];
 export type ResolvedTheme = 'light' | 'dark';
 
-export const THEME_STORAGE_KEY = 'dcc-mcp-admin-theme';
+export const THEME_STORAGE_KEY = 'meshy-dcc-admin-theme';
 
 const THEME_ID_SET = new Set<string>(THEMES);
 

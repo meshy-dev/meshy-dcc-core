@@ -11,16 +11,16 @@ from unittest.mock import patch
 
 import pytest
 
-from dcc_mcp_core._runtime.recipe_schema_patterns import pattern_is_safe
-from dcc_mcp_core.recipes import _RecipeSchemaValidator
-from dcc_mcp_core.recipes import get_recipe_content
-from dcc_mcp_core.recipes import get_recipes_path
-from dcc_mcp_core.recipes import get_recipes_paths
-from dcc_mcp_core.recipes import list_recipe_entries
-from dcc_mcp_core.recipes import load_recipe_pack
-from dcc_mcp_core.recipes import parse_recipe_anchors
-from dcc_mcp_core.recipes import register_recipes_tools
-from dcc_mcp_core.recipes import validate_recipe_inputs
+from meshy_dcc_core._runtime.recipe_schema_patterns import pattern_is_safe
+from meshy_dcc_core.recipes import _RecipeSchemaValidator
+from meshy_dcc_core.recipes import get_recipe_content
+from meshy_dcc_core.recipes import get_recipes_path
+from meshy_dcc_core.recipes import get_recipes_paths
+from meshy_dcc_core.recipes import list_recipe_entries
+from meshy_dcc_core.recipes import load_recipe_pack
+from meshy_dcc_core.recipes import parse_recipe_anchors
+from meshy_dcc_core.recipes import register_recipes_tools
+from meshy_dcc_core.recipes import validate_recipe_inputs
 
 # ── Fixtures ──────────────────────────────────────────────────────────────
 
@@ -131,9 +131,9 @@ def _make_metadata(skill_path: str | None, recipes_rel: str | None, *, nested: b
     if recipes_rel is None:
         md.metadata = {}
     elif nested:
-        md.metadata = {"dcc-mcp": {"recipes": recipes_rel}}
+        md.metadata = {"meshy-dcc": {"recipes": recipes_rel}}
     else:
-        md.metadata = {"dcc-mcp.recipes": recipes_rel}
+        md.metadata = {"meshy-dcc.recipes": recipes_rel}
     return md
 
 
@@ -1800,6 +1800,6 @@ class TestRegisterRecipesTools:
 
         import logging
 
-        with patch.object(logging.getLogger("dcc_mcp_core.recipes"), "warning") as mock_warn:
+        with patch.object(logging.getLogger("meshy_dcc_core.recipes"), "warning") as mock_warn:
             register_recipes_tools(_BadServer(), skills=[])
         mock_warn.assert_called_once()

@@ -13,11 +13,11 @@ import os
 import pytest
 
 # Import local modules
-from dcc_mcp_core import PyBufferPool
-from dcc_mcp_core import PyDccLauncher
-from dcc_mcp_core import PySceneDataKind
-from dcc_mcp_core import TransportAddress
-from dcc_mcp_core import TransportScheme
+from meshy_dcc_core import PyBufferPool
+from meshy_dcc_core import PyDccLauncher
+from meshy_dcc_core import PySceneDataKind
+from meshy_dcc_core import TransportAddress
+from meshy_dcc_core import TransportScheme
 
 # ===========================================================================
 # PyDccLauncher tests
@@ -207,7 +207,7 @@ class TestTransportAddressFactories:
         ta = TransportAddress.default_pipe_name("maya", pid)
         # On Windows this returns named pipe
         s = str(ta)
-        assert "maya" in s.lower() or "dcc-mcp" in s
+        assert "maya" in s.lower() or "meshy-dcc" in s
 
 
 # ===========================================================================

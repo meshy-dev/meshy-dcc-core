@@ -15,7 +15,7 @@ _SPEC.loader.exec_module(_PUBLISH)
 def _build_entry(**overrides):
     options = {
         "skill_md": {"name": "test-skill", "description": "Test skill"},
-        "install_url": "https://github.com/dcc-mcp/example.git",
+        "install_url": "https://github.com/meshy-dev/example.git",
         "install_type": "git",
         "install_ref": "a" * 40,
         "sha256": None,

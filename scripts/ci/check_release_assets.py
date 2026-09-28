@@ -54,33 +54,33 @@ def required_asset_groups(version: str) -> tuple:
     """Return ``(label, pattern, minimum_count)`` triples for one release.
 
     The minimum counts sum to :data:`DEFAULT_EXPECTED_COUNT`, the asset count
-    every ``dcc-mcp-core`` Release has shipped since v0.20.32.
+    every ``meshy-dcc-core`` Release has shipped since v0.20.32.
     """
     if not _VERSION_RE.fullmatch(version):
         raise ReleaseAssetError(f"invalid release version {version!r}")
     escaped = re.escape(version)
     return (
-        # dcc-mcp-core: abi3 wheels cover Python 3.8-3.14, cp37 wheels cover the
+        # meshy-dcc-core: abi3 wheels cover Python 3.8-3.14, cp37 wheels cover the
         # embedded DCC hosts (Maya 2022, Blender 2.83).
-        ("core-py37-manylinux", rf"^dcc_mcp_core-{escaped}-cp37-cp37m-manylinux\S+\.whl$", 1),
-        ("core-py37-windows", rf"^dcc_mcp_core-{escaped}-cp37-cp37m-win_amd64\.whl$", 1),
-        ("core-abi3", rf"^dcc_mcp_core-{escaped}-cp38-abi3-\S+\.whl$", 3),
-        ("core-lite", rf"^dcc_mcp_core-{escaped}-py3-none-any\.whl$", 1),
-        ("core-sdist", rf"^dcc_mcp_core-{escaped}\.tar\.gz$", 1),
-        # dcc-mcp-core-semantic: opt-in native embeddings, same two tiers.
-        ("semantic-py37", rf"^dcc_mcp_core_semantic-{escaped}-cp37-cp37m-\S+\.whl$", 2),
-        ("semantic-abi3", rf"^dcc_mcp_core_semantic-{escaped}-cp38-abi3-\S+\.whl$", 3),
-        ("server-wheel", rf"^dcc_mcp_server-{escaped}-py3-none-\S+\.whl$", 3),
+        ("core-py37-manylinux", rf"^meshy_dcc_core-{escaped}-cp37-cp37m-manylinux\S+\.whl$", 1),
+        ("core-py37-windows", rf"^meshy_dcc_core-{escaped}-cp37-cp37m-win_amd64\.whl$", 1),
+        ("core-abi3", rf"^meshy_dcc_core-{escaped}-cp38-abi3-\S+\.whl$", 3),
+        ("core-lite", rf"^meshy_dcc_core-{escaped}-py3-none-any\.whl$", 1),
+        ("core-sdist", rf"^meshy_dcc_core-{escaped}\.tar\.gz$", 1),
+        # meshy-dcc-core-semantic: opt-in native embeddings, same two tiers.
+        ("semantic-py37", rf"^meshy_dcc_core_semantic-{escaped}-cp37-cp37m-\S+\.whl$", 2),
+        ("semantic-abi3", rf"^meshy_dcc_core_semantic-{escaped}-cp38-abi3-\S+\.whl$", 3),
+        ("server-wheel", rf"^meshy_dcc_server-{escaped}-py3-none-\S+\.whl$", 3),
         # Standalone server / CLI binaries, their versioned bundles, and the
         # update manifests (plus one Sigstore attestation per manifest).
-        ("server-binary", rf"^dcc-mcp-server-({_PLATFORM_ALTERNATION})(\.exe)?$", 3),
-        ("cli-binary", rf"^dcc-mcp-cli-({_PLATFORM_ALTERNATION})(\.exe)?$", 3),
-        ("server-bundle", _platform_pattern("dcc-mcp-server", escaped, r"\.zip"), 3),
-        ("cli-bundle", _platform_pattern("dcc-mcp-cli", escaped, r"\.zip"), 3),
-        ("update-manifest", _platform_pattern("dcc-mcp-update-manifest", "", r"\.json"), 3),
+        ("server-binary", rf"^meshy-dcc-server-({_PLATFORM_ALTERNATION})(\.exe)?$", 3),
+        ("cli-binary", rf"^meshy-dcc-cli-({_PLATFORM_ALTERNATION})(\.exe)?$", 3),
+        ("server-bundle", _platform_pattern("meshy-dcc-server", escaped, r"\.zip"), 3),
+        ("cli-bundle", _platform_pattern("meshy-dcc-cli", escaped, r"\.zip"), 3),
+        ("update-manifest", _platform_pattern("meshy-dcc-update-manifest", "", r"\.json"), 3),
         (
             "update-manifest-attestation",
-            _platform_pattern("dcc-mcp-update-manifest", "", r"\.sigstore\.json"),
+            _platform_pattern("meshy-dcc-update-manifest", "", r"\.sigstore\.json"),
             3,
         ),
     )

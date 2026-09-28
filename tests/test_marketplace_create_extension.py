@@ -16,7 +16,7 @@ import sys
 import pytest
 
 from conftest import REPO_ROOT
-import dcc_mcp_core
+import meshy_dcc_core
 
 _SCRIPT = REPO_ROOT / "skills" / "marketplace-create-extension" / "scripts" / "create_extension.py"
 _SPEC = importlib.util.spec_from_file_location("marketplace_create_extension_units", _SCRIPT)
@@ -184,7 +184,7 @@ def test_make_skill_md_closes_the_frontmatter_with_a_delimiter() -> None:
 
 
 def test_make_tools_yaml_parses_into_a_valid_tool_declaration() -> None:
-    parsed = dcc_mcp_core.yaml_loads(_CREATE._make_tools_yaml("run_export", "Export Maya rigs."))
+    parsed = meshy_dcc_core.yaml_loads(_CREATE._make_tools_yaml("run_export", "Export Maya rigs."))
 
     tool = parsed["tools"][0]
     assert tool["name"] == "run_export"
@@ -206,7 +206,7 @@ def test_make_tools_yaml_parses_into_a_valid_tool_declaration() -> None:
 
 
 def test_make_tools_yaml_falls_back_to_a_placeholder_description() -> None:
-    parsed = dcc_mcp_core.yaml_loads(_CREATE._make_tools_yaml("run", ""))
+    parsed = meshy_dcc_core.yaml_loads(_CREATE._make_tools_yaml("run", ""))
 
     assert "Replace with a concrete extension intent." in parsed["tools"][0]["description"]
 
@@ -218,7 +218,7 @@ def test_make_action_script_is_importable_python_with_the_expected_signature() -
     source = _CREATE._make_action_script("maya-tools", "run_export")
 
     compile(source, "run_export.py", "exec")
-    assert "from dcc_mcp_core.skills_helper import run_main, skill_entry, skill_success" in source
+    assert "from meshy_dcc_core.skills_helper import run_main, skill_entry, skill_success" in source
     assert '@skill_entry\ndef main(label: str = "example", dry_run: bool = True, **params):' in source
     assert 'if __name__ == "__main__":\n    run_main(main)' in source
 

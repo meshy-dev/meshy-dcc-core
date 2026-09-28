@@ -27,7 +27,7 @@ from test_python_wheel_contract import _write_wheel
 
 _ROOT = Path(__file__).resolve().parents[1]
 _VERSION = "0.20.22"
-_SDIST_ROOT = f"dcc_mcp_core-{_VERSION}"
+_SDIST_ROOT = f"meshy_dcc_core-{_VERSION}"
 _WHEEL_TAGS = (
     "cp37-cp37m-manylinux_2_17_x86_64.manylinux2014_x86_64",
     "cp37-cp37m-win_amd64",
@@ -48,7 +48,7 @@ def _zip_entry(name: str, data: bytes = b"fixture\n", directory: bool = False):
 
 
 def _write_sdist(path: Path, entries=(), requirement: str = "") -> None:
-    metadata = (f"Metadata-Version: 2.1\nName: dcc-mcp-core\nVersion: {_VERSION}\nRequires-Python: >=3.7\n").encode()
+    metadata = (f"Metadata-Version: 2.1\nName: meshy-dcc-core\nVersion: {_VERSION}\nRequires-Python: >=3.7\n").encode()
     if requirement:
         metadata += f"Requires-Dist: {requirement}\n".encode()
     with tarfile.open(path, "w:gz") as archive:
@@ -184,7 +184,7 @@ def test_all_consumers_reject_windows_extraction_aliases(tmp_path: Path, target:
 
 @pytest.mark.parametrize("kind", [stat.S_IFIFO, stat.S_IFCHR, stat.S_IFBLK, stat.S_IFSOCK, 0o150000])
 def test_all_wheel_consumers_reject_unix_special_member_types(tmp_path: Path, kind: int) -> None:
-    member, data = _zip_entry("dcc_mcp_core/special")
+    member, data = _zip_entry("meshy_dcc_core/special")
     member.external_attr = (kind | 0o600) << 16
     _assert_consumers_reject(tmp_path, "wheel", [(member, data)], "forbidden special member")
     with zipfile.ZipFile(tmp_path / "dist" / f"{_SDIST_ROOT}-py3-none-any.whl") as archive:

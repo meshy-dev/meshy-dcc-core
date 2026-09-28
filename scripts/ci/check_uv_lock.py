@@ -15,7 +15,7 @@ try:
 except ModuleNotFoundError:  # pragma: no cover - exercised by the Python 3.7 CI lane
     import tomli as tomllib
 
-EXPECTED_ROOT_PACKAGE = "dcc-mcp-core"
+EXPECTED_ROOT_PACKAGE = "meshy-dcc-core"
 _PROJECT_VERSION_RE = re.compile(
     r"""
     ^\s*v?

@@ -372,7 +372,7 @@ export function useInstanceServerUpdate() {
       const res = await fetch(`${API_BASE}/instances/${encodeURIComponent(body.instanceId)}/update`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ apply: body.apply ?? true, binary: 'dcc-mcp-server' }),
+        body: JSON.stringify({ apply: body.apply ?? true, binary: 'meshy-dcc-server' }),
         signal: AbortSignal.timeout(ADMIN_FETCH_TIMEOUT_MS),
       });
       try {

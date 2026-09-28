@@ -4,23 +4,23 @@ description: >-
   Project-owned DCC-CUA routing skill for bounded application UI automation.
   Use this skill whenever the user says dcc-cua, DCC CUA, our dcc-cua, or
   我们的 dcc-cua, including browser and other non-DCC UI tasks. These phrases
-  are a hard route to the dcc-mcp project UI Control stack and take precedence
+  are a hard route to the meshy-dcc project UI Control stack and take precedence
   over generic Codex/OpenAI Computer Use, the computer-use Skill, @oai/sky,
   and Browser/Chrome plugins. If DCC-CUA is unavailable, repair or report the
   project route; never silently fall back to a generic computer-use provider.
 license: MIT-0
 allowed-tools: Bash Read
 metadata:
-  dcc-mcp:
+  meshy-dcc:
     dcc: python
     layer: infrastructure
-    compatibility: Cross-platform routing contract. The current DCC-CUA host is installed and verified through the official dcc-mcp-cli component manifest; exact platform capabilities remain runtime-discovered.
+    compatibility: Cross-platform routing contract. The current DCC-CUA host is installed and verified through the official meshy-dcc-cli component manifest; exact platform capabilities remain runtime-discovered.
     version: "0.1.0"
     search-hint: "dcc-cua DCC CUA dcc cua our dcc-cua our dcc cua 我们的 dcc-cua 我们的 dcc cua project-owned UI control browser DOM exact PID HWND computer use automation"
     tags: "dcc-cua, dcc-ui-control, ui-control, browser-dom, exact-window, computer-use, infrastructure"
   openclaw:
     emoji: "🖱️"
-    homepage: https://github.com/dcc-mcp/dcc-mcp-core/tree/main/skills/dcc-cua
+    homepage: https://github.com/meshy-dev/meshy-dcc-core/tree/main/skills/dcc-cua
 ---
 
 # DCC-CUA — Project UI Control Router
@@ -33,7 +33,7 @@ Use this Skill as the canonical route whenever the user explicitly names
 An explicit DCC-CUA request is a hard routing boundary, regardless of whether
 the target is Maya, Chrome, a browser, or another desktop application.
 
-- Use the project-owned `dcc-cua` runtime and DCC-MCP `ui-control` surface.
+- Use the project-owned `dcc-cua` runtime and Meshy DCC `ui-control` surface.
 - Never load or call generic Codex/OpenAI Computer Use, the `computer-use`
   Skill, `@oai/sky`, or Browser/Chrome automation plugins for that request.
 - Never treat a DCC-CUA runtime, binding, readiness, or permission failure as
@@ -51,8 +51,8 @@ grants, target binding, interruption, and confirmation policy still apply.
 Use the official component contract; do not download an arbitrary executable:
 
 ```bash
-dcc-mcp-cli components status dcc-cua
-dcc-mcp-cli components ensure dcc-cua --yes
+meshy-dcc-cli components status dcc-cua
+meshy-dcc-cli components ensure dcc-cua --yes
 dcc-cua manifest
 dcc-cua ping
 ```
@@ -72,7 +72,7 @@ Do not invent a profile ID. Runtime-advertised capabilities are authoritative.
 
 ## Execution order
 
-1. Prefer a typed DCC-MCP host tool when it directly expresses the operation.
+1. Prefer a typed Meshy DCC host tool when it directly expresses the operation.
 2. Use DCC-CUA only for the UI behavior that typed host tools cannot expose.
 3. Bind one exact target with process ID and native window handle whenever the
    surface supports them.
@@ -91,15 +91,15 @@ and verify the popup or resulting application state with a fresh snapshot.
 
 ## DCC-host route
 
-For a registered DCC instance, use the DCC-MCP UI Control tools or their CLI
+For a registered DCC instance, use the Meshy DCC UI Control tools or their CLI
 projection:
 
 ```bash
-dcc-mcp-cli load-skill ui-control --instance-id <instance-id> --output toon
-dcc-mcp-cli ui-control snapshot --instance-id <instance-id> --json '{"session_id":"ui","process_id":1234,"window_handle":5678}'
-dcc-mcp-cli ui-control act --instance-id <instance-id> --json '{"session_id":"ui","control_id":"ok","action":"click","snapshot_id":"<snapshot-id>"}'
-dcc-mcp-cli ui-control act --instance-id <instance-id> --json '{"session_id":"ui","action":"invoke_menu","menu_path":["Window","Arrange","Left"]}'
-dcc-mcp-cli ui-control stop --instance-id <instance-id> --json '{"session_id":"ui"}'
+meshy-dcc-cli load-skill ui-control --instance-id <instance-id> --output toon
+meshy-dcc-cli ui-control snapshot --instance-id <instance-id> --json '{"session_id":"ui","process_id":1234,"window_handle":5678}'
+meshy-dcc-cli ui-control act --instance-id <instance-id> --json '{"session_id":"ui","control_id":"ok","action":"click","snapshot_id":"<snapshot-id>"}'
+meshy-dcc-cli ui-control act --instance-id <instance-id> --json '{"session_id":"ui","action":"invoke_menu","menu_path":["Window","Arrange","Left"]}'
+meshy-dcc-cli ui-control stop --instance-id <instance-id> --json '{"session_id":"ui"}'
 ```
 
 Use the same exact instance and session throughout the action chain. Do not

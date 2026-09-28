@@ -10,7 +10,7 @@ license: MIT
 compatibility: Maya 2022+, Python 3.7+
 allowed-tools: Bash Read Write
 metadata:
-  dcc-mcp:
+  meshy-dcc:
     dcc: maya
     version: "1.0.0"
     layer: domain

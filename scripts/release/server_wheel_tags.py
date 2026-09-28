@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Retag and validate dcc-mcp-server binary wheels."""
+"""Retag and validate meshy-dcc-server binary wheels."""
 
 from __future__ import annotations
 
@@ -19,7 +19,7 @@ def _github_error(message: str) -> None:
 def _find_wheels(wheel_dir: Path, pattern: str = "*.whl") -> list[Path]:
     wheels = sorted(wheel_dir.glob(pattern))
     if not wheels:
-        _github_error(f"No dcc-mcp-server wheel was built under {wheel_dir}")
+        _github_error(f"No meshy-dcc-server wheel was built under {wheel_dir}")
         raise SystemExit(1)
     return wheels
 
@@ -43,7 +43,7 @@ def _assert_no_python_extensions(wheels: list[Path]) -> None:
 
 
 def _retag(wheel_dir: Path) -> None:
-    wheels = _find_wheels(wheel_dir, "dcc_mcp_server-*.whl")
+    wheels = _find_wheels(wheel_dir, "meshy_dcc_server-*.whl")
     _assert_no_python_extensions(wheels)
 
     try:
@@ -92,14 +92,14 @@ def _validate(wheel_dir: Path) -> None:
 
         if "Requires-Python: >=3.7" not in metadata:
             _github_error(
-                f"{wheel.name} must declare Requires-Python: >=3.7 so Maya 2022 / Python 3.7 can install dcc-mcp-server"
+                f"{wheel.name} must declare Requires-Python: >=3.7 so Maya 2022 / Python 3.7 can install meshy-dcc-server"
             )
             raise SystemExit(1)
 
         if "-py3-none-" not in wheel.name or "Tag: py3-none-" not in wheel_metadata:
             _github_error(
                 f"{wheel.name} must use py3-none platform tags because "
-                "dcc-mcp-server ships a standalone binary, not a CPython extension"
+                "meshy-dcc-server ships a standalone binary, not a CPython extension"
             )
             raise SystemExit(1)
 
@@ -107,7 +107,7 @@ def _validate(wheel_dir: Path) -> None:
             _github_error(
                 f"{wheel.name} was built against the GitHub runner glibc. "
                 "Build Linux server wheels in manylinux2014 so Maya 2022 / "
-                "Python 3.7 can resolve dcc-mcp-server."
+                "Python 3.7 can resolve meshy-dcc-server."
             )
             raise SystemExit(1)
 
@@ -127,7 +127,7 @@ def main() -> int:
     parser.add_argument(
         "--wheel-dir",
         type=Path,
-        default=Path("pkg/dcc-mcp-server-bin/wheels"),
+        default=Path("pkg/meshy-dcc-server-bin/wheels"),
     )
     args = parser.parse_args()
 

@@ -1,4 +1,4 @@
-# cargo-deny configuration for dcc-mcp-core.
+# cargo-deny configuration for meshy-dcc-core.
 #
 # Run locally with: vx cargo deny check
 # CI gates: .github/workflows/ci.yml `cargo-deny` job.
@@ -8,7 +8,7 @@
 # don't silently change the meaning of fields.
 
 [graph]
-# Resolve features in lockstep with `cargo` (resolver = "2"). The dcc-mcp
+# Resolve features in lockstep with `cargo` (resolver = "2"). The meshy-dcc
 # workspace already opts into v2 in Cargo.toml, so this matches what the
 # build actually compiles.
 all-features = false
@@ -69,7 +69,7 @@ ignore = true
 # `ring` ships under a license string that mixes ISC, OpenSSL and MIT;
 # cargo-deny's parser flags the OpenSSL portion. We accept it for the
 # rustls TLS path that replaced native-tls/openssl-sys (see
-# `crates/dcc-mcp-semantic/Cargo.toml` fastembed pinning).
+# `crates/meshy-dcc-semantic/Cargo.toml` fastembed pinning).
 allow = ["ISC", "MIT", "OpenSSL"]
 name = "ring"
 
@@ -94,7 +94,7 @@ allow-wildcard-paths = true
 # native-tls back into the tree, cargo-deny fails the PR before the
 # release pipeline does.
 deny = [
-    { name = "native-tls", reason = "use rustls — see crates/dcc-mcp-semantic/Cargo.toml fastembed feature pinning" },
+    { name = "native-tls", reason = "use rustls — see crates/meshy-dcc-semantic/Cargo.toml fastembed feature pinning" },
     { name = "openssl-sys", reason = "use rustls — manylinux2014 ships OpenSSL 1.0.2 which openssl-sys >= 0.9.100 rejects" },
 ]
 

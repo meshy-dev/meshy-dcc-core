@@ -1,8 +1,8 @@
 """Release-anchored immutability gate for published ``-vN`` schemas.
 
 The four live digest pins for the Install SOP contract (``compatibility/python.json``,
-``python/dcc_mcp_core/deployment/install_sop.py``,
-``crates/dcc-mcp-models/src/schema_validation.rs`` and the cross-assert in
+``python/meshy_dcc_core/deployment/install_sop.py``,
+``crates/meshy-dcc-models/src/schema_validation.rs`` and the cross-assert in
 ``tests/test_install_catalog_provenance_contract.py``) are all *derived from the current
 file*. Editing a released ``-vN`` schema and updating those four pins in the same change
 keeps every one of them green -- that is how the 0.20.30 in-place rewrite reached

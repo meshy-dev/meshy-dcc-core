@@ -20,9 +20,9 @@ import pytest
 from conftest import McpClient
 
 # Import local modules
-from dcc_mcp_core import McpHttpConfig
-from dcc_mcp_core import McpHttpServer
-from dcc_mcp_core import ToolRegistry
+from meshy_dcc_core import McpHttpConfig
+from meshy_dcc_core import McpHttpServer
+from meshy_dcc_core import ToolRegistry
 
 # ── helpers ───────────────────────────────────────────────────────────────
 
@@ -195,7 +195,7 @@ class TestToolsListPagination:
 
 # ── delta notification capability negotiation ─────────────────────────────
 
-DELTA_CAP_KEY = "dcc_mcp_core/deltaToolsUpdate"
+DELTA_CAP_KEY = "meshy_dcc_core/deltaToolsUpdate"
 
 
 class TestDeltaNotificationCapability:

@@ -78,7 +78,7 @@ async function mockMarketplaceApi(page: Page, state: MockState) {
             path: `/fake/path/${payload.name}`,
             install_type: 'git',
             source_name: 'builtin',
-            source_url: 'https://github.com/dcc-mcp/marketplace',
+            source_url: 'https://github.com/meshy-dev/marketplace',
             reload_required: true,
           },
         ],
@@ -92,7 +92,7 @@ async function mockMarketplaceApi(page: Page, state: MockState) {
         install_type: 'git',
         path: `/fake/path/${payload.name}`,
         source_name: 'builtin',
-        source_url: 'https://github.com/dcc-mcp/marketplace',
+        source_url: 'https://github.com/meshy-dev/marketplace',
         install_url: null,
         install_ref: null,
         installed_at_ms: Date.now(),
@@ -417,9 +417,9 @@ test.describe('Marketplace Panel', () => {
           maintainer: 'td-core',
           icon: '/missing-marketplace-icon.png',
           showcase: '/marketplace-showcase.gif',
-          url: 'https://github.com/dcc-mcp/maya-modeling',
+          url: 'https://github.com/meshy-dev/maya-modeling',
           source_name: 'builtin',
-          install: { type: 'git', url: 'https://github.com/dcc-mcp/maya-modeling.git' },
+          install: { type: 'git', url: 'https://github.com/meshy-dev/maya-modeling.git' },
         },
       ],
       installed: [],
@@ -528,7 +528,7 @@ test.describe('Marketplace Panel', () => {
       catalog: [],
       installed: [],
       sources: [
-        { name: 'official', url: 'https://github.com/dcc-mcp/marketplace', origin: 'builtin' },
+        { name: 'official', url: 'https://github.com/meshy-dev/marketplace', origin: 'builtin' },
         { name: 'td-core', url: 'https://github.com/td-core/skills', origin: 'config' },
       ],
       outdated: [],
@@ -574,7 +574,7 @@ test.describe('Marketplace Panel', () => {
       valueSetter?.call(input, value);
       input.dispatchEvent(new Event('input', { bubbles: true }));
       input.dispatchEvent(new Event('change', { bubbles: true }));
-    }, 'dcc-mcp/skills');
+    }, 'meshy-dcc/skills');
     await expect(page.locator('.marketplace-source-btn')).toBeEnabled();
     await page.locator('.marketplace-source-btn').evaluate((button) => {
       (button as HTMLButtonElement).click();
@@ -582,7 +582,7 @@ test.describe('Marketplace Panel', () => {
 
     // Should show the new source
     await expect(page.locator('.marketplace-source-row')).toHaveCount(1);
-    await expect(page.locator('.marketplace-source-row').first()).toContainText('dcc-mcp/skills');
+    await expect(page.locator('.marketplace-source-row').first()).toContainText('meshy-dcc/skills');
   });
 
   test('shows force reinstall checkbox', async ({ page }) => {
@@ -668,7 +668,7 @@ test.describe('Marketplace Panel', () => {
           install_type: 'git',
           path: '/fake/path/maya-modeling',
           source_name: 'builtin',
-          source_url: 'https://github.com/dcc-mcp/marketplace',
+          source_url: 'https://github.com/meshy-dev/marketplace',
           install_url: null,
           install_ref: null,
           installed_at_ms: Date.now(),
@@ -682,7 +682,7 @@ test.describe('Marketplace Panel', () => {
           installed_version: '1.0.0',
           latest_version: '2.1.0',
           source_name: 'builtin',
-          source_url: 'https://github.com/dcc-mcp/marketplace',
+          source_url: 'https://github.com/meshy-dev/marketplace',
           install_type: 'git',
           install_url: null,
           install_ref: null,

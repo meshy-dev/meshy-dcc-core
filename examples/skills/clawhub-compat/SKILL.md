@@ -3,13 +3,13 @@ name: clawhub-compat
 description: >-
   Example skill — demonstrates full compatibility with the ClawHub/OpenClaw
   skill format. Use as a reference when creating skills for both the
-  dcc-mcp-core ecosystem and ClawHub marketplace. Not intended for production
+  meshy-dcc-core ecosystem and ClawHub marketplace. Not intended for production
   use — this is an authoring reference only.
 license: MIT
 compatibility: Requires curl binary on PATH
 allowed-tools: Bash Read
 metadata:
-  dcc-mcp:
+  meshy-dcc:
     dcc: python
     layer: example
     version: "1.0.0"
@@ -23,7 +23,7 @@ metadata:
         - curl
     primaryEnv: EXAMPLE_API_KEY
     emoji: "🦀"
-    homepage: https://github.com/dcc-mcp/dcc-mcp-core
+    homepage: https://github.com/meshy-dev/meshy-dcc-core
     install:
       - kind: node
         package: prettier
@@ -32,13 +32,13 @@ metadata:
 
 # ClawHub Compatible Skill
 
-This skill demonstrates that `dcc-mcp-core` skills are **fully compatible**
+This skill demonstrates that `meshy-dcc-core` skills are **fully compatible**
 with the [ClawHub](https://clawhub.ai/) / [OpenClaw](https://openclaw.ai/)
 ecosystem format.
 
 ## Three-Standard Compatibility
 
-| Field | agentskills.io | ClawHub | dcc-mcp-core | This Skill |
+| Field | agentskills.io | ClawHub | meshy-dcc-core | This Skill |
 |-------|---------------|---------|--------------|------------|
 | `name` | ✅ Required | ✅ Required | ✅ Required | ✅ |
 | `description` | ✅ Required | ✅ Required | ✅ Required | ✅ |
@@ -59,13 +59,13 @@ ecosystem format.
 clawhub publish ./clawhub-compat --slug clawhub-compat --version 1.0.0
 ```
 
-## Using ClawHub Skills with dcc-mcp-core
+## Using ClawHub Skills with meshy-dcc-core
 
 ```python
-import dcc_mcp_core
+import meshy_dcc_core
 
 # Skills installed via ClawHub are discoverable automatically
-catalog = dcc_mcp_core.SkillCatalog(dcc_mcp_core.ToolRegistry())
+catalog = meshy_dcc_core.SkillCatalog(meshy_dcc_core.ToolRegistry())
 catalog.discover(extra_paths=["~/.openclaw/skills"])
 
 # Access ClawHub-specific metadata

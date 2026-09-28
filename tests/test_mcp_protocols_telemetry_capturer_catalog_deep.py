@@ -18,7 +18,7 @@ from pathlib import Path
 
 import pytest
 
-import dcc_mcp_core as m
+import meshy_dcc_core as m
 
 # ---------------------------------------------------------------------------
 # TestPromptArgument

@@ -14,8 +14,8 @@ import types
 
 import pytest
 
-import dcc_mcp_core._server._gateway_server_bin as gsb
-import dcc_mcp_core._server.gateway_guardian as gg
+import meshy_dcc_core._server._gateway_server_bin as gsb
+import meshy_dcc_core._server.gateway_guardian as gg
 
 
 @pytest.fixture(autouse=True)
@@ -119,8 +119,8 @@ def test_application_ready_requires_readyz_ok_and_ignores_stale_liveness(monkeyp
 
     monkeypatch.setattr(gg, "urlopen", _urlopen)
 
-    assert gg._is_application_ready("127.0.0.1", 9765, timeout=0.1) is False
-    assert calls == ["http://127.0.0.1:9765/v1/readyz"]
+    assert gg._is_application_ready("127.0.0.1", 19765, timeout=0.1) is False
+    assert calls == ["http://127.0.0.1:19765/v1/readyz"]
 
 
 def test_application_ready_uses_health_only_for_explicit_legacy_404(monkeypatch):
@@ -136,10 +136,10 @@ def test_application_ready_uses_health_only_for_explicit_legacy_404(monkeypatch)
 
     monkeypatch.setattr(gg, "urlopen", _urlopen)
 
-    assert gg._is_application_ready("127.0.0.1", 9765, timeout=0.1) is True
+    assert gg._is_application_ready("127.0.0.1", 19765, timeout=0.1) is True
     assert calls == [
-        "http://127.0.0.1:9765/v1/readyz",
-        "http://127.0.0.1:9765/health",
+        "http://127.0.0.1:19765/v1/readyz",
+        "http://127.0.0.1:19765/health",
     ]
 
 
@@ -153,14 +153,14 @@ def test_application_ready_transport_failure_does_not_fallback_to_health(monkeyp
     monkeypatch.setattr(gg, "urlopen", _urlopen)
     monkeypatch.setattr(gg, "_is_healthy", lambda *_a, **_k: pytest.fail("transport failure must not use stale health"))
 
-    assert gg._is_application_ready("127.0.0.1", 9765, timeout=0.1) is False
-    assert calls == ["http://127.0.0.1:9765/v1/readyz"]
+    assert gg._is_application_ready("127.0.0.1", 19765, timeout=0.1) is False
+    assert calls == ["http://127.0.0.1:19765/v1/readyz"]
 
 
 def test_application_ready_rejects_empty_success_body(monkeypatch):
     monkeypatch.setattr(gg, "urlopen", lambda *_args, **_kwargs: _EmptyResp())
 
-    assert gg._is_application_ready("127.0.0.1", 9765, timeout=0.1) is False
+    assert gg._is_application_ready("127.0.0.1", 19765, timeout=0.1) is False
 
 
 def test_application_ready_rejects_live_hanging_port_within_probe_timeout():
@@ -201,14 +201,14 @@ def test_is_healthy_treats_malformed_http_response_as_unhealthy(monkeypatch):
 
     monkeypatch.setattr(gg, "urlopen", _raise_bad_status_line)
 
-    assert gg._is_healthy("127.0.0.1", 9765, timeout=0.5) is False
+    assert gg._is_healthy("127.0.0.1", 19765, timeout=0.5) is False
 
 
 def test_ensure_gateway_daemon_reports_existing_health(monkeypatch):
     monkeypatch.setattr(gg, "urlopen", lambda *args, **kwargs: _Resp())
     result = gg.ensure_gateway_daemon(
         gateway_host="127.0.0.1",
-        gateway_port=9765,
+        gateway_port=19765,
         registry_dir=None,
         dcc_type="blender",
     )
@@ -217,58 +217,58 @@ def test_ensure_gateway_daemon_reports_existing_health(monkeypatch):
 
 
 def test_resolve_server_bin_uses_packaged_binary_when_path_missing(monkeypatch, tmp_path):
-    binary = tmp_path / "dcc-mcp-server"
+    binary = tmp_path / "meshy-dcc-server"
     binary.write_text("", encoding="utf-8")
-    module = types.ModuleType("dcc_mcp_server")
+    module = types.ModuleType("meshy_dcc_server")
     module.binary_path = lambda: binary
 
-    monkeypatch.delenv("DCC_MCP_SERVER_BIN", raising=False)
+    monkeypatch.delenv("MESHY_DCC_SERVER_BIN", raising=False)
     monkeypatch.setattr(gsb.shutil, "which", lambda _name: None)
-    monkeypatch.setitem(sys.modules, "dcc_mcp_server", module)
+    monkeypatch.setitem(sys.modules, "meshy_dcc_server", module)
 
     assert gg._resolve_server_bin() == str(binary)
 
 
 def test_resolve_server_bin_prefers_explicit_env(monkeypatch, tmp_path):
     explicit = tmp_path / "custom-server"
-    module = types.ModuleType("dcc_mcp_server")
-    module.binary_path = lambda: Path("/unused/dcc-mcp-server")
+    module = types.ModuleType("meshy_dcc_server")
+    module.binary_path = lambda: Path("/unused/meshy-dcc-server")
 
-    monkeypatch.setenv("DCC_MCP_SERVER_BIN", str(explicit))
-    monkeypatch.setitem(sys.modules, "dcc_mcp_server", module)
+    monkeypatch.setenv("MESHY_DCC_SERVER_BIN", str(explicit))
+    monkeypatch.setitem(sys.modules, "meshy_dcc_server", module)
 
     assert gg._resolve_server_bin() == str(explicit)
 
 
 def test_resolve_server_bin_prefers_path_over_python_import(monkeypatch, tmp_path):
-    """A binary on PATH wins over any importable ``dcc_mcp_server`` package.
+    """A binary on PATH wins over any importable ``meshy_dcc_server`` package.
 
     Under a managed resolve PATH points at the resolved binary, while a Python
     import can silently hit a stale user-level copy.
     """
-    on_path = tmp_path / "resolved" / "dcc-mcp-server"
-    stale = tmp_path / "stale" / "dcc-mcp-server"
-    module = types.ModuleType("dcc_mcp_server")
+    on_path = tmp_path / "resolved" / "meshy-dcc-server"
+    stale = tmp_path / "stale" / "meshy-dcc-server"
+    module = types.ModuleType("meshy_dcc_server")
     module.binary_path = lambda: stale
     module.__version__ = "9.9.9"
 
-    monkeypatch.delenv("DCC_MCP_SERVER_BIN", raising=False)
+    monkeypatch.delenv("MESHY_DCC_SERVER_BIN", raising=False)
     monkeypatch.setattr(gsb.shutil, "which", lambda _name: str(on_path))
-    monkeypatch.setitem(sys.modules, "dcc_mcp_server", module)
+    monkeypatch.setitem(sys.modules, "meshy_dcc_server", module)
     monkeypatch.setattr(gsb, "_SERVER_VERSION_DRIFT_WARNED", set())
 
     assert gg._resolve_server_bin() == str(on_path)
 
 
 def test_resolve_server_bin_warns_when_falling_back_to_module(monkeypatch, tmp_path, caplog):
-    binary = tmp_path / "dcc-mcp-server"
+    binary = tmp_path / "meshy-dcc-server"
     binary.write_text("", encoding="utf-8")
-    module = types.ModuleType("dcc_mcp_server")
+    module = types.ModuleType("meshy_dcc_server")
     module.binary_path = lambda: binary
 
-    monkeypatch.delenv("DCC_MCP_SERVER_BIN", raising=False)
+    monkeypatch.delenv("MESHY_DCC_SERVER_BIN", raising=False)
     monkeypatch.setattr(gsb.shutil, "which", lambda _name: None)
-    monkeypatch.setitem(sys.modules, "dcc_mcp_server", module)
+    monkeypatch.setitem(sys.modules, "meshy_dcc_server", module)
     monkeypatch.setattr(gsb, "_SERVER_VERSION_DRIFT_WARNED", set())
 
     with caplog.at_level(logging.WARNING, logger=gsb.__name__):
@@ -280,15 +280,15 @@ def test_resolve_server_bin_warns_when_falling_back_to_module(monkeypatch, tmp_p
 
 def test_resolve_server_bin_warns_on_version_drift(monkeypatch, tmp_path, caplog):
     """A major.minor mismatch between server and core is reported once."""
-    binary = tmp_path / "dcc-mcp-server"
+    binary = tmp_path / "meshy-dcc-server"
     binary.write_text("", encoding="utf-8")
-    module = types.ModuleType("dcc_mcp_server")
+    module = types.ModuleType("meshy_dcc_server")
     module.binary_path = lambda: binary
     module.__version__ = "0.19.8"
 
-    monkeypatch.delenv("DCC_MCP_SERVER_BIN", raising=False)
+    monkeypatch.delenv("MESHY_DCC_SERVER_BIN", raising=False)
     monkeypatch.setattr(gsb.shutil, "which", lambda _name: None)
-    monkeypatch.setitem(sys.modules, "dcc_mcp_server", module)
+    monkeypatch.setitem(sys.modules, "meshy_dcc_server", module)
     monkeypatch.setenv(gsb.ENV_CORE_VERSION, "0.20.28")
     monkeypatch.setattr(gsb, "_SERVER_VERSION_DRIFT_WARNED", set())
 
@@ -305,15 +305,15 @@ def test_resolve_server_bin_warns_on_version_drift(monkeypatch, tmp_path, caplog
 
 
 def test_resolve_server_bin_silent_when_versions_match(monkeypatch, tmp_path, caplog):
-    binary = tmp_path / "dcc-mcp-server"
+    binary = tmp_path / "meshy-dcc-server"
     binary.write_text("", encoding="utf-8")
-    module = types.ModuleType("dcc_mcp_server")
+    module = types.ModuleType("meshy_dcc_server")
     module.binary_path = lambda: binary
     module.__version__ = "0.20.31"
 
-    monkeypatch.delenv("DCC_MCP_SERVER_BIN", raising=False)
+    monkeypatch.delenv("MESHY_DCC_SERVER_BIN", raising=False)
     monkeypatch.setattr(gsb.shutil, "which", lambda _name: None)
-    monkeypatch.setitem(sys.modules, "dcc_mcp_server", module)
+    monkeypatch.setitem(sys.modules, "meshy_dcc_server", module)
     monkeypatch.setenv(gsb.ENV_CORE_VERSION, "0.20.28")
     monkeypatch.setattr(gsb, "_SERVER_VERSION_DRIFT_WARNED", set())
 
@@ -324,15 +324,15 @@ def test_resolve_server_bin_silent_when_versions_match(monkeypatch, tmp_path, ca
 
 
 def test_resolve_server_bin_warns_when_nothing_found(monkeypatch, caplog):
-    monkeypatch.delenv("DCC_MCP_SERVER_BIN", raising=False)
+    monkeypatch.delenv("MESHY_DCC_SERVER_BIN", raising=False)
     monkeypatch.setattr(gsb.shutil, "which", lambda _name: None)
-    monkeypatch.setitem(sys.modules, "dcc_mcp_server", None)
+    monkeypatch.setitem(sys.modules, "meshy_dcc_server", None)
     monkeypatch.setattr(gsb, "_SERVER_VERSION_DRIFT_WARNED", set())
 
     with caplog.at_level(logging.WARNING, logger=gsb.__name__):
         resolved = gg._resolve_server_bin()
 
-    assert resolved == "dcc-mcp-server"
+    assert resolved == "meshy-dcc-server"
     assert any("unavailable" in record.getMessage() for record in caplog.records)
 
 
@@ -342,14 +342,14 @@ def test_resolve_server_bin_reports_the_fallback_once_per_process(monkeypatch, t
     A guardian patrol cycle defaults to 5s, so an unmanaged server used to log
     this line on every cycle instead of once.
     """
-    binary = tmp_path / "dcc-mcp-server"
+    binary = tmp_path / "meshy-dcc-server"
     binary.write_text("", encoding="utf-8")
-    module = types.ModuleType("dcc_mcp_server")
+    module = types.ModuleType("meshy_dcc_server")
     module.binary_path = lambda: binary
 
-    monkeypatch.delenv("DCC_MCP_SERVER_BIN", raising=False)
+    monkeypatch.delenv("MESHY_DCC_SERVER_BIN", raising=False)
     monkeypatch.setattr(gsb.shutil, "which", lambda _name: None)
-    monkeypatch.setitem(sys.modules, "dcc_mcp_server", module)
+    monkeypatch.setitem(sys.modules, "meshy_dcc_server", module)
 
     with caplog.at_level(logging.WARNING, logger=gsb.__name__):
         gg._resolve_server_bin()
@@ -361,9 +361,9 @@ def test_resolve_server_bin_reports_the_fallback_once_per_process(monkeypatch, t
 
 
 def test_resolve_server_bin_reports_an_unavailable_binary_once_per_process(monkeypatch, caplog):
-    monkeypatch.delenv("DCC_MCP_SERVER_BIN", raising=False)
+    monkeypatch.delenv("MESHY_DCC_SERVER_BIN", raising=False)
     monkeypatch.setattr(gsb.shutil, "which", lambda _name: None)
-    monkeypatch.setitem(sys.modules, "dcc_mcp_server", None)
+    monkeypatch.setitem(sys.modules, "meshy_dcc_server", None)
 
     with caplog.at_level(logging.WARNING, logger=gsb.__name__):
         gg._resolve_server_bin()
@@ -381,14 +381,14 @@ def test_resolve_server_bin_skips_drift_check_when_path_supplies_binary(monkeypa
     Comparing them would report drift for a copy that never runs, so the check
     only applies when the package itself supplies the binary.
     """
-    on_path = tmp_path / "resolved" / "dcc-mcp-server"
-    module = types.ModuleType("dcc_mcp_server")
-    module.binary_path = lambda: tmp_path / "unused" / "dcc-mcp-server"
+    on_path = tmp_path / "resolved" / "meshy-dcc-server"
+    module = types.ModuleType("meshy_dcc_server")
+    module.binary_path = lambda: tmp_path / "unused" / "meshy-dcc-server"
     module.__version__ = "0.19.8"
 
-    monkeypatch.delenv("DCC_MCP_SERVER_BIN", raising=False)
+    monkeypatch.delenv("MESHY_DCC_SERVER_BIN", raising=False)
     monkeypatch.setattr(gsb.shutil, "which", lambda _name: str(on_path))
-    monkeypatch.setitem(sys.modules, "dcc_mcp_server", module)
+    monkeypatch.setitem(sys.modules, "meshy_dcc_server", module)
     monkeypatch.setenv(gsb.ENV_CORE_VERSION, "0.20.28")
 
     with caplog.at_level(logging.WARNING, logger=gsb.__name__):
@@ -413,8 +413,8 @@ def test_ensure_gateway_daemon_spawns_and_becomes_healthy(tmp_path, monkeypatch)
         return {"ok": True, "pid": 1}
 
     monkeypatch.setattr(gg, "launch_detached", _launch_detached)
-    monkeypatch.setattr(gg, "_resolve_server_bin", lambda: "dcc-mcp-server")
-    monkeypatch.setenv("DCC_MCP_GATEWAY_PORT", "9876")
+    monkeypatch.setattr(gg, "_resolve_server_bin", lambda: "meshy-dcc-server")
+    monkeypatch.setenv("MESHY_DCC_GATEWAY_PORT", "9876")
     result = gg.ensure_gateway_daemon(
         gateway_host="127.0.0.1",
         gateway_port=9876,
@@ -424,12 +424,12 @@ def test_ensure_gateway_daemon_spawns_and_becomes_healthy(tmp_path, monkeypatch)
     )
     assert result["ok"] is True
     assert result["reason"] == "spawned"
-    assert seen["cmd"][:2] == ["dcc-mcp-server", "gateway"]
+    assert seen["cmd"][:2] == ["meshy-dcc-server", "gateway"]
     assert "--port" in seen["cmd"]
     assert "--registry-dir" not in seen["cmd"]
-    assert seen["env"]["DCC_MCP_GATEWAY_PORT"] == "9876"
-    assert seen["env"]["DCC_MCP_REGISTRY_DIR"] == str(tmp_path)
-    assert seen["env"]["DCC_MCP_DCC_TYPE"] == "photoshop"
+    assert seen["env"]["MESHY_DCC_GATEWAY_PORT"] == "9876"
+    assert seen["env"]["MESHY_DCC_REGISTRY_DIR"] == str(tmp_path)
+    assert seen["env"]["MESHY_DCC_DCC_TYPE"] == "photoshop"
     assert not (tmp_path / "gateway-launch.lock").exists()
 
 
@@ -444,7 +444,7 @@ def test_ensure_gateway_daemon_ignores_probes_from_foreign_threads(tmp_path, mon
     """
     _install_scoped_readiness_probe(monkeypatch, host="127.0.0.1", port=9876, healthy_after=3)
     monkeypatch.setattr(gg, "launch_detached", lambda cmd, **_kwargs: {"ok": True, "pid": 1})
-    monkeypatch.setattr(gg, "_resolve_server_bin", lambda: "dcc-mcp-server")
+    monkeypatch.setattr(gg, "_resolve_server_bin", lambda: "meshy-dcc-server")
 
     stop_probing = threading.Event()
     foreign_probes = []
@@ -484,10 +484,10 @@ def test_ensure_gateway_daemon_spawn_failure_returns_embedded_fallback_reason(mo
         "launch_detached",
         lambda *_a, **_k: {"ok": False, "reason": "spawn_failed", "error": "spawn fail"},
     )
-    monkeypatch.setattr(gg, "_resolve_server_bin", lambda: "dcc-mcp-server")
+    monkeypatch.setattr(gg, "_resolve_server_bin", lambda: "meshy-dcc-server")
     result = gg.ensure_gateway_daemon(
         gateway_host="127.0.0.1",
-        gateway_port=9765,
+        gateway_port=19765,
         registry_dir=str(tmp_path),
         dcc_type="maya",
     )
@@ -507,7 +507,7 @@ def test_ensure_gateway_daemon_waits_when_launch_lock_exists(tmp_path, monkeypat
 
     result = gg.ensure_gateway_daemon(
         gateway_host="127.0.0.1",
-        gateway_port=9765,
+        gateway_port=19765,
         registry_dir=str(tmp_path),
         dcc_type="maya",
         timeout_secs=0.01,
@@ -525,7 +525,7 @@ def test_ensure_gateway_daemon_lock_loser_succeeds_when_gateway_becomes_healthy(
     (tmp_path / "gateway-launch.lock").write_text("busy", encoding="utf-8")
 
     # First probe fails, second and later succeed (winner finishes launch).
-    _install_scoped_readiness_probe(monkeypatch, host="127.0.0.1", port=9765, healthy_after=2)
+    _install_scoped_readiness_probe(monkeypatch, host="127.0.0.1", port=19765, healthy_after=2)
     monkeypatch.setattr(
         gg,
         "launch_detached",
@@ -534,7 +534,7 @@ def test_ensure_gateway_daemon_lock_loser_succeeds_when_gateway_becomes_healthy(
 
     result = gg.ensure_gateway_daemon(
         gateway_host="127.0.0.1",
-        gateway_port=9765,
+        gateway_port=19765,
         registry_dir=str(tmp_path),
         dcc_type="maya",
         timeout_secs=5.0,  # enough for the 100ms sleep between probes
@@ -545,7 +545,7 @@ def test_ensure_gateway_daemon_lock_loser_succeeds_when_gateway_becomes_healthy(
 
 
 def test_ensure_gateway_daemon_respects_ensure_timeout_env_var(tmp_path, monkeypatch):
-    """DCC_MCP_GATEWAY_ENSURE_TIMEOUT_SECS overrides the default timeout."""
+    """MESHY_DCC_GATEWAY_ENSURE_TIMEOUT_SECS overrides the default timeout."""
     (tmp_path / "gateway-launch.lock").write_text("busy", encoding="utf-8")
     monkeypatch.setattr(gg, "urlopen", lambda *_a, **_k: (_ for _ in ()).throw(OSError("down")))
     monkeypatch.setattr(
@@ -553,11 +553,11 @@ def test_ensure_gateway_daemon_respects_ensure_timeout_env_var(tmp_path, monkeyp
         "launch_detached",
         lambda *_a, **_k: (_ for _ in ()).throw(AssertionError("must not spawn")),
     )
-    monkeypatch.setenv("DCC_MCP_GATEWAY_ENSURE_TIMEOUT_SECS", "0.01")
+    monkeypatch.setenv("MESHY_DCC_GATEWAY_ENSURE_TIMEOUT_SECS", "0.01")
 
     result = gg.ensure_gateway_daemon(
         gateway_host="127.0.0.1",
-        gateway_port=9765,
+        gateway_port=19765,
         registry_dir=str(tmp_path),
         dcc_type="houdini",
     )
@@ -572,7 +572,7 @@ def test_ensure_gateway_daemon_recovers_stale_launch_lock(tmp_path, monkeypatch)
     stale_time = time.time() - 120
     os.utime(lock_path, (stale_time, stale_time))
 
-    _install_scoped_readiness_probe(monkeypatch, host="127.0.0.1", port=9765, healthy_after=3)
+    _install_scoped_readiness_probe(monkeypatch, host="127.0.0.1", port=19765, healthy_after=3)
 
     owner = threading.get_ident()
     seen = {}
@@ -584,13 +584,13 @@ def test_ensure_gateway_daemon_recovers_stale_launch_lock(tmp_path, monkeypatch)
         seen["env"] = kwargs.get("env", {})
         return {"ok": True, "pid": 1}
 
-    monkeypatch.setenv("DCC_MCP_GATEWAY_LAUNCH_LOCK_STALE_SECS", "1")
+    monkeypatch.setenv("MESHY_DCC_GATEWAY_LAUNCH_LOCK_STALE_SECS", "1")
     monkeypatch.setattr(gg, "launch_detached", _launch_detached)
-    monkeypatch.setattr(gg, "_resolve_server_bin", lambda: "dcc-mcp-server")
+    monkeypatch.setattr(gg, "_resolve_server_bin", lambda: "meshy-dcc-server")
 
     result = gg.ensure_gateway_daemon(
         gateway_host="127.0.0.1",
-        gateway_port=9765,
+        gateway_port=19765,
         registry_dir=str(tmp_path),
         dcc_type="houdini",
         timeout_secs=1.0,
@@ -598,8 +598,8 @@ def test_ensure_gateway_daemon_recovers_stale_launch_lock(tmp_path, monkeypatch)
 
     assert result["ok"] is True
     assert result["reason"] == "spawned"
-    assert seen["cmd"][:2] == ["dcc-mcp-server", "gateway"]
-    assert seen["env"]["DCC_MCP_DCC_TYPE"] == "houdini"
+    assert seen["cmd"][:2] == ["meshy-dcc-server", "gateway"]
+    assert seen["env"]["MESHY_DCC_DCC_TYPE"] == "houdini"
     assert not lock_path.exists()
 
 
@@ -622,7 +622,7 @@ def test_launch_lock_toctou_fresh_lock_appears_during_stale_reclaim(tmp_path, mo
     stale_time = time.time() - 120
     os.utime(lock_path, (stale_time, stale_time))
 
-    monkeypatch.setenv("DCC_MCP_GATEWAY_LAUNCH_LOCK_STALE_SECS", "1")
+    monkeypatch.setenv("MESHY_DCC_GATEWAY_LAUNCH_LOCK_STALE_SECS", "1")
 
     # Override _remove_stale_launch_lock so that between the two stat calls
     # a "peer" refreshes the lock.
@@ -666,7 +666,7 @@ def test_launch_lock_toctou_lock_appears_between_unlink_and_retry(tmp_path, monk
     stale_time = time.time() - 120
     os.utime(lock_path, (stale_time, stale_time))
 
-    monkeypatch.setenv("DCC_MCP_GATEWAY_LAUNCH_LOCK_STALE_SECS", "1")
+    monkeypatch.setenv("MESHY_DCC_GATEWAY_LAUNCH_LOCK_STALE_SECS", "1")
 
     # Override _remove_stale_launch_lock to simulate TOCTOU: after unlink
     # succeeds, a peer immediately creates a fresh lock before we retry.
@@ -701,7 +701,7 @@ def test_launch_lock_acquire_single_attempt_no_loop(tmp_path, monkeypatch):
     # Fresh lock held by another process.
     lock_path.write_text("busy", encoding="utf-8")
 
-    monkeypatch.setenv("DCC_MCP_GATEWAY_LAUNCH_LOCK_STALE_SECS", "3600")
+    monkeypatch.setenv("MESHY_DCC_GATEWAY_LAUNCH_LOCK_STALE_SECS", "3600")
 
     lock = gg._LaunchLock(lock_path)
     acquired = lock.acquire()
@@ -717,7 +717,7 @@ def test_gateway_daemon_guardian_is_re_exported_from_the_patrol_module(monkeypat
     the guardian module, or ``monkeypatch.setattr(gg, ...)`` stops steering the
     loop and the whole suite silently tests a mock-free path.
     """
-    import dcc_mcp_core._server._gateway_guardian_patrol as patrol
+    import meshy_dcc_core._server._gateway_guardian_patrol as patrol
 
     assert gg.GatewayDaemonGuardian is patrol.GatewayDaemonGuardian
     assert patrol._guardian() is gg
@@ -727,7 +727,7 @@ def test_gateway_daemon_guardian_is_re_exported_from_the_patrol_module(monkeypat
     monkeypatch.setattr(gg, "ensure_gateway_daemon", lambda **kwargs: calls.append(kwargs) or {"ok": True})
     guardian = gg.GatewayDaemonGuardian(
         gateway_host="127.0.0.1",
-        gateway_port=9765,
+        gateway_port=19765,
         registry_dir=None,
         dcc_type="maya",
         failure_threshold=1,
@@ -749,7 +749,7 @@ def test_gateway_daemon_guardian_restarts_after_failure_threshold(monkeypatch):
     seen = []
     guardian = gg.GatewayDaemonGuardian(
         gateway_host="127.0.0.1",
-        gateway_port=9765,
+        gateway_port=19765,
         registry_dir=None,
         dcc_type="houdini",
         failure_threshold=2,
@@ -779,7 +779,7 @@ def test_gateway_daemon_guardian_jitter_skips_when_peer_recovers(monkeypatch):
     monkeypatch.setattr(gg, "ensure_gateway_daemon", _ensure)
     guardian = gg.GatewayDaemonGuardian(
         gateway_host="127.0.0.1",
-        gateway_port=9765,
+        gateway_port=19765,
         registry_dir=None,
         dcc_type="maya",
         failure_threshold=1,
@@ -799,7 +799,7 @@ def test_gateway_daemon_guardian_resets_failures_on_health(monkeypatch):
     monkeypatch.setattr(gg, "_try_version_takeover", lambda **_kwargs: None)
     guardian = gg.GatewayDaemonGuardian(
         gateway_host="127.0.0.1",
-        gateway_port=9765,
+        gateway_port=19765,
         registry_dir=None,
         dcc_type="blender",
         failure_threshold=2,
@@ -825,7 +825,7 @@ def test_gateway_daemon_guardian_audits_version_when_endpoint_is_healthy(monkeyp
     monkeypatch.setattr(gg, "_try_version_takeover", _takeover)
     guardian = gg.GatewayDaemonGuardian(
         gateway_host="127.0.0.1",
-        gateway_port=9765,
+        gateway_port=19765,
         registry_dir=str(tmp_path),
         dcc_type="houdini",
         restart_timeout_secs=17.0,
@@ -838,7 +838,7 @@ def test_gateway_daemon_guardian_audits_version_when_endpoint_is_healthy(monkeyp
     assert calls == [
         {
             "gateway_host": "127.0.0.1",
-            "gateway_port": 9765,
+            "gateway_port": 19765,
             "registry_dir": str(tmp_path),
             "dcc_type": "houdini",
             "timeout_secs": 17.0,
@@ -867,7 +867,7 @@ def test_guardian_run_catches_crash_and_increments_crash_count(monkeypatch):
 
     guardian = gg.GatewayDaemonGuardian(
         gateway_host="127.0.0.1",
-        gateway_port=9765,
+        gateway_port=19765,
         registry_dir=None,
         dcc_type="crash-test",
         probe_interval_secs=0.05,
@@ -917,7 +917,7 @@ def test_guardian_run_continues_after_exception(monkeypatch):
 
     guardian = gg.GatewayDaemonGuardian(
         gateway_host="127.0.0.1",
-        gateway_port=9765,
+        gateway_port=19765,
         registry_dir=None,
         dcc_type="resilient-test",
         probe_interval_secs=0.05,
@@ -948,7 +948,7 @@ def test_guardian_stop_keeps_a_thread_that_refuses_to_exit_visible():
     """
     guardian = gg.GatewayDaemonGuardian(
         gateway_host="127.0.0.1",
-        gateway_port=9765,
+        gateway_port=19765,
         registry_dir=None,
         dcc_type="stuck-test",
         probe_interval_secs=0.05,
@@ -970,43 +970,43 @@ def test_guardian_stop_keeps_a_thread_that_refuses_to_exit_visible():
 
 
 def test_build_gateway_daemon_command_includes_persist_flags(monkeypatch, tmp_path):
-    monkeypatch.setattr(gg, "_resolve_server_bin", lambda: "dcc-mcp-server")
+    monkeypatch.setattr(gg, "_resolve_server_bin", lambda: "meshy-dcc-server")
     cmd, env = gg.build_gateway_daemon_command(
         gateway_host="127.0.0.1",
-        gateway_port=9765,
+        gateway_port=19765,
         registry_dir=str(tmp_path),
         dcc_type="custom-host",
         gateway_persist=True,
         gateway_idle_timeout_secs=0,
     )
-    assert cmd[:2] == ["dcc-mcp-server", "gateway"]
+    assert cmd[:2] == ["meshy-dcc-server", "gateway"]
     assert "--gateway-persist" in cmd
     assert "--gateway-idle-timeout-secs" in cmd
-    assert env["DCC_MCP_GATEWAY_PERSIST"] == "1"
-    assert env["DCC_MCP_GATEWAY_IDLE_TIMEOUT_SECS"] == "0"
-    assert env["DCC_MCP_REGISTRY_DIR"] == str(tmp_path)
-    assert env["DCC_MCP_DCC_TYPE"] == "custom-host"
+    assert env["MESHY_DCC_GATEWAY_PERSIST"] == "1"
+    assert env["MESHY_DCC_GATEWAY_IDLE_TIMEOUT_SECS"] == "0"
+    assert env["MESHY_DCC_REGISTRY_DIR"] == str(tmp_path)
+    assert env["MESHY_DCC_DCC_TYPE"] == "custom-host"
 
 
 def test_build_gateway_daemon_command_uses_adapter_idle_timeout_by_default(monkeypatch, tmp_path):
-    monkeypatch.setattr(gg, "_resolve_server_bin", lambda: "dcc-mcp-server")
+    monkeypatch.setattr(gg, "_resolve_server_bin", lambda: "meshy-dcc-server")
     cmd, env = gg.build_gateway_daemon_command(
         gateway_host="127.0.0.1",
-        gateway_port=9765,
+        gateway_port=19765,
         registry_dir=str(tmp_path),
         dcc_type="maya",
     )
     assert "--gateway-persist" not in cmd
     assert "--gateway-idle-timeout-secs" in cmd
     assert str(gg._AUTO_ENSURE_GATEWAY_IDLE_TIMEOUT_DEFAULT) in cmd
-    assert "DCC_MCP_GATEWAY_PERSIST" not in env
-    assert env["DCC_MCP_GATEWAY_IDLE_TIMEOUT_SECS"] == str(gg._AUTO_ENSURE_GATEWAY_IDLE_TIMEOUT_DEFAULT)
+    assert "MESHY_DCC_GATEWAY_PERSIST" not in env
+    assert env["MESHY_DCC_GATEWAY_IDLE_TIMEOUT_SECS"] == str(gg._AUTO_ENSURE_GATEWAY_IDLE_TIMEOUT_DEFAULT)
 
 
 def test_build_gateway_daemon_command_respects_custom_server_bin(monkeypatch, tmp_path):
     cmd, _env = gg.build_gateway_daemon_command(
         gateway_host="127.0.0.1",
-        gateway_port=9765,
+        gateway_port=19765,
         registry_dir=str(tmp_path),
         dcc_type="nuke",
         server_bin="/opt/bin/dcc-gw",
@@ -1028,7 +1028,7 @@ def test_ensure_gateway_daemon_spawn_includes_persist_flags(tmp_path, monkeypatc
         return {"ok": True, "pid": 99}
 
     monkeypatch.setattr(gg, "launch_detached", _launch_detached)
-    monkeypatch.setattr(gg, "_resolve_server_bin", lambda: "dcc-mcp-server")
+    monkeypatch.setattr(gg, "_resolve_server_bin", lambda: "meshy-dcc-server")
     result = gg.ensure_gateway_daemon(
         gateway_host="127.0.0.1",
         gateway_port=9876,
@@ -1041,15 +1041,15 @@ def test_ensure_gateway_daemon_spawn_includes_persist_flags(tmp_path, monkeypatc
     assert result["ok"] is True
     assert "--gateway-persist" in seen["cmd"]
     assert "--gateway-idle-timeout-secs" in seen["cmd"]
-    assert seen["env"]["DCC_MCP_GATEWAY_PERSIST"] == "1"
-    assert seen["env"]["DCC_MCP_GATEWAY_IDLE_TIMEOUT_SECS"] == "120"
+    assert seen["env"]["MESHY_DCC_GATEWAY_PERSIST"] == "1"
+    assert seen["env"]["MESHY_DCC_GATEWAY_IDLE_TIMEOUT_SECS"] == "120"
 
 
 def test_launch_gateway_daemon_is_alias(monkeypatch):
     monkeypatch.setattr(gg, "urlopen", lambda *args, **kwargs: _Resp())
     result = gg.launch_gateway_daemon(
         gateway_host="127.0.0.1",
-        gateway_port=9765,
+        gateway_port=19765,
         registry_dir=None,
         dcc_type="blender",
     )
@@ -1060,14 +1060,14 @@ def test_launch_gateway_daemon_is_alias(monkeypatch):
 def _make_runtime_controller(**owner_attrs):
     """Build a thin ServerRuntimeController with a mock owner."""
     # Import here to avoid circular import issues in test collection.
-    from dcc_mcp_core._server.runtime import ServerRuntimeController
+    from meshy_dcc_core._server.runtime import ServerRuntimeController
 
     attrs = {
         "_config": type(
             "Config",
             (),
             {
-                "gateway_port": 9765,
+                "gateway_port": 19765,
                 "registry_dir": None,
                 **(owner_attrs.pop("_config_kw", {})),
             },
@@ -1103,7 +1103,7 @@ def test_start_guardian_replaces_dead_guardian(monkeypatch, runtime_controller):
     """P1: start_gateway_guardian_if_needed replaces a dead guardian."""
     monkeypatch.setattr(gg, "_is_application_ready", lambda *a, **k: False)
     monkeypatch.setattr(gg, "ensure_gateway_daemon", lambda **kw: {"ok": True, "reason": "spawned"})
-    monkeypatch.setattr(gg, "_resolve_server_bin", lambda: "dcc-mcp-server")
+    monkeypatch.setattr(gg, "_resolve_server_bin", lambda: "meshy-dcc-server")
 
     ctrl, owner = runtime_controller
 
@@ -1130,7 +1130,7 @@ def test_guardian_watchdog_detects_dead_guardian(monkeypatch, runtime_controller
     """P1: Watchdog loop detects dead guardian and triggers restart."""
     monkeypatch.setattr(gg, "_is_application_ready", lambda *a, **k: False)
     monkeypatch.setattr(gg, "ensure_gateway_daemon", lambda **kw: {"ok": True, "reason": "spawned"})
-    monkeypatch.setattr(gg, "_resolve_server_bin", lambda: "dcc-mcp-server")
+    monkeypatch.setattr(gg, "_resolve_server_bin", lambda: "meshy-dcc-server")
 
     ctrl, owner = runtime_controller
 
@@ -1158,7 +1158,7 @@ def test_guardian_watchdog_detects_dead_guardian(monkeypatch, runtime_controller
 
 def test_ensure_gateway_daemon_if_needed_retries_before_fallback(monkeypatch):
     """Ensure retries 2 times before falling back to embedded-fallback mode."""
-    from dcc_mcp_core._server import runtime as rt_mod
+    from meshy_dcc_core._server import runtime as rt_mod
 
     call_count = 0
 
@@ -1183,7 +1183,7 @@ def test_ensure_gateway_daemon_if_needed_retries_before_fallback(monkeypatch):
 
 def test_ensure_gateway_daemon_if_needed_succeeds_on_retry(monkeypatch):
     """First attempt fails, retry succeeds — must not fall back."""
-    from dcc_mcp_core._server import runtime as rt_mod
+    from meshy_dcc_core._server import runtime as rt_mod
 
     call_count = 0
 
@@ -1206,15 +1206,15 @@ def test_ensure_gateway_daemon_if_needed_succeeds_on_retry(monkeypatch):
 
 
 def test_strict_gateway_raises_instead_of_fallback(monkeypatch):
-    """With DCC_MCP_STRICT_GATEWAY=1, ensure failure raises RuntimeError."""
-    from dcc_mcp_core._server import runtime as rt_mod
+    """With MESHY_DCC_STRICT_GATEWAY=1, ensure failure raises RuntimeError."""
+    from meshy_dcc_core._server import runtime as rt_mod
 
     def _ensure(**kwargs):
         return {"ok": False, "reason": "spawn_failed", "error": "test error"}
 
     monkeypatch.setattr(rt_mod, "ensure_gateway_daemon", _ensure)
     monkeypatch.setattr(rt_mod, "_RETRY_INTERVAL_SECS", 0.01)
-    monkeypatch.setenv("DCC_MCP_STRICT_GATEWAY", "1")
+    monkeypatch.setenv("MESHY_DCC_STRICT_GATEWAY", "1")
 
     ctrl, owner = _make_runtime_controller()
 
@@ -1229,7 +1229,7 @@ def test_strict_gateway_raises_instead_of_fallback(monkeypatch):
 
 def test_strict_gateway_via_owner_attribute(monkeypatch):
     """Strict mode via owner._strict_gateway=True also raises RuntimeError."""
-    from dcc_mcp_core._server import runtime as rt_mod
+    from meshy_dcc_core._server import runtime as rt_mod
 
     def _ensure(**kwargs):
         return {"ok": False, "reason": "spawn_timeout", "error": "timeout"}
@@ -1249,13 +1249,13 @@ def test_strict_gateway_via_owner_attribute(monkeypatch):
 
 def test_strict_gateway_happy_path_works_normally(monkeypatch):
     """When daemon is healthy, strict mode has no effect (no exception)."""
-    from dcc_mcp_core._server import runtime as rt_mod
+    from meshy_dcc_core._server import runtime as rt_mod
 
     def _ensure(**kwargs):
         return {"ok": True, "reason": "already_healthy"}
 
     monkeypatch.setattr(rt_mod, "ensure_gateway_daemon", _ensure)
-    monkeypatch.setenv("DCC_MCP_STRICT_GATEWAY", "1")
+    monkeypatch.setenv("MESHY_DCC_STRICT_GATEWAY", "1")
 
     ctrl, owner = _make_runtime_controller()
     result = ctrl.ensure_gateway_daemon_if_needed()
@@ -1266,7 +1266,7 @@ def test_strict_gateway_happy_path_works_normally(monkeypatch):
 
 def test_embedded_fallback_metadata_includes_daemon_status():
     """_gateway_runtime_metadata surfaces daemon status for embedded-fallback."""
-    from dcc_mcp_core._server.lifecycle_controller import LifecycleController
+    from meshy_dcc_core._server.lifecycle_controller import LifecycleController
 
     # Build a minimal mock owner in embedded-fallback mode.
     attrs = {
@@ -1291,7 +1291,7 @@ def test_embedded_fallback_metadata_includes_daemon_status():
 
 def test_embedded_fallback_metadata_omits_daemon_error_when_none():
     """When daemon status has no error field, gateway_daemon_error is absent."""
-    from dcc_mcp_core._server.lifecycle_controller import LifecycleController
+    from meshy_dcc_core._server.lifecycle_controller import LifecycleController
 
     attrs = {
         "_dcc_name": "meta-test2",
@@ -1310,7 +1310,7 @@ def test_embedded_fallback_metadata_omits_daemon_error_when_none():
 
 def test_daemon_backed_metadata_does_not_include_daemon_error():
     """In daemon-backed mode, gateway_daemon_error is not leaked."""
-    from dcc_mcp_core._server.lifecycle_controller import LifecycleController
+    from meshy_dcc_core._server.lifecycle_controller import LifecycleController
 
     attrs = {
         "_dcc_name": "meta-test3",
@@ -1369,14 +1369,14 @@ def test_is_newer_version():
 
 
 def test_get_core_version_env_override(monkeypatch):
-    """P0-3: _get_core_version respects DCC_MCP_CORE_VERSION env var."""
-    monkeypatch.setenv("DCC_MCP_CORE_VERSION", "9.8.7")
+    """P0-3: _get_core_version respects MESHY_DCC_CORE_VERSION env var."""
+    monkeypatch.setenv("MESHY_DCC_CORE_VERSION", "9.8.7")
     assert gg._get_core_version() == "9.8.7"
 
 
 def test_write_and_read_sentinel_entry(tmp_path):
     """P0-3: _write_sentinel_entry and _read_gateway_version_from_registry roundtrip."""
-    reg = str(tmp_path / "dcc-mcp-registry")
+    reg = str(tmp_path / "meshy-dcc-registry")
     Path(reg).mkdir()
     (Path(reg) / "services.json").write_text(
         json.dumps([{"dcc_type": "houdini", "instance_id": "live-row"}]),
@@ -1386,13 +1386,13 @@ def test_write_and_read_sentinel_entry(tmp_path):
     ok = gg._write_sentinel_entry(
         reg,
         gateway_host="127.0.0.1",
-        gateway_port=9765,
+        gateway_port=19765,
         crate_version="0.18.15",
         adapter_version="0.3.0",
         adapter_dcc="maya",
     )
     assert ok is True
-    assert (tmp_path / "dcc-mcp-registry" / "services.json").exists()
+    assert (tmp_path / "meshy-dcc-registry" / "services.json").exists()
     rows = json.loads((Path(reg) / "services.json").read_text(encoding="utf-8"))
     assert rows[0]["instance_id"] == "live-row"
     sentinel = rows[1]
@@ -1404,14 +1404,14 @@ def test_write_and_read_sentinel_entry(tmp_path):
     ver = gg._read_gateway_version_from_registry(
         reg,
         gateway_host="127.0.0.1",
-        gateway_port=9765,
+        gateway_port=19765,
     )
     assert ver == "0.18.15"
 
 
 def test_read_gateway_version_from_registry_filters_host_and_port(tmp_path):
     """Only the sentinel for the probed gateway endpoint is authoritative."""
-    reg = tmp_path / "dcc-mcp-registry"
+    reg = tmp_path / "meshy-dcc-registry"
     reg.mkdir()
     (reg / "services.json").write_text(
         json.dumps(
@@ -1425,7 +1425,7 @@ def test_read_gateway_version_from_registry_filters_host_and_port(tmp_path):
                 {
                     "dcc_type": "__gateway__",
                     "host": "127.0.0.1",
-                    "port": 9765,
+                    "port": 19765,
                     "version": "0.18.20",
                 },
             ]
@@ -1437,7 +1437,7 @@ def test_read_gateway_version_from_registry_filters_host_and_port(tmp_path):
         gg._read_gateway_version_from_registry(
             str(reg),
             gateway_host="127.0.0.1",
-            gateway_port=9765,
+            gateway_port=19765,
         )
         == "0.18.20"
     )
@@ -1447,12 +1447,12 @@ def test_read_gateway_version_from_admin_health(monkeypatch):
     """Use admin health when the registry sentinel is missing or stale."""
 
     def _urlopen(req, **_kwargs):
-        assert req == "http://127.0.0.1:9765/admin/api/health"
+        assert req == "http://127.0.0.1:19765/admin/api/health"
         return _JsonResp({"gateway": {"current": {"version": "0.18.20"}}})
 
     monkeypatch.setattr(gg, "urlopen", _urlopen)
 
-    assert gg._read_gateway_version_from_admin_health("127.0.0.1", 9765) == "0.18.20"
+    assert gg._read_gateway_version_from_admin_health("127.0.0.1", 19765) == "0.18.20"
 
 
 def test_read_gateway_version_missing_registry():
@@ -1473,13 +1473,13 @@ def test_wait_managed_gateway_ready_rejects_health_only_challenger(monkeypatch, 
     gg._write_sentinel_entry(
         str(tmp_path),
         gateway_host="127.0.0.1",
-        gateway_port=9765,
+        gateway_port=19765,
         crate_version="0.19.23",
     )
 
     assert not gg._wait_managed_gateway_ready(
         "127.0.0.1",
-        9765,
+        19765,
         registry_dir=str(tmp_path),
         minimum_version="0.19.23",
         timeout_secs=0.01,
@@ -1494,7 +1494,7 @@ def test_wait_managed_gateway_ready_accepts_owned_same_version(monkeypatch, tmp_
             "dcc_type": "__gateway__",
             "instance_id": "gateway-instance",
             "host": "127.0.0.1",
-            "port": 9765,
+            "port": 19765,
             "version": "0.19.23",
             "pid": 4242,
         }
@@ -1503,7 +1503,7 @@ def test_wait_managed_gateway_ready_accepts_owned_same_version(monkeypatch, tmp_
 
     assert gg._wait_managed_gateway_ready(
         "127.0.0.1",
-        9765,
+        19765,
         registry_dir=str(tmp_path),
         minimum_version="0.19.23",
         timeout_secs=0.2,
@@ -1513,19 +1513,19 @@ def test_wait_managed_gateway_ready_accepts_owned_same_version(monkeypatch, tmp_
 def test_ensure_gateway_daemon_skips_takeover_when_gateway_newer(monkeypatch, tmp_path):
     """P0-3: No takeover when running gateway version is same or newer."""
     monkeypatch.setattr(gg, "urlopen", lambda *args, **kwargs: _Resp())
-    monkeypatch.setenv("DCC_MCP_CORE_VERSION", "0.18.15")
+    monkeypatch.setenv("MESHY_DCC_CORE_VERSION", "0.18.15")
 
     # Pre-populate registry with a same-version sentinel.
     gg._write_sentinel_entry(
         str(tmp_path),
         gateway_host="127.0.0.1",
-        gateway_port=9765,
+        gateway_port=19765,
         crate_version="0.18.15",
     )
 
     result = gg.ensure_gateway_daemon(
         gateway_host="127.0.0.1",
-        gateway_port=9765,
+        gateway_port=19765,
         registry_dir=str(tmp_path),
         dcc_type="maya",
     )
@@ -1543,7 +1543,7 @@ def test_try_version_takeover_returns_none_when_dev_version(monkeypatch, tmp_pat
 
     result = gg._try_version_takeover(
         gateway_host="127.0.0.1",
-        gateway_port=9765,
+        gateway_port=19765,
         registry_dir=str(tmp_path),
         dcc_type="maya",
         timeout_secs=15.0,
@@ -1576,11 +1576,11 @@ def test_try_version_takeover_uses_admin_health_and_cooperative_yield(monkeypatc
         return {"ok": True, "pid": 4242}
 
     monkeypatch.setattr(gg, "launch_detached", _launch_detached)
-    monkeypatch.setattr(gg, "_resolve_server_bin", lambda: "dcc-mcp-server")
+    monkeypatch.setattr(gg, "_resolve_server_bin", lambda: "meshy-dcc-server")
 
     result = gg._try_version_takeover(
         gateway_host="127.0.0.1",
-        gateway_port=9765,
+        gateway_port=19765,
         registry_dir=str(tmp_path),
         dcc_type="houdini",
         timeout_secs=15.0,
@@ -1595,7 +1595,7 @@ def test_try_version_takeover_uses_admin_health_and_cooperative_yield(monkeypatc
     assert result["old_version"] == "0.18.20"
     assert result["new_version"] == "0.19.14"
     assert yield_requests[0]["challenger_version"] == "0.19.14"
-    assert launches[0][0][:2] == ["dcc-mcp-server", "gateway"]
+    assert launches[0][0][:2] == ["meshy-dcc-server", "gateway"]
 
 
 # ---------------------------------------------------------------------------
@@ -1605,16 +1605,16 @@ def test_try_version_takeover_uses_admin_health_and_cooperative_yield(monkeypatc
 
 def test_watchdog_interval_default_is_15s():
     """PIP-1416: watchdog default interval is 15 s (was 60 s)."""
-    from dcc_mcp_core._server import runtime as rt_mod
+    from meshy_dcc_core._server import runtime as rt_mod
 
     # Resolve interval without env var set.
     assert rt_mod._resolve_watchdog_interval() == 15.0
 
 
 def test_watchdog_interval_respects_env_var(monkeypatch):
-    """PIP-1416: DCC_MCP_GUARDIAN_WATCHDOG_INTERVAL overrides the default."""
-    monkeypatch.setenv("DCC_MCP_GUARDIAN_WATCHDOG_INTERVAL", "8.5")
-    from dcc_mcp_core._server import runtime as rt_mod
+    """PIP-1416: MESHY_DCC_GUARDIAN_WATCHDOG_INTERVAL overrides the default."""
+    monkeypatch.setenv("MESHY_DCC_GUARDIAN_WATCHDOG_INTERVAL", "8.5")
+    from meshy_dcc_core._server import runtime as rt_mod
 
     # _resolve_watchdog_interval() reads os.environ at call time — no reload needed.
     assert rt_mod._resolve_watchdog_interval() == 8.5
@@ -1622,16 +1622,16 @@ def test_watchdog_interval_respects_env_var(monkeypatch):
 
 def test_watchdog_interval_env_floor_0_1s(monkeypatch):
     """PIP-1416: watchdog interval env floors at 0.1 s."""
-    monkeypatch.setenv("DCC_MCP_GUARDIAN_WATCHDOG_INTERVAL", "0.01")
-    from dcc_mcp_core._server import runtime as rt_mod
+    monkeypatch.setenv("MESHY_DCC_GUARDIAN_WATCHDOG_INTERVAL", "0.01")
+    from meshy_dcc_core._server import runtime as rt_mod
 
     assert rt_mod._resolve_watchdog_interval() == 0.1
 
 
 def test_watchdog_interval_env_invalid_falls_back(monkeypatch):
     """PIP-1416: invalid env value falls back to default 15 s."""
-    monkeypatch.setenv("DCC_MCP_GUARDIAN_WATCHDOG_INTERVAL", "not_a_number")
-    from dcc_mcp_core._server import runtime as rt_mod
+    monkeypatch.setenv("MESHY_DCC_GUARDIAN_WATCHDOG_INTERVAL", "not_a_number")
+    from meshy_dcc_core._server import runtime as rt_mod
 
     assert rt_mod._resolve_watchdog_interval() == 15.0
 
@@ -1640,7 +1640,7 @@ def test_watchdog_immediate_retry_on_guardian_death(monkeypatch, runtime_control
     """PIP-1416: watchdog immediately probes the new guardian after restart."""
     monkeypatch.setattr(gg, "_is_application_ready", lambda *a, **k: False)
     monkeypatch.setattr(gg, "ensure_gateway_daemon", lambda **kw: {"ok": True, "reason": "spawned"})
-    monkeypatch.setattr(gg, "_resolve_server_bin", lambda: "dcc-mcp-server")
+    monkeypatch.setattr(gg, "_resolve_server_bin", lambda: "meshy-dcc-server")
 
     ctrl, owner = runtime_controller
 
@@ -1695,7 +1695,7 @@ def test_ensure_gateway_daemon_handles_version_takeover_health(monkeypatch, tmp_
 
     result = gg.ensure_gateway_daemon(
         gateway_host="127.0.0.1",
-        gateway_port=9765,
+        gateway_port=19765,
         registry_dir=str(tmp_path),
         dcc_type="blender",
     )

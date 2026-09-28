@@ -1,7 +1,7 @@
 """Hello World skill script — prints a greeting message.
 
 Parameter resolution order:
-1. stdin JSON: {"name": "..."} — used by dcc-mcp-core execute_script
+1. stdin JSON: {"name": "..."} — used by meshy-dcc-core execute_script
 2. CLI positional arg: greet.py <name> — used by direct invocation / tests
 3. Default: "World"
 """
@@ -16,7 +16,7 @@ def main() -> None:
     """Entry point for the greet action."""
     name = "World"
 
-    # 1. Try stdin JSON (dcc-mcp-core execute_script protocol)
+    # 1. Try stdin JSON (meshy-dcc-core execute_script protocol)
     try:
         if not sys.stdin.isatty():
             raw = sys.stdin.read()

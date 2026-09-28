@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Build the platform-specific ``dcc-mcp-cli`` PyPI wrapper wheel.
+"""Build the platform-specific ``meshy-dcc-cli`` PyPI wrapper wheel.
 
 The wheel embeds the compressed release archive produced by
 :mod:`scripts.release.build_standalone_bundle` instead of the raw executable:
 PyPI meters a project's *total* storage, and the deflated archive costs roughly
 a third of the raw binary per release. The archive is unpacked on first use by
-``pkg/dcc-mcp-cli-bin/python/dcc_mcp_cli/_bootstrap.py``.
+``pkg/meshy-dcc-cli-bin/python/meshy_dcc_cli/_bootstrap.py``.
 
 One job can build every platform's wheel: nothing here compiles, so the
 release workflow runs this once per platform on a single runner using the
@@ -27,9 +27,9 @@ import tempfile
 import zipfile
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
-DEFAULT_PROJECT_DIR = REPO_ROOT / "pkg" / "dcc-mcp-cli-bin"
+DEFAULT_PROJECT_DIR = REPO_ROOT / "pkg" / "meshy-dcc-cli-bin"
 PAYLOAD_SCHEMA_VERSION = 1
-BINARY_STEM = "dcc-mcp-cli"
+BINARY_STEM = "meshy-dcc-cli"
 
 # Rust's `x86_64-unknown-linux-gnu` target requires glibc >= 2.17, and the
 # project's other Linux wheels already target manylinux2014 (== 2.17).
@@ -114,7 +114,7 @@ def linux_platform_tag(binary: Path, platform: str) -> str:
     arch = platform.split("-", 1)[1] if "-" in platform else "x86_64"
     detected = _detect_glibc(binary) or _runner_glibc()
     if detected is None:
-        raise SystemExit("cannot determine the glibc requirement of the Linux dcc-mcp-cli binary")
+        raise SystemExit("cannot determine the glibc requirement of the Linux meshy-dcc-cli binary")
     major, minor = max(detected, MANYLINUX_FLOOR)
     return f"manylinux_{major}_{minor}_{arch}"
 
@@ -152,7 +152,7 @@ def stage_payload(*, project_dir: Path, archive: Path, version: str, platform: s
     """Copy the release archive into the wrapper package and write its manifest.
 
     Args:
-        project_dir: Wrapper package root (``pkg/dcc-mcp-cli-bin``).
+        project_dir: Wrapper package root (``pkg/meshy-dcc-cli-bin``).
         archive: Release zip to embed.
         version: Release version without the ``v`` prefix.
         platform: Release platform label.
@@ -162,7 +162,7 @@ def stage_payload(*, project_dir: Path, archive: Path, version: str, platform: s
         Directory the payload was staged into.
 
     """
-    payload_dir = project_dir / "python" / "dcc_mcp_cli" / "_payload"
+    payload_dir = project_dir / "python" / "meshy_dcc_cli" / "_payload"
     if payload_dir.is_dir():
         shutil.rmtree(payload_dir)
     payload_dir.mkdir(parents=True)
@@ -170,7 +170,7 @@ def stage_payload(*, project_dir: Path, archive: Path, version: str, platform: s
     shutil.copyfile(archive, staged)
     metadata = {
         "schema_version": PAYLOAD_SCHEMA_VERSION,
-        "distribution": "dcc-mcp-cli",
+        "distribution": "meshy-dcc-cli",
         "version": version,
         "platform": platform,
         "archive": archive.name,
@@ -209,7 +209,7 @@ def build_wheel(*, project_dir: Path, out_dir: Path) -> list:
         check=False,
     )
     if completed.returncode != 0:
-        _github_error("hatchling failed to build the dcc-mcp-cli wrapper wheel")
+        _github_error("hatchling failed to build the meshy-dcc-cli wrapper wheel")
         raise SystemExit(completed.returncode)
     produced = sorted(set(out_dir.glob("*.whl")) - before)
     if len(produced) != 1:

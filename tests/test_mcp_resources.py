@@ -14,11 +14,11 @@ import urllib.request
 import pytest
 
 from conftest import McpClient
-from dcc_mcp_core import McpHttpConfig
-from dcc_mcp_core import McpHttpServer
-from dcc_mcp_core import ToolRegistry
-from dcc_mcp_core._server.options import DccServerOptions
-from dcc_mcp_core.server_base import DccServerBase
+from meshy_dcc_core import McpHttpConfig
+from meshy_dcc_core import McpHttpServer
+from meshy_dcc_core import ToolRegistry
+from meshy_dcc_core._server.options import DccServerOptions
+from meshy_dcc_core.server_base import DccServerBase
 
 
 def _post_json(
@@ -240,7 +240,7 @@ def test_dcc_server_base_registers_custom_resource_producer(tmp_path):
 
 def test_dcc_server_base_exposes_host_errors_through_mcp_resources(tmp_path, monkeypatch):
     """Host console errors are readable through the existing MCP resources."""
-    monkeypatch.setenv("DCC_MCP_LOG_DIR", str(tmp_path / "logs"))
+    monkeypatch.setenv("MESHY_DCC_LOG_DIR", str(tmp_path / "logs"))
 
     skills_dir = tmp_path / "skills"
     skills_dir.mkdir()

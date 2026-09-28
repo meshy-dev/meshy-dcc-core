@@ -1,6 +1,6 @@
 """Python action script example.
 
-Reads JSON parameters from stdin (dcc-mcp-core execute_script protocol).
+Reads JSON parameters from stdin (meshy-dcc-core execute_script protocol).
 """
 
 from __future__ import annotations

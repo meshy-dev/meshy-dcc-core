@@ -5,18 +5,18 @@ from __future__ import annotations
 import pytest
 from tests._support.server import make_test_server
 
-from dcc_mcp_core import DEFAULT_PROMOTION_THRESHOLD
-from dcc_mcp_core import MAX_TRACKED_SCRIPTS
-from dcc_mcp_core import PROMOTION_HINT_KEY
-from dcc_mcp_core import EscapeHatchInvocation
-from dcc_mcp_core import EscapeHatchPolicy
-from dcc_mcp_core import EscapeHatchPromotionCandidate
-from dcc_mcp_core import HookContext
-from dcc_mcp_core import HookDeny
-from dcc_mcp_core import HookEvent
-from dcc_mcp_core import LifecycleHooks
-from dcc_mcp_core import ObservabilityQuery
-from dcc_mcp_core import install_escape_hatch_policy
+from meshy_dcc_core import DEFAULT_PROMOTION_THRESHOLD
+from meshy_dcc_core import MAX_TRACKED_SCRIPTS
+from meshy_dcc_core import PROMOTION_HINT_KEY
+from meshy_dcc_core import EscapeHatchInvocation
+from meshy_dcc_core import EscapeHatchPolicy
+from meshy_dcc_core import EscapeHatchPromotionCandidate
+from meshy_dcc_core import HookContext
+from meshy_dcc_core import HookDeny
+from meshy_dcc_core import HookEvent
+from meshy_dcc_core import LifecycleHooks
+from meshy_dcc_core import ObservabilityQuery
+from meshy_dcc_core import install_escape_hatch_policy
 
 SHA_A = "a" * 64
 SHA_B = "b" * 64

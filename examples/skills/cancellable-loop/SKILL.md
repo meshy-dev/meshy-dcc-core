@@ -8,7 +8,7 @@ description: >-
 license: MIT
 compatibility: Python 3.7+
 metadata:
-  dcc-mcp:
+  meshy-dcc:
     dcc: python
     version: "1.0.0"
     layer: example
@@ -47,6 +47,6 @@ the `@skill_entry` wrapper converts it into a standard error dict.
 
 ## Related
 
-- `dcc_mcp_core.check_cancelled` — the API this skill demonstrates.
+- `meshy_dcc_core.check_cancelled` — the API this skill demonstrates.
 - Issue #329 — cooperative cancellation checkpoints.
 - Issue #318 — async dispatcher integration (wires the CancelToken).

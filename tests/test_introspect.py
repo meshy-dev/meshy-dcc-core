@@ -10,11 +10,11 @@ from unittest.mock import patch
 
 import pytest
 
-from dcc_mcp_core.introspect import introspect_eval
-from dcc_mcp_core.introspect import introspect_list_module
-from dcc_mcp_core.introspect import introspect_search
-from dcc_mcp_core.introspect import introspect_signature
-from dcc_mcp_core.introspect import register_introspect_tools
+from meshy_dcc_core.introspect import introspect_eval
+from meshy_dcc_core.introspect import introspect_list_module
+from meshy_dcc_core.introspect import introspect_search
+from meshy_dcc_core.introspect import introspect_signature
+from meshy_dcc_core.introspect import register_introspect_tools
 
 # ── introspect_list_module ────────────────────────────────────────────────
 
@@ -175,7 +175,7 @@ class TestIntrospectEval:
         assert result["success"] is False
 
     def test_split_exec_lookup_cannot_escape_through_builtins(self, tmp_path) -> None:
-        marker = "_dcc_mcp_introspect_eval_probe"
+        marker = "_meshy_dcc_introspect_eval_probe"
         payload = tmp_path / "payload.py"
         payload.write_text(f"__builtins__[{marker!r}] = True", encoding="utf-8")
         expression = f"__builtins__['ex'+'ec'](open({str(payload)!r}).read())"
@@ -274,7 +274,7 @@ class TestRegisterIntrospectTools:
             def registry(self):
                 raise AttributeError("no registry")
 
-        with patch.object(logging.getLogger("dcc_mcp_core.introspect"), "warning") as mock_warn:
+        with patch.object(logging.getLogger("meshy_dcc_core.introspect"), "warning") as mock_warn:
             register_introspect_tools(_BadServer())
         mock_warn.assert_called_once()
 

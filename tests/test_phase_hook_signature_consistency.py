@@ -5,11 +5,11 @@ from __future__ import annotations
 import ast
 from pathlib import Path
 
-from dcc_mcp_core._registration import CoreBuiltinActionsPhase
-from dcc_mcp_core._registration import RegistrationContext
+from meshy_dcc_core._registration import CoreBuiltinActionsPhase
+from meshy_dcc_core._registration import RegistrationContext
 
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent
-_SERVER_BASE = _PROJECT_ROOT / "python" / "dcc_mcp_core" / "server_base.py"
+_SERVER_BASE = _PROJECT_ROOT / "python" / "meshy_dcc_core" / "server_base.py"
 
 _REMOVED_PHASE_HOOKS = {
     "_attach_project_tools",

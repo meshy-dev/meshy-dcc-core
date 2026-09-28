@@ -1,6 +1,6 @@
 # Gateway HA — Kubernetes
 
-Minimal manifests for a 2-replica `dcc-mcp-server` gateway deployment
+Minimal manifests for a 2-replica `meshy-dcc-server` gateway deployment
 sharing a `ReadWriteMany` `FileRegistry` volume. Deliberately **not** a
 Helm chart — copy, tweak, apply.
 
@@ -8,7 +8,7 @@ Files:
 
 - `configmap.yaml` — environment for all replicas.
 - `deployment.yaml` — Deployment + RWX PVC.
-- `service.yaml` — ClusterIP service on port `9765`.
+- `service.yaml` — ClusterIP service on port `19765`.
 
 See [`docs/guide/production-deployment.md`](../../../docs/guide/production-deployment.md)
 for the full topology and failover semantics.
@@ -26,8 +26,8 @@ for the full topology and failover semantics.
 
 ```bash
 kubectl apply -f examples/k8s/gateway-ha/
-kubectl rollout status deploy/dcc-mcp-gateway
-kubectl get pods -l app.kubernetes.io/name=dcc-mcp-gateway
+kubectl rollout status deploy/meshy-dcc-gateway
+kubectl get pods -l app.kubernetes.io/name=meshy-dcc-gateway
 ```
 
 Dry-run validation before applying:
@@ -40,18 +40,18 @@ kubectl apply --dry-run=client -f examples/k8s/gateway-ha/
 
 ```bash
 # Port-forward the service
-kubectl port-forward svc/dcc-mcp-gateway 9765:9765 &
+kubectl port-forward svc/meshy-dcc-gateway 19765:19765 &
 PF_PID=$!
 
 # Health
-curl -sf http://localhost:9765/health
+curl -sf http://localhost:19765/health
 # → {"ok":true}
 
 # Registered instances
-curl -s http://localhost:9765/instances | jq
+curl -s http://localhost:19765/instances | jq
 
 # MCP — list aggregated tools
-curl -sf -X POST http://localhost:9765/mcp \
+curl -sf -X POST http://localhost:19765/mcp \
   -H 'Content-Type: application/json' \
   -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' | jq '.result.tools | length'
 
@@ -62,11 +62,11 @@ kill "$PF_PID"
 
 ```bash
 # Delete one pod; replicas=2 and maxUnavailable=0 ensure the service stays up.
-POD=$(kubectl get pod -l app.kubernetes.io/name=dcc-mcp-gateway -o name | head -n1)
+POD=$(kubectl get pod -l app.kubernetes.io/name=meshy-dcc-gateway -o name | head -n1)
 kubectl delete "$POD"
 sleep 6
-kubectl port-forward svc/dcc-mcp-gateway 9765:9765 &
-curl -sf http://localhost:9765/health    # still 200
+kubectl port-forward svc/meshy-dcc-gateway 19765:19765 &
+curl -sf http://localhost:19765/health    # still 200
 kill %1
 ```
 
@@ -79,7 +79,7 @@ add an Ingress (nginx-ingress example):
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: dcc-mcp-gateway
+  name: meshy-dcc-gateway
   annotations:
     nginx.ingress.kubernetes.io/upstream-hash-by: "$http_mcp_session_id"
     nginx.ingress.kubernetes.io/proxy-buffering: "off"
@@ -88,7 +88,7 @@ spec:
   ingressClassName: nginx
   tls:
     - hosts: [mcp.example.com]
-      secretName: dcc-mcp-tls
+      secretName: meshy-dcc-tls
   rules:
     - host: mcp.example.com
       http:
@@ -97,8 +97,8 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: dcc-mcp-gateway
-                port: { number: 9765 }
+                name: meshy-dcc-gateway
+                port: { number: 19765 }
 ```
 
 ## Tear down

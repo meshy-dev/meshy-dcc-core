@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from dcc_mcp_core.skills_helper import run_main
-from dcc_mcp_core.skills_helper import skill_entry
-from dcc_mcp_core.skills_helper import skill_error
-from dcc_mcp_core.skills_helper import skill_success
+from meshy_dcc_core.skills_helper import run_main
+from meshy_dcc_core.skills_helper import skill_entry
+from meshy_dcc_core.skills_helper import skill_error
+from meshy_dcc_core.skills_helper import skill_success
 
 
 @skill_entry

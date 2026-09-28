@@ -4,8 +4,8 @@ import queue
 
 import pytest
 
-from dcc_mcp_core.cua_cli import CuaCliBridge
-from dcc_mcp_core.cua_cli import CuaCliError
+from meshy_dcc_core.cua_cli import CuaCliBridge
+from meshy_dcc_core.cua_cli import CuaCliError
 from test_cua_cli import _fake_command
 
 

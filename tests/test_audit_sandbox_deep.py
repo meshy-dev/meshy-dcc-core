@@ -14,8 +14,8 @@ import json
 
 import pytest
 
-from dcc_mcp_core import SandboxContext
-from dcc_mcp_core import SandboxPolicy
+from meshy_dcc_core import SandboxContext
+from meshy_dcc_core import SandboxPolicy
 
 # ---------------------------------------------------------------------------
 # Helpers

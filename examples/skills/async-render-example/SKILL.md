@@ -8,7 +8,7 @@ description: >-
 license: MIT
 compatibility: Python 3.7+
 metadata:
-  dcc-mcp:
+  meshy-dcc:
     dcc: python
     version: "1.0.0"
     layer: example
@@ -37,4 +37,4 @@ from this value and surfaces `timeout_hint_secs` under
 ## Script convention
 
 Each script reads JSON parameters from stdin and writes a JSON result to
-stdout — the standard dcc-mcp-core skill script contract.
+stdout — the standard meshy-dcc-core skill script contract.

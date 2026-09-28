@@ -1,6 +1,6 @@
-# Debug gateway + per-DCC REST/MCP using worktree-built dcc-mcp-cli / dcc-mcp-server.
+# Debug gateway + per-DCC REST/MCP using worktree-built meshy-dcc-cli / meshy-dcc-server.
 # Usage:
-#   # A) Live Maya + gateway (default 9765) — after relinking dcc-mcp-core into Maya
+#   # A) Live Maya + gateway (default 19765) — after relinking meshy-dcc-core into Maya
 #   .\scripts\cli-gateway-debug.ps1 -Mode gateway
 #
 #   # B) Standalone server (no embedded DCC) — CI/automation smoke on example skills
@@ -9,7 +9,7 @@
 param(
     [ValidateSet("gateway", "standalone")]
     [string]$Mode = "gateway",
-    [string]$BaseUrl = "http://127.0.0.1:9765",
+    [string]$BaseUrl = "http://127.0.0.1:19765",
     [int]$McpPort = 18765,
     [string]$RepoRoot = ""
 )
@@ -61,13 +61,13 @@ if (-not $RepoRoot) {
     if (-not $RepoRoot) { $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path }
 }
 
-$Cli = Join-Path $RepoRoot "target\release\dcc-mcp-cli.exe"
-$Server = Join-Path $RepoRoot "target\release\dcc-mcp-server.exe"
+$Cli = Join-Path $RepoRoot "target\release\meshy-dcc-cli.exe"
+$Server = Join-Path $RepoRoot "target\release\meshy-dcc-server.exe"
 
 if (-not (Test-Path $Cli)) {
-    Write-Host "Building dcc-mcp-cli + dcc-mcp-server..."
+    Write-Host "Building meshy-dcc-cli + meshy-dcc-server..."
     Push-Location $RepoRoot
-    cargo build -p dcc-mcp-cli -p dcc-mcp-server --release
+    cargo build -p meshy-dcc-cli -p meshy-dcc-server --release
     Pop-Location
 }
 
@@ -76,7 +76,7 @@ try {
     if ($Mode -eq "standalone") {
         $BaseUrl = "http://127.0.0.1:$McpPort"
         $skillPaths = Join-Path $RepoRoot "examples\skills"
-        Write-Host "Starting standalone dcc-mcp-server on $BaseUrl (gateway disabled)..."
+        Write-Host "Starting standalone meshy-dcc-server on $BaseUrl (gateway disabled)..."
         # ponytail: Start-Process on Windows PowerShell 5.1 mangles array
         # ArgumentList values that contain quotes. Pass one pre-quoted command
         # line so JSON payloads survive intact.
@@ -91,7 +91,7 @@ try {
         Start-Sleep -Seconds 2
     }
 
-    $env:DCC_MCP_BASE_URL = $BaseUrl
+    $env:MESHY_DCC_BASE_URL = $BaseUrl
     Write-Host "=== health ==="
     & $Cli health
     if ($Mode -eq "gateway") {

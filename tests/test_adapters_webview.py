@@ -10,11 +10,11 @@ from typing import ClassVar
 import pytest
 
 # Import local modules
-import dcc_mcp_core
-from dcc_mcp_core import CAPABILITY_KEYS
-from dcc_mcp_core import WEBVIEW_DEFAULT_CAPABILITIES
-from dcc_mcp_core import WebViewAdapter
-from dcc_mcp_core import WebViewContext
+import meshy_dcc_core
+from meshy_dcc_core import CAPABILITY_KEYS
+from meshy_dcc_core import WEBVIEW_DEFAULT_CAPABILITIES
+from meshy_dcc_core import WebViewAdapter
+from meshy_dcc_core import WebViewContext
 
 # ── Public API shape ──────────────────────────────────────────────────────────
 
@@ -36,8 +36,8 @@ class TestAdaptersPublicApi:
         assert WebViewAdapter.capabilities["scene"] is False
 
     def test_adapters_reexport_from_top_level(self) -> None:
-        assert dcc_mcp_core.WebViewAdapter is WebViewAdapter
-        assert dcc_mcp_core.WebViewContext is WebViewContext
+        assert meshy_dcc_core.WebViewAdapter is WebViewAdapter
+        assert meshy_dcc_core.WebViewContext is WebViewContext
 
 
 # ── WebViewAdapter contract ───────────────────────────────────────────────────

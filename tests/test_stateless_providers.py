@@ -9,14 +9,14 @@ import urllib.request
 
 import pytest
 
-from dcc_mcp_core import McpHttpConfig
-from dcc_mcp_core import McpHttpServer
-from dcc_mcp_core import ToolRegistry
-from dcc_mcp_core import create_skill_server
+from meshy_dcc_core import McpHttpConfig
+from meshy_dcc_core import McpHttpServer
+from meshy_dcc_core import ToolRegistry
+from meshy_dcc_core import create_skill_server
 
 # MCP methods whose result extends the base `CacheableResult` and must
 # therefore carry `ttlMs` / `cacheScope`. Mirrors
-# `dcc_mcp_jsonrpc::CACHEABLE_RESULT_METHODS` in the Rust crate: adding a
+# `meshy_dcc_jsonrpc::CACHEABLE_RESULT_METHODS` in the Rust crate: adding a
 # cacheable method server-side means adding it here too.
 _CACHEABLE_METHODS = frozenset(
     {
@@ -102,7 +102,7 @@ def test_disabled_stateless_provider_methods_return_http_not_found(method, param
 
 @pytest.fixture(params=["blender", "maya"])
 def provider_server(request, tmp_path, monkeypatch):
-    monkeypatch.setenv("DCC_MCP_DISABLE_DEFAULT_SKILL_PATHS", "1")
+    monkeypatch.setenv("MESHY_DCC_DISABLE_DEFAULT_SKILL_PATHS", "1")
     config = McpHttpConfig(port=0, server_name="stateless-provider-contract")
     config.gateway_port = 0
     config.registry_dir = str(tmp_path / "registry")

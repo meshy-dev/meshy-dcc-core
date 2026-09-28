@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build deployable dcc-mcp-server release bundles."""
+"""Build deployable meshy-dcc-server release bundles."""
 
 from __future__ import annotations
 
@@ -27,7 +27,7 @@ def _validate_filename_part(name: str, *, label: str) -> str:
 
 def _archive_binary_name(kind: str, source: Path) -> str:
     suffix = ".exe" if source.suffix.lower() == ".exe" else ""
-    return f"dcc-mcp-{kind}{suffix}"
+    return f"meshy-dcc-{kind}{suffix}"
 
 
 def _write_binary(zf: ZipFile, source: Path, archive_name: str) -> None:
@@ -53,7 +53,7 @@ def build_bundle(
     platform = _validate_filename_part(platform, label="platform")
 
     out_dir.mkdir(parents=True, exist_ok=True)
-    bundle_path = out_dir / f"dcc-mcp-server-{version}-{platform}.zip"
+    bundle_path = out_dir / f"meshy-dcc-server-{version}-{platform}.zip"
 
     with ZipFile(bundle_path, "w", ZIP_DEFLATED) as zf:
         _write_binary(zf, server_bin, _archive_binary_name("server", server_bin))

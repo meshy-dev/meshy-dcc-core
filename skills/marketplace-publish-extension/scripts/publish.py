@@ -44,19 +44,19 @@ def _parse_skill_md(path: Path) -> dict[str, Any]:
     frontmatter_text = rest[:end_idx].strip()
 
     # Use a minimal YAML parser — we could import yaml, but that adds a
-    # dependency. For the dcc-mcp frontmatter subset, a line-oriented
+    # dependency. For the meshy-dcc frontmatter subset, a line-oriented
     # parser that handles simple scalars, lists with [], and nested
     # key: value under metadata is sufficient.
     return _parse_simple_yaml(frontmatter_text)
 
 
 def _parse_simple_yaml(text: str) -> dict[str, Any]:
-    """Minimal YAML subset parser for dcc-mcp SKILL.md frontmatter.
+    """Minimal YAML subset parser for meshy-dcc SKILL.md frontmatter.
 
     Handles:
     - plain scalars (key: value)
     - flow-sequence lists (key: [a, b, c])
-    - nested blocks (2-space indent) for metadata.dcc-mcp.*
+    - nested blocks (2-space indent) for metadata.meshy-dcc.*
     - >- folded block scalars (description: >-)
     """
     result: dict[str, Any] = {}
@@ -196,7 +196,7 @@ def _build_catalog_entry(
         raise ValueError("git installs require a full 40-character commit object ID")
     if install_type == "zip" and not re.fullmatch(r"(?:sha256:)?[0-9a-fA-F]{64}", sha256 or ""):
         raise ValueError("zip installs require exactly 64 hexadecimal SHA-256 digits")
-    dcc_mcp_meta = skill_md.get("metadata", {}).get("dcc-mcp", {})
+    meshy_dcc_meta = skill_md.get("metadata", {}).get("meshy-dcc", {})
 
     # Name from SKILL.md frontmatter
     name = skill_md.get("name", "")
@@ -206,8 +206,8 @@ def _build_catalog_entry(
     # Description from SKILL.md
     description = skill_md.get("description", "")
 
-    # DCC targets from metadata.dcc-mcp.dcc
-    dcc_raw = dcc_mcp_meta.get("dcc", "python")
+    # DCC targets from metadata.meshy-dcc.dcc
+    dcc_raw = meshy_dcc_meta.get("dcc", "python")
     if isinstance(dcc_raw, list):
         dcc_targets = dcc_raw
     elif isinstance(dcc_raw, str):
@@ -216,10 +216,10 @@ def _build_catalog_entry(
         dcc_targets = ["python"]
 
     # Version: CLI override > metadata > None
-    entry_version = version or dcc_mcp_meta.get("version")
+    entry_version = version or meshy_dcc_meta.get("version")
 
     # Tags: merge metadata tags + CLI tags
-    meta_tags_raw = dcc_mcp_meta.get("tags", "")
+    meta_tags_raw = meshy_dcc_meta.get("tags", "")
     if isinstance(meta_tags_raw, list):
         meta_tags = meta_tags_raw
     elif isinstance(meta_tags_raw, str):
@@ -229,7 +229,7 @@ def _build_catalog_entry(
     merged_tags = list(dict.fromkeys(meta_tags + tags))  # dedupe, preserve order
 
     # Maintainer: CLI > metadata
-    entry_maintainer = maintainer or dcc_mcp_meta.get("maintainer")
+    entry_maintainer = maintainer or meshy_dcc_meta.get("maintainer")
 
     entry: dict[str, Any] = {
         "name": name,
@@ -318,7 +318,7 @@ def _resolve_marketplace_path(raw: str) -> Path:
     """
     trimmed = raw.strip()
 
-    # GitHub slug like "owner/repo" or "dcc-mcp/marketplace"
+    # GitHub slug like "owner/repo" or "meshy-dev/marketplace"
     if _looks_like_github_slug(trimmed):
         # For local write operations, the user should provide a local path.
         # We return a path relative to cwd as a sensible default.
@@ -465,7 +465,7 @@ def main() -> None:
     parser.add_argument("--extension_dir", required=True, help="Path to the extension directory containing SKILL.md")
     parser.add_argument(
         "--marketplace_source",
-        default="dcc-mcp/marketplace",
+        default="meshy-dev/marketplace",
         help="Marketplace catalog source (local path, or directory)",
     )
     parser.add_argument("--install_url", required=True, help="Install source URL for the CatalogEntry")
@@ -484,7 +484,7 @@ def main() -> None:
     parser.add_argument("--maintainer", default=None, help="Extension maintainer name")
     parser.add_argument("--icon", default=None, help="Icon path or URL for the CatalogEntry")
     parser.add_argument("--tags", nargs="*", default=[], help="Additional tags to add to the CatalogEntry")
-    parser.add_argument("--min_core_version", default=None, help="Minimum dcc-mcp-core version required")
+    parser.add_argument("--min_core_version", default=None, help="Minimum meshy-dcc-core version required")
     parser.add_argument("--extension_url", default=None, help="Canonical URL for the extension (homepage, docs, etc.)")
     parser.add_argument(
         "--commit",

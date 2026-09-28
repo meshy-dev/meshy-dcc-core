@@ -7,13 +7,13 @@ import time
 
 import pytest
 
-from dcc_mcp_core._server.host_ui_dispatcher import DEFAULT_UI_JOB_TIMEOUT_MS
-from dcc_mcp_core._server.host_ui_dispatcher import DispatcherErrorCode
-from dcc_mcp_core._server.host_ui_dispatcher import HostUiDispatcherBase
-from dcc_mcp_core._server.host_ui_dispatcher import HostUiJobEntry
-from dcc_mcp_core._server.host_ui_dispatcher import host_ui_outcome
-from dcc_mcp_core._server.host_ui_dispatcher import normalize_affinity
-from dcc_mcp_core.cancellation import check_dcc_cancelled
+from meshy_dcc_core._server.host_ui_dispatcher import DEFAULT_UI_JOB_TIMEOUT_MS
+from meshy_dcc_core._server.host_ui_dispatcher import DispatcherErrorCode
+from meshy_dcc_core._server.host_ui_dispatcher import HostUiDispatcherBase
+from meshy_dcc_core._server.host_ui_dispatcher import HostUiJobEntry
+from meshy_dcc_core._server.host_ui_dispatcher import host_ui_outcome
+from meshy_dcc_core._server.host_ui_dispatcher import normalize_affinity
+from meshy_dcc_core.cancellation import check_dcc_cancelled
 
 
 class _SyncPumpDispatcher(HostUiDispatcherBase):

@@ -25,9 +25,9 @@ import urllib.request
 import pytest
 
 from conftest import McpClient
-from dcc_mcp_core import McpHttpConfig
-from dcc_mcp_core import McpHttpServer
-from dcc_mcp_core import ToolRegistry
+from meshy_dcc_core import McpHttpConfig
+from meshy_dcc_core import McpHttpServer
+from meshy_dcc_core import ToolRegistry
 
 
 def _make_registry() -> ToolRegistry:
@@ -96,9 +96,9 @@ def test_metrics_endpoint_returns_prometheus_payload(prom_server):
     assert "text/plain" in ctype
     assert "version=0.0.4" in ctype
     # Always-on series
-    assert "dcc_mcp_build_info" in body
-    assert "dcc_mcp_active_sessions" in body
-    assert "dcc_mcp_registered_tools" in body
+    assert "meshy_dcc_build_info" in body
+    assert "meshy_dcc_active_sessions" in body
+    assert "meshy_dcc_registered_tools" in body
 
 
 def test_tool_calls_advance_counter(prom_server):
@@ -125,7 +125,7 @@ def test_tool_calls_advance_counter(prom_server):
     value = 0
     while time.monotonic() < deadline:
         _, body, _ = _get(metrics_url)
-        target_prefix = 'dcc_mcp_tool_calls_total{status="success",tool="ping"}'
+        target_prefix = 'meshy_dcc_tool_calls_total{status="success",tool="ping"}'
         for line in body.splitlines():
             if line.startswith(target_prefix):
                 try:
@@ -169,7 +169,7 @@ def test_basic_auth_rejects_without_credentials():
         good = base64.b64encode(b"admin:s3cret").decode()
         status, body, _ = _get(url, headers={"Authorization": f"Basic {good}"})
         assert status == 200
-        assert "dcc_mcp_build_info" in body
+        assert "meshy_dcc_build_info" in body
     finally:
         handle.shutdown()
 

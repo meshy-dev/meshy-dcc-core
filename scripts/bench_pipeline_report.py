@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Build the trend-friendly ``pipeline-bench.json`` report from raw stage metrics.
 
-The Rust harness (``crates/dcc-mcp-telemetry/examples/pipeline_bench.rs``) records
+The Rust harness (``crates/meshy-dcc-telemetry/examples/pipeline_bench.rs``) records
 every pipeline stage under a ``ToolRecorder`` and exports the aggregated
 ``ToolMetrics`` as a raw JSON report. This script turns that export into the
 trend artifact consumed by dashboards and by the per-stage budget gate:

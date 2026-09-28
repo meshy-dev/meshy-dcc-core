@@ -1,11 +1,11 @@
 # Skills benchmark dataset
 
-Seed corpus for [`crates/dcc-mcp-skills-bench`](../../crates/dcc-mcp-skills-bench).
+Seed corpus for [`crates/meshy-dcc-skills-bench`](../../crates/meshy-dcc-skills-bench).
 
 ## What is in here
 
 `seeds.json` — the real skills harvested from this repository, parsed with the
-production loader (`dcc_mcp_skills::parse_skill_md`) so each entry carries the
+production loader (`meshy_dcc_skills::parse_skill_md`) so each entry carries the
 same fields the ranker sees at runtime: SKILL.md frontmatter plus the sibling
 `tools.yaml` tool declarations.
 
@@ -15,7 +15,7 @@ Seeds are harvested from these workspace-relative roots:
 |---|---|
 | `skills/` | skills this repository ships |
 | `examples/skills/` | worked examples, including edge cases |
-| `python/dcc_mcp_core/skills/` | bundled Python-side skills |
+| `python/meshy_dcc_core/skills/` | bundled Python-side skills |
 | `tests/fixtures/skills/` | loader edge cases, useful as ranking stress cases |
 
 The corpus is *not* only these seeds. They are the real part; the benchmark
@@ -27,7 +27,7 @@ from `blender-skill-00002`, which the DCC prefix alone can do.
 ## Regenerating
 
 ```bash
-cargo run -p dcc-mcp-skills-bench --bin skills-bench -- regenerate-seeds
+cargo run -p meshy-dcc-skills-bench --bin skills-bench -- regenerate-seeds
 ```
 
 Regenerate whenever skills are added or their frontmatter changes. There is a
@@ -46,6 +46,6 @@ match the generator is treated as absent and regenerated rather than used.
 
 The issue that created this benchmark set a split condition: extract the
 dataset into its own repository once it exceeds 10 MB, or once a real cross-adapter
-device matrix is needed. The bench crate stays in `dcc-mcp-core` either way —
-it has to, because it drives `dcc-mcp-gateway-search` through its Rust API
+device matrix is needed. The bench crate stays in `meshy-dcc-core` either way —
+it has to, because it drives `meshy-dcc-gateway-search` through its Rust API
 rather than over HTTP.

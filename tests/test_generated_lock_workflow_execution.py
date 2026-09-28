@@ -13,7 +13,7 @@ from types import SimpleNamespace
 import pytest
 
 from conftest import REPO_ROOT
-from dcc_mcp_core import yaml_loads
+from meshy_dcc_core import yaml_loads
 from test_uv_lock_consistency import _trusted_validator_source
 
 WORKFLOW_PATH = REPO_ROOT / ".github" / "workflows" / "release-please-lock-sync.yml"
@@ -372,7 +372,7 @@ def _resolve_fixture(tmp_path: Path):
     run_env["PATH"] = str(bin_dir) + os.pathsep + env["PATH"]
     run_env.update(
         {
-            "GITHUB_REPOSITORY": "dcc-mcp/dcc-mcp-core",
+            "GITHUB_REPOSITORY": "meshy-dev/meshy-dcc-core",
             "PR_NUMBER": "2486",
             "PR_HEAD_REF": "main",
             "EVENT_HEAD_SHA": stale,

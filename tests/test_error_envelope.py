@@ -23,9 +23,9 @@ import urllib.request
 import pytest
 
 from conftest import McpClient
-from dcc_mcp_core import McpHttpConfig
-from dcc_mcp_core import McpHttpServer
-from dcc_mcp_core import ToolRegistry
+from meshy_dcc_core import McpHttpConfig
+from meshy_dcc_core import McpHttpServer
+from meshy_dcc_core import ToolRegistry
 
 
 def _parse_error_envelope(body: dict[str, Any]) -> dict[str, Any]:

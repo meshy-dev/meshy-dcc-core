@@ -4,7 +4,7 @@ Covers:
 - Basic instantiation (no env vars, no skills discovered)
 - Returns a McpHttpServer instance
 - Custom McpHttpConfig is honoured
-- app_name determines which DCC_MCP_{APP}_SKILL_PATHS env var is read (not server name)
+- app_name determines which MESHY_DCC_{APP}_SKILL_PATHS env var is read (not server name)
 - dcc_name override is accepted
 - extra_paths parameter is accepted
 - Server can be started and returns a handle with valid mcp_url
@@ -19,9 +19,9 @@ from uuid import UUID
 import pytest
 
 from conftest import allocate_gateway_port
-from dcc_mcp_core import McpHttpConfig
-from dcc_mcp_core import McpHttpServer
-from dcc_mcp_core import create_skill_server
+from meshy_dcc_core import McpHttpConfig
+from meshy_dcc_core import McpHttpServer
+from meshy_dcc_core import create_skill_server
 
 
 class TestCreateSkillManagerBasic:
@@ -38,10 +38,10 @@ class TestCreateSkillManagerBasic:
 
     def test_default_server_name_in_repr(self):
         # app_name determines which env var to read for skill paths, NOT the server name.
-        # The default server name is the APP_NAME constant ("dcc-mcp").
+        # The default server name is the APP_NAME constant ("meshy-dcc").
         server = create_skill_server("blender")
         r = repr(server).lower()
-        assert "dcc-mcp" in r
+        assert "meshy-dcc" in r
 
     def test_custom_server_name_in_repr(self):
         cfg = McpHttpConfig(server_name="blender")
@@ -75,8 +75,8 @@ class TestCreateSkillManagerBasic:
         assert isinstance(server, McpHttpServer)
 
     def test_no_skills_discovered_without_env(self, monkeypatch):
-        monkeypatch.delenv("DCC_MCP_MAYA_SKILL_PATHS", raising=False)
-        monkeypatch.delenv("DCC_MCP_SKILL_PATHS", raising=False)
+        monkeypatch.delenv("MESHY_DCC_MAYA_SKILL_PATHS", raising=False)
+        monkeypatch.delenv("MESHY_DCC_SKILL_PATHS", raising=False)
         server = create_skill_server("maya")
         skills = server.list_skills()
         assert isinstance(skills, list)
@@ -194,8 +194,8 @@ class TestCreateSkillManagerSkillMethods:
         assert "SkillCatalog" in info
 
     def test_discover_returns_int(self, server, monkeypatch):
-        monkeypatch.delenv("DCC_MCP_MAYA_SKILL_PATHS", raising=False)
-        monkeypatch.delenv("DCC_MCP_SKILL_PATHS", raising=False)
+        monkeypatch.delenv("MESHY_DCC_MAYA_SKILL_PATHS", raising=False)
+        monkeypatch.delenv("MESHY_DCC_SKILL_PATHS", raising=False)
         count = server.discover()
         assert isinstance(count, int)
         assert count >= 0
@@ -214,7 +214,7 @@ class TestCreateSkillManagerHandlerRegistration:
 
     @pytest.fixture
     def server(self):
-        from dcc_mcp_core import ToolRegistry
+        from meshy_dcc_core import ToolRegistry
 
         reg = ToolRegistry()
         reg.register(

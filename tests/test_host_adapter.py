@@ -1,11 +1,11 @@
-"""Contract tests for :class:`dcc_mcp_core.host.HostAdapter`.
+"""Contract tests for :class:`meshy_dcc_core.host.HostAdapter`.
 
 Verify the lifecycle + hook contract without any DCC dependency. A
 minimal in-memory subclass (:class:`_TimerHost`) wires the tick
 callback to a Python :class:`threading.Timer` so the test proves the
 base class machinery actually drives a dispatcher end-to-end.
 
-External DCC adapter repos (``dcc-mcp-blender``, ``dcc-mcp-maya``, …)
+External DCC adapter repos (``meshy-dcc-blender``, ``meshy-dcc-maya``, …)
 are encouraged to copy
 :func:`test_subclass_overriding_hooks_drives_dispatcher` into their
 own test suite as a contract gate — if your subclass passes it, it
@@ -23,9 +23,9 @@ import time
 import pytest
 
 # Import local modules
-from dcc_mcp_core.host import BlockingDispatcher
-from dcc_mcp_core.host import HostAdapter
-from dcc_mcp_core.host import QueueDispatcher
+from meshy_dcc_core.host import BlockingDispatcher
+from meshy_dcc_core.host import HostAdapter
+from meshy_dcc_core.host import QueueDispatcher
 
 # ── Fakes ────────────────────────────────────────────────────────────
 

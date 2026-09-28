@@ -1,8 +1,8 @@
 """Contract tests for the cross-DCC asset import shape (PIP-1825).
 
-These tests freeze the :class:`dcc_mcp_core.AssetDescriptor` contract that
-downstream DCC repos (``dcc-mcp-blender``, ``dcc-mcp-maya``,
-``dcc-mcp-unreal``, ``dcc-mcp-houdini``) build their asset import skills
+These tests freeze the :class:`meshy_dcc_core.AssetDescriptor` contract that
+downstream DCC repos (``meshy-dcc-blender``, ``meshy-dcc-maya``,
+``meshy-dcc-unreal``, ``meshy-dcc-houdini``) build their asset import skills
 against.  They are pure-Python and require no DCC binary — the import
 *implementations* are tested in the respective downstream repositories.
 
@@ -20,20 +20,20 @@ import pathlib
 import pytest
 
 # Import local modules
-import dcc_mcp_core
-from dcc_mcp_core.asset_import import AssetAttribution
-from dcc_mcp_core.asset_import import AssetDescriptor
-from dcc_mcp_core.asset_import import AssetFileVariant
-from dcc_mcp_core.asset_import import AssetFormat
-from dcc_mcp_core.asset_import import AssetImportValidationError
-from dcc_mcp_core.asset_import import AxisHint
-from dcc_mcp_core.asset_import import ImportToSceneRequest
-from dcc_mcp_core.asset_import import ImportToSceneResult
-from dcc_mcp_core.asset_import import ImportWarning
-from dcc_mcp_core.asset_import import ImportWarningCode
-from dcc_mcp_core.asset_import import MaterialMode
-from dcc_mcp_core.asset_import import PlacementHint
-from dcc_mcp_core.asset_import import UnitHint
+import meshy_dcc_core
+from meshy_dcc_core.asset_import import AssetAttribution
+from meshy_dcc_core.asset_import import AssetDescriptor
+from meshy_dcc_core.asset_import import AssetFileVariant
+from meshy_dcc_core.asset_import import AssetFormat
+from meshy_dcc_core.asset_import import AssetImportValidationError
+from meshy_dcc_core.asset_import import AxisHint
+from meshy_dcc_core.asset_import import ImportToSceneRequest
+from meshy_dcc_core.asset_import import ImportToSceneResult
+from meshy_dcc_core.asset_import import ImportWarning
+from meshy_dcc_core.asset_import import ImportWarningCode
+from meshy_dcc_core.asset_import import MaterialMode
+from meshy_dcc_core.asset_import import PlacementHint
+from meshy_dcc_core.asset_import import UnitHint
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -310,8 +310,8 @@ class TestAssetDescriptor:
             "ImportToSceneResult",
             "AssetImportValidationError",
         ]:
-            assert hasattr(dcc_mcp_core, name), f"Missing top-level export: {name}"
-            assert name in dcc_mcp_core.__all__, f"Missing from __all__: {name}"
+            assert hasattr(meshy_dcc_core, name), f"Missing top-level export: {name}"
+            assert name in meshy_dcc_core.__all__, f"Missing from __all__: {name}"
 
 
 # ---------------------------------------------------------------------------
@@ -540,7 +540,7 @@ class TestBackwardCompatibility:
     """No changes to SceneStats semantics."""
 
     def test_scene_stats_still_works(self) -> None:
-        from dcc_mcp_core import SceneStats
+        from meshy_dcc_core import SceneStats
 
         stats = SceneStats(object_count=1, vertex_count=100, has_mesh=True)
         payload = stats.to_dict()
@@ -548,5 +548,5 @@ class TestBackwardCompatibility:
         assert restored == stats
 
     def test_scene_stats_still_exported(self) -> None:
-        assert hasattr(dcc_mcp_core, "SceneStats")
-        assert "SceneStats" in dcc_mcp_core.__all__
+        assert hasattr(meshy_dcc_core, "SceneStats")
+        assert "SceneStats" in meshy_dcc_core.__all__

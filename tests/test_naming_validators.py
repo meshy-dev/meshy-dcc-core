@@ -1,6 +1,6 @@
-"""Tests for client-safe MCP naming validators exposed from ``dcc_mcp_core``.
+"""Tests for client-safe MCP naming validators exposed from ``meshy_dcc_core``.
 
-The authoritative Rust unit tests live in ``crates/dcc-mcp-naming/src/lib.rs``.
+The authoritative Rust unit tests live in ``crates/meshy-dcc-naming/src/lib.rs``.
 These Python-side tests guard the PyO3 binding layer: constants are reachable,
 validators raise ``ValueError`` on bad input, and accept the common
 client-safe wire contract. See issue #260 for the full contract.
@@ -13,12 +13,12 @@ from typing import ClassVar
 
 import pytest
 
-from dcc_mcp_core import ACTION_ID_RE
-from dcc_mcp_core import MAX_TOOL_NAME_LEN
-from dcc_mcp_core import TOOL_NAME_RE
-from dcc_mcp_core import ToolRegistry
-from dcc_mcp_core import validate_action_id
-from dcc_mcp_core import validate_tool_name
+from meshy_dcc_core import ACTION_ID_RE
+from meshy_dcc_core import MAX_TOOL_NAME_LEN
+from meshy_dcc_core import TOOL_NAME_RE
+from meshy_dcc_core import ToolRegistry
+from meshy_dcc_core import validate_action_id
+from meshy_dcc_core import validate_tool_name
 
 # ── Constants ───────────────────────────────────────────────────────────────
 

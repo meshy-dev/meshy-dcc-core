@@ -5,17 +5,17 @@ from threading import Event
 
 import pytest
 
-from dcc_mcp_core import MemoryProvider
-from dcc_mcp_core.runtime.memory_provider import LocalMemoryProvider
-from dcc_mcp_core.runtime.memory_provider import MemoryCoordinator
-from dcc_mcp_core.runtime.memory_provider import MemoryForgetRequest
-from dcc_mcp_core.runtime.memory_provider import MemoryHealth
-from dcc_mcp_core.runtime.memory_provider import MemoryProviderStatus
-from dcc_mcp_core.runtime.memory_provider import MemoryRecallRequest
-from dcc_mcp_core.runtime.memory_provider import MemoryRecord
-from dcc_mcp_core.runtime.memory_provider import MemoryRememberRequest
-from dcc_mcp_core.runtime.memory_provider import NoopMemoryProvider
-from dcc_mcp_core.runtime.memory_provider import discover_memory_provider_factories
+from meshy_dcc_core import MemoryProvider
+from meshy_dcc_core.runtime.memory_provider import LocalMemoryProvider
+from meshy_dcc_core.runtime.memory_provider import MemoryCoordinator
+from meshy_dcc_core.runtime.memory_provider import MemoryForgetRequest
+from meshy_dcc_core.runtime.memory_provider import MemoryHealth
+from meshy_dcc_core.runtime.memory_provider import MemoryProviderStatus
+from meshy_dcc_core.runtime.memory_provider import MemoryRecallRequest
+from meshy_dcc_core.runtime.memory_provider import MemoryRecord
+from meshy_dcc_core.runtime.memory_provider import MemoryRememberRequest
+from meshy_dcc_core.runtime.memory_provider import NoopMemoryProvider
+from meshy_dcc_core.runtime.memory_provider import discover_memory_provider_factories
 
 
 def _record() -> MemoryRecord:
@@ -110,7 +110,7 @@ def test_entry_point_discovery_is_lazy_and_group_scoped() -> None:
         return [EntryPoint()]
 
     factories = discover_memory_provider_factories(entry_points=entry_points)
-    assert seen == ["dcc_mcp.memory_providers"]
+    assert seen == ["meshy_dcc.memory_providers"]
     assert factories["memcode"]().health().status is MemoryProviderStatus.DISABLED
 
 

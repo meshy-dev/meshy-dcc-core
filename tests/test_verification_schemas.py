@@ -6,21 +6,21 @@ import json
 
 import pytest
 
-from dcc_mcp_core.verification import SCHEMA_ANIM_CURVES
-from dcc_mcp_core.verification import SCHEMA_GRAPH_STATE
-from dcc_mcp_core.verification import SCHEMA_RIG_STATE
-from dcc_mcp_core.verification import SCHEMA_SIM_STATUS
-from dcc_mcp_core.verification import SchemaValidationError
-from dcc_mcp_core.verification import sample_curve
-from dcc_mcp_core.verification import schema_document
-from dcc_mcp_core.verification import schema_names
-from dcc_mcp_core.verification import validate_state_export
-from dcc_mcp_core.verification import value_at
+from meshy_dcc_core.verification import SCHEMA_ANIM_CURVES
+from meshy_dcc_core.verification import SCHEMA_GRAPH_STATE
+from meshy_dcc_core.verification import SCHEMA_RIG_STATE
+from meshy_dcc_core.verification import SCHEMA_SIM_STATUS
+from meshy_dcc_core.verification import SchemaValidationError
+from meshy_dcc_core.verification import sample_curve
+from meshy_dcc_core.verification import schema_document
+from meshy_dcc_core.verification import schema_names
+from meshy_dcc_core.verification import validate_state_export
+from meshy_dcc_core.verification import value_at
 
 
 def _anim_curves_payload():
     return {
-        "schema_name": "dcc-mcp/anim-curves",
+        "schema_name": "meshy-dcc/anim-curves",
         "schema_version": 1,
         "curves": [
             {
@@ -39,7 +39,7 @@ def _anim_curves_payload():
 
 def _rig_state_payload():
     return {
-        "schema_name": "dcc-mcp/rig-state",
+        "schema_name": "meshy-dcc/rig-state",
         "schema_version": 1,
         "joints": {
             "count": 2,
@@ -55,7 +55,7 @@ def _rig_state_payload():
 
 def _sim_status_payload():
     return {
-        "schema_name": "dcc-mcp/sim-status",
+        "schema_name": "meshy-dcc/sim-status",
         "schema_version": 1,
         "cache_exists": True,
         "cache_path": "/tmp/sim.cache",
@@ -69,7 +69,7 @@ def _sim_status_payload():
 
 def _graph_state_payload():
     return {
-        "schema_name": "dcc-mcp/graph-state",
+        "schema_name": "meshy-dcc/graph-state",
         "schema_version": 1,
         "nodes": [{"name": "Read1", "type": "Read"}, {"name": "Blur1", "type": "Blur"}],
         "connections": [{"from": "Read1", "to": "Blur1"}],
@@ -97,7 +97,7 @@ class TestSchemaRegistry:
 
     def test_schema_document_unknown_name_raises_keyerror(self):
         with pytest.raises(KeyError):
-            schema_document("dcc-mcp/nope")
+            schema_document("meshy-dev/nope")
 
 
 class TestAnimCurves:
@@ -118,7 +118,7 @@ class TestAnimCurves:
 
     def test_schema_name_mismatch_rejected(self):
         payload = _anim_curves_payload()
-        payload["schema_name"] = "dcc-mcp/rig-state"
+        payload["schema_name"] = "meshy-dcc/rig-state"
         with pytest.raises(SchemaValidationError, match="schema_name mismatch"):
             validate_state_export(payload, SCHEMA_ANIM_CURVES)
 
@@ -363,4 +363,4 @@ class TestValueAtTargetMatching:
 
     def test_unknown_schema_raises_keyerror(self):
         with pytest.raises(KeyError):
-            validate_state_export({}, "dcc-mcp/nope")
+            validate_state_export({}, "meshy-dev/nope")

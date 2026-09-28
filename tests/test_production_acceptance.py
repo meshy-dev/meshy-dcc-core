@@ -16,26 +16,26 @@ from typing import Any
 
 import pytest
 
-from dcc_mcp_core import yaml_loads
-from dcc_mcp_core.verification.acceptance import LEVELS
-from dcc_mcp_core.verification.acceptance import AcceptanceValidationError
-from dcc_mcp_core.verification.acceptance import build_report
-from dcc_mcp_core.verification.acceptance import dumps_report
-from dcc_mcp_core.verification.acceptance import evaluate_acceptance
-from dcc_mcp_core.verification.acceptance import evaluate_many
-from dcc_mcp_core.verification.acceptance import make_level
-from dcc_mcp_core.verification.acceptance import production_acceptance_v1_json_schema
-from dcc_mcp_core.verification.acceptance import recompute_sha256
-from dcc_mcp_core.verification.acceptance import record_from_catalog_entry
-from dcc_mcp_core.verification.acceptance import sanitize_evidence_link
-from dcc_mcp_core.verification.acceptance import validate_acceptance_schema
-from dcc_mcp_core.verification.acceptance import verify_release_sha256
-from dcc_mcp_core.verification.acceptance_fixtures import MIN_TUANJIE_EDITOR_MAJOR
-from dcc_mcp_core.verification.acceptance_fixtures import MIN_UNITY_EDITOR_MAJOR
-from dcc_mcp_core.verification.acceptance_fixtures import godot_project
-from dcc_mcp_core.verification.acceptance_fixtures import godot_version_probe
-from dcc_mcp_core.verification.acceptance_fixtures import unity_project_version
-from dcc_mcp_core.verification.acceptance_fixtures import unreal_project
+from meshy_dcc_core import yaml_loads
+from meshy_dcc_core.verification.acceptance import LEVELS
+from meshy_dcc_core.verification.acceptance import AcceptanceValidationError
+from meshy_dcc_core.verification.acceptance import build_report
+from meshy_dcc_core.verification.acceptance import dumps_report
+from meshy_dcc_core.verification.acceptance import evaluate_acceptance
+from meshy_dcc_core.verification.acceptance import evaluate_many
+from meshy_dcc_core.verification.acceptance import make_level
+from meshy_dcc_core.verification.acceptance import production_acceptance_v1_json_schema
+from meshy_dcc_core.verification.acceptance import recompute_sha256
+from meshy_dcc_core.verification.acceptance import record_from_catalog_entry
+from meshy_dcc_core.verification.acceptance import sanitize_evidence_link
+from meshy_dcc_core.verification.acceptance import validate_acceptance_schema
+from meshy_dcc_core.verification.acceptance import verify_release_sha256
+from meshy_dcc_core.verification.acceptance_fixtures import MIN_TUANJIE_EDITOR_MAJOR
+from meshy_dcc_core.verification.acceptance_fixtures import MIN_UNITY_EDITOR_MAJOR
+from meshy_dcc_core.verification.acceptance_fixtures import godot_project
+from meshy_dcc_core.verification.acceptance_fixtures import godot_version_probe
+from meshy_dcc_core.verification.acceptance_fixtures import unity_project_version
+from meshy_dcc_core.verification.acceptance_fixtures import unreal_project
 
 TIMESTAMP = "2026-01-01T00:00:00+00:00"
 _DIGEST_A = "a" * 64
@@ -54,14 +54,14 @@ def _valid_record(overrides: Any = None) -> dict[str, Any]:
     record: dict[str, Any] = {
         "schema_version": 1,
         "product": {
-            "identifier": "dcc-mcp-maya",
-            "entity": "dcc-mcp",
-            "owner_repository": "https://github.com/dcc-mcp/dcc-mcp-maya",
+            "identifier": "meshy-dcc-maya",
+            "entity": "meshy-dcc",
+            "owner_repository": "https://github.com/meshy-dev/meshy-dcc-maya",
             "catalog_version": "1",
             "package_version": "0.9.22",
             "release_tag": "v0.9.22",
             "source_ref": _SOURCE_REF,
-            "asset_name": "dcc_mcp_maya-0.9.22-py3-none-any.whl",
+            "asset_name": "meshy_dcc_maya-0.9.22-py3-none-any.whl",
             "publisher_digest": _DIGEST_A,
             "recomputed_sha256": _DIGEST_A,
             "runner": {"available": True},
@@ -69,7 +69,7 @@ def _valid_record(overrides: Any = None) -> dict[str, Any]:
             "tests_skipped": 2,
             "credentials_licenses": {"licensed": True},
             "last_licensed_acceptance": "2026-01-01",
-            "evidence_links": [{"url": "https://github.com/dcc-mcp/dcc-mcp-maya", "label": "repository"}],
+            "evidence_links": [{"url": "https://github.com/meshy-dev/meshy-dcc-maya", "label": "repository"}],
         },
         "levels": {key: _level() for key in LEVELS},
         "report": {"generated_at": TIMESTAMP, "overall_status": "PASS", "sanitized": True},
@@ -362,7 +362,7 @@ def test_verify_release_sha256_rejects_non_public_url(tmp_path: Any, url: str) -
         "C:\\Users\\x\\report.json",
         "\\\\server\\share\\report.json",
         "ftp://host/report",
-        "https://user:token@github.com/dcc-mcp/dcc-mcp-maya",
+        "https://user:token@github.com/meshy-dev/meshy-dcc-maya",
         # Alternate spellings of loopback that bypass a plain "127." prefix match.
         "http://2130706433/report",
         "http://0177.0.0.1/report",
@@ -371,8 +371,8 @@ def test_verify_release_sha256_rejects_non_public_url(tmp_path: Any, url: str) -
         "http://[fd00::1]/report",
         "https://[::ffff:127.0.0.1]/report",
         # Credentials smuggled into the query string instead of userinfo.
-        "https://github.com/dcc-mcp/dcc-mcp-maya?token=SECRET",
-        "https://github.com/dcc-mcp/dcc-mcp-maya?sig=abc",
+        "https://github.com/meshy-dev/meshy-dcc-maya?token=SECRET",
+        "https://github.com/meshy-dev/meshy-dcc-maya?sig=abc",
     ],
 )
 def test_sanitize_evidence_link_rejects_non_public(url: str) -> None:
@@ -381,8 +381,8 @@ def test_sanitize_evidence_link_rejects_non_public(url: str) -> None:
 
 
 def test_sanitize_evidence_link_accepts_public_https() -> None:
-    assert sanitize_evidence_link("https://github.com/dcc-mcp/dcc-mcp-maya") == (
-        "https://github.com/dcc-mcp/dcc-mcp-maya"
+    assert sanitize_evidence_link("https://github.com/meshy-dev/meshy-dcc-maya") == (
+        "https://github.com/meshy-dev/meshy-dcc-maya"
     )
     # A public numeric host is accepted: hardening targets non-public hosts only.
     assert sanitize_evidence_link("http://93.184.216.34/report") == "http://93.184.216.34/report"
@@ -398,7 +398,7 @@ def test_make_level_output_passes_the_validator() -> None:
         source="real-host",
         checked_at=TIMESTAMP,
         detail="ok",
-        evidence=[{"url": "https://github.com/dcc-mcp/dcc-mcp-maya", "label": "repository"}],
+        evidence=[{"url": "https://github.com/meshy-dev/meshy-dcc-maya", "label": "repository"}],
     )
     validate_acceptance_schema(_valid_record({"levels": {"instance_qualified_call": level}}))
     assert level["evidence"][0]["label"] == "repository"
@@ -410,12 +410,12 @@ def test_make_level_output_passes_the_validator() -> None:
         pytest.param({"checked_at": ""}, "checked_at", id="empty-checked-at"),
         pytest.param({"checked_at": None}, "checked_at", id="null-checked-at"),
         pytest.param(
-            {"evidence": ["https://github.com/dcc-mcp/dcc-mcp-maya"]},
+            {"evidence": ["https://github.com/meshy-dev/meshy-dcc-maya"]},
             "evidence link must have url and label",
             id="string-evidence",
         ),
         pytest.param(
-            {"evidence": {"url": "https://github.com/dcc-mcp/dcc-mcp-maya", "label": "repository"}},
+            {"evidence": {"url": "https://github.com/meshy-dev/meshy-dcc-maya", "label": "repository"}},
             "evidence must be a list",
             id="dict-evidence",
         ),
@@ -471,11 +471,11 @@ def test_tuanjie_has_its_own_editor_floor(tmp_path: Any) -> None:
 
 
 def test_unreal_project_writes_and_rejects_unsupported(tmp_path: Any) -> None:
-    result = unreal_project(tmp_path, "5.4", released_package="dcc-mcp-unreal")
+    result = unreal_project(tmp_path, "5.4", released_package="meshy-dcc-unreal")
     assert result["launched"] is False
     uproject = json.loads((tmp_path / "DisposableProject.uproject").read_text(encoding="utf-8"))
     assert uproject["EngineAssociation"] == "5.4"
-    assert uproject["Plugins"][0]["Name"] == "dcc-mcp-unreal"
+    assert uproject["Plugins"][0]["Name"] == "meshy-dcc-unreal"
 
     with pytest.raises(AcceptanceValidationError, match="unsupported"):
         unreal_project(tmp_path / "old", "4.27")
@@ -532,7 +532,7 @@ def test_godot_project_writes_and_rejects_unsupported(tmp_path: Any) -> None:
 def test_catalog_derives_a_record_for_every_adapter() -> None:
     from conftest import REPO_ROOT
 
-    catalog = yaml_loads((REPO_ROOT / "dcc-mcp-catalog.yml").read_text(encoding="utf-8"))
+    catalog = yaml_loads((REPO_ROOT / "meshy-dcc-catalog.yml").read_text(encoding="utf-8"))
     entries = catalog["entries"]
     assert entries
 
@@ -558,9 +558,9 @@ def test_catalog_install_url_type_error_is_a_validation_error(url: Any) -> None:
     ``AttributeError`` — an internal fault instead of a rejected catalog entry.
     """
     entry = {
-        "name": "dcc-mcp-example",
-        "maintainer": "dcc-mcp",
-        "url": "https://github.com/dcc-mcp/dcc-mcp-maya",
+        "name": "meshy-dcc-example",
+        "maintainer": "meshy-dcc",
+        "url": "https://github.com/meshy-dev/meshy-dcc-maya",
         "version": "1.0.0",
         "install": {"url": url},
     }
@@ -572,9 +572,9 @@ def test_catalog_install_url_type_error_is_a_validation_error(url: Any) -> None:
 def test_catalog_install_url_stays_optional(url: Any) -> None:
     """A null or empty ``install.url`` still means "no downloadable artifact"."""
     entry: dict[str, Any] = {
-        "name": "dcc-mcp-example",
-        "maintainer": "dcc-mcp",
-        "url": "https://github.com/dcc-mcp/dcc-mcp-maya",
+        "name": "meshy-dcc-example",
+        "maintainer": "meshy-dcc",
+        "url": "https://github.com/meshy-dev/meshy-dcc-maya",
         "version": "1.0.0",
         "install": {"url": url},
     }
@@ -589,15 +589,15 @@ def test_report_is_deterministic_and_sanitized() -> None:
     blender = _valid_record(
         {
             "product": {
-                "identifier": "dcc-mcp-blender",
-                "owner_repository": "https://github.com/dcc-mcp/dcc-mcp-blender",
+                "identifier": "meshy-dcc-blender",
+                "owner_repository": "https://github.com/meshy-dev/meshy-dcc-blender",
             }
         }
     )
     report = build_report([maya, blender], generated_at=TIMESTAMP)
     assert report["sanitized"] is True
     # Deterministic ordering: sorted by identifier.
-    assert [item["identifier"] for item in report["products"]] == ["dcc-mcp-blender", "dcc-mcp-maya"]
+    assert [item["identifier"] for item in report["products"]] == ["meshy-dcc-blender", "meshy-dcc-maya"]
     # Every product emits an independent per-level status.
     assert set(report["products"][0]["levels"]) == set(LEVELS)
     assert dumps_report(report) == dumps_report(build_report([maya, blender], generated_at=TIMESTAMP))

@@ -1,6 +1,6 @@
 /// Marketplace-card branding derivation.
 ///
-/// When `metadata.dcc-mcp.branding` is not authored (most skills today),
+/// When `metadata.meshy-dcc.branding` is not authored (most skills today),
 /// we still want each card to feel distinct. This module derives a
 /// stable accent colour + initial letter from the skill identifier so
 /// the grid reads as a marketplace instead of an undifferentiated table.

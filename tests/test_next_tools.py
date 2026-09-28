@@ -26,10 +26,10 @@ import pytest
 
 from conftest import McpClient
 from conftest import allocate_gateway_port
-import dcc_mcp_core
-from dcc_mcp_core import McpHttpConfig
-from dcc_mcp_core import McpHttpServer
-from dcc_mcp_core import ToolRegistry
+import meshy_dcc_core
+from meshy_dcc_core import McpHttpConfig
+from meshy_dcc_core import McpHttpServer
+from meshy_dcc_core import ToolRegistry
 
 # ── Unit: sibling tools.yaml parses next-tools per tool ────────────────────
 
@@ -61,7 +61,7 @@ def test_sibling_tools_yaml_parses_next_tools(tmp_path: Path) -> None:
 name: nt-skill
 description: next-tools sibling-file test
 metadata:
-  dcc-mcp:
+  meshy-dcc:
     dcc: maya
     tools: tools.yaml
 ---
@@ -69,7 +69,7 @@ metadata:
 """,
     )
 
-    meta = dcc_mcp_core.parse_skill_md(str(skill_dir))
+    meta = meshy_dcc_core.parse_skill_md(str(skill_dir))
     assert meta is not None
     assert len(meta.tools) == 1
     tool = meta.tools[0]
@@ -96,7 +96,7 @@ next-tools:
 ---
 """,
     )
-    assert dcc_mcp_core.parse_skill_md(str(skill_dir)) is None, (
+    assert meshy_dcc_core.parse_skill_md(str(skill_dir)) is None, (
         "top-level next-tools: must cause the loader to reject the skill"
     )
 
@@ -147,7 +147,7 @@ print(json.dumps({"success": True, "message": "pong"}))
 name: nt-success
 description: Success skill for #342 end-to-end test
 metadata:
-  dcc-mcp:
+  meshy-dcc:
     dcc: test
     tools: tools.yaml
 ---
@@ -188,7 +188,7 @@ sys.exit(1)
 name: nt-failure
 description: Failure skill for #342 end-to-end test
 metadata:
-  dcc-mcp:
+  meshy-dcc:
     dcc: test
     tools: tools.yaml
 ---
@@ -224,7 +224,7 @@ print(json.dumps({"success": True, "message": "ok"}))
 name: nt-plain
 description: No next-tools declared
 metadata:
-  dcc-mcp:
+  meshy-dcc:
     dcc: test
     tools: tools.yaml
 ---

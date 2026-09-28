@@ -1,0 +1,37 @@
+[package]
+name = "meshy-dcc-wire"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Canonical MCP/gateway wire serialization and argument validation for Meshy DCC."
+keywords = ["mcp", "wire", "serialization", "validation", "clean-architecture"]
+categories = ["api-bindings", "parsing"]
+
+[package.metadata.release]
+release = true
+
+[features]
+default = []
+# The default Rust crate remains protocol-only.  Python bindings reuse
+# meshy-dcc-pybridge as the sole PyAny <-> serde_json::Value conversion owner.
+python-bindings = ["pyo3", "dep:meshy-dcc-pybridge", "meshy-dcc-pybridge/python-bindings"]
+stub-gen = ["python-bindings", "dep:pyo3-stub-gen", "dep:pyo3-stub-gen-derive"]
+
+[dependencies]
+# Internal — the pybridge edge is optional and enabled only for PyO3 exports.
+meshy-dcc-protocols = { workspace = true }
+meshy-dcc-pybridge = { workspace = true, optional = true }
+
+# Workspace shared
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+workspace-hack = { version = "0.1", path = "../workspace-hack" }
+
+# Type-stub generation (opt-in via `stub-gen` feature).
+pyo3 = { workspace = true, optional = true }
+pyo3-stub-gen = { workspace = true, optional = true }
+pyo3-stub-gen-derive = { workspace = true, optional = true }

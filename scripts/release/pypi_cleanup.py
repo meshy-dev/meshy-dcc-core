@@ -11,13 +11,13 @@ GitHub repository is supplied, the tool fails closed unless every selected
 PyPI file has an exact-name GitHub Release asset with the same size and digest.
 
 Example:
-    python scripts/release/pypi_cleanup.py --package dcc-mcp-core \
+    python scripts/release/pypi_cleanup.py --package meshy-dcc-core \
         --delete-below 0.19.90 \
         --keep-version 0.19.3 --keep-version 0.19.4 \
         --keep-version 0.19.45 \
         --max-deletes 83 --expect-selected-count 83 \
         --expect-selected-total-bytes 9271523910 \
-        --github-repository dcc-mcp/dcc-mcp-core \
+        --github-repository meshy-dev/meshy-dcc-core \
         --output-json cleanup-plan.json
 
 Set GH_TOKEN or GITHUB_TOKEN only when GitHub's anonymous API rate limit is
@@ -44,7 +44,7 @@ import urllib.request
 
 PYPI_URL = "https://pypi.org"
 GITHUB_API_URL = "https://api.github.com"
-USER_AGENT = "dcc-mcp-pypi-cleanup-plan/2.0 (+https://github.com/dcc-mcp/dcc-mcp-core)"
+USER_AGENT = "meshy-dcc-pypi-cleanup-plan/2.0 (+https://github.com/meshy-dev/meshy-dcc-core)"
 
 
 class CleanupError(Exception):

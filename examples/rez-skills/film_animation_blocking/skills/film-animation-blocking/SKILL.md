@@ -4,7 +4,7 @@ description: "Maya blocking helpers for film shot animation contexts."
 license: MIT
 allowed-tools: Bash Read Write
 metadata:
-  dcc-mcp:
+  meshy-dcc:
     dcc: maya
     version: "1.0.0"
     layer: domain

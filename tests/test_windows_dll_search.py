@@ -2,7 +2,7 @@ from pathlib import Path
 
 
 def test_adds_embedded_python_prefix_to_windows_dll_search(monkeypatch, tmp_path):
-    from dcc_mcp_core import _windows_dll_search as windows_dll_search
+    from meshy_dcc_core import _windows_dll_search as windows_dll_search
 
     added = []
     handle = object()
@@ -20,7 +20,7 @@ def test_adds_embedded_python_prefix_to_windows_dll_search(monkeypatch, tmp_path
 
 
 def test_skips_dll_search_setup_outside_windows(monkeypatch):
-    from dcc_mcp_core import _windows_dll_search as windows_dll_search
+    from meshy_dcc_core import _windows_dll_search as windows_dll_search
 
     monkeypatch.setattr(windows_dll_search.sys, "platform", "linux")
     windows_dll_search._DLL_DIRECTORY_HANDLES.clear()

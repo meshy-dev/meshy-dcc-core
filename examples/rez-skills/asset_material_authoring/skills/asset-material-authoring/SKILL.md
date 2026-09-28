@@ -4,7 +4,7 @@ description: "Material authoring helpers for asset-library contexts."
 license: MIT
 allowed-tools: Bash Read Write
 metadata:
-  dcc-mcp:
+  meshy-dcc:
     dcc: python
     version: "1.0.0"
     layer: domain

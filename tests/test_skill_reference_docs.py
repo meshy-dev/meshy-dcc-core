@@ -5,10 +5,10 @@ from __future__ import annotations
 from pathlib import Path
 import warnings
 
-from dcc_mcp_core.constants import METADATA_SKILL_REFERENCE_DOCS_KEY
-from dcc_mcp_core.skill_reference_docs import _handle_list
-from dcc_mcp_core.skill_reference_docs import _handle_read
-from dcc_mcp_core.skill_reference_docs import register_skill_reference_docs_tools
+from meshy_dcc_core.constants import METADATA_SKILL_REFERENCE_DOCS_KEY
+from meshy_dcc_core.skill_reference_docs import _handle_list
+from meshy_dcc_core.skill_reference_docs import _handle_read
+from meshy_dcc_core.skill_reference_docs import register_skill_reference_docs_tools
 
 
 class _Meta:

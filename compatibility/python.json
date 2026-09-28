@@ -52,7 +52,7 @@
     }
   },
   "distributions": {
-    "dcc-mcp-core": {
+    "meshy-dcc-core": {
       "pyproject": "pyproject.toml",
       "support_profile": "lts",
       "forbidden_runtime_dependencies": [
@@ -63,48 +63,48 @@
       ],
       "wheel_resources": [
         {
-          "member": "dcc_mcp_core/schemas/adapter-install-sop-v1.schema.json",
-          "source": "python/dcc_mcp_core/schemas/adapter-install-sop-v1.schema.json",
-          "canonical_url": "https://dcc-mcp.github.io/schemas/adapter-install-sop-v1.schema.json",
-          "sha256": "2b3a8a101384a5163c7569c4a2b0de6586c672c5ee291735f94334a33b7d37a0",
+          "member": "meshy_dcc_core/schemas/adapter-install-sop-v1.schema.json",
+          "source": "python/meshy_dcc_core/schemas/adapter-install-sop-v1.schema.json",
+          "canonical_url": "https://www.meshy.ai/meshy-dcc/schemas/adapter-install-sop-v1.schema.json",
+          "sha256": "78271120374b0e23e47097de168d99a025671d913454884d28cf650bbc10a10f",
           "status": "frozen"
         },
         {
-          "member": "dcc_mcp_core/schemas/adapter-install-sop-v2.schema.json",
-          "source": "python/dcc_mcp_core/schemas/adapter-install-sop-v2.schema.json",
-          "canonical_url": "https://dcc-mcp.github.io/schemas/adapter-install-sop-v2.schema.json",
+          "member": "meshy_dcc_core/schemas/adapter-install-sop-v2.schema.json",
+          "source": "python/meshy_dcc_core/schemas/adapter-install-sop-v2.schema.json",
+          "canonical_url": "https://www.meshy.ai/meshy-dcc/schemas/adapter-install-sop-v2.schema.json",
           "sha256": "daa5840e07c956d7c9269e5709d6993a3988b905f986c06e7c4c02f5023e9422",
           "status": "current"
         }
       ]
     },
-    "dcc-mcp-server": {
-      "pyproject": "pkg/dcc-mcp-server-bin/pyproject.toml",
+    "meshy-dcc-server": {
+      "pyproject": "pkg/meshy-dcc-server-bin/pyproject.toml",
       "support_profile": "lts"
     },
-    "dcc-mcp-core-semantic": {
-      "pyproject": "pkg/dcc-mcp-core-semantic/pyproject.toml",
+    "meshy-dcc-core-semantic": {
+      "pyproject": "pkg/meshy-dcc-core-semantic/pyproject.toml",
       "support_profile": "lts"
     },
-    "dcc-mcp-cli": {
-      "pyproject": "pkg/dcc-mcp-cli-bin/pyproject.toml",
+    "meshy-dcc-cli": {
+      "pyproject": "pkg/meshy-dcc-cli-bin/pyproject.toml",
       "support_profile": "lts"
     }
   },
   "optional_dependencies": {
     "semantic": {
-      "owner_distribution": "dcc-mcp-core",
-      "native_dependency": "dcc-mcp-core-semantic",
+      "owner_distribution": "meshy-dcc-core",
+      "native_dependency": "meshy-dcc-core-semantic",
       "python_fallback_dependency": "fastembed",
       "fallback_minimum_python": "3.8"
     }
   },
   "wheel_profiles": {
     "native_py37": {
-      "distribution": "dcc-mcp-core",
+      "distribution": "meshy-dcc-core",
       "wheel_tag": "cp37-cp37m",
       "root_is_purelib": false,
-      "extension_module": "dcc_mcp_core/_core",
+      "extension_module": "meshy_dcc_core/_core",
       "expects_extension": true,
       "platforms": {
         "linux-x86_64": {
@@ -121,10 +121,10 @@
       }
     },
     "lite_py37": {
-      "distribution": "dcc-mcp-core",
+      "distribution": "meshy-dcc-core",
       "wheel_tag": "py3-none",
       "root_is_purelib": true,
-      "extension_module": "dcc_mcp_core/_core",
+      "extension_module": "meshy_dcc_core/_core",
       "expects_extension": false,
       "platforms": {
         "any": {
@@ -135,10 +135,10 @@
       }
     },
     "abi3": {
-      "distribution": "dcc-mcp-core",
+      "distribution": "meshy-dcc-core",
       "wheel_tag": "cp38-abi3",
       "root_is_purelib": false,
-      "extension_module": "dcc_mcp_core/_core",
+      "extension_module": "meshy_dcc_core/_core",
       "expects_extension": true,
       "platforms": {
         "linux-x86_64": {
@@ -171,10 +171,10 @@
       }
     },
     "semantic_native_py37": {
-      "distribution": "dcc-mcp-core-semantic",
+      "distribution": "meshy-dcc-core-semantic",
       "wheel_tag": "cp37-cp37m",
       "root_is_purelib": false,
-      "extension_module": "dcc_mcp_core_semantic/_native",
+      "extension_module": "meshy_dcc_core_semantic/_native",
       "expects_extension": true,
       "platforms": {
         "linux-x86_64": {
@@ -190,10 +190,10 @@
       }
     },
     "semantic_abi3": {
-      "distribution": "dcc-mcp-core-semantic",
+      "distribution": "meshy-dcc-core-semantic",
       "wheel_tag": "cp38-abi3",
       "root_is_purelib": false,
-      "extension_module": "dcc_mcp_core_semantic/_native",
+      "extension_module": "meshy_dcc_core_semantic/_native",
       "expects_extension": true,
       "platforms": {
         "linux-x86_64": {
@@ -241,26 +241,26 @@
   },
   "runtime_smoke": {
     "native_py37": [
-      "dcc_mcp_core",
-      "dcc_mcp_core._core",
-      "dcc_mcp_core.skill",
-      "dcc_mcp_core.schema",
-      "dcc_mcp_core.server_base",
-      "dcc_mcp_core.host",
-      "dcc_mcp_core._server.options",
-      "dcc_mcp_core._runtime.mcp_http_config"
+      "meshy_dcc_core",
+      "meshy_dcc_core._core",
+      "meshy_dcc_core.skill",
+      "meshy_dcc_core.schema",
+      "meshy_dcc_core.server_base",
+      "meshy_dcc_core.host",
+      "meshy_dcc_core._server.options",
+      "meshy_dcc_core._runtime.mcp_http_config"
     ],
     "lite_py37": [
-      "dcc_mcp_core",
-      "dcc_mcp_core.skill",
-      "dcc_mcp_core.schema",
-      "dcc_mcp_core.server_base",
-      "dcc_mcp_core.host",
-      "dcc_mcp_core._lite_fallback",
-      "dcc_mcp_core._runtime.mcp_http_config",
-      "dcc_mcp_core._runtime.pure_skill_catalog",
-      "dcc_mcp_core._runtime.server_factory",
-      "dcc_mcp_core._runtime.sidecar_skill_server"
+      "meshy_dcc_core",
+      "meshy_dcc_core.skill",
+      "meshy_dcc_core.schema",
+      "meshy_dcc_core.server_base",
+      "meshy_dcc_core.host",
+      "meshy_dcc_core._lite_fallback",
+      "meshy_dcc_core._runtime.mcp_http_config",
+      "meshy_dcc_core._runtime.pure_skill_catalog",
+      "meshy_dcc_core._runtime.server_factory",
+      "meshy_dcc_core._runtime.sidecar_skill_server"
     ]
   },
   "test_toolchain": {

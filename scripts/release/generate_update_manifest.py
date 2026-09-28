@@ -3,9 +3,9 @@
 
 Produces a platform-specific manifest that maps binary names to their
 version, download URL, and SHA-256 checksum. The gateway's update-check
-endpoint fetches this manifest via ``DCC_MCP_UPDATE_MANIFEST_URL``.
+endpoint fetches this manifest via ``MESHY_DCC_UPDATE_MANIFEST_URL``.
 
-Output: ``dcc-mcp-update-manifest-<platform>.json``
+Output: ``meshy-dcc-update-manifest-<platform>.json``
 """
 
 from __future__ import annotations
@@ -48,7 +48,7 @@ def generate_manifest(
         version: Release version (e.g. ``0.19.0``).
         platform: Platform label (e.g. ``linux-x86_64``).
         release_tag: GitHub release tag (e.g. ``v0.19.0``).
-        repo: GitHub repository (e.g. ``dcc-mcp/dcc-mcp-core``).
+        repo: GitHub repository (e.g. ``meshy-dev/meshy-dcc-core``).
         assets: Mapping of logical binary names to their filesystem paths.
         out_dir: Output directory for the manifest.
 
@@ -74,7 +74,7 @@ def generate_manifest(
         }
 
     out_dir.mkdir(parents=True, exist_ok=True)
-    manifest_path = out_dir / f"dcc-mcp-update-manifest-{platform}.json"
+    manifest_path = out_dir / f"meshy-dcc-update-manifest-{platform}.json"
     # Byte write on purpose: the manifest is consumed by an updater that compares
     # published bytes, and Path.write_text() would rewrite it as CRLF on Windows.
     manifest_path.write_bytes((json.dumps(manifest, indent=2) + "\n").encode("utf-8"))
@@ -88,15 +88,15 @@ def main() -> int:
     parser.add_argument("--version", required=True)
     parser.add_argument("--platform", required=True)
     parser.add_argument("--release-tag", required=True)
-    parser.add_argument("--repo", default="dcc-mcp/dcc-mcp-core")
+    parser.add_argument("--repo", default="meshy-dev/meshy-dcc-core")
     parser.add_argument("--server-bin", type=Path, required=True)
     parser.add_argument("--cli-bin", type=Path, required=True)
     parser.add_argument("--out-dir", type=Path, default=Path())
     args = parser.parse_args()
 
     assets = {
-        "dcc-mcp-server": args.server_bin,
-        "dcc-mcp-cli": args.cli_bin,
+        "meshy-dcc-server": args.server_bin,
+        "meshy-dcc-cli": args.cli_bin,
     }
     try:
         manifest_path = generate_manifest(

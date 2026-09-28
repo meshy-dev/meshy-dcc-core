@@ -4,7 +4,7 @@ tools:
       Scaffold a new marketplace extension package. Generates SKILL.md
       (with MIT-0 license frontmatter), tools.yaml skeleton, and a
       scripts/ directory with a placeholder action script. The output
-      follows the standard dcc-mcp skill layout.
+      follows the standard meshy-dcc skill layout.
     source_file: scripts/create_extension.py
     input_schema:
       type: object
@@ -82,5 +82,5 @@ tools:
       open_world_hint: true
       deferred_hint: false
     next-tools:
-      on-success: [dcc_mcp_skills_creator__validate_skill_dir]
+      on-success: [meshy_dcc_skills_creator__validate_skill_dir]
       on-failure: [dcc_diagnostics__audit_log]

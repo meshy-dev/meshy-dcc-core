@@ -9,11 +9,11 @@ from threading import Barrier
 
 import pytest
 
-import dcc_mcp_core
-from dcc_mcp_core.asset_sync import AssetSyncConflictError
-from dcc_mcp_core.asset_sync import AssetSyncRevision
-from dcc_mcp_core.asset_sync import AssetSyncValidationError
-from dcc_mcp_core.asset_sync import FileAssetSyncStore
+import meshy_dcc_core
+from meshy_dcc_core.asset_sync import AssetSyncConflictError
+from meshy_dcc_core.asset_sync import AssetSyncRevision
+from meshy_dcc_core.asset_sync import AssetSyncValidationError
+from meshy_dcc_core.asset_sync import FileAssetSyncStore
 
 
 def test_publish_first_revision_creates_content_addressed_head(tmp_path: Path) -> None:
@@ -40,8 +40,8 @@ def test_publish_first_revision_creates_content_addressed_head(tmp_path: Path) -
 
     head_path = tmp_path / "sync" / "channels" / "houdini-comfyui" / "heads" / "test-model.json"
     assert json.loads(head_path.read_text(encoding="utf-8")) == revision.to_dict()
-    assert dcc_mcp_core.AssetSyncRevision is not None
-    assert dcc_mcp_core.FileAssetSyncStore is FileAssetSyncStore
+    assert meshy_dcc_core.AssetSyncRevision is not None
+    assert meshy_dcc_core.FileAssetSyncStore is FileAssetSyncStore
 
 
 def test_publish_rejects_stale_expected_head(tmp_path: Path) -> None:
@@ -144,7 +144,7 @@ def test_materialize_rejects_parent_traversal(tmp_path: Path) -> None:
 
 
 def test_concurrent_publish_allows_only_one_writer(tmp_path: Path, monkeypatch) -> None:
-    import dcc_mcp_core.asset_sync as asset_sync
+    import meshy_dcc_core.asset_sync as asset_sync
 
     source = tmp_path / "model.obj"
     source.write_bytes(b"concurrent-model")

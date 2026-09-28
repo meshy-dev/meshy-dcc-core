@@ -6,10 +6,10 @@ import logging
 
 import pytest
 
-from dcc_mcp_core import HookContext
-from dcc_mcp_core import HookDeny
-from dcc_mcp_core import HookEvent
-from dcc_mcp_core import LifecycleHooks
+from meshy_dcc_core import HookContext
+from meshy_dcc_core import HookDeny
+from meshy_dcc_core import HookEvent
+from meshy_dcc_core import LifecycleHooks
 
 
 class TestHookEvent:
@@ -88,7 +88,7 @@ class TestLifecycleHooks:
         hooks.on(HookEvent.AFTER_TOOL_CALL, broken)
         hooks.on(HookEvent.AFTER_TOOL_CALL, good)
 
-        with caplog.at_level(logging.WARNING, logger="dcc_mcp_core.lifecycle_hooks"):
+        with caplog.at_level(logging.WARNING, logger="meshy_dcc_core.lifecycle_hooks"):
             hooks.dispatch(HookContext(event=HookEvent.AFTER_TOOL_CALL, dcc_name="any"))
 
         assert seen == ["ok"]
@@ -118,7 +118,7 @@ class TestLifecycleHooks:
             lambda ctx: (_ for _ in ()).throw(HookDeny("oops")),
         )
 
-        with caplog.at_level(logging.WARNING, logger="dcc_mcp_core.lifecycle_hooks"):
+        with caplog.at_level(logging.WARNING, logger="meshy_dcc_core.lifecycle_hooks"):
             hooks.dispatch(HookContext(event=HookEvent.AFTER_SEARCH, dcc_name="any"))
 
         assert any("non-policy event after_search" in r.message for r in caplog.records)

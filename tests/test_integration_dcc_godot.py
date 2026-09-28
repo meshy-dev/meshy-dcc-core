@@ -1,6 +1,6 @@
-"""Godot integration tests for dcc-mcp-core.
+"""Godot integration tests for meshy-dcc-core.
 
-Tests the dcc-mcp-core skill/action pipeline against Godot (headless --headless --script mode).
+Tests the meshy-dcc-core skill/action pipeline against Godot (headless --headless --script mode).
 All tests are conditionally skipped if Godot is not installed.
 
 Run:  pytest -m dcc -k "Godot"
@@ -22,7 +22,7 @@ from typing import Any
 import pytest
 
 # Import local modules
-import dcc_mcp_core
+import meshy_dcc_core
 
 # ── Binary detection ──
 
@@ -229,10 +229,10 @@ class TestGodotIntegration:
 
 @godot_available
 class TestGodotSkillPipeline:
-    """dcc-mcp-core skill pipeline with Godot as target DCC."""
+    """meshy-dcc-core skill pipeline with Godot as target DCC."""
 
     def test_register_godot_actions(self) -> None:
-        reg = dcc_mcp_core.ToolRegistry()
+        reg = meshy_dcc_core.ToolRegistry()
         reg.register(name="spawn_node", description="Spawn scene node", dcc="godot")
         reg.register(name="add_script", description="Attach GDScript", dcc="godot")
         reg.register(name="export_scene", description="Export packed scene", dcc="godot")
@@ -252,7 +252,7 @@ class TestGodotSkillPipeline:
             frontmatter=(
                 "name: godot-scene-builder\n"
                 "metadata:\n"
-                "  dcc-mcp:\n"
+                "  meshy-dcc:\n"
                 "    dcc: godot\n"
                 "    version: 1.0.0\n"
                 "    tags:\n"
@@ -260,13 +260,13 @@ class TestGodotSkillPipeline:
                 "      - scene"
             ),
         )
-        meta = dcc_mcp_core.parse_skill_md(str(tmp_path / "godot-scene-builder"))
+        meta = meshy_dcc_core.parse_skill_md(str(tmp_path / "godot-scene-builder"))
         assert meta is not None
         assert meta.dcc == "godot"
         assert "game" in meta.tags
 
     def test_godot_action_result(self) -> None:
-        result = dcc_mcp_core.success_result(
+        result = meshy_dcc_core.success_result(
             "Spawned node",
             node_class="CharacterBody3D",
             node_path="/root/Player",

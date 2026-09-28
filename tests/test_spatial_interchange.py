@@ -4,12 +4,12 @@ import importlib.util
 import sys
 
 from conftest import REPO_ROOT
-import dcc_mcp_core
+import meshy_dcc_core
 
 
 def _load_spatial_module():
-    path = REPO_ROOT / "python" / "dcc_mcp_core" / "spatial.py"
-    spec = importlib.util.spec_from_file_location("dcc_mcp_core_spatial_test", path)
+    path = REPO_ROOT / "python" / "meshy_dcc_core" / "spatial.py"
+    spec = importlib.util.spec_from_file_location("meshy_dcc_core_spatial_test", path)
     assert spec and spec.loader
     module = importlib.util.module_from_spec(spec)
     sys.modules[spec.name] = module
@@ -47,9 +47,9 @@ def test_spatial_interchange_contract_and_skill(monkeypatch) -> None:
         raise AssertionError("duplicate axes must be rejected")
 
     skill_dir = REPO_ROOT / "skills" / "spatial-interchange"
-    assert dcc_mcp_core.validate_skill(str(skill_dir)).is_clean
-    monkeypatch.setattr(dcc_mcp_core, "SpatialConvention", spatial.SpatialConvention, raising=False)
-    monkeypatch.setattr(dcc_mcp_core, "plan_spatial_conversion", spatial.plan_spatial_conversion, raising=False)
+    assert meshy_dcc_core.validate_skill(str(skill_dir)).is_clean
+    monkeypatch.setattr(meshy_dcc_core, "SpatialConvention", spatial.SpatialConvention, raising=False)
+    monkeypatch.setattr(meshy_dcc_core, "plan_spatial_conversion", spatial.plan_spatial_conversion, raising=False)
     script = skill_dir / "scripts" / "plan_conversion.py"
     spec = importlib.util.spec_from_file_location("spatial_interchange_plan", script)
     assert spec and spec.loader

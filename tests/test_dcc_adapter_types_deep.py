@@ -20,20 +20,20 @@ from __future__ import annotations
 
 import pytest
 
-from dcc_mcp_core import CaptureResult
-from dcc_mcp_core import DccCapabilities
-from dcc_mcp_core import DccError
-from dcc_mcp_core import DccErrorCode
-from dcc_mcp_core import DccInfo
-from dcc_mcp_core import ResourceAnnotations
-from dcc_mcp_core import ResourceDefinition
-from dcc_mcp_core import ResourceTemplateDefinition
-from dcc_mcp_core import SceneInfo
-from dcc_mcp_core import SceneStatistics
-from dcc_mcp_core import ScriptLanguage
-from dcc_mcp_core import ScriptResult
-from dcc_mcp_core import ToolAnnotations
-from dcc_mcp_core import ToolDefinition
+from meshy_dcc_core import CaptureResult
+from meshy_dcc_core import DccCapabilities
+from meshy_dcc_core import DccError
+from meshy_dcc_core import DccErrorCode
+from meshy_dcc_core import DccInfo
+from meshy_dcc_core import ResourceAnnotations
+from meshy_dcc_core import ResourceDefinition
+from meshy_dcc_core import ResourceTemplateDefinition
+from meshy_dcc_core import SceneInfo
+from meshy_dcc_core import SceneStatistics
+from meshy_dcc_core import ScriptLanguage
+from meshy_dcc_core import ScriptResult
+from meshy_dcc_core import ToolAnnotations
+from meshy_dcc_core import ToolDefinition
 
 # ---------------------------------------------------------------------------
 # SceneStatistics

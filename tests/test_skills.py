@@ -8,12 +8,12 @@ from pathlib import Path
 
 # Import local modules
 from conftest import create_skill_dir
-import dcc_mcp_core
+import meshy_dcc_core
 
 
 class TestSkillMetadata:
     def test_create_default(self) -> None:
-        sm = dcc_mcp_core.SkillMetadata(name="test-skill")
+        sm = meshy_dcc_core.SkillMetadata(name="test-skill")
         assert sm.name == "test-skill"
         assert sm.description == ""
         assert sm.dcc == "python"
@@ -24,10 +24,10 @@ class TestSkillMetadata:
         assert sm.skill_path == ""
 
     def test_create_full(self) -> None:
-        sm = dcc_mcp_core.SkillMetadata(
+        sm = meshy_dcc_core.SkillMetadata(
             name="maya-tool",
             description="A Maya tool",
-            tools=[dcc_mcp_core.ToolDeclaration(name="read"), dcc_mcp_core.ToolDeclaration(name="write")],
+            tools=[meshy_dcc_core.ToolDeclaration(name="read"), meshy_dcc_core.ToolDeclaration(name="write")],
             dcc="maya",
             tags=["geometry"],
             scripts=["hello.py"],
@@ -45,10 +45,10 @@ class TestSkillMetadata:
         assert sm.version == "2.0.0"
 
     def test_setters(self) -> None:
-        sm = dcc_mcp_core.SkillMetadata(name="old")
+        sm = meshy_dcc_core.SkillMetadata(name="old")
         sm.name = "new"
         sm.description = "new desc"
-        sm.tools = [dcc_mcp_core.ToolDeclaration(name="tool1")]
+        sm.tools = [meshy_dcc_core.ToolDeclaration(name="tool1")]
         sm.dcc = "houdini"
         sm.tags = ["tag1", "tag2"]
         sm.scripts = ["s.py"]
@@ -64,7 +64,7 @@ class TestSkillMetadata:
         assert sm.version == "3.0.0"
 
     def test_repr(self) -> None:
-        sm = dcc_mcp_core.SkillMetadata(name="test", dcc="maya")
+        sm = meshy_dcc_core.SkillMetadata(name="test", dcc="maya")
         r = repr(sm)
         assert "test" in r
         assert "maya" in r
@@ -72,36 +72,36 @@ class TestSkillMetadata:
 
 class TestSkillScanner:
     def test_create(self) -> None:
-        scanner = dcc_mcp_core.SkillScanner()
+        scanner = meshy_dcc_core.SkillScanner()
         assert scanner.discovered_skills == []
 
     def test_scan_empty_dir(self, tmp_path: Path) -> None:
-        scanner = dcc_mcp_core.SkillScanner()
+        scanner = meshy_dcc_core.SkillScanner()
         result = scanner.scan(extra_paths=[str(tmp_path)])
         assert result == []
 
     def test_scan_with_skill(self, tmp_path: Path) -> None:
-        scanner = dcc_mcp_core.SkillScanner()
+        scanner = meshy_dcc_core.SkillScanner()
         create_skill_dir(str(tmp_path), "my-skill", dcc="maya", body="# My Skill\n")
         result = scanner.scan(extra_paths=[str(tmp_path)])
         assert len(result) == 1
         assert "my-skill" in result[0]
 
     def test_scan_updates_discovered_skills(self, tmp_path: Path) -> None:
-        scanner = dcc_mcp_core.SkillScanner()
+        scanner = meshy_dcc_core.SkillScanner()
         create_skill_dir(str(tmp_path), "s1")
         scanner.scan(extra_paths=[str(tmp_path)])
         assert len(scanner.discovered_skills) == 1
 
     def test_scan_multiple_skills(self, tmp_path: Path) -> None:
-        scanner = dcc_mcp_core.SkillScanner()
+        scanner = meshy_dcc_core.SkillScanner()
         for name in ["skill-a", "skill-b", "skill-c"]:
             create_skill_dir(str(tmp_path), name)
         result = scanner.scan(extra_paths=[str(tmp_path)])
         assert len(result) == 3
 
     def test_scan_ignores_non_skill_dirs(self, tmp_path: Path) -> None:
-        scanner = dcc_mcp_core.SkillScanner()
+        scanner = meshy_dcc_core.SkillScanner()
         # dir without SKILL.md
         (tmp_path / "not-a-skill").mkdir()
         # file (not dir)
@@ -110,7 +110,7 @@ class TestSkillScanner:
         assert result == []
 
     def test_scan_with_dcc_name(self, tmp_path: Path) -> None:
-        scanner = dcc_mcp_core.SkillScanner()
+        scanner = meshy_dcc_core.SkillScanner()
         create_skill_dir(str(tmp_path), "s1")
         result = scanner.scan(extra_paths=[str(tmp_path)], dcc_name="maya")
         assert len(result) == 1
@@ -122,10 +122,10 @@ class TestSkillScanner:
         env_root.mkdir()
         create_skill_dir(str(explicit_root), "explicit-skill", dcc="maya")
         create_skill_dir(str(env_root), "env-skill", dcc="maya")
-        monkeypatch.setenv("DCC_MCP_DISABLE_DEFAULT_SKILL_PATHS", "1")
-        monkeypatch.setenv("DCC_MCP_MAYA_SKILL_PATHS", str(env_root))
+        monkeypatch.setenv("MESHY_DCC_DISABLE_DEFAULT_SKILL_PATHS", "1")
+        monkeypatch.setenv("MESHY_DCC_MAYA_SKILL_PATHS", str(env_root))
 
-        result = dcc_mcp_core.SkillScanner().scan(
+        result = meshy_dcc_core.SkillScanner().scan(
             extra_paths=[str(explicit_root)],
             dcc_name="maya",
         )
@@ -133,21 +133,21 @@ class TestSkillScanner:
         assert {Path(path).name for path in result} == {"explicit-skill", "env-skill"}
 
     def test_scan_force_refresh(self, tmp_path: Path) -> None:
-        scanner = dcc_mcp_core.SkillScanner()
+        scanner = meshy_dcc_core.SkillScanner()
         create_skill_dir(str(tmp_path), "s1")
         r1 = scanner.scan(extra_paths=[str(tmp_path)])
         r2 = scanner.scan(extra_paths=[str(tmp_path)], force_refresh=True)
         assert r1 == r2
 
     def test_scan_uses_cache(self, tmp_path: Path) -> None:
-        scanner = dcc_mcp_core.SkillScanner()
+        scanner = meshy_dcc_core.SkillScanner()
         create_skill_dir(str(tmp_path), "s1")
         r1 = scanner.scan(extra_paths=[str(tmp_path)])
         r2 = scanner.scan(extra_paths=[str(tmp_path)])  # should use cache
         assert r1 == r2
 
     def test_clear_cache(self, tmp_path: Path) -> None:
-        scanner = dcc_mcp_core.SkillScanner()
+        scanner = meshy_dcc_core.SkillScanner()
         create_skill_dir(str(tmp_path), "s1")
         scanner.scan(extra_paths=[str(tmp_path)])
         scanner.clear_cache()
@@ -156,28 +156,28 @@ class TestSkillScanner:
 
 class TestScanSkillPaths:
     def test_scan_nonexistent(self) -> None:
-        result = dcc_mcp_core.scan_skill_paths(extra_paths=["/nonexistent"])
+        result = meshy_dcc_core.scan_skill_paths(extra_paths=["/nonexistent"])
         assert result == []
 
     def test_scan_with_skills(self, tmp_path: Path) -> None:
         create_skill_dir(str(tmp_path), "my-skill")
-        result = dcc_mcp_core.scan_skill_paths(extra_paths=[str(tmp_path)])
+        result = meshy_dcc_core.scan_skill_paths(extra_paths=[str(tmp_path)])
         assert len(result) == 1
 
     def test_scan_with_dcc_name(self, tmp_path: Path) -> None:
         create_skill_dir(str(tmp_path), "s1")
-        result = dcc_mcp_core.scan_skill_paths(extra_paths=[str(tmp_path)], dcc_name="blender")
+        result = meshy_dcc_core.scan_skill_paths(extra_paths=[str(tmp_path)], dcc_name="blender")
         assert len(result) == 1
 
 
 class TestParseSkillMd:
     def test_parse_valid(self, tmp_path: Path) -> None:
         (tmp_path / "SKILL.md").write_text(
-            "---\nname: test-skill\nmetadata:\n  dcc-mcp:\n    dcc: maya\n    tags:\n      - geo\n---\n# Body\n",
+            "---\nname: test-skill\nmetadata:\n  meshy-dcc:\n    dcc: maya\n    tags:\n      - geo\n---\n# Body\n",
             encoding="utf-8",
         )
         tmpdir = str(tmp_path)
-        meta = dcc_mcp_core.parse_skill_md(tmpdir)
+        meta = meshy_dcc_core.parse_skill_md(tmpdir)
         assert meta is not None
         assert meta.name == "test-skill"
         assert meta.dcc == "maya"
@@ -190,41 +190,41 @@ class TestParseSkillMd:
         scripts_dir.mkdir()
         (scripts_dir / "hello.py").write_text("print('hello')", encoding="utf-8")
         (scripts_dir / "run.sh").write_text("echo hello", encoding="utf-8")
-        meta = dcc_mcp_core.parse_skill_md(str(tmp_path))
+        meta = meshy_dcc_core.parse_skill_md(str(tmp_path))
         assert meta is not None
         assert len(meta.scripts) == 2
 
     def test_parse_no_skill_md(self, tmp_path: Path) -> None:
-        result = dcc_mcp_core.parse_skill_md(str(tmp_path))
+        result = meshy_dcc_core.parse_skill_md(str(tmp_path))
         assert result is None
 
     def test_parse_invalid_yaml(self, tmp_path: Path) -> None:
         (tmp_path / "SKILL.md").write_text("---\n: invalid yaml [[\n---\n", encoding="utf-8")
-        result = dcc_mcp_core.parse_skill_md(str(tmp_path))
+        result = meshy_dcc_core.parse_skill_md(str(tmp_path))
         assert result is None
 
     def test_parse_no_frontmatter(self, tmp_path: Path) -> None:
         (tmp_path / "SKILL.md").write_text("# No frontmatter\nJust body text.", encoding="utf-8")
-        result = dcc_mcp_core.parse_skill_md(str(tmp_path))
+        result = meshy_dcc_core.parse_skill_md(str(tmp_path))
         assert result is None
 
     def test_parse_depends_single(self, tmp_path: Path) -> None:
         """A single-item depends list is parsed into SkillMetadata.depends."""
         (tmp_path / "SKILL.md").write_text(
-            "---\nname: child\nmetadata:\n  dcc-mcp:\n    dcc: maya\n    depends:\n      - parent-skill\n---\n",
+            "---\nname: child\nmetadata:\n  meshy-dcc:\n    dcc: maya\n    depends:\n      - parent-skill\n---\n",
             encoding="utf-8",
         )
-        meta = dcc_mcp_core.parse_skill_md(str(tmp_path))
+        meta = meshy_dcc_core.parse_skill_md(str(tmp_path))
         assert meta is not None
         assert "parent-skill" in meta.depends
 
     def test_parse_depends_multiple(self, tmp_path: Path) -> None:
         """Multiple items in depends are all present in SkillMetadata.depends."""
         (tmp_path / "SKILL.md").write_text(
-            "---\nname: child\nmetadata:\n  dcc-mcp:\n    depends:\n      - dep-a\n      - dep-b\n      - dep-c\n---\n",
+            "---\nname: child\nmetadata:\n  meshy-dcc:\n    depends:\n      - dep-a\n      - dep-b\n      - dep-c\n---\n",
             encoding="utf-8",
         )
-        meta = dcc_mcp_core.parse_skill_md(str(tmp_path))
+        meta = meshy_dcc_core.parse_skill_md(str(tmp_path))
         assert meta is not None
         assert set(meta.depends) == {"dep-a", "dep-b", "dep-c"}
 
@@ -234,17 +234,17 @@ class TestParseSkillMd:
             "---\nname: no-deps\n---\n",
             encoding="utf-8",
         )
-        meta = dcc_mcp_core.parse_skill_md(str(tmp_path))
+        meta = meshy_dcc_core.parse_skill_md(str(tmp_path))
         assert meta is not None
         assert meta.depends == []
 
     def test_parse_tags_multiple(self, tmp_path: Path) -> None:
         """Tags field with multiple values is parsed into meta.tags list."""
         (tmp_path / "SKILL.md").write_text(
-            "---\nname: tagged\nmetadata:\n  dcc-mcp:\n    tags:\n      - geo\n      - render\n      - shading\n---\n",
+            "---\nname: tagged\nmetadata:\n  meshy-dcc:\n    tags:\n      - geo\n      - render\n      - shading\n---\n",
             encoding="utf-8",
         )
-        meta = dcc_mcp_core.parse_skill_md(str(tmp_path))
+        meta = meshy_dcc_core.parse_skill_md(str(tmp_path))
         assert meta is not None
         assert "geo" in meta.tags
         assert "render" in meta.tags
@@ -256,7 +256,7 @@ class TestParseSkillMd:
             "---\nname: tooled\nallowed-tools:\n  - Bash\n  - Read\n  - Write\n---\n",
             encoding="utf-8",
         )
-        meta = dcc_mcp_core.parse_skill_md(str(tmp_path))
+        meta = meshy_dcc_core.parse_skill_md(str(tmp_path))
         assert meta is not None
         tool_names = list(meta.allowed_tools)
         assert "Bash" in tool_names
@@ -269,7 +269,7 @@ class TestParseSkillMd:
             "---\nname: no-tools\n---\n",
             encoding="utf-8",
         )
-        meta = dcc_mcp_core.parse_skill_md(str(tmp_path))
+        meta = meshy_dcc_core.parse_skill_md(str(tmp_path))
         assert meta is not None
         assert meta.tools == []
 
@@ -279,7 +279,7 @@ class TestParseSkillMd:
             "---\nname: no-extra-files\n---\n",
             encoding="utf-8",
         )
-        meta = dcc_mcp_core.parse_skill_md(str(tmp_path))
+        meta = meshy_dcc_core.parse_skill_md(str(tmp_path))
         assert meta is not None
         assert isinstance(meta.metadata_files, list)
 
@@ -288,33 +288,33 @@ class TestSkillMetadataDepends:
     """Unit tests for SkillMetadata.depends field construction and mutation."""
 
     def test_default_depends_empty(self) -> None:
-        sm = dcc_mcp_core.SkillMetadata(name="test")
+        sm = meshy_dcc_core.SkillMetadata(name="test")
         assert sm.depends == []
 
     def test_construct_with_depends(self) -> None:
-        sm = dcc_mcp_core.SkillMetadata(name="child", depends=["base-skill"])
+        sm = meshy_dcc_core.SkillMetadata(name="child", depends=["base-skill"])
         assert "base-skill" in sm.depends
 
     def test_construct_with_multiple_depends(self) -> None:
-        sm = dcc_mcp_core.SkillMetadata(name="child", depends=["dep-a", "dep-b"])
+        sm = meshy_dcc_core.SkillMetadata(name="child", depends=["dep-a", "dep-b"])
         assert set(sm.depends) == {"dep-a", "dep-b"}
 
     def test_depends_setter(self) -> None:
-        sm = dcc_mcp_core.SkillMetadata(name="skill")
+        sm = meshy_dcc_core.SkillMetadata(name="skill")
         sm.depends = ["new-dep"]
         assert sm.depends == ["new-dep"]
 
     def test_depends_setter_empty(self) -> None:
-        sm = dcc_mcp_core.SkillMetadata(name="skill", depends=["old"])
+        sm = meshy_dcc_core.SkillMetadata(name="skill", depends=["old"])
         sm.depends = []
         assert sm.depends == []
 
     def test_depends_is_list(self) -> None:
-        sm = dcc_mcp_core.SkillMetadata(name="skill", depends=["x"])
+        sm = meshy_dcc_core.SkillMetadata(name="skill", depends=["x"])
         assert isinstance(sm.depends, list)
 
     def test_depends_present_in_repr(self) -> None:
         """Depends values appear somewhere in the repr (useful for debugging)."""
-        sm = dcc_mcp_core.SkillMetadata(name="dep-skill", depends=["base"])
+        sm = meshy_dcc_core.SkillMetadata(name="dep-skill", depends=["base"])
         # repr should at minimum contain the skill name
         assert "dep-skill" in repr(sm)

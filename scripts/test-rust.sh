@@ -37,13 +37,13 @@ run() {
 }
 
 run cargo nextest run --workspace --no-fail-fast
-run cargo nextest run -p dcc-mcp-job --features job-persist-sqlite --no-fail-fast
+run cargo nextest run -p meshy-dcc-job --features job-persist-sqlite --no-fail-fast
 # `--no-fail-fast` is a cargo flag on the doctest passes (before `--`): it keeps
 # the remaining crates' doctests running after one crate fails. The libtest flag
 # of the same name does not exist — `cargo test --doc -- --no-fail-fast` aborts
 # with "Unrecognized option: 'no-fail-fast'" before running a single doctest.
 run cargo test --workspace --doc --no-fail-fast
-run cargo test -p dcc-mcp-job --features job-persist-sqlite --doc --no-fail-fast
+run cargo test -p meshy-dcc-job --features job-persist-sqlite --doc --no-fail-fast
 
 if [ -n "$failures" ]; then
     printf '\nRust test suites failed:%s\n' "$failures" >&2

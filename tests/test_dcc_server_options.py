@@ -17,20 +17,20 @@ import warnings
 
 import pytest
 
-from dcc_mcp_core._server.config import build_mcp_http_config
-from dcc_mcp_core._server.config import collect_context_metadata_from_env
-from dcc_mcp_core._server.config import resolve_diagnostics_state
-from dcc_mcp_core._server.config import resolve_execution_binding
-from dcc_mcp_core._server.config import resolve_observability_flags
-from dcc_mcp_core._server.options import BridgeExecution
-from dcc_mcp_core._server.options import DccServerOptions
-from dcc_mcp_core._server.options import DiagnosticsOptions
-from dcc_mcp_core._server.options import DispatcherExecution
-from dcc_mcp_core._server.options import ExecutionOptions
-from dcc_mcp_core._server.options import GatewayOptions
-from dcc_mcp_core._server.options import InlineExecution
-from dcc_mcp_core._server.options import ObservabilityOptions
-from dcc_mcp_core._server.options import StandaloneMainThreadExecution
+from meshy_dcc_core._server.config import build_mcp_http_config
+from meshy_dcc_core._server.config import collect_context_metadata_from_env
+from meshy_dcc_core._server.config import resolve_diagnostics_state
+from meshy_dcc_core._server.config import resolve_execution_binding
+from meshy_dcc_core._server.config import resolve_observability_flags
+from meshy_dcc_core._server.options import BridgeExecution
+from meshy_dcc_core._server.options import DccServerOptions
+from meshy_dcc_core._server.options import DiagnosticsOptions
+from meshy_dcc_core._server.options import DispatcherExecution
+from meshy_dcc_core._server.options import ExecutionOptions
+from meshy_dcc_core._server.options import GatewayOptions
+from meshy_dcc_core._server.options import InlineExecution
+from meshy_dcc_core._server.options import ObservabilityOptions
+from meshy_dcc_core._server.options import StandaloneMainThreadExecution
 
 # ── GatewayOptions ────────────────────────────────────────────────────────────
 
@@ -44,45 +44,45 @@ class TestGatewayOptions:
 
     def test_pytest_session_disables_default_gateway(self):
         """Ordinary pytest sessions must not join the operator gateway."""
-        assert os.environ["DCC_MCP_GATEWAY_PORT"] == "0"
+        assert os.environ["MESHY_DCC_GATEWAY_PORT"] == "0"
         assert GatewayOptions.from_env().port == 0
 
     def test_from_env_reads_gateway_port(self, monkeypatch):
-        monkeypatch.setenv("DCC_MCP_GATEWAY_PORT", "9999")
+        monkeypatch.setenv("MESHY_DCC_GATEWAY_PORT", "9999")
         gw = GatewayOptions.from_env()
         assert gw.port == 9999
 
     def test_from_env_invalid_port_preserves_none(self, monkeypatch):
-        """Invalid DCC_MCP_GATEWAY_PORT keeps port=None so Rust default is used."""
-        monkeypatch.setenv("DCC_MCP_GATEWAY_PORT", "not_a_number")
+        """Invalid MESHY_DCC_GATEWAY_PORT keeps port=None so Rust default is used."""
+        monkeypatch.setenv("MESHY_DCC_GATEWAY_PORT", "not_a_number")
         gw = GatewayOptions.from_env()
         assert gw.port is None
 
     def test_from_env_reads_registry_dir(self, monkeypatch):
-        monkeypatch.setenv("DCC_MCP_REGISTRY_DIR", "/some/registry")
+        monkeypatch.setenv("MESHY_DCC_REGISTRY_DIR", "/some/registry")
         gw = GatewayOptions.from_env()
         assert gw.registry_dir == "/some/registry"
 
     def test_from_env_explicit_port_overrides_env(self, monkeypatch):
-        monkeypatch.setenv("DCC_MCP_GATEWAY_PORT", "9999")
+        monkeypatch.setenv("MESHY_DCC_GATEWAY_PORT", "9999")
         gw = GatewayOptions.from_env(port=1234)
         assert gw.port == 1234
 
     def test_from_env_no_env_port_keeps_none(self, monkeypatch):
-        """When DCC_MCP_GATEWAY_PORT is not set, port stays None (use Rust default 9765)."""
-        monkeypatch.delenv("DCC_MCP_GATEWAY_PORT", raising=False)
+        """When MESHY_DCC_GATEWAY_PORT is not set, port stays None (use Rust default 19765)."""
+        monkeypatch.delenv("MESHY_DCC_GATEWAY_PORT", raising=False)
         gw = GatewayOptions.from_env()
         assert gw.port is None
 
     def test_from_env_explicit_zero_port_disables_gateway(self, monkeypatch):
         """Explicit port=0 should disable gateway through build_mcp_http_config."""
-        monkeypatch.setenv("DCC_MCP_GATEWAY_PORT", "9999")
+        monkeypatch.setenv("MESHY_DCC_GATEWAY_PORT", "9999")
         gw = GatewayOptions.from_env(port=0)
         assert gw.port == 0  # explicit 0 wins over env
 
     def test_from_env_direct_zero_port_disables_gateway(self, monkeypatch):
         """GatewayOptions(port=0) means gateway is explicitly disabled."""
-        monkeypatch.delenv("DCC_MCP_GATEWAY_PORT", raising=False)
+        monkeypatch.delenv("MESHY_DCC_GATEWAY_PORT", raising=False)
         gw = GatewayOptions.from_env(port=0)
         assert gw.port == 0
 
@@ -118,9 +118,9 @@ class TestObservabilityOptions:
 
 class TestResolvedServerConfig:
     def test_observability_flags_honor_runtime_env(self, monkeypatch):
-        monkeypatch.setenv("DCC_MCP_DISABLE_FILE_LOGGING", "1")
-        monkeypatch.delenv("DCC_MCP_DISABLE_JOB_PERSISTENCE", raising=False)
-        monkeypatch.delenv("DCC_MCP_DISABLE_TELEMETRY", raising=False)
+        monkeypatch.setenv("MESHY_DCC_DISABLE_FILE_LOGGING", "1")
+        monkeypatch.delenv("MESHY_DCC_DISABLE_JOB_PERSISTENCE", raising=False)
+        monkeypatch.delenv("MESHY_DCC_DISABLE_TELEMETRY", raising=False)
 
         flags = resolve_observability_flags(ObservabilityOptions())
 
@@ -175,8 +175,8 @@ class TestResolvedServerConfig:
         assert binding.register_inprocess_executor is False
 
     def test_context_metadata_from_env_includes_dcc_specific_paths(self, monkeypatch):
-        monkeypatch.setenv("DCC_MCP_PROJECT", "show-a")
-        monkeypatch.setenv("DCC_MCP_HOUDINI_SKILL_PATHS", "C:/show/skills")
+        monkeypatch.setenv("MESHY_DCC_PROJECT", "show-a")
+        monkeypatch.setenv("MESHY_DCC_HOUDINI_SKILL_PATHS", "C:/show/skills")
 
         metadata = collect_context_metadata_from_env("houdini")
 
@@ -184,13 +184,13 @@ class TestResolvedServerConfig:
         assert metadata["dcc_skill_paths"] == "C:/show/skills"
 
     def test_context_metadata_from_env_binds_start_instance_launch(self, monkeypatch):
-        monkeypatch.setenv("DCC_MCP_START_PROJECT", "/work/city")
-        monkeypatch.setenv("DCC_MCP_START_OPERATION_ID", "op-1")
+        monkeypatch.setenv("MESHY_DCC_START_PROJECT", "/work/city")
+        monkeypatch.setenv("MESHY_DCC_START_OPERATION_ID", "op-1")
 
         metadata = collect_context_metadata_from_env("blender")
 
-        assert metadata["dcc_mcp_project"] == "/work/city"
-        assert metadata["dcc_mcp_operation_id"] == "op-1"
+        assert metadata["meshy_dcc_project"] == "/work/city"
+        assert metadata["meshy_dcc_operation_id"] == "op-1"
 
     def test_build_mcp_http_config_populates_gateway_contract(self, tmp_path):
         opts = DccServerOptions.from_env(
@@ -218,8 +218,8 @@ class TestResolvedServerConfig:
         assert config.scene == "C:/scene.psd"
         assert config.dcc_type == "photoshop"
         assert config.standalone_main_thread_execution is False
-        assert config.instance_metadata["dcc_mcp_server_version"] == "9.9.9"
-        assert config.instance_metadata["dcc_mcp_instance_type"] == "gui"
+        assert config.instance_metadata["meshy_dcc_server_version"] == "9.9.9"
+        assert config.instance_metadata["meshy_dcc_instance_type"] == "gui"
 
     def test_build_mcp_http_config_propagates_standalone_main_thread(self, tmp_path):
         opts = DccServerOptions.from_env(
@@ -236,8 +236,8 @@ class TestResolvedServerConfig:
         )
 
         assert config.standalone_main_thread_execution is True
-        assert config.instance_metadata["dcc_mcp_server_version"] == "9.9.9"
-        assert config.instance_metadata["dcc_mcp_instance_type"] == "standalone"
+        assert config.instance_metadata["meshy_dcc_server_version"] == "9.9.9"
+        assert config.instance_metadata["meshy_dcc_instance_type"] == "standalone"
 
     @pytest.mark.parametrize(
         ("instance_type", "standalone_main_thread"),
@@ -264,7 +264,7 @@ class TestResolvedServerConfig:
         )
 
         assert config.standalone_main_thread_execution is standalone_main_thread
-        assert config.instance_metadata["dcc_mcp_instance_type"] == instance_type
+        assert config.instance_metadata["meshy_dcc_instance_type"] == instance_type
 
     def test_build_mcp_http_config_propagates_explicit_host_pid(self, tmp_path):
         opts = DccServerOptions.from_env(
@@ -374,14 +374,14 @@ class TestDccServerOptions:
         assert opts.execution.mode is InlineExecution
 
     def test_from_env_reads_dcc_port(self, tmp_path, monkeypatch):
-        monkeypatch.setenv("DCC_MCP_SUBSTANCE3D_PAINTER_PORT", "18812")
+        monkeypatch.setenv("MESHY_DCC_SUBSTANCE3D_PAINTER_PORT", "18812")
 
         opts = DccServerOptions.from_env("substance3d-painter", tmp_path)
 
         assert opts.port == 18812
 
     def test_from_env_explicit_zero_wins_over_dcc_port(self, tmp_path, monkeypatch):
-        monkeypatch.setenv("DCC_MCP_NUKE_PORT", "8765")
+        monkeypatch.setenv("MESHY_DCC_NUKE_PORT", "8765")
 
         opts = DccServerOptions.from_env("nuke", tmp_path, port=0)
 
@@ -389,9 +389,9 @@ class TestDccServerOptions:
 
     @pytest.mark.parametrize("value", ["invalid", "65536", "-1"])
     def test_from_env_rejects_invalid_dcc_port(self, tmp_path, monkeypatch, value):
-        monkeypatch.setenv("DCC_MCP_MAYA_PORT", value)
+        monkeypatch.setenv("MESHY_DCC_MAYA_PORT", value)
 
-        with pytest.raises(ValueError, match="DCC_MCP_MAYA_PORT"):
+        with pytest.raises(ValueError, match="MESHY_DCC_MAYA_PORT"):
             DccServerOptions.from_env("maya", tmp_path)
 
     def test_from_env_dispatcher(self, tmp_path):
@@ -411,14 +411,14 @@ class TestDccServerOptions:
         assert opts.execution.mode is StandaloneMainThreadExecution
 
     def test_from_env_reads_dcc_instance_type(self, tmp_path, monkeypatch):
-        monkeypatch.setenv("DCC_MCP_RENDERDOC_INSTANCE_TYPE", " STANDALONE ")
+        monkeypatch.setenv("MESHY_DCC_RENDERDOC_INSTANCE_TYPE", " STANDALONE ")
 
         opts = DccServerOptions.from_env("renderdoc", tmp_path)
 
         assert opts.instance_type == "standalone"
 
     def test_from_env_explicit_instance_type_wins(self, tmp_path, monkeypatch):
-        monkeypatch.setenv("DCC_MCP_RENDERDOC_INSTANCE_TYPE", "standalone")
+        monkeypatch.setenv("MESHY_DCC_RENDERDOC_INSTANCE_TYPE", "standalone")
 
         opts = DccServerOptions.from_env("renderdoc", tmp_path, instance_type="GUI")
 
@@ -448,13 +448,13 @@ class TestDccServerOptions:
             )
 
     def test_from_env_gateway_port_from_kwarg(self, tmp_path, monkeypatch):
-        monkeypatch.setenv("DCC_MCP_GATEWAY_PORT", "9999")
+        monkeypatch.setenv("MESHY_DCC_GATEWAY_PORT", "9999")
         opts = DccServerOptions.from_env("test", tmp_path, gateway_port=1234)
         assert opts.gateway.port == 1234  # explicit kwarg wins
 
     def test_from_env_env_var_resolution(self, tmp_path, monkeypatch):
-        monkeypatch.setenv("DCC_MCP_GATEWAY_PORT", "9999")
-        monkeypatch.setenv("DCC_MCP_REGISTRY_DIR", "/reg")
+        monkeypatch.setenv("MESHY_DCC_GATEWAY_PORT", "9999")
+        monkeypatch.setenv("MESHY_DCC_REGISTRY_DIR", "/reg")
         opts = DccServerOptions.from_env("test", tmp_path)
         assert opts.gateway.port == 9999
         assert opts.gateway.registry_dir == "/reg"
@@ -534,8 +534,8 @@ class _FakeDccServer:
         return 0
 
 
-def _make_fake_dcc_mcp(config):
-    """Return a SimpleNamespace that fakes the dcc_mcp_core deferred imports."""
+def _make_fake_meshy_dcc(config):
+    """Return a SimpleNamespace that fakes the meshy_dcc_core deferred imports."""
     from types import SimpleNamespace
 
     return SimpleNamespace(
@@ -551,13 +551,13 @@ class TestDccServerBaseOptionsPath:
     def _make_server_via_options(self, tmp_path):
         from unittest.mock import patch
 
-        from dcc_mcp_core.server_base import DccServerBase
+        from meshy_dcc_core.server_base import DccServerBase
 
         skills_dir = tmp_path / "skills"
         skills_dir.mkdir(exist_ok=True)
         opts = DccServerOptions.from_env("houdini", skills_dir)
         with patch(
-            "dcc_mcp_core.server_base.create_adapter_server",
+            "meshy_dcc_core.server_base.create_adapter_server",
             return_value=_FakeDccServer(),
         ):
             with warnings.catch_warnings(record=True) as w:
@@ -607,7 +607,7 @@ class TestDccServerBaseOptionsPath:
     def test_feedback_store_uses_instance_registry_path_and_flushes_on_session_end(self, tmp_path):
         from unittest.mock import patch
 
-        from dcc_mcp_core.server_base import DccServerBase
+        from meshy_dcc_core.server_base import DccServerBase
 
         skills_dir = tmp_path / "skills"
         skills_dir.mkdir()
@@ -619,7 +619,7 @@ class TestDccServerBaseOptionsPath:
             dcc_pid=4242,
         )
         with patch(
-            "dcc_mcp_core.server_base.create_adapter_server",
+            "meshy_dcc_core.server_base.create_adapter_server",
             return_value=_FakeDccServer(),
         ):
             server = DccServerBase(opts)
@@ -633,45 +633,45 @@ class TestDccServerBaseOptionsPath:
 
 
 def test_dcc_server_base_requires_options_argument() -> None:
-    from dcc_mcp_core.server_base import DccServerBase
+    from meshy_dcc_core.server_base import DccServerBase
 
     with pytest.raises(TypeError, match="options"):
         DccServerBase()
 
 
 class TestDccServerBasePublicImport:
-    """DccServerOptions and sub-options are importable from top-level dcc_mcp_core."""
+    """DccServerOptions and sub-options are importable from top-level meshy_dcc_core."""
 
     def test_options_importable(self):
-        from dcc_mcp_core._server.options import DccServerOptions as O1
+        from meshy_dcc_core._server.options import DccServerOptions as O1
 
         assert O1 is not None
 
     def test_gateway_options_importable(self):
-        from dcc_mcp_core._server.options import GatewayOptions as G
+        from meshy_dcc_core._server.options import GatewayOptions as G
 
         assert G is not None
 
     def test_observability_options_importable(self):
-        from dcc_mcp_core._server.options import ObservabilityOptions as O
+        from meshy_dcc_core._server.options import ObservabilityOptions as O
 
         assert O is not None
 
     def test_diagnostics_options_importable(self):
-        from dcc_mcp_core._server.options import DiagnosticsOptions as D
+        from meshy_dcc_core._server.options import DiagnosticsOptions as D
 
         assert D is not None
 
     def test_execution_options_importable(self):
-        from dcc_mcp_core._server.options import ExecutionOptions as E
+        from meshy_dcc_core._server.options import ExecutionOptions as E
 
         assert E is not None
 
     def test_execution_constructors_importable(self):
-        from dcc_mcp_core._server.options import BridgeExecution
-        from dcc_mcp_core._server.options import DispatcherExecution
-        from dcc_mcp_core._server.options import InlineExecution
-        from dcc_mcp_core._server.options import StandaloneMainThreadExecution
+        from meshy_dcc_core._server.options import BridgeExecution
+        from meshy_dcc_core._server.options import DispatcherExecution
+        from meshy_dcc_core._server.options import InlineExecution
+        from meshy_dcc_core._server.options import StandaloneMainThreadExecution
 
         assert InlineExecution is not None
         assert DispatcherExecution is not None

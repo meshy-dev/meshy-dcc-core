@@ -7,10 +7,10 @@ from pathlib import Path
 import urllib.request
 
 from conftest import McpClient
-from dcc_mcp_core import McpHttpConfig
-from dcc_mcp_core import McpHttpServer
-from dcc_mcp_core import ToolRegistry
-from dcc_mcp_core import scan_and_load
+from meshy_dcc_core import McpHttpConfig
+from meshy_dcc_core import McpHttpServer
+from meshy_dcc_core import ToolRegistry
+from meshy_dcc_core import scan_and_load
 
 FORGECAD_SKILL = "forgecad-make-a-model"
 FORGECAD_TOOL = "create_model"
@@ -24,7 +24,7 @@ def _write_forgecad_skill(root: Path) -> None:
 name: forgecad-make-a-model
 description: Create new ForgeCAD (.forge.js) models in the active CAD project. Handles file placement, invokes the forgecad skill for API guidance, and validates the result.
 metadata:
-  dcc-mcp:
+  meshy-dcc:
     dcc: forgecad
     tags: [forgecad, cad, third-party]
     tools: tools.yaml

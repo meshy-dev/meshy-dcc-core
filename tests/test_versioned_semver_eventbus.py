@@ -11,14 +11,14 @@ from __future__ import annotations
 import pytest
 
 # Import local modules
-import dcc_mcp_core
+import meshy_dcc_core
 
 # ── VersionedRegistry deep API ────────────────────────────────────────────────
 
 
 class TestVersionedRegistryDeep:
-    def _make_registry(self) -> dcc_mcp_core.VersionedRegistry:
-        vreg = dcc_mcp_core.VersionedRegistry()
+    def _make_registry(self) -> meshy_dcc_core.VersionedRegistry:
+        vreg = meshy_dcc_core.VersionedRegistry()
         vreg.register_versioned("render", dcc="maya", version="1.0.0")
         vreg.register_versioned("render", dcc="maya", version="1.5.0")
         vreg.register_versioned("render", dcc="maya", version="2.0.0")
@@ -83,7 +83,7 @@ class TestVersionedRegistryDeep:
         assert "2.0.0" in str(result)
 
     def test_multiple_dccs_independent(self) -> None:
-        vreg = dcc_mcp_core.VersionedRegistry()
+        vreg = meshy_dcc_core.VersionedRegistry()
         vreg.register_versioned("render", dcc="maya", version="1.0.0")
         vreg.register_versioned("render", dcc="blender", version="2.0.0")
         maya_latest = vreg.latest_version("render", dcc="maya")
@@ -92,14 +92,14 @@ class TestVersionedRegistryDeep:
         assert blender_latest == "2.0.0"
 
     def test_keys_multiple_actions(self) -> None:
-        vreg = dcc_mcp_core.VersionedRegistry()
+        vreg = meshy_dcc_core.VersionedRegistry()
         vreg.register_versioned("render", dcc="maya", version="1.0.0")
         vreg.register_versioned("export", dcc="maya", version="1.0.0")
         keys = vreg.keys()
         assert len(keys) >= 2
 
     def test_resolve_nonexistent_action_returns_none(self) -> None:
-        vreg = dcc_mcp_core.VersionedRegistry()
+        vreg = meshy_dcc_core.VersionedRegistry()
         result = vreg.resolve("nonexistent_action", dcc="maya", constraint="*")
         assert result is None
 
@@ -109,67 +109,67 @@ class TestVersionedRegistryDeep:
 
 class TestSemVerDeep:
     def test_parse_major_minor_patch(self) -> None:
-        v = dcc_mcp_core.SemVer.parse("3.7.12")
+        v = meshy_dcc_core.SemVer.parse("3.7.12")
         assert v.major == 3
         assert v.minor == 7
         assert v.patch == 12
 
     def test_parse_zero_version(self) -> None:
-        v = dcc_mcp_core.SemVer.parse("0.0.0")
+        v = meshy_dcc_core.SemVer.parse("0.0.0")
         assert v.major == 0
         assert v.minor == 0
         assert v.patch == 0
 
     def test_comparison_less_than(self) -> None:
-        v1 = dcc_mcp_core.SemVer.parse("1.0.0")
-        v2 = dcc_mcp_core.SemVer.parse("2.0.0")
+        v1 = meshy_dcc_core.SemVer.parse("1.0.0")
+        v2 = meshy_dcc_core.SemVer.parse("2.0.0")
         assert v1 < v2
 
     def test_comparison_greater_than(self) -> None:
-        v1 = dcc_mcp_core.SemVer.parse("2.0.0")
-        v2 = dcc_mcp_core.SemVer.parse("1.9.9")
+        v1 = meshy_dcc_core.SemVer.parse("2.0.0")
+        v2 = meshy_dcc_core.SemVer.parse("1.9.9")
         assert v1 > v2
 
     def test_equality(self) -> None:
-        v1 = dcc_mcp_core.SemVer.parse("1.2.3")
-        v2 = dcc_mcp_core.SemVer.parse("1.2.3")
+        v1 = meshy_dcc_core.SemVer.parse("1.2.3")
+        v2 = meshy_dcc_core.SemVer.parse("1.2.3")
         assert v1 == v2
 
     def test_inequality_different_patch(self) -> None:
-        v1 = dcc_mcp_core.SemVer.parse("1.2.3")
-        v2 = dcc_mcp_core.SemVer.parse("1.2.4")
+        v1 = meshy_dcc_core.SemVer.parse("1.2.3")
+        v2 = meshy_dcc_core.SemVer.parse("1.2.4")
         assert v1 != v2
 
     def test_matches_constraint_wildcard(self) -> None:
-        v = dcc_mcp_core.SemVer.parse("1.5.0")
-        vc = dcc_mcp_core.VersionConstraint.parse("*")
+        v = meshy_dcc_core.SemVer.parse("1.5.0")
+        vc = meshy_dcc_core.VersionConstraint.parse("*")
         assert v.matches_constraint(vc) is True
 
     def test_matches_constraint_gte(self) -> None:
-        v = dcc_mcp_core.SemVer.parse("2.0.0")
-        assert v.matches_constraint(dcc_mcp_core.VersionConstraint.parse(">=1.0.0")) is True
-        assert v.matches_constraint(dcc_mcp_core.VersionConstraint.parse(">=3.0.0")) is False
+        v = meshy_dcc_core.SemVer.parse("2.0.0")
+        assert v.matches_constraint(meshy_dcc_core.VersionConstraint.parse(">=1.0.0")) is True
+        assert v.matches_constraint(meshy_dcc_core.VersionConstraint.parse(">=3.0.0")) is False
 
     def test_matches_constraint_caret_major(self) -> None:
-        v1 = dcc_mcp_core.SemVer.parse("1.5.0")
-        assert v1.matches_constraint(dcc_mcp_core.VersionConstraint.parse("^1.0.0")) is True
-        v2 = dcc_mcp_core.SemVer.parse("2.0.0")
-        assert v2.matches_constraint(dcc_mcp_core.VersionConstraint.parse("^1.0.0")) is False
+        v1 = meshy_dcc_core.SemVer.parse("1.5.0")
+        assert v1.matches_constraint(meshy_dcc_core.VersionConstraint.parse("^1.0.0")) is True
+        v2 = meshy_dcc_core.SemVer.parse("2.0.0")
+        assert v2.matches_constraint(meshy_dcc_core.VersionConstraint.parse("^1.0.0")) is False
 
     def test_matches_constraint_exact(self) -> None:
-        v = dcc_mcp_core.SemVer.parse("1.2.3")
-        assert v.matches_constraint(dcc_mcp_core.VersionConstraint.parse("=1.2.3")) is True
-        assert v.matches_constraint(dcc_mcp_core.VersionConstraint.parse("=1.2.4")) is False
+        v = meshy_dcc_core.SemVer.parse("1.2.3")
+        assert v.matches_constraint(meshy_dcc_core.VersionConstraint.parse("=1.2.3")) is True
+        assert v.matches_constraint(meshy_dcc_core.VersionConstraint.parse("=1.2.4")) is False
 
     def test_str_representation(self) -> None:
-        v = dcc_mcp_core.SemVer.parse("1.2.3")
+        v = meshy_dcc_core.SemVer.parse("1.2.3")
         s = str(v)
         assert "1" in s
         assert "2" in s
         assert "3" in s
 
     def test_repr_is_string(self) -> None:
-        v = dcc_mcp_core.SemVer.parse("1.0.0")
+        v = meshy_dcc_core.SemVer.parse("1.0.0")
         assert isinstance(repr(v), str)
 
 
@@ -178,18 +178,18 @@ class TestSemVerDeep:
 
 class TestEventBus:
     def test_subscribe_returns_int_id(self) -> None:
-        eb = dcc_mcp_core.EventBus()
+        eb = meshy_dcc_core.EventBus()
         sub_id = eb.subscribe("test:event", lambda **kw: None)
         assert isinstance(sub_id, int)
 
     def test_subscribe_increments_id(self) -> None:
-        eb = dcc_mcp_core.EventBus()
+        eb = meshy_dcc_core.EventBus()
         id1 = eb.subscribe("event:a", lambda **kw: None)
         id2 = eb.subscribe("event:a", lambda **kw: None)
         assert id2 > id1
 
     def test_publish_triggers_subscriber(self) -> None:
-        eb = dcc_mcp_core.EventBus()
+        eb = meshy_dcc_core.EventBus()
         received: list = []
         eb.subscribe("action:start", lambda **kw: received.append(kw))
         eb.publish("action:start", action="create_sphere", dcc="maya")
@@ -197,7 +197,7 @@ class TestEventBus:
         assert received[0]["action"] == "create_sphere"
 
     def test_publish_kwargs_preserved(self) -> None:
-        eb = dcc_mcp_core.EventBus()
+        eb = meshy_dcc_core.EventBus()
         received: list = []
         eb.subscribe("test", lambda **kw: received.append(kw))
         eb.publish("test", key1="val1", key2=42)
@@ -205,11 +205,11 @@ class TestEventBus:
         assert received[0]["key2"] == 42
 
     def test_publish_no_subscribers_no_error(self) -> None:
-        eb = dcc_mcp_core.EventBus()
+        eb = meshy_dcc_core.EventBus()
         eb.publish("nonexistent:event", data="test")
 
     def test_multiple_subscribers_all_called(self) -> None:
-        eb = dcc_mcp_core.EventBus()
+        eb = meshy_dcc_core.EventBus()
         calls: list = []
         eb.subscribe("event", lambda **kw: calls.append("a"))
         eb.subscribe("event", lambda **kw: calls.append("b"))
@@ -217,7 +217,7 @@ class TestEventBus:
         assert len(calls) == 2
 
     def test_unsubscribe_stops_callback(self) -> None:
-        eb = dcc_mcp_core.EventBus()
+        eb = meshy_dcc_core.EventBus()
         received: list = []
         sub_id = eb.subscribe("action", lambda **kw: received.append(kw))
         eb.publish("action", x=1)
@@ -226,7 +226,7 @@ class TestEventBus:
         assert len(received) == 1
 
     def test_publish_multiple_times(self) -> None:
-        eb = dcc_mcp_core.EventBus()
+        eb = meshy_dcc_core.EventBus()
         count: list = []
         eb.subscribe("tick", lambda **kw: count.append(1))
         for _ in range(5):
@@ -234,7 +234,7 @@ class TestEventBus:
         assert len(count) == 5
 
     def test_different_events_isolated(self) -> None:
-        eb = dcc_mcp_core.EventBus()
+        eb = meshy_dcc_core.EventBus()
         a_calls: list = []
         b_calls: list = []
         eb.subscribe("event:a", lambda **kw: a_calls.append(1))
@@ -244,5 +244,5 @@ class TestEventBus:
         assert len(b_calls) == 0
 
     def test_repr_contains_eventbus(self) -> None:
-        eb = dcc_mcp_core.EventBus()
+        eb = meshy_dcc_core.EventBus()
         assert "EventBus" in repr(eb)

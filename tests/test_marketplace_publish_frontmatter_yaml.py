@@ -48,8 +48,8 @@ _set_nested = _PUBLISH._set_nested
         pytest.param('name: "quoted name"\n', {"name": "quoted name"}, id="double-quoted-value"),
         pytest.param("name: 'quoted name'\n", {"name": "quoted name"}, id="single-quoted-value"),
         pytest.param(
-            'compatibility: "Python 3.7+, dcc-mcp-core 0.17+"\n',
-            {"compatibility": "Python 3.7+, dcc-mcp-core 0.17+"},
+            'compatibility: "Python 3.7+, meshy-dcc-core 0.17+"\n',
+            {"compatibility": "Python 3.7+, meshy-dcc-core 0.17+"},
             id="quoted-value-with-punctuation",
         ),
         pytest.param(
@@ -62,7 +62,7 @@ _set_nested = _PUBLISH._set_nested
             {"allowed-tools": "Bash Read Write Edit"},
             id="space-separated-value-kept-verbatim",
         ),
-        pytest.param("dcc-mcp: yes\n", {"dcc-mcp": "yes"}, id="dashed-key"),
+        pytest.param("meshy-dcc: yes\n", {"meshy-dcc": "yes"}, id="dashed-key"),
         pytest.param("name: a\nname: b\n", {"name": "b"}, id="duplicate-key-last-wins"),
         pytest.param(
             "name: x  # trailing comment\n",
@@ -131,8 +131,8 @@ def test_values_containing_colons(text: str, expected: dict) -> None:
             id="fold-finalised-at-eof",
         ),
         pytest.param(
-            "metadata:\n  dcc-mcp:\n    search-hint: >-\n      alpha beta\n      gamma\n",
-            {"metadata": {"dcc-mcp": {"search-hint": "alpha beta gamma"}}},
+            "metadata:\n  meshy-dcc:\n    search-hint: >-\n      alpha beta\n      gamma\n",
+            {"metadata": {"meshy-dcc": {"search-hint": "alpha beta gamma"}}},
             id="fold-inside-nested-block",
         ),
         pytest.param(
@@ -201,23 +201,23 @@ def test_flow_sequences(text: str, expected: dict) -> None:
     ("text", "expected"),
     [
         pytest.param(
-            "metadata:\n  dcc-mcp:\n    dcc: maya\n",
-            {"metadata": {"dcc-mcp": {"dcc": "maya"}}},
+            "metadata:\n  meshy-dcc:\n    dcc: maya\n",
+            {"metadata": {"meshy-dcc": {"dcc": "maya"}}},
             id="two-level-nesting",
         ),
         pytest.param(
-            'metadata:\n  dcc-mcp:\n    dcc: maya\n    version: "1.0"\n    layer: domain\n',
-            {"metadata": {"dcc-mcp": {"dcc": "maya", "version": "1.0", "layer": "domain"}}},
-            id="dcc-mcp-metadata-block",
+            'metadata:\n  meshy-dcc:\n    dcc: maya\n    version: "1.0"\n    layer: domain\n',
+            {"metadata": {"meshy-dcc": {"dcc": "maya", "version": "1.0", "layer": "domain"}}},
+            id="meshy-dcc-metadata-block",
         ),
         pytest.param(
-            "metadata:\n  dcc-mcp:\n    dcc: maya\n  other:\n    k: v\n",
-            {"metadata": {"dcc-mcp": {"dcc": "maya"}, "other": {"k": "v"}}},
+            "metadata:\n  meshy-dcc:\n    dcc: maya\n  other:\n    k: v\n",
+            {"metadata": {"meshy-dcc": {"dcc": "maya"}, "other": {"k": "v"}}},
             id="sibling-parent-key-dedents-back-one-level",
         ),
         pytest.param(
-            "metadata:\n  dcc-mcp:\n    dcc: maya\n  other: x\n",
-            {"metadata": {"dcc-mcp": {"dcc": "maya", "other": "x"}}},
+            "metadata:\n  meshy-dcc:\n    dcc: maya\n  other: x\n",
+            {"metadata": {"meshy-dcc": {"dcc": "maya", "other": "x"}}},
             id="characterization-sibling-scalar-dedent-is-swallowed-by-the-open-block",
         ),
         pytest.param(
@@ -227,13 +227,13 @@ def test_flow_sequences(text: str, expected: dict) -> None:
         ),
         pytest.param("a:\n    b: 1\n", {"a": {"b": "1"}}, id="four-space-indent-under-parent"),
         pytest.param(
-            "metadata:\n  dcc-mcp:\n    dcc: maya\nlicense: MIT-0\n",
-            {"metadata": {"dcc-mcp": {"dcc": "maya", "license": "MIT-0"}}},
+            "metadata:\n  meshy-dcc:\n    dcc: maya\nlicense: MIT-0\n",
+            {"metadata": {"meshy-dcc": {"dcc": "maya", "license": "MIT-0"}}},
             id="characterization-scalar-after-nested-block-is-swallowed",
         ),
         pytest.param(
-            "metadata:\n\tdcc-mcp:\n\t\tdcc: maya\n",
-            {"dcc-mcp": {"dcc": "maya"}},
+            "metadata:\n\tmeshy-dcc:\n\t\tdcc: maya\n",
+            {"meshy-dcc": {"dcc": "maya"}},
             id="characterization-tab-indent-drops-the-metadata-root",
         ),
         pytest.param(
@@ -287,8 +287,8 @@ def test_empty_and_unparseable_input_yields_empty_mapping(text: str) -> None:
             id="crlf-folded-scalar",
         ),
         pytest.param(
-            "metadata:\r\n  dcc-mcp:\r\n    dcc: maya\r\n",
-            {"metadata": {"dcc-mcp": {"dcc": "maya"}}},
+            "metadata:\r\n  meshy-dcc:\r\n    dcc: maya\r\n",
+            {"metadata": {"meshy-dcc": {"dcc": "maya"}}},
             id="crlf-nested-block",
         ),
         pytest.param(

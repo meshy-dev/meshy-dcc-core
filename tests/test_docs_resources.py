@@ -9,7 +9,7 @@ Covers:
 - register_docs_resources_from_dir: scans directory and registers files
 - register_docs_server: registers all built-ins on a server
 - All built-in URIs have expected fields
-- Public API importable from top-level dcc_mcp_core
+- Public API importable from top-level meshy_dcc_core
 """
 
 from __future__ import annotations
@@ -20,7 +20,7 @@ from unittest.mock import MagicMock
 
 
 def test_builtin_uris_returned():
-    from dcc_mcp_core.docs_resources import get_builtin_docs_uris
+    from meshy_dcc_core.docs_resources import get_builtin_docs_uris
 
     uris = get_builtin_docs_uris()
     assert len(uris) > 0
@@ -29,7 +29,7 @@ def test_builtin_uris_returned():
 
 
 def test_get_docs_content_known():
-    from dcc_mcp_core.docs_resources import get_docs_content
+    from meshy_dcc_core.docs_resources import get_docs_content
 
     content = get_docs_content("docs://output-format/call-action")
     assert content is not None
@@ -39,13 +39,13 @@ def test_get_docs_content_known():
 
 
 def test_get_docs_content_unknown():
-    from dcc_mcp_core.docs_resources import get_docs_content
+    from meshy_dcc_core.docs_resources import get_docs_content
 
     assert get_docs_content("docs://nonexistent/resource") is None
 
 
 def test_all_builtins_have_required_fields():
-    from dcc_mcp_core.docs_resources import _DOCS
+    from meshy_dcc_core.docs_resources import _DOCS
 
     for uri, meta in _DOCS.items():
         assert "name" in meta, f"{uri} missing 'name'"
@@ -56,8 +56,8 @@ def test_all_builtins_have_required_fields():
 
 
 def test_register_docs_resource_stores_in_registry():
-    from dcc_mcp_core.docs_resources import get_docs_content
-    from dcc_mcp_core.docs_resources import register_docs_resource
+    from meshy_dcc_core.docs_resources import get_docs_content
+    from meshy_dcc_core.docs_resources import register_docs_resource
 
     server = MagicMock()
     register_docs_resource(
@@ -76,7 +76,7 @@ def test_register_docs_resource_stores_in_registry():
 def test_register_docs_resource_invalid_uri(caplog):
     import logging
 
-    from dcc_mcp_core.docs_resources import register_docs_resource
+    from meshy_dcc_core.docs_resources import register_docs_resource
 
     server = MagicMock()
     with caplog.at_level(logging.WARNING):
@@ -91,8 +91,8 @@ def test_register_docs_resource_invalid_uri(caplog):
 
 
 def test_register_docs_resources_from_dir():
-    from dcc_mcp_core.docs_resources import get_docs_content
-    from dcc_mcp_core.docs_resources import register_docs_resources_from_dir
+    from meshy_dcc_core.docs_resources import get_docs_content
+    from meshy_dcc_core.docs_resources import register_docs_resources_from_dir
 
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
@@ -114,7 +114,7 @@ def test_register_docs_resources_from_dir():
 
 
 def test_register_docs_resources_from_dir_missing():
-    from dcc_mcp_core.docs_resources import register_docs_resources_from_dir
+    from meshy_dcc_core.docs_resources import register_docs_resources_from_dir
 
     server = MagicMock()
     result = register_docs_resources_from_dir(server, directory="/nonexistent/path")
@@ -122,8 +122,8 @@ def test_register_docs_resources_from_dir_missing():
 
 
 def test_register_docs_server():
-    from dcc_mcp_core.docs_resources import get_builtin_docs_uris
-    from dcc_mcp_core.docs_resources import register_docs_server
+    from meshy_dcc_core.docs_resources import get_builtin_docs_uris
+    from meshy_dcc_core.docs_resources import register_docs_server
 
     server = MagicMock()
     register_docs_server(server)
@@ -143,7 +143,7 @@ def test_register_docs_resource_producer_returns_payload():
     ``{"mimeType": ..., "text": ...}`` so the Rust side can wrap it into
     a ``ProducerContent::Text``.
     """
-    from dcc_mcp_core.docs_resources import register_docs_resource
+    from meshy_dcc_core.docs_resources import register_docs_resource
 
     server = MagicMock()
     register_docs_resource(
@@ -165,10 +165,10 @@ def test_register_docs_resource_producer_returns_payload():
 
 
 def test_importable_from_top_level():
-    import dcc_mcp_core
+    import meshy_dcc_core
 
-    assert hasattr(dcc_mcp_core, "get_builtin_docs_uris")
-    assert hasattr(dcc_mcp_core, "get_docs_content")
-    assert hasattr(dcc_mcp_core, "register_docs_resource")
-    assert hasattr(dcc_mcp_core, "register_docs_resources_from_dir")
-    assert hasattr(dcc_mcp_core, "register_docs_server")
+    assert hasattr(meshy_dcc_core, "get_builtin_docs_uris")
+    assert hasattr(meshy_dcc_core, "get_docs_content")
+    assert hasattr(meshy_dcc_core, "register_docs_resource")
+    assert hasattr(meshy_dcc_core, "register_docs_resources_from_dir")
+    assert hasattr(meshy_dcc_core, "register_docs_server")

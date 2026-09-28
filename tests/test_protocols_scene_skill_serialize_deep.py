@@ -1,4 +1,4 @@
-"""Deep tests for Cross-DCC protocol data models, dcc_mcp_core.skill helpers.
+"""Deep tests for Cross-DCC protocol data models, meshy_dcc_core.skill helpers.
 
 serialize_result/deserialize_result, and ToolDeclaration coverage targets:
 - ObjectTransform, BoundingBox, SceneObject, SceneNode, FrameRange, RenderOutput
@@ -14,24 +14,24 @@ import math
 
 import pytest
 
-import dcc_mcp_core
-from dcc_mcp_core import BoundingBox
-from dcc_mcp_core import FrameRange
-from dcc_mcp_core import ObjectTransform
-from dcc_mcp_core import RenderOutput
-from dcc_mcp_core import SceneNode
-from dcc_mcp_core import SceneObject
-from dcc_mcp_core import SerializeFormat
-from dcc_mcp_core import ToolDeclaration
-from dcc_mcp_core import deserialize_result
-from dcc_mcp_core import error_result
-from dcc_mcp_core import serialize_result
-from dcc_mcp_core import success_result
-from dcc_mcp_core.skill import skill_entry
-from dcc_mcp_core.skill import skill_error
-from dcc_mcp_core.skill import skill_exception
-from dcc_mcp_core.skill import skill_success
-from dcc_mcp_core.skill import skill_warning
+import meshy_dcc_core
+from meshy_dcc_core import BoundingBox
+from meshy_dcc_core import FrameRange
+from meshy_dcc_core import ObjectTransform
+from meshy_dcc_core import RenderOutput
+from meshy_dcc_core import SceneNode
+from meshy_dcc_core import SceneObject
+from meshy_dcc_core import SerializeFormat
+from meshy_dcc_core import ToolDeclaration
+from meshy_dcc_core import deserialize_result
+from meshy_dcc_core import error_result
+from meshy_dcc_core import serialize_result
+from meshy_dcc_core import success_result
+from meshy_dcc_core.skill import skill_entry
+from meshy_dcc_core.skill import skill_error
+from meshy_dcc_core.skill import skill_exception
+from meshy_dcc_core.skill import skill_success
+from meshy_dcc_core.skill import skill_warning
 
 
 # ---------------------------------------------------------------------------
@@ -473,7 +473,7 @@ class TestSerializeFormatEnum:
 
 
 # ---------------------------------------------------------------------------
-# dcc_mcp_core.skill sub-module
+# meshy_dcc_core.skill sub-module
 # ---------------------------------------------------------------------------
 class TestSkillSuccess:
     def test_returns_dict(self):

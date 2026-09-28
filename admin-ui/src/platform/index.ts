@@ -87,7 +87,7 @@ export function adminApiBase(): string {
 
 export const API_BASE = adminApiBase();
 export const ADMIN_FETCH_TIMEOUT_MS = 25_000;
-export const DEFAULT_LOCAL_GATEWAY_PORT = '9765';
+export const DEFAULT_LOCAL_GATEWAY_PORT = '19765';
 
 function responsePreview(text: string): string {
   return text.replace(/\s+/g, ' ').trim().slice(0, 120);
@@ -223,7 +223,7 @@ export async function adminOkResponse(response: Response, endpoint: string): Pro
 
 // ── IDE targets ───────────────────────────────────────────────────────────────
 
-export const IDE_SERVER_NAME = 'dcc-mcp-gateway';
+export const IDE_SERVER_NAME = 'meshy-dcc-gateway';
 
 export const buildMcpServersConfig = (url: string) => JSON.stringify({
   mcpServers: {
@@ -343,7 +343,7 @@ export function configuredDevGatewayMcpUrl(): string | null {
   if (!import.meta.env.DEV || !isLoopbackHost(window.location.hostname)) {
     return null;
   }
-  const configured = String(import.meta.env.VITE_DCC_MCP_GATEWAY_URL ?? '').trim();
+  const configured = String(import.meta.env.VITE_MESHY_DCC_GATEWAY_URL ?? '').trim();
   try {
     if (configured) {
       return new URL('/mcp', configured).toString();
@@ -450,12 +450,12 @@ export async function issueReportJsonText(requestId: string): Promise<string> {
 
 export function issueReportFilename(requestId: string): string {
   const safe = requestId.replace(/[^A-Za-z0-9_.-]+/g, '-').replace(/^-+|-+$/g, '') || 'request';
-  return `dcc-mcp-issue-report-${safe}.json`;
+  return `meshy-dcc-issue-report-${safe}.json`;
 }
 
 export function openApiSpecFilename(label: string): string {
   const safe = label.replace(/[^A-Za-z0-9_.-]+/g, '-').replace(/^-+|-+$/g, '') || 'gateway';
-  return `dcc-mcp-openapi-${safe}.json`;
+  return `meshy-dcc-openapi-${safe}.json`;
 }
 
 export function downloadJsonText(filename: string, text: string): void {

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Sample idle memory for the standalone dcc-mcp-server binary (#1354).
+"""Sample idle memory for the standalone meshy-dcc-server binary (#1354).
 
 The smoke run starts the server without a live DCC, gateway, admin UI, bridge,
 or rotating file logs, samples RSS/working-set memory for a short window, then
@@ -24,7 +24,7 @@ def _repo_root() -> Path:
 
 
 def _default_server_exe() -> Path | None:
-    exe_name = "dcc-mcp-server.exe" if os.name == "nt" else "dcc-mcp-server"
+    exe_name = "meshy-dcc-server.exe" if os.name == "nt" else "meshy-dcc-server"
     root = _repo_root()
     candidates = [
         root / "target" / "debug" / exe_name,
@@ -67,7 +67,7 @@ def _mb(value: int | None) -> float | None:
 def _build_command(args: argparse.Namespace) -> list[str]:
     server_exe = Path(args.server_exe) if args.server_exe else _default_server_exe()
     if server_exe is None:
-        raise SystemExit("dcc-mcp-server binary not found; pass --server-exe or run `vx cargo build -p dcc-mcp-server`")
+        raise SystemExit("meshy-dcc-server binary not found; pass --server-exe or run `vx cargo build -p meshy-dcc-server`")
     return [
         str(server_exe),
         "--app",
@@ -97,8 +97,8 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     """Run the smoke test and return a JSON-serialisable report."""
     cmd = _build_command(args)
     env = os.environ.copy()
-    env.setdefault("DCC_MCP_NO_LOG_FILE", "true")
-    env.setdefault("DCC_MCP_NO_ADMIN", "true")
+    env.setdefault("MESHY_DCC_NO_LOG_FILE", "true")
+    env.setdefault("MESHY_DCC_NO_ADMIN", "true")
     env.setdefault("RUST_LOG", "warn")
     proc = subprocess.Popen(
         cmd,
@@ -116,7 +116,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             if proc.poll() is not None:
                 stdout, stderr = proc.communicate(timeout=1)
                 raise SystemExit(
-                    f"dcc-mcp-server exited early with code {proc.returncode}\n"
+                    f"meshy-dcc-server exited early with code {proc.returncode}\n"
                     f"stdout:\n{stdout[-2000:]}\n"
                     f"stderr:\n{stderr[-2000:]}"
                 )
@@ -147,7 +147,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
 def main() -> int:
     """Parse CLI arguments and enforce memory thresholds."""
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--server-exe", help="Path to a built dcc-mcp-server binary")
+    parser.add_argument("--server-exe", help="Path to a built meshy-dcc-server binary")
     parser.add_argument("--app", default="python", help="DCC app name to advertise")
     parser.add_argument("--duration-secs", type=float, default=10.0)
     parser.add_argument("--interval-secs", type=float, default=1.0)

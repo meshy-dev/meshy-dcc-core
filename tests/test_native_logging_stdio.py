@@ -9,13 +9,13 @@ import sys
 def test_native_debug_logs_do_not_pollute_stdout() -> None:
     root = Path(__file__).resolve().parent.parent
     env = os.environ.copy()
-    env["DCC_MCP_LOG_LEVEL"] = "debug"
+    env["MESHY_DCC_LOG_LEVEL"] = "debug"
 
     result = subprocess.run(
         [
             sys.executable,
             "-c",
-            "from dcc_mcp_core import PySharedBuffer; PySharedBuffer.create(capacity=1024)",
+            "from meshy_dcc_core import PySharedBuffer; PySharedBuffer.create(capacity=1024)",
         ],
         cwd=root,
         env=env,

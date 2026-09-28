@@ -25,20 +25,20 @@ import threading
 # Import third-party modules
 import pytest
 
-from dcc_mcp_core import McpHttpConfig
-from dcc_mcp_core import McpHttpServer
-from dcc_mcp_core import PyDccLauncher
-from dcc_mcp_core import SkillScanner
-from dcc_mcp_core import SkillWatcher
+from meshy_dcc_core import McpHttpConfig
+from meshy_dcc_core import McpHttpServer
+from meshy_dcc_core import PyDccLauncher
+from meshy_dcc_core import SkillScanner
+from meshy_dcc_core import SkillWatcher
 
 # Import local modules
-from dcc_mcp_core import ToolDispatcher
-from dcc_mcp_core import ToolPipeline
-from dcc_mcp_core import ToolRegistry
-from dcc_mcp_core import parse_skill_md
-from dcc_mcp_core import scan_and_load
-from dcc_mcp_core import scan_and_load_lenient
-from dcc_mcp_core import scan_skill_paths
+from meshy_dcc_core import ToolDispatcher
+from meshy_dcc_core import ToolPipeline
+from meshy_dcc_core import ToolRegistry
+from meshy_dcc_core import parse_skill_md
+from meshy_dcc_core import scan_and_load
+from meshy_dcc_core import scan_and_load_lenient
+from meshy_dcc_core import scan_skill_paths
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -81,7 +81,7 @@ def _make_skill_dir(
             f"name: {skill_name}\n"
             f'description: "Test skill {skill_name}"\n'
             f"metadata:\n"
-            f"  dcc-mcp:\n"
+            f"  meshy-dcc:\n"
             f"    dcc: {dcc}\n"
             f'    version: "{version}"\n'
             f'    tags: ["test"]'

@@ -3,14 +3,14 @@
 Failure mode observed by the user
 =================================
 
-1. Maya A wins the gateway election (binds 9765) and registers a
+1. Maya A wins the gateway election (binds 19765) and registers a
    ``__gateway__`` sentinel in the FileRegistry.
 2. Maya A crashes uncleanly. The kernel keeps the socket in
    ``TIME_WAIT`` for ~2 minutes (Windows default
    ``TcpTimedWaitDelay``). The sentinel stays in the registry because
    no clean shutdown happened.
 3. Maya B / C are non-gateway peers running ``DccGatewayElection``.
-   Their ``GET /health`` probes against 9765 fail (no listener).
+   Their ``GET /health`` probes against 19765 fail (no listener).
 4. After two consecutive failures, the election attempts to take
    over. Previously, this had two bugs:
 
@@ -42,7 +42,7 @@ The fixes
   sentinel after pruning" case (TIME_WAIT recovery).
 
 This test file covers the Python half of the contract via mocks. The
-Rust half is covered by ``crates/dcc-mcp-gateway/src/gateway/tests.rs``.
+Rust half is covered by ``crates/meshy-dcc-gateway/src/gateway/tests.rs``.
 """
 
 # Import future modules
@@ -56,7 +56,7 @@ from unittest.mock import MagicMock
 import pytest
 
 # Import local modules
-from dcc_mcp_core.gateway_election import DccGatewayElection
+from meshy_dcc_core.gateway_election import DccGatewayElection
 
 
 @pytest.fixture
@@ -82,7 +82,7 @@ class TestIsPortFreeMatchesRustBindSemantics:
     """_is_port_free must answer "would Rust's bind succeed right now?".
 
     The Rust gateway runner uses ``socket.set_reuse_address(false)``
-    (see ``crates/dcc-mcp-gateway/src/gateway/bind.rs::try_bind_port``).
+    (see ``crates/meshy-dcc-gateway/src/gateway/bind.rs::try_bind_port``).
     The Python probe must mirror this so the election doesn't lie about
     port availability and waste a server restart per iteration during
     TIME_WAIT.

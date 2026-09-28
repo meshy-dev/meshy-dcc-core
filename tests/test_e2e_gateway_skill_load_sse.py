@@ -21,7 +21,7 @@ was actually at risk from the #303 fix:
 The flow covered end-to-end:
 
 1. A backend ``McpHttpServer`` is built via ``create_skill_server`` with
-   ``DCC_MCP_SKILL_PATHS`` pointing at ``examples/skills`` — so
+   ``MESHY_DCC_SKILL_PATHS`` pointing at ``examples/skills`` — so
    ``hello-world`` is discovered as a skill stub (``__skill__hello-world``)
    but its tool (``hello_world__greet``) is **not** active.
 2. The backend joins a gateway (first-wins election). The gateway's
@@ -66,10 +66,10 @@ import pytest
 from conftest import McpClient
 from conftest import allocate_gateway_port
 from conftest import wait_tcp_reachable
-from dcc_mcp_core import McpHttpConfig
-from dcc_mcp_core import McpHttpServer
-from dcc_mcp_core import ToolRegistry
-from dcc_mcp_core import create_skill_server
+from meshy_dcc_core import McpHttpConfig
+from meshy_dcc_core import McpHttpServer
+from meshy_dcc_core import ToolRegistry
+from meshy_dcc_core import create_skill_server
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 EXAMPLES_SKILLS_DIR = str(REPO_ROOT / "examples" / "skills")
@@ -221,7 +221,7 @@ def gateway_with_skill_backend(tmp_path, monkeypatch):
 
     # Point the skill scanner at our examples dir.  monkeypatch.setenv
     # guarantees the env var is reset even if the test aborts mid-way.
-    monkeypatch.setenv("DCC_MCP_SKILL_PATHS", EXAMPLES_SKILLS_DIR)
+    monkeypatch.setenv("MESHY_DCC_SKILL_PATHS", EXAMPLES_SKILLS_DIR)
 
     handle = None
     gw_port = 0

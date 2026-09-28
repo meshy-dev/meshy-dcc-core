@@ -54,7 +54,7 @@ const jsonEndpoints: JsonEndpoint[] = [
     init: {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ binary: 'dcc-mcp-server' }),
+      body: JSON.stringify({ binary: 'meshy-dcc-server' }),
     },
   },
   {
@@ -104,7 +104,7 @@ const jsonEndpoints: JsonEndpoint[] = [
     init: {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ source: 'dcc-mcp/community-marketplace' }),
+      body: JSON.stringify({ source: 'meshy-dev/community-marketplace' }),
     },
   },
   {

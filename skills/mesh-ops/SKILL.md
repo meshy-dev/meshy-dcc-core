@@ -8,10 +8,10 @@ description: >-
   blender, houdini, 3dsmax, and custom hosts) before falling back to raw
   scripting.
 license: "MIT"
-compatibility: "dcc-mcp-core 0.20.29+, Python 3.7+"
+compatibility: "meshy-dcc-core 0.20.29+, Python 3.7+"
 allowed-tools: ["Read"]
 metadata:
-  dcc-mcp:
+  meshy-dcc:
     dcc: any
     layer: domain
     stage: modeling
@@ -112,7 +112,7 @@ contracts are deliberately fail-able:
   an FBX with 31% of meshes un-UV'd.
 
 Validate with `jsonschema.Draft202012Validator`, or with Core's dependency-free
-validator (`dcc_mcp_core._runtime.recipe_schema._RecipeSchemaValidator`) on
+validator (`meshy_dcc_core._runtime.recipe_schema._RecipeSchemaValidator`) on
 Python 3.7 hosts.
 
 ## Adapter-local duplicates

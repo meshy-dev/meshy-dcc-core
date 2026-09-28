@@ -2,17 +2,17 @@
 
 name = "film_fx_cache_review"
 version = "1.0.0"
-requires = ["dcc_mcp_core", "dcc_mcp_houdini"]
+requires = ["meshy_dcc_core", "meshy_dcc_houdini"]
 
 
 def commands():
-    env.DCC_MCP_CONTEXT_BUNDLE = "show-a.seq010.shot020.fx"
-    env.DCC_MCP_PRODUCTION_DOMAIN = "film"
-    env.DCC_MCP_CONTEXT_KIND = "shot"
-    env.DCC_MCP_PROJECT = "show-a"
-    env.DCC_MCP_SEQUENCE = "seq010"
-    env.DCC_MCP_SHOT = "shot020"
-    env.DCC_MCP_TASK = "fx"
-    env.DCC_MCP_TOOLSET_PROFILE = "film-shot-fx"
-    env.DCC_MCP_PACKAGE_PROVENANCE.append("film_fx_cache_review-1.0.0")
-    env.DCC_MCP_HOUDINI_SKILL_PATHS.append("{root}/skills")
+    env.MESHY_DCC_CONTEXT_BUNDLE = "show-a.seq010.shot020.fx"
+    env.MESHY_DCC_PRODUCTION_DOMAIN = "film"
+    env.MESHY_DCC_CONTEXT_KIND = "shot"
+    env.MESHY_DCC_PROJECT = "show-a"
+    env.MESHY_DCC_SEQUENCE = "seq010"
+    env.MESHY_DCC_SHOT = "shot020"
+    env.MESHY_DCC_TASK = "fx"
+    env.MESHY_DCC_TOOLSET_PROFILE = "film-shot-fx"
+    env.MESHY_DCC_PACKAGE_PROVENANCE.append("film_fx_cache_review-1.0.0")
+    env.MESHY_DCC_HOUDINI_SKILL_PATHS.append("{root}/skills")

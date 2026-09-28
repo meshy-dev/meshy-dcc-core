@@ -3,7 +3,7 @@
 These exercise the Python surface (``FileLoggingConfig`` /
 ``init_file_logging`` / ``shutdown_file_logging``) — the rotation and
 retention semantics themselves are covered by the Rust unit tests in
-``crates/dcc-mcp-logging/src/file_logging/``.
+``crates/meshy-dcc-logging/src/file_logging/``.
 
 The global ``tracing`` subscriber is a process-wide resource, so each
 test swaps the file layer onto a per-test ``tmp_path`` and tears it
@@ -22,17 +22,17 @@ from pathlib import Path
 import pytest
 
 # Import local modules
-from dcc_mcp_core import DEFAULT_LOG_FILE_PREFIX
-from dcc_mcp_core import DEFAULT_LOG_MAX_FILES
-from dcc_mcp_core import DEFAULT_LOG_MAX_SIZE
-from dcc_mcp_core import DEFAULT_LOG_ROTATION
-from dcc_mcp_core import ENV_LOG_DIR
-from dcc_mcp_core import ENV_LOG_MAX_FILES
-from dcc_mcp_core import ENV_LOG_MAX_SIZE
-from dcc_mcp_core import ENV_LOG_ROTATION
-from dcc_mcp_core import FileLoggingConfig
-from dcc_mcp_core import init_file_logging
-from dcc_mcp_core import shutdown_file_logging
+from meshy_dcc_core import DEFAULT_LOG_FILE_PREFIX
+from meshy_dcc_core import DEFAULT_LOG_MAX_FILES
+from meshy_dcc_core import DEFAULT_LOG_MAX_SIZE
+from meshy_dcc_core import DEFAULT_LOG_ROTATION
+from meshy_dcc_core import ENV_LOG_DIR
+from meshy_dcc_core import ENV_LOG_MAX_FILES
+from meshy_dcc_core import ENV_LOG_MAX_SIZE
+from meshy_dcc_core import ENV_LOG_ROTATION
+from meshy_dcc_core import FileLoggingConfig
+from meshy_dcc_core import init_file_logging
+from meshy_dcc_core import shutdown_file_logging
 
 
 @pytest.fixture(autouse=True)
@@ -146,7 +146,7 @@ def test_emits_to_file_via_tracing_bridge(tmp_path: Path):
 
     # Emit a record through the standard library — harmless even when the
     # tracing bridge is not wired up; the file is already created.
-    logging.getLogger("dcc_mcp_core").info("hello from pytest")
+    logging.getLogger("meshy_dcc_core").info("hello from pytest")
 
 
 def test_swapping_directory_does_not_raise(tmp_path: Path):

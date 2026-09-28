@@ -6,10 +6,10 @@ import threading
 from typing import Any
 from typing import ClassVar
 
-import dcc_mcp_core
-from dcc_mcp_core.factory import create_dcc_server
-from dcc_mcp_core.factory import make_start_stop
-from dcc_mcp_core.factory import start_embedded_dcc_server
+import meshy_dcc_core
+from meshy_dcc_core.factory import create_dcc_server
+from meshy_dcc_core.factory import make_start_stop
+from meshy_dcc_core.factory import start_embedded_dcc_server
 
 
 class _FakeServer:
@@ -111,5 +111,5 @@ def test_make_start_stop_accepts_dispatcher_factory() -> None:
 
 
 def test_start_embedded_dcc_server_exported_from_top_level() -> None:
-    assert dcc_mcp_core.start_embedded_dcc_server is start_embedded_dcc_server
-    assert "start_embedded_dcc_server" in dcc_mcp_core.__all__
+    assert meshy_dcc_core.start_embedded_dcc_server is start_embedded_dcc_server
+    assert "start_embedded_dcc_server" in meshy_dcc_core.__all__

@@ -1,4 +1,4 @@
-//! Type-stub generator — produces `python/dcc_mcp_core/_core.pyi` from annotated Rust code.
+//! Type-stub generator — produces `python/meshy_dcc_core/_core.pyi` from annotated Rust code.
 //!
 //! Walks every `#[gen_stub_pyclass]` / `#[gen_stub_pymethods]` /
 //! `#[gen_stub_pyfunction]` annotation registered via `inventory::submit!`
@@ -18,18 +18,18 @@ use std::path::PathBuf;
 use pyo3_stub_gen::Result;
 
 /// Where pyo3-stub-gen writes its package-style output.
-const GEN_PKG_STUB: &str = "python/dcc_mcp_core/_core/__init__.pyi";
-const GEN_PARENT_STUB: &str = "python/dcc_mcp_core/__init__.pyi";
-const GEN_PKG_DIR: &str = "python/dcc_mcp_core/_core";
+const GEN_PKG_STUB: &str = "python/meshy_dcc_core/_core/__init__.pyi";
+const GEN_PARENT_STUB: &str = "python/meshy_dcc_core/__init__.pyi";
+const GEN_PKG_DIR: &str = "python/meshy_dcc_core/_core";
 
 /// Where the final single-file stub is written.
-const FINAL_STUB: &str = "python/dcc_mcp_core/_core.pyi";
+const FINAL_STUB: &str = "python/meshy_dcc_core/_core.pyi";
 
 fn main() -> Result<()> {
     let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     let check_mode = std::env::args().any(|arg| arg == "--check");
 
-    // 1. Run the generator — this writes into python/dcc_mcp_core/...
+    // 1. Run the generator — this writes into python/meshy_dcc_core/...
     let stub = _core::stub_info()?;
     stub.generate()?;
 

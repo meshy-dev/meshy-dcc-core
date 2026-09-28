@@ -8,7 +8,7 @@ description: >-
 license: MIT
 compatibility: Python 3.10+
 metadata:
-  dcc-mcp:
+  meshy-dcc:
     dcc: python
     version: "1.0.0"
     layer: example
@@ -18,7 +18,7 @@ metadata:
 
 # Typed Schema Demo (issue #242)
 
-This skill demonstrates the `dcc_mcp_core.schema` helpers landed for
+This skill demonstrates the `meshy_dcc_core.schema` helpers landed for
 issue #242: authors write a typed handler and
 `tool_spec_from_callable` derives both `inputSchema` and `outputSchema`
 from the annotations, with no dependency on `pydantic`, `jsonschema`, or
@@ -34,11 +34,11 @@ from the annotations, with no dependency on `pydantic`, `jsonschema`, or
 ## How to wire it into a server
 
 The demo module builds a `ToolSpec` that is ready for
-`dcc_mcp_core._tool_registration.register_tools(server, [spec])`. Inside
+`meshy_dcc_core._tool_registration.register_tools(server, [spec])`. Inside
 an adapter (e.g. Maya/Blender), register it during bootstrap:
 
 ```python
-from dcc_mcp_core._tool_registration import register_tools
+from meshy_dcc_core._tool_registration import register_tools
 from typed_schema_demo.scripts.demo import spec
 
 register_tools(server, [spec], dcc_name="python")

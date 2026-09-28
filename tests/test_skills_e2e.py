@@ -33,7 +33,7 @@ from conftest import REPO_ROOT
 # Import local modules
 from conftest import McpClient
 from conftest import scan_and_find
-import dcc_mcp_core
+import meshy_dcc_core
 
 # All expected example skills
 ALL_EXAMPLE_SKILLS = {
@@ -55,29 +55,29 @@ ALL_EXAMPLE_SKILLS = {
 
 class TestSkillScanningE2E:
     def test_scan_discovers_all_example_skills(self, examples_dir: str) -> None:
-        scanner = dcc_mcp_core.SkillScanner()
+        scanner = meshy_dcc_core.SkillScanner()
         dirs = scanner.scan(extra_paths=[examples_dir])
         names = {Path(d).name for d in dirs}
         for expected in ALL_EXAMPLE_SKILLS:
             assert expected in names, f"Missing skill: {expected}"
 
     def test_scan_with_dcc_filter_still_returns_extra_paths(self, examples_dir: str) -> None:
-        scanner = dcc_mcp_core.SkillScanner()
+        scanner = meshy_dcc_core.SkillScanner()
         dirs = scanner.scan(extra_paths=[examples_dir], dcc_name="maya")
         assert len(dirs) >= len(ALL_EXAMPLE_SKILLS)
 
     def test_scan_force_refresh(self, examples_dir: str) -> None:
-        scanner = dcc_mcp_core.SkillScanner()
+        scanner = meshy_dcc_core.SkillScanner()
         r1 = scanner.scan(extra_paths=[examples_dir])
         r2 = scanner.scan(extra_paths=[examples_dir], force_refresh=True)
         assert set(r1) == set(r2)
 
     def test_scan_skill_paths_convenience(self, examples_dir: str) -> None:
-        dirs = dcc_mcp_core.scan_skill_paths(extra_paths=[examples_dir])
+        dirs = meshy_dcc_core.scan_skill_paths(extra_paths=[examples_dir])
         assert len(dirs) >= len(ALL_EXAMPLE_SKILLS)
 
     def test_discovered_skills_property(self, examples_dir: str) -> None:
-        scanner = dcc_mcp_core.SkillScanner()
+        scanner = meshy_dcc_core.SkillScanner()
         scanner.scan(extra_paths=[examples_dir])
         assert len(scanner.discovered_skills) >= len(ALL_EXAMPLE_SKILLS)
 
@@ -88,7 +88,7 @@ class TestSkillScanningE2E:
 class TestSkillParsingE2E:
     def test_parse_hello_world(self, examples_dir: str) -> None:
         skill_dir = str(Path(examples_dir) / "hello-world")
-        meta = dcc_mcp_core.parse_skill_md(skill_dir)
+        meta = meshy_dcc_core.parse_skill_md(skill_dir)
         assert meta is not None
         assert meta.name == "hello-world"
         assert meta.dcc == "python"
@@ -99,7 +99,7 @@ class TestSkillParsingE2E:
 
     def test_parse_maya_geometry(self, examples_dir: str) -> None:
         skill_dir = str(Path(examples_dir) / "maya-geometry")
-        meta = dcc_mcp_core.parse_skill_md(skill_dir)
+        meta = meshy_dcc_core.parse_skill_md(skill_dir)
         assert meta is not None
         assert meta.name == "maya-geometry"
         assert meta.dcc == "maya"
@@ -112,7 +112,7 @@ class TestSkillParsingE2E:
 
     def test_parse_multi_script(self, examples_dir: str) -> None:
         skill_dir = str(Path(examples_dir) / "multi-script")
-        meta = dcc_mcp_core.parse_skill_md(skill_dir)
+        meta = meshy_dcc_core.parse_skill_md(skill_dir)
         assert meta is not None
         assert meta.name == "multi-script"
         assert len(meta.scripts) == 3
@@ -126,11 +126,11 @@ class TestSkillParsingE2E:
         # Tool entry points live beside services/ and utils/ so shared runner
         # path setup is sufficient; tools.yaml wires each explicit source_file.
         skill_dir = str(Path(examples_dir) / "example-layered-skill")
-        meta = dcc_mcp_core.parse_skill_md(skill_dir)
+        meta = meshy_dcc_core.parse_skill_md(skill_dir)
         assert meta is not None
         assert meta.name == "example-layered-skill"
         assert meta.dcc == "python"
-        assert meta.metadata.get("dcc-mcp.layer") == "example"
+        assert meta.metadata.get("meshy-dcc.layer") == "example"
 
         tool_names = {t.name for t in meta.tools}
         assert tool_names == {"create_asset", "publish_asset", "validate_asset"}
@@ -150,7 +150,7 @@ class TestSkillParsingE2E:
 
     def test_skill_metadata_fields(self, examples_dir: str) -> None:
         skill_dir = str(Path(examples_dir) / "hello-world")
-        meta = dcc_mcp_core.parse_skill_md(skill_dir)
+        meta = meshy_dcc_core.parse_skill_md(skill_dir)
         assert meta.skill_path == skill_dir
         assert isinstance(meta.tools, list)
         # hello-world uses allowed-tools (agent permission list), not tools (MCP declarations)
@@ -162,7 +162,7 @@ class TestSkillParsingE2E:
 
     def test_skill_metadata_is_mutable(self, examples_dir: str) -> None:
         skill_dir = str(Path(examples_dir) / "hello-world")
-        meta = dcc_mcp_core.parse_skill_md(skill_dir)
+        meta = meshy_dcc_core.parse_skill_md(skill_dir)
         meta.name = "renamed"
         assert meta.name == "renamed"
         meta.tags = ["custom"]
@@ -175,7 +175,7 @@ class TestSkillParsingE2E:
 class TestOpenSourceToolSkills:
     def test_parse_ffmpeg_media(self, examples_dir: str) -> None:
         skill_dir = str(Path(examples_dir) / "ffmpeg-media")
-        meta = dcc_mcp_core.parse_skill_md(skill_dir)
+        meta = meshy_dcc_core.parse_skill_md(skill_dir)
         assert meta is not None
         assert meta.name == "ffmpeg-media"
         assert "ffmpeg" in meta.tags
@@ -188,7 +188,7 @@ class TestOpenSourceToolSkills:
 
     def test_parse_imagemagick_tools(self, examples_dir: str) -> None:
         skill_dir = str(Path(examples_dir) / "imagemagick-tools")
-        meta = dcc_mcp_core.parse_skill_md(skill_dir)
+        meta = meshy_dcc_core.parse_skill_md(skill_dir)
         assert meta is not None
         assert meta.name == "imagemagick-tools"
         assert "image" in meta.tags
@@ -196,7 +196,7 @@ class TestOpenSourceToolSkills:
 
     def test_parse_git_automation(self, examples_dir: str) -> None:
         skill_dir = str(Path(examples_dir) / "git-automation")
-        meta = dcc_mcp_core.parse_skill_md(skill_dir)
+        meta = meshy_dcc_core.parse_skill_md(skill_dir)
         assert meta is not None
         assert meta.name == "git-automation"
         assert "git" in meta.tags
@@ -204,7 +204,7 @@ class TestOpenSourceToolSkills:
 
     def test_parse_usd_tools(self, examples_dir: str) -> None:
         skill_dir = str(Path(examples_dir) / "usd-tools")
-        meta = dcc_mcp_core.parse_skill_md(skill_dir)
+        meta = meshy_dcc_core.parse_skill_md(skill_dir)
         assert meta is not None
         assert meta.name == "usd-tools"
         assert "usd" in meta.tags
@@ -217,14 +217,14 @@ class TestOpenSourceToolSkills:
 class TestClawHubCompat:
     def test_parse_clawhub_compat_skill(self, examples_dir: str) -> None:
         skill_dir = str(Path(examples_dir) / "clawhub-compat")
-        meta = dcc_mcp_core.parse_skill_md(skill_dir)
+        meta = meshy_dcc_core.parse_skill_md(skill_dir)
         assert meta is not None
         assert meta.name == "clawhub-compat"
         assert meta.version == "1.0.0"
 
     def test_clawhub_compat_has_scripts(self, examples_dir: str) -> None:
         skill_dir = str(Path(examples_dir) / "clawhub-compat")
-        meta = dcc_mcp_core.parse_skill_md(skill_dir)
+        meta = meshy_dcc_core.parse_skill_md(skill_dir)
         assert meta is not None
         assert len(meta.scripts) >= 1
         extensions = {Path(s).suffix for s in meta.scripts}
@@ -232,7 +232,7 @@ class TestClawHubCompat:
         assert ".sh" in extensions
 
     def test_clawhub_skill_scannable(self, examples_dir: str) -> None:
-        scanner = dcc_mcp_core.SkillScanner()
+        scanner = meshy_dcc_core.SkillScanner()
         dirs = scanner.scan(extra_paths=[examples_dir])
         names = {Path(d).name for d in dirs}
         assert "clawhub-compat" in names
@@ -244,7 +244,7 @@ class TestClawHubCompat:
 class TestAdvancedSkillLayout:
     def test_parse_maya_pipeline(self, examples_dir: str) -> None:
         skill_dir = str(Path(examples_dir) / "maya-pipeline")
-        meta = dcc_mcp_core.parse_skill_md(skill_dir)
+        meta = meshy_dcc_core.parse_skill_md(skill_dir)
         assert meta is not None
         assert meta.name == "maya-pipeline"
         assert meta.dcc == "maya"
@@ -253,7 +253,7 @@ class TestAdvancedSkillLayout:
 
     def test_maya_pipeline_has_scripts(self, examples_dir: str) -> None:
         skill_dir = str(Path(examples_dir) / "maya-pipeline")
-        meta = dcc_mcp_core.parse_skill_md(skill_dir)
+        meta = meshy_dcc_core.parse_skill_md(skill_dir)
         assert meta is not None
         assert len(meta.scripts) == 2
         script_names = {Path(s).name for s in meta.scripts}
@@ -267,7 +267,7 @@ class TestAdvancedSkillLayout:
     def test_metadata_files_enumerated(self, examples_dir: str) -> None:
         """Verify the Rust loader discovers all .md files under metadata/."""
         skill_dir = str(Path(examples_dir) / "maya-pipeline")
-        meta = dcc_mcp_core.parse_skill_md(skill_dir)
+        meta = meshy_dcc_core.parse_skill_md(skill_dir)
         assert meta is not None
         md_basenames = {Path(f).name for f in meta.metadata_files}
         assert "help.md" in md_basenames
@@ -279,7 +279,7 @@ class TestAdvancedSkillLayout:
     def test_depends_parsed_from_metadata_dir(self, examples_dir: str) -> None:
         """Verify depends are parsed from metadata/depends.md."""
         skill_dir = str(Path(examples_dir) / "maya-pipeline")
-        meta = dcc_mcp_core.parse_skill_md(skill_dir)
+        meta = meshy_dcc_core.parse_skill_md(skill_dir)
         assert meta is not None
         assert "maya-geometry" in meta.depends
         assert "usd-tools" in meta.depends
@@ -288,14 +288,14 @@ class TestAdvancedSkillLayout:
     def test_depends_empty_for_basic_skill(self, examples_dir: str) -> None:
         """Basic skills without metadata/depends.md should have empty depends."""
         skill_dir = str(Path(examples_dir) / "hello-world")
-        meta = dcc_mcp_core.parse_skill_md(skill_dir)
+        meta = meshy_dcc_core.parse_skill_md(skill_dir)
         assert meta is not None
         assert meta.depends == []
 
     def test_metadata_files_empty_for_basic_skill(self, examples_dir: str) -> None:
         """Basic skills without metadata/ dir should have empty metadata_files."""
         skill_dir = str(Path(examples_dir) / "hello-world")
-        meta = dcc_mcp_core.parse_skill_md(skill_dir)
+        meta = meshy_dcc_core.parse_skill_md(skill_dir)
         assert meta is not None
         assert meta.metadata_files == []
 
@@ -416,28 +416,28 @@ class TestScanParseExecutePipeline:
 
 
 class TestScanAndParseRoundTrip:
-    def test_scan_then_parse_all(self, scanned_metas: list[dcc_mcp_core.SkillMetadata]) -> None:
+    def test_scan_then_parse_all(self, scanned_metas: list[meshy_dcc_core.SkillMetadata]) -> None:
         assert len(scanned_metas) >= len(ALL_EXAMPLE_SKILLS)
         names = {m.name for m in scanned_metas}
         for expected in ALL_EXAMPLE_SKILLS:
             assert expected in names, f"Missing after parse: {expected}"
 
-    def test_all_skills_have_scripts(self, scanned_metas: list[dcc_mcp_core.SkillMetadata]) -> None:
+    def test_all_skills_have_scripts(self, scanned_metas: list[meshy_dcc_core.SkillMetadata]) -> None:
         for meta in scanned_metas:
             assert len(meta.scripts) > 0, f"Skill {meta.name} has no scripts"
 
-    def test_version_field_populated(self, scanned_metas: list[dcc_mcp_core.SkillMetadata]) -> None:
+    def test_version_field_populated(self, scanned_metas: list[meshy_dcc_core.SkillMetadata]) -> None:
         for meta in scanned_metas:
             assert meta.version, f"Skill {meta.name} missing version"
 
     def test_description_field_populated(
         self,
-        scanned_metas: list[dcc_mcp_core.SkillMetadata],
+        scanned_metas: list[meshy_dcc_core.SkillMetadata],
     ) -> None:
         for meta in scanned_metas:
             assert meta.description, f"Skill {meta.name} missing description"
 
-    def test_all_python_scripts_have_valid_syntax(self, scanned_metas: list[dcc_mcp_core.SkillMetadata]) -> None:
+    def test_all_python_scripts_have_valid_syntax(self, scanned_metas: list[meshy_dcc_core.SkillMetadata]) -> None:
         """Verify all .py scripts have valid Python syntax via ast.parse."""
         for meta in scanned_metas:
             for script in meta.scripts:
@@ -456,15 +456,15 @@ class TestInProcessExecutor:
     ``SkillCatalog.set_in_process_executor``, skill scripts must be dispatched
     through that callable instead of being spawned as subprocesses.
 
-    This is the core fix for the bug where setting ``DCC_MCP_PYTHON_EXECUTABLE``
+    This is the core fix for the bug where setting ``MESHY_DCC_PYTHON_EXECUTABLE``
     inside Maya would launch a *second* Maya process instead of executing the
     script inside the already-running interpreter.
     """
 
     def test_set_in_process_executor_accepts_callable(self, examples_dir: str) -> None:
         """Registering a callable must not raise."""
-        registry = dcc_mcp_core.ToolRegistry()
-        catalog = dcc_mcp_core.SkillCatalog(registry)
+        registry = meshy_dcc_core.ToolRegistry()
+        catalog = meshy_dcc_core.SkillCatalog(registry)
         calls: list[tuple[str, dict]] = []
 
         def my_exec(script_path: str, params: dict) -> dict:
@@ -476,8 +476,8 @@ class TestInProcessExecutor:
 
     def test_set_in_process_executor_none_clears_it(self, examples_dir: str) -> None:
         """Passing None must remove a previously registered executor."""
-        registry = dcc_mcp_core.ToolRegistry()
-        catalog = dcc_mcp_core.SkillCatalog(registry)
+        registry = meshy_dcc_core.ToolRegistry()
+        catalog = meshy_dcc_core.SkillCatalog(registry)
         catalog.set_in_process_executor(lambda sp, p: {"success": True})
         catalog.set_in_process_executor(None)  # must not raise
 
@@ -487,8 +487,8 @@ class TestInProcessExecutor:
         """
         import importlib.util
 
-        registry = dcc_mcp_core.ToolRegistry()
-        catalog = dcc_mcp_core.SkillCatalog(registry)
+        registry = meshy_dcc_core.ToolRegistry()
+        catalog = meshy_dcc_core.SkillCatalog(registry)
 
         # Capture which scripts were executed in-process
         executed: list[str] = []
@@ -521,7 +521,7 @@ class TestInProcessExecutor:
         skill_dir = tmp_path / "my-skill"
         skill_dir.mkdir()
         (skill_dir / "SKILL.md").write_text(
-            "---\nname: my-skill\ndescription: Test\nmetadata:\n  dcc-mcp:\n    dcc: python\n---\n",
+            "---\nname: my-skill\ndescription: Test\nmetadata:\n  meshy-dcc:\n    dcc: python\n---\n",
             encoding="utf-8",
         )
         script = skill_dir / "do_thing.py"
@@ -545,21 +545,21 @@ class TestInProcessExecutor:
 
         import os
 
-        import dcc_mcp_core
+        import meshy_dcc_core
 
-        env_backup = os.environ.get("DCC_MCP_SKILL_PATHS")
-        os.environ["DCC_MCP_SKILL_PATHS"] = str(tmp_path)
+        env_backup = os.environ.get("MESHY_DCC_SKILL_PATHS")
+        os.environ["MESHY_DCC_SKILL_PATHS"] = str(tmp_path)
         try:
-            registry = dcc_mcp_core.ToolRegistry()
-            catalog = dcc_mcp_core.SkillCatalog(registry)
+            registry = meshy_dcc_core.ToolRegistry()
+            catalog = meshy_dcc_core.SkillCatalog(registry)
             catalog.set_in_process_executor(capture_exec)
             catalog.discover(extra_paths=[str(tmp_path)])
             catalog.load_skill("my-skill")
         finally:
             if env_backup is None:
-                os.environ.pop("DCC_MCP_SKILL_PATHS", None)
+                os.environ.pop("MESHY_DCC_SKILL_PATHS", None)
             else:
-                os.environ["DCC_MCP_SKILL_PATHS"] = env_backup
+                os.environ["MESHY_DCC_SKILL_PATHS"] = env_backup
 
         # Skill was loaded — executor contract is verified structurally
         assert catalog.is_loaded("my-skill")
@@ -573,7 +573,7 @@ class TestInProcessExecutor:
             "name: affinity-skill\n"
             "description: Test affinity metadata\n"
             "metadata:\n"
-            "  dcc-mcp:\n"
+            "  meshy-dcc:\n"
             "    dcc: python\n"
             "    tools: tools.yaml\n"
             "---\n",
@@ -616,7 +616,7 @@ class TestInProcessExecutor:
                 time.sleep(0.02)
             raise AssertionError(f"executor did not observe {action_name}; seen={seen!r}")
 
-        server = dcc_mcp_core.create_skill_server("python", dcc_mcp_core.McpHttpConfig(port=0))
+        server = meshy_dcc_core.create_skill_server("python", meshy_dcc_core.McpHttpConfig(port=0))
         server.set_in_process_executor(capture_exec)
         server.discover(extra_paths=[str(tmp_path)])
         loaded = server.load_skill("affinity-skill")
@@ -706,7 +706,7 @@ class TestInProcessExecutor:
             "name: cancel-skill\n"
             "description: Cooperative cancellation probe\n"
             "metadata:\n"
-            "  dcc-mcp:\n"
+            "  meshy-dcc:\n"
             "    dcc: python\n"
             "    tools: tools.yaml\n"
             "---\n",
@@ -725,7 +725,7 @@ class TestInProcessExecutor:
         (skill_dir / "scripts" / "wait_for_cancel.py").write_text(
             "import time\n"
             "from pathlib import Path\n"
-            "from dcc_mcp_core import check_dcc_cancelled, current_job_id\n"
+            "from meshy_dcc_core import check_dcc_cancelled, current_job_id\n"
             "def main(started_path, stopped_path):\n"
             "    Path(started_path).write_text(current_job_id() or '', encoding='utf-8')\n"
             "    try:\n"
@@ -739,8 +739,8 @@ class TestInProcessExecutor:
         started_path = tmp_path / "started.txt"
         stopped_path = tmp_path / "stopped.txt"
 
-        server = dcc_mcp_core.create_skill_server("python", dcc_mcp_core.McpHttpConfig(port=0))
-        bridge = dcc_mcp_core.HostExecutionBridge()
+        server = meshy_dcc_core.create_skill_server("python", meshy_dcc_core.McpHttpConfig(port=0))
+        bridge = meshy_dcc_core.HostExecutionBridge()
         server.set_in_process_executor(bridge.as_inprocess_executor())
         server.discover(extra_paths=[str(tmp_path)])
         server.load_skill("cancel-skill")

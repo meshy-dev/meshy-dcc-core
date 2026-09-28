@@ -21,30 +21,30 @@ def _asset_payload(names):
 def _baseline_names(version=VERSION):
     """Mirror the v0.20.32-v0.20.33 asset set: 33 files."""
     names = [
-        f"dcc_mcp_core-{version}-cp37-cp37m-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
-        f"dcc_mcp_core-{version}-cp37-cp37m-win_amd64.whl",
-        (f"dcc_mcp_core-{version}-cp38-abi3-macosx_10_12_x86_64.macosx_11_0_arm64.macosx_10_12_universal2.whl"),
-        f"dcc_mcp_core-{version}-cp38-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
-        f"dcc_mcp_core-{version}-cp38-abi3-win_amd64.whl",
-        f"dcc_mcp_core-{version}-py3-none-any.whl",
-        f"dcc_mcp_core-{version}.tar.gz",
-        f"dcc_mcp_core_semantic-{version}-cp37-cp37m-manylinux_2_28_x86_64.whl",
-        f"dcc_mcp_core_semantic-{version}-cp37-cp37m-win_amd64.whl",
-        f"dcc_mcp_core_semantic-{version}-cp38-abi3-macosx_11_0_arm64.whl",
-        f"dcc_mcp_core_semantic-{version}-cp38-abi3-manylinux_2_28_x86_64.whl",
-        f"dcc_mcp_core_semantic-{version}-cp38-abi3-win_amd64.whl",
-        f"dcc_mcp_server-{version}-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
-        f"dcc_mcp_server-{version}-py3-none-win_amd64.whl",
-        f"dcc_mcp_server-{version}-py3-none-macosx_10_12_universal2.macosx_11_0_arm64.whl",
+        f"meshy_dcc_core-{version}-cp37-cp37m-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+        f"meshy_dcc_core-{version}-cp37-cp37m-win_amd64.whl",
+        (f"meshy_dcc_core-{version}-cp38-abi3-macosx_10_12_x86_64.macosx_11_0_arm64.macosx_10_12_universal2.whl"),
+        f"meshy_dcc_core-{version}-cp38-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+        f"meshy_dcc_core-{version}-cp38-abi3-win_amd64.whl",
+        f"meshy_dcc_core-{version}-py3-none-any.whl",
+        f"meshy_dcc_core-{version}.tar.gz",
+        f"meshy_dcc_core_semantic-{version}-cp37-cp37m-manylinux_2_28_x86_64.whl",
+        f"meshy_dcc_core_semantic-{version}-cp37-cp37m-win_amd64.whl",
+        f"meshy_dcc_core_semantic-{version}-cp38-abi3-macosx_11_0_arm64.whl",
+        f"meshy_dcc_core_semantic-{version}-cp38-abi3-manylinux_2_28_x86_64.whl",
+        f"meshy_dcc_core_semantic-{version}-cp38-abi3-win_amd64.whl",
+        f"meshy_dcc_server-{version}-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+        f"meshy_dcc_server-{version}-py3-none-win_amd64.whl",
+        f"meshy_dcc_server-{version}-py3-none-macosx_10_12_universal2.macosx_11_0_arm64.whl",
     ]
     for platform in PLATFORMS:
         suffix = ".exe" if platform == "windows-x86_64" else ""
-        names.append(f"dcc-mcp-server-{platform}{suffix}")
-        names.append(f"dcc-mcp-cli-{platform}{suffix}")
-        names.append(f"dcc-mcp-server-{version}-{platform}.zip")
-        names.append(f"dcc-mcp-cli-{version}-{platform}.zip")
-        names.append(f"dcc-mcp-update-manifest-{platform}.json")
-        names.append(f"dcc-mcp-update-manifest-{platform}.sigstore.json")
+        names.append(f"meshy-dcc-server-{platform}{suffix}")
+        names.append(f"meshy-dcc-cli-{platform}{suffix}")
+        names.append(f"meshy-dcc-server-{version}-{platform}.zip")
+        names.append(f"meshy-dcc-cli-{version}-{platform}.zip")
+        names.append(f"meshy-dcc-update-manifest-{platform}.json")
+        names.append(f"meshy-dcc-update-manifest-{platform}.sigstore.json")
     return names
 
 

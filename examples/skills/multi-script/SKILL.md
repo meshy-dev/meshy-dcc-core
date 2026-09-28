@@ -8,7 +8,7 @@ license: MIT
 compatibility: Python 3.7+; bash required on Linux/macOS; cmd on Windows
 allowed-tools: Bash Read
 metadata:
-  dcc-mcp:
+  meshy-dcc:
     dcc: python
     version: "1.0.0"
     layer: example
@@ -20,7 +20,7 @@ metadata:
 # Multi-Script Skill
 
 A reference skill demonstrating **cross-platform, multi-language script support**
-in `dcc-mcp-core`.
+in `meshy-dcc-core`.
 
 ## Supported Script Extensions
 

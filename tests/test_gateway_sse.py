@@ -9,7 +9,7 @@ channels).
 This test focuses on the HTTP plumbing pieces most likely to regress
 in future refactors. The deep correlation / reconnect backoff /
 pending-buffer logic is covered by the Rust unit tests in
-``crates/dcc-mcp-http/src/gateway/sse_subscriber.rs``.
+``crates/meshy-dcc-http/src/gateway/sse_subscriber.rs``.
 
 Invariants verified here:
 
@@ -39,9 +39,9 @@ import pytest
 
 from conftest import allocate_gateway_port
 from conftest import wait_tcp_reachable
-from dcc_mcp_core import McpHttpConfig
-from dcc_mcp_core import McpHttpServer
-from dcc_mcp_core import ToolRegistry
+from meshy_dcc_core import McpHttpConfig
+from meshy_dcc_core import McpHttpServer
+from meshy_dcc_core import ToolRegistry
 
 SSE_READ_BUDGET_S = 6.0
 

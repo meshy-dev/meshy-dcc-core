@@ -14,9 +14,9 @@ simulated DCC instances:
 
 The in-process suite runs on every matrix cell and validates the core
 invariants. The real-subprocess suite (``TestRealServerExeSubprocess``)
-is gated by ``DCC_MCP_SERVER_EXE`` so the main CI path stays fast; the
+is gated by ``MESHY_DCC_SERVER_EXE`` so the main CI path stays fast; the
 mcpcall-e2e job (or a local developer) opts in by setting the env var
-to the compiled ``dcc-mcp-server`` binary path.
+to the compiled ``meshy-dcc-server`` binary path.
 """
 
 from __future__ import annotations
@@ -40,9 +40,9 @@ from conftest import McpClient
 from conftest import allocate_gateway_port
 
 # Import local modules
-import dcc_mcp_core
-from dcc_mcp_core import McpHttpConfig
-from dcc_mcp_core import create_skill_server
+import meshy_dcc_core
+from meshy_dcc_core import McpHttpConfig
+from meshy_dcc_core import create_skill_server
 
 # ── Constants ────────────────────────────────────────────────────────────
 
@@ -128,7 +128,7 @@ def _pick_free_port() -> int:
 def _write_skill(skills_dir: Path, name: str, dcc: str, tool_names: list[str]) -> None:
     """Materialise a SKILL.md + sibling tools.yaml pair on disk.
 
-    Uses the agentskills.io-compliant nested ``metadata.dcc-mcp.*`` form so
+    Uses the agentskills.io-compliant nested ``metadata.meshy-dcc.*`` form so
     the loader accepts it (post-commit 531501a).
     """
     skill_dir = skills_dir / name
@@ -139,7 +139,7 @@ def _write_skill(skills_dir: Path, name: str, dcc: str, tool_names: list[str]) -
         f"name: {name}\n"
         f'description: "{name} skill for {dcc} — fuzzy-search surface"\n'
         "metadata:\n"
-        "  dcc-mcp:\n"
+        "  meshy-dcc:\n"
         f"    dcc: {dcc}\n"
         "    version: 1.0.0\n"
         f'    search-hint: "{dcc}, {name}, geometry, render, primitives"\n'
@@ -440,18 +440,18 @@ class TestRestMcpParity:
 
 
 def _find_server_binary() -> Path | None:
-    """Locate the dcc-mcp-server binary via env var or default Cargo targets."""
-    explicit = os.environ.get("DCC_MCP_SERVER_EXE")
+    """Locate the meshy-dcc-server binary via env var or default Cargo targets."""
+    explicit = os.environ.get("MESHY_DCC_SERVER_EXE")
     if explicit:
         p = Path(explicit)
         if p.is_file():
             return p
     repo_root = Path(__file__).resolve().parent.parent
     for candidate in (
-        repo_root / "target" / "debug" / "dcc-mcp-server",
-        repo_root / "target" / "debug" / "dcc-mcp-server.exe",
-        repo_root / "target" / "release" / "dcc-mcp-server",
-        repo_root / "target" / "release" / "dcc-mcp-server.exe",
+        repo_root / "target" / "debug" / "meshy-dcc-server",
+        repo_root / "target" / "debug" / "meshy-dcc-server.exe",
+        repo_root / "target" / "release" / "meshy-dcc-server",
+        repo_root / "target" / "release" / "meshy-dcc-server.exe",
     ):
         if candidate.is_file():
             return candidate
@@ -460,7 +460,7 @@ def _find_server_binary() -> Path | None:
 
 @pytest.mark.skipif(
     _find_server_binary() is None,
-    reason="dcc-mcp-server binary not found; set DCC_MCP_SERVER_EXE or run `cargo build -p dcc-mcp-server`",
+    reason="meshy-dcc-server binary not found; set MESHY_DCC_SERVER_EXE or run `cargo build -p meshy-dcc-server`",
 )
 class TestRealServerExeSubprocess:
     """Spawn 3 real ``server.exe`` subprocesses and run the same flow.
@@ -468,7 +468,7 @@ class TestRealServerExeSubprocess:
     Each subprocess is launched with ``--app {maya|blender|houdini}``
     and an isolated ``--skill-paths`` directory. We probe each REST
     surface to prove discovery works end-to-end through the compiled
-    binary — mirrors a production mcpcall/dcc-mcp-server deployment.
+    binary — mirrors a production mcpcall/meshy-dcc-server deployment.
     In-process tests above already cover the MCP handshake and tool-call
     contract; this opt-in subprocess suite focuses on the compiled
     binary's CLI + REST bootstrap path.

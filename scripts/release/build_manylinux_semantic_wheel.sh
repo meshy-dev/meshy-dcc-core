@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Build the `dcc-mcp-core-semantic` companion wheel inside the pyo3/maturin
+# Build the `meshy-dcc-core-semantic` companion wheel inside the pyo3/maturin
 # docker image. Two build modes:
 #
 #   abi3  → single wheel for CPython 3.8-3.13 (features without `abi3-py38`
@@ -10,7 +10,7 @@
 #
 # NOTE on manylinux tag: fastembed-rs pulls `ort` (ONNX Runtime), which
 # requires glibc >= 2.27. That rules out manylinux2014 (CentOS 7, glibc 2.17)
-# used by `pkg/dcc-mcp-server-bin/`; semantic wheels MUST target
+# used by `pkg/meshy-dcc-server-bin/`; semantic wheels MUST target
 # manylinux_2_28 (CentOS 8 / RHEL 8). The pyke.io CDN ships matching
 # prebuilt ORT binaries for this baseline.
 #
@@ -45,7 +45,7 @@ maturin_args_str="${maturin_args[*]}"
 # entrypoint to `/bin/sh` so the shell receives `-c "..."` directly.
 #
 # The maturin v1.13.3 image is built FROM `quay.io/pypa/manylinux2014_x86_64`
-# (CentOS 7 / glibc 2.17, OpenSSL 1.0.2). `dcc-mcp-semantic`'s fastembed
+# (CentOS 7 / glibc 2.17, OpenSSL 1.0.2). `meshy-dcc-semantic`'s fastembed
 # dep is pinned to **rustls** (`hf-hub-rustls-tls`,
 # `ort-download-binaries-rustls-tls`) so the wheel build is OpenSSL-free
 # and there is no need to install openssl-devel inside the container.
@@ -56,10 +56,10 @@ docker run --rm \
   --entrypoint /bin/sh \
   -v "$PWD:/io" \
   -e CARGO_TARGET_DIR=/io/target-manylinux-semantic \
-  -w /io/pkg/dcc-mcp-core-semantic \
+  -w /io/pkg/meshy-dcc-core-semantic \
   ghcr.io/pyo3/maturin:v1.13.3 \
   -c "maturin build --release --manylinux 2_28 --out wheels ${maturin_args_str}"
 
 if command -v sudo >/dev/null 2>&1; then
-  sudo chown -R "$(id -u):$(id -g)" pkg/dcc-mcp-core-semantic/wheels
+  sudo chown -R "$(id -u):$(id -g)" pkg/meshy-dcc-core-semantic/wheels
 fi

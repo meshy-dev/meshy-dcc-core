@@ -5,7 +5,7 @@ Verifies that, out-of-the-box, every DccServerBase instance:
 1. Starts rolling file logging (``init_file_logging``).
 2. Wires a SQLite job-persistence path into ``McpHttpConfig``.
 3. Initialises in-process telemetry metrics before ``start()``.
-4. Respects ``DCC_MCP_DISABLE_*`` env vars and explicit ``enable_*=False``
+4. Respects ``MESHY_DCC_DISABLE_*`` env vars and explicit ``enable_*=False``
    options to let adapters opt out.
 """
 
@@ -20,7 +20,7 @@ import pytest
 
 def _make_stub_class(tmp_path: Path):
     """Return a DccServerBase subclass and the skills dir for it."""
-    from dcc_mcp_core.server_base import DccServerBase
+    from meshy_dcc_core.server_base import DccServerBase
 
     class _Stub(DccServerBase):
         pass
@@ -31,7 +31,7 @@ def _make_stub_class(tmp_path: Path):
 
 
 def _options(dcc_name: str, skills: Path, **kwargs: object):
-    from dcc_mcp_core._server.options import DccServerOptions
+    from meshy_dcc_core._server.options import DccServerOptions
 
     return DccServerOptions.from_env(dcc_name, skills, **kwargs)
 
@@ -42,8 +42,8 @@ def _options(dcc_name: str, skills: Path, **kwargs: object):
 class TestFileLoggingDefaults:
     def test_file_logging_enabled_by_default(self, tmp_path: Path) -> None:
         """init_file_logging must be called on construction when not disabled."""
-        with patch("dcc_mcp_core.server_base.create_adapter_server", return_value=MagicMock()):
-            with patch("dcc_mcp_core.server_base.DccServerBase._init_file_logging") as mock_log:
+        with patch("meshy_dcc_core.server_base.create_adapter_server", return_value=MagicMock()):
+            with patch("meshy_dcc_core.server_base.DccServerBase._init_file_logging") as mock_log:
                 mock_log.return_value = str(tmp_path)
                 _Stub, skills = _make_stub_class(tmp_path)
                 _Stub(_options("maya", skills, port=0))
@@ -51,8 +51,8 @@ class TestFileLoggingDefaults:
 
     def test_file_logging_disabled_via_flag(self, tmp_path: Path) -> None:
         """enable_file_logging=False must be stored correctly."""
-        with patch("dcc_mcp_core.server_base.create_adapter_server", return_value=MagicMock()):
-            with patch("dcc_mcp_core.server_base.DccServerBase._init_file_logging") as mock_log:
+        with patch("meshy_dcc_core.server_base.create_adapter_server", return_value=MagicMock()):
+            with patch("meshy_dcc_core.server_base.DccServerBase._init_file_logging") as mock_log:
                 mock_log.return_value = ""
                 _Stub, skills = _make_stub_class(tmp_path)
                 srv = _Stub(
@@ -66,9 +66,9 @@ class TestFileLoggingDefaults:
                 assert srv._enable_file_logging is False
 
     def test_file_logging_disabled_via_env_var(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-        """DCC_MCP_DISABLE_FILE_LOGGING=1 must override enable_file_logging=True."""
-        monkeypatch.setenv("DCC_MCP_DISABLE_FILE_LOGGING", "1")
-        with patch("dcc_mcp_core.server_base.create_adapter_server", return_value=MagicMock()):
+        """MESHY_DCC_DISABLE_FILE_LOGGING=1 must override enable_file_logging=True."""
+        monkeypatch.setenv("MESHY_DCC_DISABLE_FILE_LOGGING", "1")
+        with patch("meshy_dcc_core.server_base.create_adapter_server", return_value=MagicMock()):
             _Stub, skills = _make_stub_class(tmp_path)
             srv = _Stub(_options("maya", skills, port=0))
             assert srv._enable_file_logging is False
@@ -77,14 +77,14 @@ class TestFileLoggingDefaults:
         """server.log_dir must return the path passed back by init_file_logging."""
         log_dir = str(tmp_path / "logs")
         Path(log_dir).mkdir()
-        with patch("dcc_mcp_core.server_base.create_adapter_server", return_value=MagicMock()):
-            with patch("dcc_mcp_core.server_base.DccServerBase._init_file_logging", return_value=log_dir):
+        with patch("meshy_dcc_core.server_base.create_adapter_server", return_value=MagicMock()):
+            with patch("meshy_dcc_core.server_base.DccServerBase._init_file_logging", return_value=log_dir):
                 _Stub, skills = _make_stub_class(tmp_path)
                 srv = _Stub(_options("maya", skills, port=0))
                 assert srv.log_dir == log_dir
 
     def test_init_file_logging_helper_uses_dcc_prefix(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-        """_init_file_logging must set file_name_prefix=dcc-mcp-<dcc_name>."""
+        """_init_file_logging must set file_name_prefix=meshy-dcc-<dcc_name>."""
         captured: list = []
 
         def _fake_init(cfg):
@@ -93,23 +93,23 @@ class TestFileLoggingDefaults:
 
         from types import SimpleNamespace
 
-        import dcc_mcp_core
+        import meshy_dcc_core
 
-        monkeypatch.setitem(dcc_mcp_core.__dict__, "init_file_logging", _fake_init)
-        monkeypatch.setitem(dcc_mcp_core.__dict__, "get_log_dir", lambda: str(tmp_path))
+        monkeypatch.setitem(meshy_dcc_core.__dict__, "init_file_logging", _fake_init)
+        monkeypatch.setitem(meshy_dcc_core.__dict__, "get_log_dir", lambda: str(tmp_path))
         monkeypatch.setitem(
-            dcc_mcp_core.__dict__,
+            meshy_dcc_core.__dict__,
             "FileLoggingConfig",
             lambda **kwargs: SimpleNamespace(**kwargs),
         )
 
-        with patch("dcc_mcp_core.server_base.create_adapter_server", return_value=MagicMock()):
+        with patch("meshy_dcc_core.server_base.create_adapter_server", return_value=MagicMock()):
             _Stub, skills = _make_stub_class(tmp_path)
             _Stub(_options("houdini", skills, port=0))
 
         if captured:
             # Prefix includes PID suffix for multi-instance isolation (issue #402).
-            assert captured[0].file_name_prefix.startswith("dcc-mcp-houdini")
+            assert captured[0].file_name_prefix.startswith("meshy-dcc-houdini")
 
 
 # ── Job persistence ───────────────────────────────────────────────────────────
@@ -118,34 +118,34 @@ class TestFileLoggingDefaults:
 class TestJobPersistenceDefaults:
     def test_default_storage_path_isolated_by_instance_key(self, tmp_path: Path) -> None:
         """Concurrent same-DCC processes must not contend on one default DB."""
-        from dcc_mcp_core._server.observability import JobPersistenceManager
+        from meshy_dcc_core._server.observability import JobPersistenceManager
 
         first = JobPersistenceManager("blender", log_dir=str(tmp_path), instance_key="gui-a")
         second = JobPersistenceManager("blender", log_dir=str(tmp_path), instance_key="gui-b")
         first_path = first._resolve_db_path()
         second_path = second._resolve_db_path()
         assert first_path and second_path and first_path != second_path
-        assert first_path.endswith("dcc-mcp-blender-gui-a-jobs.db")
-        assert second_path.endswith("dcc-mcp-blender-gui-b-jobs.db")
+        assert first_path.endswith("meshy-dcc-blender-gui-a-jobs.db")
+        assert second_path.endswith("meshy-dcc-blender-gui-b-jobs.db")
 
     def test_environment_instance_key_is_honored_for_restart_recovery(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """A stable operator key must survive process restarts for recovery."""
-        from dcc_mcp_core._server.observability import JobPersistenceManager
+        from meshy_dcc_core._server.observability import JobPersistenceManager
 
-        monkeypatch.setenv("DCC_MCP_JOB_INSTANCE_KEY", "stable-gui")
+        monkeypatch.setenv("MESHY_DCC_JOB_INSTANCE_KEY", "stable-gui")
         manager = JobPersistenceManager("maya", log_dir=str(tmp_path))
-        assert manager._resolve_db_path().endswith("dcc-mcp-maya-stable-gui-jobs.db")
+        assert manager._resolve_db_path().endswith("meshy-dcc-maya-stable-gui-jobs.db")
 
     def test_explicit_storage_path_remains_shared_contract(self, tmp_path: Path) -> None:
         """An explicit path is never rewritten with the per-instance suffix."""
-        from dcc_mcp_core._server.observability import JobPersistenceManager
+        from meshy_dcc_core._server.observability import JobPersistenceManager
 
         manager = JobPersistenceManager("maya", log_dir=str(tmp_path), instance_key="gui-a")
         config = MagicMock(job_storage_path=str(tmp_path / "shared.sqlite3"))
         config.job_storage_path = str(tmp_path / "shared.sqlite3")
-        with patch("dcc_mcp_core._server.observability.importlib.import_module") as import_module:
+        with patch("meshy_dcc_core._server.observability.importlib.import_module") as import_module:
             import_module.return_value.job_persistence_feature_enabled.return_value = False
             manager.init(config)
         assert config.job_storage_path == str(tmp_path / "shared.sqlite3")
@@ -154,7 +154,7 @@ class TestJobPersistenceDefaults:
         """The startup probe must test writes without mutating persisted jobs."""
         import sqlite3
 
-        from dcc_mcp_core._server.observability import JobPersistenceManager
+        from meshy_dcc_core._server.observability import JobPersistenceManager
 
         db_path = tmp_path / "jobs.sqlite3"
         with sqlite3.connect(db_path) as connection:
@@ -173,12 +173,12 @@ class TestJobPersistenceDefaults:
         """Probe failures expose stable categories without raw SQLite text."""
         from types import SimpleNamespace
 
-        from dcc_mcp_core._server.observability import JobPersistenceManager
+        from meshy_dcc_core._server.observability import JobPersistenceManager
 
         manager = JobPersistenceManager("maya", log_dir=str(tmp_path))
         config = MagicMock()
         monkeypatch.setattr(
-            "dcc_mcp_core._server.observability.importlib.import_module",
+            "meshy_dcc_core._server.observability.importlib.import_module",
             lambda _name: SimpleNamespace(job_persistence_feature_enabled=lambda: True),
         )
         monkeypatch.setattr(
@@ -200,8 +200,8 @@ class TestJobPersistenceDefaults:
 
     def test_storage_probe_detects_rust_sidecar_owner(self, tmp_path: Path) -> None:
         """The Python probe must fail closed when the Rust ownership lease is held."""
-        from dcc_mcp_core._server.observability import JobPersistenceManager
-        from dcc_mcp_core._server.observability import _storage_ownership_lock
+        from meshy_dcc_core._server.observability import JobPersistenceManager
+        from meshy_dcc_core._server.observability import _storage_ownership_lock
 
         db_path = tmp_path / "jobs.sqlite3"
         import sqlite3
@@ -214,7 +214,7 @@ class TestJobPersistenceDefaults:
 
     def test_storage_probe_rejects_symlink_database_path(self, tmp_path: Path) -> None:
         """Ownership probing must not follow aliases to another database."""
-        from dcc_mcp_core._server.observability import JobPersistenceManager
+        from meshy_dcc_core._server.observability import JobPersistenceManager
 
         target = tmp_path / "real.sqlite3"
         target.touch()
@@ -233,16 +233,16 @@ class TestJobPersistenceDefaults:
         import sys
         from types import SimpleNamespace
 
-        import dcc_mcp_core
-        from dcc_mcp_core._server.observability import JobPersistenceManager
+        import meshy_dcc_core
+        from meshy_dcc_core._server.observability import JobPersistenceManager
 
         fake_core = SimpleNamespace(job_persistence_feature_enabled=lambda: False)
         monkeypatch.setitem(
             sys.modules,
-            "dcc_mcp_core._core",
+            "meshy_dcc_core._core",
             fake_core,
         )
-        monkeypatch.setattr(dcc_mcp_core, "_core", fake_core, raising=False)
+        monkeypatch.setattr(meshy_dcc_core, "_core", fake_core, raising=False)
         manager = JobPersistenceManager("maya", log_dir=str(tmp_path))
         config = MagicMock()
         manager.init(config)
@@ -257,10 +257,10 @@ class TestJobPersistenceDefaults:
         import sys
         from types import SimpleNamespace
 
-        from dcc_mcp_core._server.observability import JobPersistenceManager
+        from meshy_dcc_core._server.observability import JobPersistenceManager
 
         fake_core = SimpleNamespace(job_persistence_feature_enabled=lambda: False)
-        monkeypatch.setitem(sys.modules, "dcc_mcp_core._core", fake_core)
+        monkeypatch.setitem(sys.modules, "meshy_dcc_core._core", fake_core)
         manager = JobPersistenceManager("maya", log_dir=str(tmp_path))
         config = MagicMock(job_storage_path=str(tmp_path / "jobs.sqlite3"))
         manager.init(config)
@@ -270,10 +270,10 @@ class TestJobPersistenceDefaults:
 
     def test_missing_native_build_without_explicit_path_is_disabled(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Lite wheels without a log-dir helper may disable persistence safely."""
-        from dcc_mcp_core._server.observability import JobPersistenceManager
+        from meshy_dcc_core._server.observability import JobPersistenceManager
 
         monkeypatch.setattr(
-            "dcc_mcp_core._server.observability.importlib.import_module",
+            "meshy_dcc_core._server.observability.importlib.import_module",
             lambda _name: (_ for _ in ()).throw(ImportError("native extension unavailable")),
         )
         manager = JobPersistenceManager("maya")
@@ -286,10 +286,10 @@ class TestJobPersistenceDefaults:
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """The py37-lite fallback must not claim native persistence is healthy."""
-        from dcc_mcp_core._server.observability import JobPersistenceManager
+        from meshy_dcc_core._server.observability import JobPersistenceManager
 
         monkeypatch.setattr(
-            "dcc_mcp_core._server.observability.importlib.import_module",
+            "meshy_dcc_core._server.observability.importlib.import_module",
             lambda _name: (_ for _ in ()).throw(ImportError("native extension unavailable")),
         )
         manager = JobPersistenceManager("maya", log_dir=str(tmp_path))
@@ -303,10 +303,10 @@ class TestJobPersistenceDefaults:
     ) -> None:
         from types import SimpleNamespace
 
-        from dcc_mcp_core._server.observability import JobPersistenceManager
+        from meshy_dcc_core._server.observability import JobPersistenceManager
 
         monkeypatch.setattr(
-            "dcc_mcp_core._server.observability.importlib.import_module",
+            "meshy_dcc_core._server.observability.importlib.import_module",
             lambda _name: SimpleNamespace(),
         )
         manager = JobPersistenceManager("maya", log_dir=str(tmp_path))
@@ -320,10 +320,10 @@ class TestJobPersistenceDefaults:
     ) -> None:
         from types import SimpleNamespace
 
-        from dcc_mcp_core._server.observability import JobPersistenceManager
+        from meshy_dcc_core._server.observability import JobPersistenceManager
 
         monkeypatch.setattr(
-            "dcc_mcp_core._server.observability.importlib.import_module",
+            "meshy_dcc_core._server.observability.importlib.import_module",
             lambda _name: SimpleNamespace(job_persistence_feature_enabled=lambda: True),
         )
 
@@ -337,8 +337,8 @@ class TestJobPersistenceDefaults:
     def test_server_refuses_memory_fallback_after_persistence_path_failure(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        import dcc_mcp_core._server.observability as observability
-        import dcc_mcp_core.server_base as server_base
+        import meshy_dcc_core._server.observability as observability
+        import meshy_dcc_core.server_base as server_base
 
         def fail_closed(manager: object, _config: object) -> None:
             manager._state = "unavailable"  # type: ignore[attr-defined]
@@ -353,8 +353,8 @@ class TestJobPersistenceDefaults:
 
     def test_job_storage_path_set_by_default(self, tmp_path: Path) -> None:
         """job_storage_path on McpHttpConfig must be set when persistence is enabled."""
-        with patch("dcc_mcp_core.server_base.create_adapter_server", return_value=MagicMock()):
-            with patch("dcc_mcp_core.server_base.DccServerBase._init_file_logging", return_value=str(tmp_path)):
+        with patch("meshy_dcc_core.server_base.create_adapter_server", return_value=MagicMock()):
+            with patch("meshy_dcc_core.server_base.DccServerBase._init_file_logging", return_value=str(tmp_path)):
                 _Stub, skills = _make_stub_class(tmp_path)
                 srv = _Stub(_options("maya", skills, port=0))
                 if srv._enable_job_persistence:
@@ -363,8 +363,8 @@ class TestJobPersistenceDefaults:
 
     def test_job_persistence_disabled_via_flag(self, tmp_path: Path) -> None:
         """enable_job_persistence=False must be stored correctly."""
-        with patch("dcc_mcp_core.server_base.create_adapter_server", return_value=MagicMock()):
-            with patch("dcc_mcp_core.server_base.DccServerBase._init_file_logging", return_value=""):
+        with patch("meshy_dcc_core.server_base.create_adapter_server", return_value=MagicMock()):
+            with patch("meshy_dcc_core.server_base.DccServerBase._init_file_logging", return_value=""):
                 _Stub, skills = _make_stub_class(tmp_path)
                 srv = _Stub(
                     _options(
@@ -377,10 +377,10 @@ class TestJobPersistenceDefaults:
                 assert srv._enable_job_persistence is False
 
     def test_job_persistence_disabled_via_env_var(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-        """DCC_MCP_DISABLE_JOB_PERSISTENCE=1 must override the default."""
-        monkeypatch.setenv("DCC_MCP_DISABLE_JOB_PERSISTENCE", "1")
-        with patch("dcc_mcp_core.server_base.create_adapter_server", return_value=MagicMock()):
-            with patch("dcc_mcp_core.server_base.DccServerBase._init_file_logging", return_value=""):
+        """MESHY_DCC_DISABLE_JOB_PERSISTENCE=1 must override the default."""
+        monkeypatch.setenv("MESHY_DCC_DISABLE_JOB_PERSISTENCE", "1")
+        with patch("meshy_dcc_core.server_base.create_adapter_server", return_value=MagicMock()):
+            with patch("meshy_dcc_core.server_base.DccServerBase._init_file_logging", return_value=""):
                 _Stub, skills = _make_stub_class(tmp_path)
                 srv = _Stub(_options("maya", skills, port=0))
                 assert srv._enable_job_persistence is False
@@ -397,9 +397,9 @@ class TestTelemetryDefaults:
         mock_server = MagicMock()
         mock_server.start.return_value = mock_handle
 
-        with patch("dcc_mcp_core.server_base.create_adapter_server", return_value=mock_server):
-            with patch("dcc_mcp_core.server_base.DccServerBase._init_file_logging", return_value=""):
-                with patch("dcc_mcp_core.server_base.DccServerBase._init_telemetry") as mock_tel:
+        with patch("meshy_dcc_core.server_base.create_adapter_server", return_value=mock_server):
+            with patch("meshy_dcc_core.server_base.DccServerBase._init_file_logging", return_value=""):
+                with patch("meshy_dcc_core.server_base.DccServerBase._init_telemetry") as mock_tel:
                     _Stub, skills = _make_stub_class(tmp_path)
                     srv = _Stub(_options("maya", skills, port=0))
                     mock_tel.assert_not_called()
@@ -408,8 +408,8 @@ class TestTelemetryDefaults:
 
     def test_telemetry_disabled_via_flag(self, tmp_path: Path) -> None:
         """enable_telemetry=False must be stored correctly."""
-        with patch("dcc_mcp_core.server_base.create_adapter_server", return_value=MagicMock()):
-            with patch("dcc_mcp_core.server_base.DccServerBase._init_file_logging", return_value=""):
+        with patch("meshy_dcc_core.server_base.create_adapter_server", return_value=MagicMock()):
+            with patch("meshy_dcc_core.server_base.DccServerBase._init_file_logging", return_value=""):
                 _Stub, skills = _make_stub_class(tmp_path)
                 srv = _Stub(
                     _options(
@@ -422,10 +422,10 @@ class TestTelemetryDefaults:
                 assert srv._enable_telemetry is False
 
     def test_telemetry_disabled_via_env_var(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-        """DCC_MCP_DISABLE_TELEMETRY=1 must override enable_telemetry=True."""
-        monkeypatch.setenv("DCC_MCP_DISABLE_TELEMETRY", "1")
-        with patch("dcc_mcp_core.server_base.create_adapter_server", return_value=MagicMock()):
-            with patch("dcc_mcp_core.server_base.DccServerBase._init_file_logging", return_value=""):
+        """MESHY_DCC_DISABLE_TELEMETRY=1 must override enable_telemetry=True."""
+        monkeypatch.setenv("MESHY_DCC_DISABLE_TELEMETRY", "1")
+        with patch("meshy_dcc_core.server_base.create_adapter_server", return_value=MagicMock()):
+            with patch("meshy_dcc_core.server_base.DccServerBase._init_file_logging", return_value=""):
                 _Stub, skills = _make_stub_class(tmp_path)
                 srv = _Stub(_options("maya", skills, port=0))
                 assert srv._enable_telemetry is False
@@ -434,16 +434,16 @@ class TestTelemetryDefaults:
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """_init_telemetry must not call TelemetryConfig.init() twice."""
-        with patch("dcc_mcp_core.server_base.create_adapter_server", return_value=MagicMock()):
-            with patch("dcc_mcp_core.server_base.DccServerBase._init_file_logging", return_value=""):
+        with patch("meshy_dcc_core.server_base.create_adapter_server", return_value=MagicMock()):
+            with patch("meshy_dcc_core.server_base.DccServerBase._init_file_logging", return_value=""):
                 _Stub, skills = _make_stub_class(tmp_path)
                 srv = _Stub(_options("maya", skills, port=0))
 
-        import dcc_mcp_core
+        import meshy_dcc_core
 
         mock_tc = MagicMock()
-        monkeypatch.setitem(dcc_mcp_core.__dict__, "is_telemetry_initialized", lambda: True)
-        monkeypatch.setitem(dcc_mcp_core.__dict__, "TelemetryConfig", mock_tc)
+        monkeypatch.setitem(meshy_dcc_core.__dict__, "is_telemetry_initialized", lambda: True)
+        monkeypatch.setitem(meshy_dcc_core.__dict__, "TelemetryConfig", mock_tc)
         srv._init_telemetry()
         mock_tc.assert_not_called()
 
@@ -454,8 +454,8 @@ class TestTelemetryDefaults:
 class TestObservabilitySummary:
     def test_summary_keys_present(self, tmp_path: Path) -> None:
         """observability_summary must expose all three feature flags."""
-        with patch("dcc_mcp_core.server_base.create_adapter_server", return_value=MagicMock()):
-            with patch("dcc_mcp_core.server_base.DccServerBase._init_file_logging", return_value=""):
+        with patch("meshy_dcc_core.server_base.create_adapter_server", return_value=MagicMock()):
+            with patch("meshy_dcc_core.server_base.DccServerBase._init_file_logging", return_value=""):
                 _Stub, skills = _make_stub_class(tmp_path)
                 srv = _Stub(_options("maya", skills, port=0))
                 summary = srv.observability_summary

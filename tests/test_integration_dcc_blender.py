@@ -1,6 +1,6 @@
-"""Blender integration tests for dcc-mcp-core.
+"""Blender integration tests for meshy-dcc-core.
 
-Tests the dcc-mcp-core skill/action pipeline against Blender (headless / --background mode).
+Tests the meshy-dcc-core skill/action pipeline against Blender (headless / --background mode).
 All tests are conditionally skipped if Blender is not installed.
 
 Run:  pytest -m dcc -k "Blender"
@@ -21,7 +21,7 @@ from typing import Any
 import pytest
 
 # Import local modules
-import dcc_mcp_core
+import meshy_dcc_core
 
 # ── Binary detection ──
 
@@ -59,7 +59,7 @@ def _run_blender_script(script: str, timeout: int = 60) -> dict[str, Any]:
 
 @blender_available
 class TestBlenderIntegration:
-    """Tests that exercise dcc-mcp-core concepts inside Blender."""
+    """Tests that exercise meshy-dcc-core concepts inside Blender."""
 
     def test_blender_version(self) -> None:
         assert BLENDER_BIN is not None
@@ -262,13 +262,13 @@ class TestBlenderIntegration:
         assert out["major"] >= 3
 
     def test_blender_py37_can_load_schema_derivation_helper(self) -> None:
-        schema_path = Path(dcc_mcp_core.__file__).resolve().parent / "schema.py"
+        schema_path = Path(meshy_dcc_core.__file__).resolve().parent / "schema.py"
         script = textwrap.dedent(f"""\
             import importlib.util, json
             from dataclasses import dataclass
             from typing import List, Optional, Tuple
 
-            spec = importlib.util.spec_from_file_location("dcc_mcp_schema", r"{schema_path}")
+            spec = importlib.util.spec_from_file_location("meshy_dcc_schema", r"{schema_path}")
             schema = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(schema)
 
@@ -302,10 +302,10 @@ class TestBlenderIntegration:
 
 @blender_available
 class TestBlenderSkillPipeline:
-    """dcc-mcp-core skill pipeline with Blender as target DCC."""
+    """meshy-dcc-core skill pipeline with Blender as target DCC."""
 
     def test_register_blender_actions(self) -> None:
-        reg = dcc_mcp_core.ToolRegistry()
+        reg = meshy_dcc_core.ToolRegistry()
         reg.register(name="create_sphere", description="Create UV Sphere", dcc="blender")
         reg.register(name="batch_rename", description="Rename objects", dcc="blender")
         reg.register(name="export_scene", description="Export scene", dcc="blender")
@@ -316,7 +316,7 @@ class TestBlenderSkillPipeline:
         assert "maya_action" not in names
 
     def test_blender_action_result_model(self) -> None:
-        result = dcc_mcp_core.success_result(
+        result = meshy_dcc_core.success_result(
             "Created UV Sphere",
             object_name="Sphere",
             vertex_count=482,
@@ -327,7 +327,7 @@ class TestBlenderSkillPipeline:
         assert result.context["vertex_count"] == 482
 
     def test_blender_error_result_with_solutions(self) -> None:
-        result = dcc_mcp_core.error_result(
+        result = meshy_dcc_core.error_result(
             "Failed to export",
             "FileNotFoundError: directory does not exist",
             possible_solutions=["Create the directory", "Check permissions"],
@@ -338,7 +338,7 @@ class TestBlenderSkillPipeline:
         assert result.context["dcc"] == "blender"
 
     def test_blender_event_bus(self) -> None:
-        bus = dcc_mcp_core.EventBus()
+        bus = meshy_dcc_core.EventBus()
         log: list[dict] = []
         bus.subscribe("blender.object.created", lambda **kw: log.append({"type": "created", **kw}))
         bus.subscribe("blender.scene.saved", lambda **kw: log.append({"type": "saved", **kw}))

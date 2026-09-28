@@ -23,14 +23,14 @@ import urllib.request
 import pytest
 
 from conftest import McpClient
-from dcc_mcp_core import McpHttpConfig
-from dcc_mcp_core import McpHttpServer
-from dcc_mcp_core import ToolRegistry
+from meshy_dcc_core import McpHttpConfig
+from meshy_dcc_core import McpHttpServer
+from meshy_dcc_core import ToolRegistry
 
 # Built-in tools always emitted by the HTTP server regardless of whether
 # any skill has been loaded.  Kept in sync with
 # ``build_core_tools_inner()`` + ``build_lazy_action_tools()`` in
-# ``crates/dcc-mcp-http/src/handler.rs``.
+# ``crates/meshy-dcc-http/src/handler.rs``.
 CORE_TOOLS = frozenset(
     {
         "list_roots",

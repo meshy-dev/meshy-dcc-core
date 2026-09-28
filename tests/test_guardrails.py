@@ -7,19 +7,19 @@ from types import SimpleNamespace
 
 import pytest
 
-import dcc_mcp_core
-from dcc_mcp_core import DccBlockedCall
-from dcc_mcp_core import DccGuardrailError
-from dcc_mcp_core import DccWeakSandbox
+import meshy_dcc_core
+from meshy_dcc_core import DccBlockedCall
+from meshy_dcc_core import DccGuardrailError
+from meshy_dcc_core import DccWeakSandbox
 
 
 def test_guardrail_symbols_exported() -> None:
-    assert dcc_mcp_core.DccBlockedCall is DccBlockedCall
-    assert dcc_mcp_core.DccGuardrailError is DccGuardrailError
-    assert dcc_mcp_core.DccWeakSandbox is DccWeakSandbox
-    assert "DccBlockedCall" in dcc_mcp_core.__all__
-    assert "DccGuardrailError" in dcc_mcp_core.__all__
-    assert "DccWeakSandbox" in dcc_mcp_core.__all__
+    assert meshy_dcc_core.DccBlockedCall is DccBlockedCall
+    assert meshy_dcc_core.DccGuardrailError is DccGuardrailError
+    assert meshy_dcc_core.DccWeakSandbox is DccWeakSandbox
+    assert "DccBlockedCall" in meshy_dcc_core.__all__
+    assert "DccGuardrailError" in meshy_dcc_core.__all__
+    assert "DccWeakSandbox" in meshy_dcc_core.__all__
 
 
 def test_blocked_call_raises_clear_error_and_restores() -> None:

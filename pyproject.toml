@@ -3,11 +3,11 @@ requires = ["maturin>=1.0,<2.0"]
 build-backend = "maturin"
 
 [project]
-name = "dcc-mcp-core"
-version = "0.20.36" # x-release-please-version
+name = "meshy-dcc-core"
+version = "0.2.0"
 description = "Foundational library for the DCC Model Context Protocol (MCP) ecosystem"
 authors = [
-    {name = "Hal Long", email = "hal.long@outlook.com"}
+    {name = "Meshy", email = "support@meshy.ai"}
 ]
 readme = "README.md"
 license = {text = "MIT"}
@@ -32,27 +32,27 @@ classifiers = [
 ]
 
 dependencies = [
-    # dcc-mcp-server (Python 3.7+): provides the sidecar gateway daemon binary
-    # and the packaging toolchain for standalone DCC MCP server bundles.
+    # meshy-dcc-server (Python 3.7+): provides the sidecar gateway daemon binary
+    # and the packaging toolchain for standalone Meshy DCC server bundles.
     # Maya 2022 / Blender 2.83 embed Python 3.7; the py37-lite wheel ships
-    # pure-Python code only and users install dcc-mcp-server separately when
+    # pure-Python code only and users install meshy-dcc-server separately when
     # their platform provides a compatible binary wheel.
     #
-    # Same-batch contract: dcc-mcp-core and dcc-mcp-server ship from one
+    # Same-batch contract: meshy-dcc-core and meshy-dcc-server ship from one
     # release, so a deployment must pair them at the same major.minor. The
     # floor is deliberately older than the current release because the matching
     # wheel only exists on PyPI after release-please publishes it. The runtime
     # enforces the pairing: the gateway bootstrap prefers the binary on PATH
-    # (the resolved environment) over the importable dcc_mcp_server package and
+    # (the resolved environment) over the importable meshy_dcc_server package and
     # logs a WARNING when their major.minor differs. Keep this declaration in
-    # place — a rez/venv resolve that omits dcc-mcp-server makes hosts import a
+    # place — a rez/venv resolve that omits meshy-dcc-server makes hosts import a
     # workstation-local copy instead.
-    "dcc-mcp-server>=0.18.17,<1.0.0",
+    "meshy-dcc-server>=0.18.17,<1.0.0",
 ]
 
 [project.scripts]
-dcc-mcp-install-lifecycle = "dcc_mcp_core.install_lifecycle_cli:main"
-dcc-mcp-ui-control-server = "dcc_mcp_core.ui_control_server:cli"
+meshy-dcc-install-lifecycle = "meshy_dcc_core.install_lifecycle_cli:main"
+meshy-dcc-ui-control-server = "meshy_dcc_core.ui_control_server:cli"
 
 [project.optional-dependencies]
 test = [
@@ -73,7 +73,7 @@ test = [
     "PySide6-Essentials>=6.5; python_version>='3.9'",
 ]
 dev = [
-    "dcc-mcp-core[test]",
+    "meshy-dcc-core[test]",
     "ruff>=0.8.0; python_version>='3.8'",
     "mypy>=1.0; python_version>='3.8'",
     "maturin>=1.0",
@@ -88,8 +88,8 @@ bridge = ["websockets>=11,<18"]
 # skills.
 #
 # The extra pulls in BOTH:
-#   * ``dcc-mcp-core-semantic`` — preferred Rust-native backend
-#     (fastembed-rs + ONNX Runtime, lives in pkg/dcc-mcp-core-semantic/).
+#   * ``meshy-dcc-core-semantic`` — preferred Rust-native backend
+#     (fastembed-rs + ONNX Runtime, lives in pkg/meshy-dcc-core-semantic/).
 #     Released through the same Release Please version stream.
 #   * ``fastembed`` — pure-Python fallback for platforms the Rust wheel
 #     does not cover (rare; included as a safety net).
@@ -104,17 +104,17 @@ bridge = ["websockets>=11,<18"]
 # resolver will pick the matching version. Users that want lockstep can
 # pin both explicitly.
 semantic = [
-    "dcc-mcp-core-semantic>=0.17.37",
+    "meshy-dcc-core-semantic>=0.17.37",
     "fastembed>=0.3; python_version>='3.8'",
 ]
 
 [project.urls]
-Homepage = "https://dcc-mcp.github.io/dcc-mcp-core/"
-Documentation = "https://dcc-mcp.github.io/dcc-mcp-core/"
-Repository = "https://github.com/dcc-mcp/dcc-mcp-core"
-Issues = "https://github.com/dcc-mcp/dcc-mcp-core/issues"
-Changelog = "https://github.com/dcc-mcp/dcc-mcp-core/blob/main/CHANGELOG.md"
-"Release Notes" = "https://github.com/dcc-mcp/dcc-mcp-core/releases"
+Homepage = "https://www.meshy.ai/meshy-dcc/meshy-dcc-core/"
+Documentation = "https://www.meshy.ai/meshy-dcc/meshy-dcc-core/"
+Repository = "https://github.com/meshy-dev/meshy-dcc-core"
+Issues = "https://github.com/meshy-dev/meshy-dcc-core/issues"
+Changelog = "https://github.com/meshy-dev/meshy-dcc-core/blob/main/CHANGELOG.md"
+"Release Notes" = "https://github.com/meshy-dev/meshy-dcc-core/releases"
 
 # VFX Reference Platform alignment. `core` is imported inside Python 3.7 hosts
 # (Maya 2022 and friends) and inside CY2026 hosts, so it is checked against both
@@ -122,13 +122,13 @@ Changelog = "https://github.com/dcc-mcp/dcc-mcp-core/blob/main/CHANGELOG.md"
 # Python 3.7 and to a release inside the CY2026 baseline. Dependencies that only
 # hold on newer interpreters must carry an environment marker instead. See
 # config/vfx-platform-baseline.json and scripts/ci/check_vfx_baseline.py.
-[tool.dcc-mcp.vfx-platform]
+[tool.meshy-dcc.vfx-platform]
 year = ["CY2026", "py37"]
 host = "core"
 
 [tool.maturin]
 python-source = "python"
-module-name = "dcc_mcp_core._core"
+module-name = "meshy_dcc_core._core"
 # Source builds default to the CPython 3.8+ stable ABI. Native CPython 3.7
 # wheels are separate CI/release artifacts built without ``abi3-py38``;
 # ``requires-python >=3.7`` covers both explicitly validated profiles.
@@ -146,11 +146,11 @@ disable_error_code = ["type-arg", "misc", "no-any-return"]
 [tool.ruff]
 line-length = 120
 target-version = "py37"
-src = ["python/dcc_mcp_core", "tests", "examples"]
+src = ["python/meshy_dcc_core", "tests", "examples"]
 # `_core.pyi` is regenerated from the Rust extension by `pyo3-stub-gen`
 # on every build; running ruff against it produces ~1k spurious diffs
 # that would just get clobbered the next time `maturin develop` runs.
-extend-exclude = ["python/dcc_mcp_core/_core.pyi"]
+extend-exclude = ["python/meshy_dcc_core/_core.pyi"]
 
 [tool.ruff.lint]
 select = [
@@ -169,35 +169,35 @@ ignore = ["D203", "D213", "D107", "D105", "D102"]
 [tool.ruff.lint.isort]
 force-single-line = true
 force-sort-within-sections = true
-known-first-party = ["dcc_mcp_core"]
+known-first-party = ["meshy_dcc_core"]
 # Import convention (enforced via ``ruff check`` rule **I**, not ``ruff format``):
 # stdlib → third-party → first-party, one import per line. Prefer module-level imports.
-# For symbols implemented in the PyO3 extension, import from ``dcc_mcp_core._core``
-# instead of ``from dcc_mcp_core import …`` so submodules avoid the lazy package facade.
+# For symbols implemented in the PyO3 extension, import from ``meshy_dcc_core._core``
+# instead of ``from meshy_dcc_core import …`` so submodules avoid the lazy package facade.
 
 [tool.ruff.lint.per-file-ignores]
 # Python 3.7 (Maya 2022) compat: use typing.Optional/Dict/List instead of PEP 604 syntax.
-"python/dcc_mcp_core/_server/host_ui_dispatcher.py" = ["UP006", "UP045"]
-"python/dcc_mcp_core/host_errors.py" = ["UP006", "UP045"]
-"python/dcc_mcp_core/_server/tools_list_policy.py" = ["UP006", "UP045"]
-"python/dcc_mcp_core/_install_lifecycle_process.py" = ["UP006", "UP045"]
-"python/dcc_mcp_core/_install_lifecycle_sidecar.py" = ["UP006", "UP045"]
-"python/dcc_mcp_core/cua_cli.py" = ["UP006", "UP045"]
-"python/dcc_mcp_core/metadata_registration.py" = ["UP006", "UP045"]
-"python/dcc_mcp_core/_registration.py" = ["UP006", "UP045"]
-"python/dcc_mcp_core/usd_resources.py" = ["UP006", "UP007", "UP045"]
-"python/dcc_mcp_core/skills/ui-control/scripts/*.py" = ["UP006", "UP045"]
-"python/dcc_mcp_core/skills/media/scripts/*.py" = ["UP006", "UP045"]
-"python/dcc_mcp_core/skills/verification/scripts/*.py" = ["UP006", "UP045"]
-"python/dcc_mcp_core/verification/*.py" = ["UP006", "UP045"]
-"python/dcc_mcp_core/adapter_contracts.py" = ["UP006", "UP037", "UP045"]
-"python/dcc_mcp_core/asset_import.py" = ["UP006", "UP045"]
-"python/dcc_mcp_core/asset_sync.py" = ["UP006", "UP007", "UP045"]
-"python/dcc_mcp_core/spatial.py" = ["UP006", "UP007", "UP045"]
+"python/meshy_dcc_core/_server/host_ui_dispatcher.py" = ["UP006", "UP045"]
+"python/meshy_dcc_core/host_errors.py" = ["UP006", "UP045"]
+"python/meshy_dcc_core/_server/tools_list_policy.py" = ["UP006", "UP045"]
+"python/meshy_dcc_core/_install_lifecycle_process.py" = ["UP006", "UP045"]
+"python/meshy_dcc_core/_install_lifecycle_sidecar.py" = ["UP006", "UP045"]
+"python/meshy_dcc_core/cua_cli.py" = ["UP006", "UP045"]
+"python/meshy_dcc_core/metadata_registration.py" = ["UP006", "UP045"]
+"python/meshy_dcc_core/_registration.py" = ["UP006", "UP045"]
+"python/meshy_dcc_core/usd_resources.py" = ["UP006", "UP007", "UP045"]
+"python/meshy_dcc_core/skills/ui-control/scripts/*.py" = ["UP006", "UP045"]
+"python/meshy_dcc_core/skills/media/scripts/*.py" = ["UP006", "UP045"]
+"python/meshy_dcc_core/skills/verification/scripts/*.py" = ["UP006", "UP045"]
+"python/meshy_dcc_core/verification/*.py" = ["UP006", "UP045"]
+"python/meshy_dcc_core/adapter_contracts.py" = ["UP006", "UP037", "UP045"]
+"python/meshy_dcc_core/asset_import.py" = ["UP006", "UP045"]
+"python/meshy_dcc_core/asset_sync.py" = ["UP006", "UP007", "UP045"]
+"python/meshy_dcc_core/spatial.py" = ["UP006", "UP007", "UP045"]
 "skills/spatial-interchange/scripts/*.py" = ["UP006", "UP045"]
-"python/dcc_mcp_core/install_lifecycle.py" = ["UP006", "UP007", "UP045"]
-"python/dcc_mcp_core/install_lifecycle_cli.py" = ["UP006", "UP007", "UP045"]
-"python/dcc_mcp_core/ui_control_server.py" = ["UP045"]
+"python/meshy_dcc_core/install_lifecycle.py" = ["UP006", "UP007", "UP045"]
+"python/meshy_dcc_core/install_lifecycle_cli.py" = ["UP006", "UP007", "UP045"]
+"python/meshy_dcc_core/ui_control_server.py" = ["UP045"]
 "scripts/check_py37_syntax.py" = ["UP032"]  # intentional: f-strings are syntax errors on 3.7; verified by py37-syntax-check CI job. Enforced in CI via check-py37-syntax job.
 "__init__.py" = ["F401"]
 "tests/test_metadata_registration.py" = ["UP006", "UP007", "UP045"]

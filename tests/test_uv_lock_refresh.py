@@ -31,13 +31,13 @@ def _wheel(package: str, version: str, tag: str) -> str:
 def _semantic_wheels(version: str, *, cp37: bool = True) -> list:
     wheels = []
     if cp37:
-        wheels.append(_wheel("dcc_mcp_core_semantic", version, "cp37-cp37m-manylinux_2_28_x86_64"))
-    wheels.append(_wheel("dcc_mcp_core_semantic", version, "cp38-abi3-manylinux_2_28_x86_64"))
+        wheels.append(_wheel("meshy_dcc_core_semantic", version, "cp37-cp37m-manylinux_2_28_x86_64"))
+    wheels.append(_wheel("meshy_dcc_core_semantic", version, "cp38-abi3-manylinux_2_28_x86_64"))
     return wheels
 
 
 def _server_wheels(version: str) -> list:
-    return [_wheel("dcc_mcp_server", version, "py3-none-manylinux2014_x86_64")]
+    return [_wheel("meshy_dcc_server", version, "py3-none-manylinux2014_x86_64")]
 
 
 def _parse(text: str) -> dict:
@@ -66,16 +66,16 @@ def _lock_text(*, requires_python: str = ">=3.7", packages: list) -> str:
 
 def _baseline():
     return [
-        ("dcc-mcp-core-semantic", "0.20.33", _semantic_wheels("0.20.33")),
-        ("dcc-mcp-server", "0.20.33", _server_wheels("0.20.33")),
+        ("meshy-dcc-core-semantic", "0.20.33", _semantic_wheels("0.20.33")),
+        ("meshy-dcc-server", "0.20.33", _server_wheels("0.20.33")),
         ("zipp", "3.19.1", [_wheel("zipp", "3.19.1", "py3-none-any")]),
     ]
 
 
 def _refreshed():
     return [
-        ("dcc-mcp-core-semantic", "0.20.34", _semantic_wheels("0.20.34")),
-        ("dcc-mcp-server", "0.20.34", _server_wheels("0.20.34")),
+        ("meshy-dcc-core-semantic", "0.20.34", _semantic_wheels("0.20.34")),
+        ("meshy-dcc-server", "0.20.34", _server_wheels("0.20.34")),
         ("zipp", "3.19.1", [_wheel("zipp", "3.19.1", "py3-none-any")]),
     ]
 
@@ -110,11 +110,11 @@ def test_unmanaged_package_bump_fails() -> None:
 def test_dropped_cp37_wheel_fails() -> None:
     module = _load_module()
     without_cp37 = _refreshed()
-    without_cp37[0] = ("dcc-mcp-core-semantic", "0.20.34", _semantic_wheels("0.20.34", cp37=False))
+    without_cp37[0] = ("meshy-dcc-core-semantic", "0.20.34", _semantic_wheels("0.20.34", cp37=False))
 
     errors = module.verify_refresh(_parse(_lock_text(packages=_baseline())), _parse(_lock_text(packages=without_cp37)))
 
-    assert any("cp37" in error and "dcc-mcp-core-semantic" in error for error in errors)
+    assert any("cp37" in error and "meshy-dcc-core-semantic" in error for error in errors)
 
 
 def test_narrowed_requires_python_fails() -> None:
@@ -129,22 +129,22 @@ def test_narrowed_requires_python_fails() -> None:
 
 def test_removed_allowed_pin_fails() -> None:
     module = _load_module()
-    trimmed = [entry for entry in _refreshed() if entry[0] != "dcc-mcp-server"]
+    trimmed = [entry for entry in _refreshed() if entry[0] != "meshy-dcc-server"]
 
     errors = module.verify_refresh(_parse(_lock_text(packages=_baseline())), _parse(_lock_text(packages=trimmed)))
 
-    assert any("dcc-mcp-server" in error and "removed" in error for error in errors)
+    assert any("meshy-dcc-server" in error and "removed" in error for error in errors)
 
 
 def test_downgraded_allowed_pin_fails() -> None:
     module = _load_module()
     # `0.20.34` got yanked, so the resolver falls back to an older release.
     rolled_back = _refreshed()
-    rolled_back[0] = ("dcc-mcp-core-semantic", "0.20.32", _semantic_wheels("0.20.32"))
+    rolled_back[0] = ("meshy-dcc-core-semantic", "0.20.32", _semantic_wheels("0.20.32"))
 
     errors = module.verify_refresh(_parse(_lock_text(packages=_baseline())), _parse(_lock_text(packages=rolled_back)))
 
-    assert any("backwards" in error and "dcc-mcp-core-semantic" in error for error in errors)
+    assert any("backwards" in error and "meshy-dcc-core-semantic" in error for error in errors)
 
 
 def test_cli_verify_accepts_a_scoped_refresh(tmp_path: Path) -> None:
@@ -183,7 +183,7 @@ def test_cli_verify_honours_a_package_override(tmp_path: Path) -> None:
 @pytest.mark.parametrize(
     "expected",
     [
-        "uv lock --upgrade-package dcc-mcp-core-semantic --upgrade-package dcc-mcp-server",
+        "uv lock --upgrade-package meshy-dcc-core-semantic --upgrade-package meshy-dcc-server",
         "scripts/ci/uv_lock_refresh.py verify",
         "scripts/ci/check_lock_versions.py",
         "scripts/ci/check_uv_lock.py",

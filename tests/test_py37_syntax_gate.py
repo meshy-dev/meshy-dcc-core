@@ -11,7 +11,7 @@ import pytest
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
 _CHECKER = _REPO_ROOT / "scripts" / "check_py37_syntax.py"
-_HOST_PUMP = _REPO_ROOT / "python" / "dcc_mcp_core" / "_server" / "host_pump.py"
+_HOST_PUMP = _REPO_ROOT / "python" / "meshy_dcc_core" / "_server" / "host_pump.py"
 
 
 @pytest.mark.skipif(sys.version_info[:2] != (3, 7), reason="requires Python 3.7 interpreter")

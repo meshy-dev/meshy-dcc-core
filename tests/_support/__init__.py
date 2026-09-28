@@ -1,4 +1,4 @@
-"""Private helpers shared by the dcc-mcp-core test suite."""
+"""Private helpers shared by the meshy-dcc-core test suite."""
 
 from _support.server import make_test_server
 from _support.watcher import wait_for_event

@@ -8,8 +8,8 @@ dcc:
   primary: unreal
   companions: [blender, substance-painter]
 rez_packages:
-  - dcc_mcp_core
-  - dcc_mcp_unreal
+  - meshy_dcc_core
+  - meshy_dcc_unreal
   - game_level_layout
 skill_paths:
   shared: ["${REZ_GAME_LEVEL_LAYOUT_ROOT}/skills"]
@@ -25,13 +25,13 @@ visual_feedback:
   capture_after_mutation: true
   include_editor_viewport: true
 env:
-  DCC_MCP_CONTEXT_BUNDLE: game-demo.level.city-block.layout
-  DCC_MCP_PRODUCTION_DOMAIN: game
-  DCC_MCP_CONTEXT_KIND: level
-  DCC_MCP_PROJECT: game-demo
-  DCC_MCP_ASSET: city-block
-  DCC_MCP_TASK: level-layout
-  DCC_MCP_TOOLSET_PROFILE: game-level-layout
-  DCC_MCP_UNREAL_SKILL_PATHS: "${REZ_GAME_LEVEL_LAYOUT_ROOT}/skills"
-  DCC_MCP_PACKAGE_PROVENANCE: game_level_layout-1.0.0
+  MESHY_DCC_CONTEXT_BUNDLE: game-demo.level.city-block.layout
+  MESHY_DCC_PRODUCTION_DOMAIN: game
+  MESHY_DCC_CONTEXT_KIND: level
+  MESHY_DCC_PROJECT: game-demo
+  MESHY_DCC_ASSET: city-block
+  MESHY_DCC_TASK: level-layout
+  MESHY_DCC_TOOLSET_PROFILE: game-level-layout
+  MESHY_DCC_UNREAL_SKILL_PATHS: "${REZ_GAME_LEVEL_LAYOUT_ROOT}/skills"
+  MESHY_DCC_PACKAGE_PROVENANCE: game_level_layout-1.0.0
 docs: ../../docs/guide/rez-skill-packages.md

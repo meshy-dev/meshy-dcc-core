@@ -2,7 +2,7 @@
 
 End-to-end verification of the cancel-forward + cross-backend cascade
 path is covered by the Rust integration tests in
-``crates/dcc-mcp-http/src/gateway/sse_subscriber.rs`` (``JobRoute`` unit
+``crates/meshy-dcc-http/src/gateway/sse_subscriber.rs`` (``JobRoute`` unit
 tests) and can be exercised against a real two-backend cluster via the
 ``gateway_cross_process`` harness. From Python we pin the public surface:
 
@@ -23,9 +23,9 @@ import pytest
 
 from conftest import allocate_gateway_port
 from conftest import wait_tcp_reachable
-from dcc_mcp_core import McpHttpConfig
-from dcc_mcp_core import McpHttpServer
-from dcc_mcp_core import ToolRegistry
+from meshy_dcc_core import McpHttpConfig
+from meshy_dcc_core import McpHttpServer
+from meshy_dcc_core import ToolRegistry
 
 # ── Config surface ────────────────────────────────────────────────────────
 

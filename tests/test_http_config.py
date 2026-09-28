@@ -1,4 +1,4 @@
-"""Tests for :class:`dcc_mcp_core.McpHttpConfig` Python bindings.
+"""Tests for :class:`meshy_dcc_core.McpHttpConfig` Python bindings.
 
 Issue #314 — the gateway's per-backend fan-out timeout must be configurable
 from Python so downstream DCC adapters (Maya/Blender/Houdini…) can extend
@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import pytest
 
-from dcc_mcp_core import McpHttpConfig
+from meshy_dcc_core import McpHttpConfig
 
 
 def test_backend_timeout_ms_has_sensible_default() -> None:
@@ -76,7 +76,7 @@ def test_job_recovery_setter_round_trips(policy: str) -> None:
 
 @pytest.mark.parametrize("raw", ["DROP", "Drop", "Requeue", "  requeue  "])
 def test_job_recovery_setter_is_case_insensitive(raw: str) -> None:
-    """Tolerates env-var plumbing such as ``DCC_MCP_*_JOB_RECOVERY=Requeue``
+    """Tolerates env-var plumbing such as ``MESHY_DCC_*_JOB_RECOVERY=Requeue``
     where adapters may emit canonical-case strings.
     """
     cfg = McpHttpConfig(port=8765)

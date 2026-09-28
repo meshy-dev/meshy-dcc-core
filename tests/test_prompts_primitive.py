@@ -7,13 +7,13 @@ Covers:
   ``prompts: { listChanged: true }`` when enabled.
 
 Full end-to-end ``prompts/list`` + ``prompts/get`` are exercised by the Rust
-integration tests in ``crates/dcc-mcp-http``; the Python layer only needs to
+integration tests in ``crates/meshy-dcc-http``; the Python layer only needs to
 verify the configuration surface behaves as documented.
 """
 
 from __future__ import annotations
 
-from dcc_mcp_core import McpHttpConfig
+from meshy_dcc_core import McpHttpConfig
 
 
 def test_enable_prompts_default_on() -> None:

@@ -22,11 +22,11 @@ from __future__ import annotations
 
 import pytest
 
-from dcc_mcp_core import RecordingGuard
-from dcc_mcp_core import ScriptResult
-from dcc_mcp_core import ToolMetrics
-from dcc_mcp_core import ToolRecorder
-from dcc_mcp_core import VtValue
+from meshy_dcc_core import RecordingGuard
+from meshy_dcc_core import ScriptResult
+from meshy_dcc_core import ToolMetrics
+from meshy_dcc_core import ToolRecorder
+from meshy_dcc_core import VtValue
 
 # ---------------------------------------------------------------------------
 # VtValue factories and to_python()

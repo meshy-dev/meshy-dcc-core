@@ -13,12 +13,12 @@ import time
 
 import pytest
 
-from dcc_mcp_core import InputValidator
-from dcc_mcp_core import PyCrashRecoveryPolicy
-from dcc_mcp_core import PyDccLauncher
-from dcc_mcp_core import ToolRecorder
-from dcc_mcp_core import TransportAddress
-from dcc_mcp_core import TransportScheme
+from meshy_dcc_core import InputValidator
+from meshy_dcc_core import PyCrashRecoveryPolicy
+from meshy_dcc_core import PyDccLauncher
+from meshy_dcc_core import ToolRecorder
+from meshy_dcc_core import TransportAddress
+from meshy_dcc_core import TransportScheme
 
 # ---------------------------------------------------------------------------
 # PyDccLauncher

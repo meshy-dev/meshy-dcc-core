@@ -1,7 +1,7 @@
 """Tool entry point — create_asset.
 
 Thin adapter:
-1. Read JSON params from stdin (the dcc-mcp-core convention).
+1. Read JSON params from stdin (the meshy-dcc-core convention).
 2. Delegate to ``AssetService.create``.
 3. Print the success / error envelope to stdout.
 

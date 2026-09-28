@@ -10,25 +10,25 @@ from unittest.mock import patch
 
 import pytest
 
-import dcc_mcp_core
-from dcc_mcp_core.checkpoint import CheckpointStore
-from dcc_mcp_core.checkpoint import checkpoint_every
-from dcc_mcp_core.checkpoint import clear_checkpoint
-from dcc_mcp_core.checkpoint import configure_checkpoint_store
-from dcc_mcp_core.checkpoint import get_checkpoint
-from dcc_mcp_core.checkpoint import get_default_checkpoint_store
-from dcc_mcp_core.checkpoint import list_checkpoints
-from dcc_mcp_core.checkpoint import register_checkpoint_tools
-from dcc_mcp_core.checkpoint import reset_default_checkpoint_store_for_tests
-from dcc_mcp_core.checkpoint import save_checkpoint
+import meshy_dcc_core
+from meshy_dcc_core.checkpoint import CheckpointStore
+from meshy_dcc_core.checkpoint import checkpoint_every
+from meshy_dcc_core.checkpoint import clear_checkpoint
+from meshy_dcc_core.checkpoint import configure_checkpoint_store
+from meshy_dcc_core.checkpoint import get_checkpoint
+from meshy_dcc_core.checkpoint import get_default_checkpoint_store
+from meshy_dcc_core.checkpoint import list_checkpoints
+from meshy_dcc_core.checkpoint import register_checkpoint_tools
+from meshy_dcc_core.checkpoint import reset_default_checkpoint_store_for_tests
+from meshy_dcc_core.checkpoint import save_checkpoint
 
 # ── CheckpointStore ────────────────────────────────────────────────────────
 
 
 def test_checkpoint_state_seams_are_public() -> None:
-    assert dcc_mcp_core.CheckpointStore is CheckpointStore
-    assert dcc_mcp_core.get_default_checkpoint_store is get_default_checkpoint_store
-    assert callable(dcc_mcp_core.reset_default_checkpoint_store_for_tests)
+    assert meshy_dcc_core.CheckpointStore is CheckpointStore
+    assert meshy_dcc_core.get_default_checkpoint_store is get_default_checkpoint_store
+    assert callable(meshy_dcc_core.reset_default_checkpoint_store_for_tests)
 
 
 class TestCheckpointStore:
@@ -231,6 +231,6 @@ class TestRegisterCheckpointTools:
             def registry(self):
                 raise AttributeError("no registry")
 
-        with patch.object(logging.getLogger("dcc_mcp_core.checkpoint"), "warning") as mock_warn:
+        with patch.object(logging.getLogger("meshy_dcc_core.checkpoint"), "warning") as mock_warn:
             register_checkpoint_tools(_BadServer())
         mock_warn.assert_called_once()

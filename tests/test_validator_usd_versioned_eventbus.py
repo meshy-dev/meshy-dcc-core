@@ -17,15 +17,15 @@ import json
 
 import pytest
 
-import dcc_mcp_core
-from dcc_mcp_core import EventBus
-from dcc_mcp_core import SemVer
-from dcc_mcp_core import ToolRegistry
-from dcc_mcp_core import ToolValidator
-from dcc_mcp_core import UsdStage
-from dcc_mcp_core import VersionConstraint
-from dcc_mcp_core import VersionedRegistry
-from dcc_mcp_core import VtValue
+import meshy_dcc_core
+from meshy_dcc_core import EventBus
+from meshy_dcc_core import SemVer
+from meshy_dcc_core import ToolRegistry
+from meshy_dcc_core import ToolValidator
+from meshy_dcc_core import UsdStage
+from meshy_dcc_core import VersionConstraint
+from meshy_dcc_core import VersionedRegistry
+from meshy_dcc_core import VtValue
 
 
 # ---------------------------------------------------------------------------

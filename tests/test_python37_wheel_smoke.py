@@ -43,7 +43,7 @@ def test_install_and_smoke_commands_enforce_the_same_profile_boundary(
     monkeypatch.setattr(
         "scripts.ci.python37_wheel_smoke.subprocess.run", lambda command, **kwargs: commands.append(command)
     )
-    wheel = tmp_path / "dcc_mcp_core-0.20.21-py3-none-any.whl"
+    wheel = tmp_path / "meshy_dcc_core-0.20.21-py3-none-any.whl"
     smoke_wheel(wheel, profile, historical, has_contract)
     install = next(command for command in commands if "pip" in command)
     assert ("--no-deps" in install) is not historical
@@ -53,6 +53,6 @@ def test_install_and_smoke_commands_enforce_the_same_profile_boundary(
     if not historical:
         assert commands.index(isolated[0]) < commands.index(install)
     if historical and not has_contract:
-        assert commands[-1][-2:] == ["-c", "import dcc_mcp_core"]
+        assert commands[-1][-2:] == ["-c", "import meshy_dcc_core"]
     else:
         assert commands[-1][-2:] == ["--profile", profile]

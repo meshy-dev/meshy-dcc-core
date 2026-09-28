@@ -1,0 +1,58 @@
+[package]
+name = "meshy-dcc-cli"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Client-side control plane CLI for discovering, calling, and planning Meshy DCC installations"
+
+[[bin]]
+name = "meshy-dcc"
+path = "src/main.rs"
+
+[dependencies]
+anyhow.workspace = true
+base64.workspace = true
+clap = { version = "4", features = ["derive", "env"] }
+meshy-dcc-catalog.workspace = true
+meshy-dcc-attestation.workspace = true
+meshy-dcc-gateway-ensure.workspace = true
+meshy-dcc-jsonrpc.workspace = true
+meshy-dcc-http-server.workspace = true
+# Keep the path override: Cargo cannot override inherited workspace default features.
+meshy-dcc-sidecar = { path = "../meshy-dcc-sidecar", default-features = false, features = ["gateway-daemon", "admin"] }
+meshy-dcc-transport.workspace = true
+meshy-dcc-updater.workspace = true
+meshy-dcc-marketplace.workspace = true
+meshy-dcc-models.workspace = true
+meshy-dcc-skills.workspace = true
+dirs.workspace = true
+flate2 = "1"
+jsonschema = "0.28"
+reqwest.workspace = true
+semver.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+tar = "0.4"
+tempfile.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+toon-format.workspace = true
+uuid.workspace = true
+workspace-hack = { version = "0.1", path = "../workspace-hack" }
+zip = { version = "2", default-features = false, features = ["deflate"] }
+
+[dev-dependencies]
+axum = { workspace = true, features = ["http1", "tokio"] }
+meshy-dcc-actions.workspace = true
+meshy-dcc-http.workspace = true
+hex = "0.4"
+
+[target.'cfg(unix)'.dependencies]
+libc.workspace = true
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_System_Diagnostics_ToolHelp", "Win32_System_JobObjects", "Win32_System_Threading"] }

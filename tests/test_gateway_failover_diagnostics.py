@@ -28,11 +28,11 @@ from typing import Any
 
 import pytest
 
-from dcc_mcp_core import McpHttpConfig
-from dcc_mcp_core import create_skill_server
-from dcc_mcp_core import register_diagnostic_mcp_tools
-from dcc_mcp_core._server.diagnostic_state import get_default_diagnostic_state
-from dcc_mcp_core.dcc_server import _handle_gateway_failover_status
+from meshy_dcc_core import McpHttpConfig
+from meshy_dcc_core import create_skill_server
+from meshy_dcc_core import register_diagnostic_mcp_tools
+from meshy_dcc_core._server.diagnostic_state import get_default_diagnostic_state
+from meshy_dcc_core.dcc_server import _handle_gateway_failover_status
 
 _instance_context = get_default_diagnostic_state().instance_context
 
@@ -105,7 +105,7 @@ def test_failover_disabled_by_adapter(dcc_name) -> None:
             "running": False,
             "consecutive_failures": 0,
             "gateway_host": "127.0.0.1",
-            "gateway_port": 9765,
+            "gateway_port": 19765,
             "is_gateway": False,
         },
     ):
@@ -148,7 +148,7 @@ def test_runtime_mode_reason_takes_priority(dcc_name, runtime_mode) -> None:
             "running": False,
             "consecutive_failures": 0,
             "gateway_host": "127.0.0.1",
-            "gateway_port": 9765,
+            "gateway_port": 19765,
             "is_gateway": False,
             "gateway_runtime_mode": runtime_mode,
             "gateway_guardian_enabled": "true" if runtime_mode == "daemon-backed" else "false",
@@ -159,7 +159,7 @@ def test_runtime_mode_reason_takes_priority(dcc_name, runtime_mode) -> None:
 
     assert payload["enabled"] is True
     assert payload["running"] is False
-    assert payload["gateway_port"] == 9765
+    assert payload["gateway_port"] == 19765
     assert payload["gateway_runtime_mode"] == runtime_mode
     assert payload["registration_refresh_mode"] == "file_registry_heartbeat"
     assert payload["gateway_recovery_driver"] == (
@@ -174,7 +174,7 @@ def test_gateway_recovery_driver_reports_daemon_guardian() -> None:
         lambda: {
             "enabled": True,
             "running": False,
-            "gateway_port": 9765,
+            "gateway_port": 19765,
             "gateway_runtime_mode": "daemon-backed",
             "gateway_recovery_driver": "daemon_guardian",
             "registration_refresh_mode": "file_registry_heartbeat",
@@ -196,7 +196,7 @@ def test_election_active_state(dcc_name) -> None:
             "running": True,
             "consecutive_failures": 2,
             "gateway_host": "127.0.0.1",
-            "gateway_port": 9765,
+            "gateway_port": 19765,
             "is_gateway": False,
         },
     ):
@@ -218,7 +218,7 @@ def test_active_gateway_state(dcc_name) -> None:
             "running": True,
             "consecutive_failures": 0,
             "gateway_host": "127.0.0.1",
-            "gateway_port": 9765,
+            "gateway_port": 19765,
             "is_gateway": True,
         },
     ):
@@ -251,7 +251,7 @@ def test_gateway_exit_triggers_promotion_or_explains_why_not(monkeypatch) -> Non
     ``DccGatewayElection`` with a fake that we drive manually, so it
     runs in CI without a Rust runtime.
     """
-    from dcc_mcp_core._server import runtime as runtime_mod
+    from meshy_dcc_core._server import runtime as runtime_mod
 
     promotion_calls: list[int] = []
     election_started: list[Any] = []
@@ -298,7 +298,7 @@ def test_gateway_exit_triggers_promotion_or_explains_why_not(monkeypatch) -> Non
             "running": True,
             "consecutive_failures": 3,
             "gateway_host": "127.0.0.1",
-            "gateway_port": 9765,
+            "gateway_port": 19765,
             "is_gateway": False,
         },
     )
@@ -308,4 +308,4 @@ def test_gateway_exit_triggers_promotion_or_explains_why_not(monkeypatch) -> Non
     assert payload["running"] is True
     assert payload["consecutive_failures"] == 3
     assert payload["reason"] == "election_active"
-    assert payload["gateway_port"] == 9765
+    assert payload["gateway_port"] == 19765

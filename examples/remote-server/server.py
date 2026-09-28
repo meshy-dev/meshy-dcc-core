@@ -7,11 +7,11 @@ from pathlib import Path
 import signal
 import time
 
-from dcc_mcp_core import McpHttpConfig
-from dcc_mcp_core import create_skill_server
+from meshy_dcc_core import McpHttpConfig
+from meshy_dcc_core import create_skill_server
 
-HOST = os.environ.get("DCC_MCP_HOST", "127.0.0.1")
-PORT = int(os.environ.get("DCC_MCP_PORT", "8765"))
+HOST = os.environ.get("MESHY_DCC_HOST", "127.0.0.1")
+PORT = int(os.environ.get("MESHY_DCC_PORT", "8765"))
 SKILLS_DIR = Path(__file__).parent / "skills"
 
 config = McpHttpConfig(
@@ -21,7 +21,7 @@ config = McpHttpConfig(
 )
 config.host = HOST
 config.dcc_type = "studio-service"
-config.instance_metadata = {"dcc_mcp_instance_type": "standalone"}
+config.instance_metadata = {"meshy_dcc_instance_type": "standalone"}
 
 server = create_skill_server(
     "studio-service",

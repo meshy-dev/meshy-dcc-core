@@ -11,9 +11,9 @@ import time
 import pytest
 
 from _support.watcher import wait_for_event
-from dcc_mcp_core import PyProcessMonitor
-from dcc_mcp_core import PyProcessWatcher
-from dcc_mcp_core import TelemetryConfig
+from meshy_dcc_core import PyProcessMonitor
+from meshy_dcc_core import PyProcessWatcher
+from meshy_dcc_core import TelemetryConfig
 
 # ---------------------------------------------------------------------------
 # PyProcessMonitor deep tests
@@ -340,7 +340,7 @@ class TestTelemetryConfigBuilderChain:
     def test_builder_chain_full(self):
         """Full builder chain all at once."""
         cfg = (
-            TelemetryConfig("dcc-mcp")
+            TelemetryConfig("meshy-dcc")
             .with_noop_exporter()
             .with_json_logs()
             .with_attribute("env", "test")
@@ -348,7 +348,7 @@ class TestTelemetryConfigBuilderChain:
             .set_enable_metrics(False)
             .set_enable_tracing(True)
         )
-        assert cfg.service_name == "dcc-mcp"
+        assert cfg.service_name == "meshy-dcc"
         assert cfg.enable_metrics is False
         assert cfg.enable_tracing is True
 
@@ -385,8 +385,8 @@ class TestTelemetryConfigInitShutdown:
 
     def test_init_raises_on_double_init(self):
         """init() raises RuntimeError if called twice without shutdown."""
-        from dcc_mcp_core import is_telemetry_initialized
-        from dcc_mcp_core import shutdown_telemetry
+        from meshy_dcc_core import is_telemetry_initialized
+        from meshy_dcc_core import shutdown_telemetry
 
         cfg = TelemetryConfig("test-double-init").with_noop_exporter()
         # Shut down any existing provider first
@@ -405,7 +405,7 @@ class TestTelemetryConfigInitShutdown:
             pass
 
     def test_is_telemetry_initialized_returns_bool(self):
-        from dcc_mcp_core import is_telemetry_initialized
+        from meshy_dcc_core import is_telemetry_initialized
 
         result = is_telemetry_initialized()
         assert isinstance(result, bool)

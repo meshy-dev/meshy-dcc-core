@@ -15,13 +15,13 @@ from types import SimpleNamespace
 import pytest
 
 from conftest import REPO_ROOT
-from dcc_mcp_core import yaml_loads
+from meshy_dcc_core import yaml_loads
 
 SCRIPT_PATH = REPO_ROOT / "scripts" / "ci" / "check_uv_lock.py"
 LOCK_SYNC_WORKFLOW = REPO_ROOT / ".github" / "workflows" / "release-please-lock-sync.yml"
 CI_WORKFLOW = REPO_ROOT / ".github" / "workflows" / "ci.yml"
 VERSION_WORKFLOW = REPO_ROOT / ".github" / "workflows" / "version-consistency.yml"
-EXPECTED_ROOT_PACKAGE = "dcc-mcp-core"
+EXPECTED_ROOT_PACKAGE = "meshy-dcc-core"
 TRUSTED_VALIDATOR_PATH = "scripts/ci/generated_lock_sync.py"
 TRUSTED_VALIDATOR_COMMIT = "b8e294e8a64abba426871b1e86eb106e75aab075"
 # Probe children create their PID file and only afterwards write the payload.
@@ -216,7 +216,7 @@ def test_stale_editable_root_version_is_rejected(tmp_path: Path) -> None:
 
     errors = checker.check_uv_lock_consistency(tmp_path)
 
-    assert errors == ["uv.lock editable root dcc-mcp-core version '0.20.14' != expected '0.20.15'"]
+    assert errors == ["uv.lock editable root meshy-dcc-core version '0.20.14' != expected '0.20.15'"]
 
 
 def test_matching_editable_root_version_is_accepted(tmp_path: Path) -> None:
@@ -238,7 +238,7 @@ def test_synchronized_root_package_rename_is_rejected(tmp_path: Path) -> None:
     )
 
     assert checker.check_uv_lock_consistency(tmp_path) == [
-        "release-please-config.json root package-name 'renamed-core' != fixed identity 'dcc-mcp-core'"
+        "release-please-config.json root package-name 'renamed-core' != fixed identity 'meshy-dcc-core'"
     ]
 
 
@@ -667,15 +667,15 @@ def test_generated_lock_contract_rejects_fork_and_identity_drift() -> None:
     spec.loader.exec_module(module)
 
     expected = module.PullRequestIdentity(
-        repository="dcc-mcp/dcc-mcp-core",
+        repository="meshy-dev/meshy-dcc-core",
         number=2381,
-        head_repository="dcc-mcp/dcc-mcp-core",
+        head_repository="meshy-dev/meshy-dcc-core",
         head_branch="renovate/uv-lock",
         head_sha="a" * 40,
         title="chore(deps): update locks",
     )
     assert module.validate_identity(expected, expected) == []
-    fork = expected._replace(head_repository="attacker/dcc-mcp-core")
+    fork = expected._replace(head_repository="attacker/meshy-dcc-core")
     assert any("fork" in error for error in module.validate_identity(expected, fork))
     drift = expected._replace(head_sha="b" * 40)
     assert any("head SHA" in error for error in module.validate_identity(expected, drift))
@@ -732,13 +732,13 @@ def test_remote_urls_are_bound_to_expected_owner_and_repo() -> None:
     assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
-    expected = "dcc-mcp/dcc-mcp-core"
-    assert module.validate_remote_url("https://github.com/dcc-mcp/dcc-mcp-core.git", expected) == []
-    assert module.validate_remote_url("git@github.com:dcc-mcp/dcc-mcp-core.git", expected) == []
-    assert module.validate_remote_url("https://attacker.example/dcc-mcp/dcc-mcp-core.git", expected)
+    expected = "meshy-dev/meshy-dcc-core"
+    assert module.validate_remote_url("https://github.com/meshy-dev/meshy-dcc-core.git", expected) == []
+    assert module.validate_remote_url("git@github.com:meshy-dev/meshy-dcc-core.git", expected) == []
+    assert module.validate_remote_url("https://attacker.example/meshy-dcc/meshy-dcc-core.git", expected)
     assert module.validate_remote_url("https://github.com/attacker/repo.git", expected)
     assert module.validate_remote_urls(
-        ["https://github.com/dcc-mcp/dcc-mcp-core.git", "https://attacker.example/pwn.git"], expected, "push"
+        ["https://github.com/meshy-dev/meshy-dcc-core.git", "https://attacker.example/pwn.git"], expected, "push"
     )
 
 
@@ -752,11 +752,11 @@ def test_validate_remote_enumerates_and_rejects_multiple_urls(tmp_path: Path, mo
 
     def fake_run(command, **kwargs):
         calls.append(tuple(command))
-        return SimpleNamespace(returncode=0, stdout="https://github.com/dcc-mcp/dcc-mcp-core.git\n" * 2)
+        return SimpleNamespace(returncode=0, stdout="https://github.com/meshy-dev/meshy-dcc-core.git\n" * 2)
 
     monkeypatch.setattr(module.subprocess, "run", fake_run)
     with pytest.raises(SystemExit):
-        module.validate_remote(tmp_path, "dcc-mcp/dcc-mcp-core")
+        module.validate_remote(tmp_path, "meshy-dev/meshy-dcc-core")
     assert calls and calls[0][-3:] == ("get-url", "--all", "origin")
 
 
@@ -774,12 +774,12 @@ def test_validate_remote_rejects_local_proxy_configuration(
 
     def fake_run(command, **kwargs):
         if command[:3] == ("git", "remote", "get-url"):
-            return SimpleNamespace(returncode=0, stdout="https://github.com/dcc-mcp/dcc-mcp-core.git\n")
+            return SimpleNamespace(returncode=0, stdout="https://github.com/meshy-dev/meshy-dcc-core.git\n")
         return SimpleNamespace(returncode=0, stdout=f"{proxy_key}\n")
 
     monkeypatch.setattr(module.subprocess, "run", fake_run)
     with pytest.raises(SystemExit):
-        module.validate_remote(tmp_path, "dcc-mcp/dcc-mcp-core")
+        module.validate_remote(tmp_path, "meshy-dev/meshy-dcc-core")
 
 
 def test_git_helper_uses_hard_timeout(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:

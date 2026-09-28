@@ -1,0 +1,34 @@
+[package]
+name = "meshy-dcc-actions"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Action registry and event system for the Meshy DCC ecosystem"
+
+[dependencies]
+pyo3 = { workspace = true, optional = true }
+
+# Type-stub generation (opt-in via `stub-gen` feature).
+pyo3-stub-gen = { workspace = true, optional = true }
+pyo3-stub-gen-derive = { workspace = true, optional = true }
+
+meshy-dcc-naming = { workspace = true }
+meshy-dcc-pybridge = { workspace = true, optional = true }
+meshy-dcc-models = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+dashmap = { workspace = true }
+tracing = { workspace = true }
+parking_lot = { workspace = true }
+workspace-hack = { version = "0.1", path = "../workspace-hack" }
+
+[dev-dependencies]
+meshy-dcc-models = { workspace = true, features = ["testing"] }
+
+[features]
+default = []
+python-bindings = ["pyo3", "meshy-dcc-naming/python-bindings", "meshy-dcc-models/python-bindings", "dep:meshy-dcc-pybridge", "meshy-dcc-pybridge/python-bindings"]
+# Enable `pyo3-stub-gen` annotations on this crate's PyO3 types.
+stub-gen = ["python-bindings", "dep:pyo3-stub-gen", "dep:pyo3-stub-gen-derive"]

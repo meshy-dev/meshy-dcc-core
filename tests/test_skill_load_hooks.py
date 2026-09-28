@@ -8,9 +8,9 @@ import time
 import urllib.request
 
 from conftest import McpClient
-from dcc_mcp_core import McpHttpConfig
-from dcc_mcp_core import McpHttpServer
-from dcc_mcp_core import ToolRegistry
+from meshy_dcc_core import McpHttpConfig
+from meshy_dcc_core import McpHttpServer
+from meshy_dcc_core import ToolRegistry
 
 
 def _write_skill(root: Path, name: str) -> None:
@@ -21,7 +21,7 @@ def _write_skill(root: Path, name: str) -> None:
 name: {name}
 description: Original skill description
 metadata:
-  dcc-mcp:
+  meshy-dcc:
     dcc: python
     version: "1.0.0"
     layer: example

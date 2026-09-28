@@ -1,4 +1,4 @@
-"""Tests for dcc-mcp-sandbox Python bindings.
+"""Tests for meshy-dcc-sandbox Python bindings.
 
 Covers SandboxPolicy, SandboxContext, AuditLog, AuditEntry, InputValidator.
 """
@@ -13,55 +13,55 @@ import json
 import pytest
 
 # Import local modules
-import dcc_mcp_core
+import meshy_dcc_core
 
 # ── SandboxPolicy ─────────────────────────────────────────────────────────────
 
 
 class TestSandboxPolicy:
     def test_default_policy_not_read_only(self) -> None:
-        policy = dcc_mcp_core.SandboxPolicy()
+        policy = meshy_dcc_core.SandboxPolicy()
         assert policy.is_read_only is False
 
     def test_set_read_only(self) -> None:
-        policy = dcc_mcp_core.SandboxPolicy()
+        policy = meshy_dcc_core.SandboxPolicy()
         policy.set_read_only(True)
         assert policy.is_read_only is True
 
     def test_set_read_only_false(self) -> None:
-        policy = dcc_mcp_core.SandboxPolicy()
+        policy = meshy_dcc_core.SandboxPolicy()
         policy.set_read_only(True)
         policy.set_read_only(False)
         assert policy.is_read_only is False
 
     def test_set_timeout_ms(self) -> None:
-        policy = dcc_mcp_core.SandboxPolicy()
+        policy = meshy_dcc_core.SandboxPolicy()
         policy.set_timeout_ms(5000)
         # No getter, but should not raise
         assert policy is not None
 
     def test_set_max_actions(self) -> None:
-        policy = dcc_mcp_core.SandboxPolicy()
+        policy = meshy_dcc_core.SandboxPolicy()
         policy.set_max_actions(100)
         assert policy is not None
 
     def test_allow_actions(self) -> None:
-        policy = dcc_mcp_core.SandboxPolicy()
+        policy = meshy_dcc_core.SandboxPolicy()
         policy.allow_actions(["get_scene_info", "list_objects"])
         assert policy is not None
 
     def test_deny_actions(self) -> None:
-        policy = dcc_mcp_core.SandboxPolicy()
+        policy = meshy_dcc_core.SandboxPolicy()
         policy.deny_actions(["delete_scene", "nuke_project"])
         assert policy is not None
 
     def test_allow_paths(self) -> None:
-        policy = dcc_mcp_core.SandboxPolicy()
+        policy = meshy_dcc_core.SandboxPolicy()
         policy.allow_paths(["/tmp/project", "/home/user/scenes"])
         assert policy is not None
 
     def test_repr_contains_policy_info(self) -> None:
-        policy = dcc_mcp_core.SandboxPolicy()
+        policy = meshy_dcc_core.SandboxPolicy()
         r = repr(policy)
         assert "SandboxPolicy" in r
 
@@ -70,15 +70,15 @@ class TestSandboxPolicy:
 
 
 class TestSandboxContext:
-    def _make_open_context(self) -> dcc_mcp_core.SandboxContext:
+    def _make_open_context(self) -> meshy_dcc_core.SandboxContext:
         """Return a context with no action restrictions."""
-        policy = dcc_mcp_core.SandboxPolicy()
-        return dcc_mcp_core.SandboxContext(policy)
+        policy = meshy_dcc_core.SandboxPolicy()
+        return meshy_dcc_core.SandboxContext(policy)
 
-    def _make_restricted_context(self, allowed: list[str]) -> dcc_mcp_core.SandboxContext:
-        policy = dcc_mcp_core.SandboxPolicy()
+    def _make_restricted_context(self, allowed: list[str]) -> meshy_dcc_core.SandboxContext:
+        policy = meshy_dcc_core.SandboxPolicy()
         policy.allow_actions(allowed)
-        return dcc_mcp_core.SandboxContext(policy)
+        return meshy_dcc_core.SandboxContext(policy)
 
     def test_initial_action_count(self) -> None:
         ctx = self._make_open_context()
@@ -129,9 +129,9 @@ class TestSandboxContext:
         import tempfile
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            policy = dcc_mcp_core.SandboxPolicy()
+            policy = meshy_dcc_core.SandboxPolicy()
             policy.allow_paths([tmpdir])
-            ctx = dcc_mcp_core.SandboxContext(policy)
+            ctx = meshy_dcc_core.SandboxContext(policy)
             allowed_path = str(Path(tmpdir) / "scene.mb")
             assert ctx.is_path_allowed(allowed_path) is True
             assert ctx.is_path_allowed("/etc/passwd") is False
@@ -157,9 +157,9 @@ class TestSandboxContext:
         assert "SandboxContext" in r
 
     def test_read_only_policy_allows_read_actions(self) -> None:
-        policy = dcc_mcp_core.SandboxPolicy()
+        policy = meshy_dcc_core.SandboxPolicy()
         policy.set_read_only(True)
-        ctx = dcc_mcp_core.SandboxContext(policy)
+        ctx = meshy_dcc_core.SandboxContext(policy)
         # In a read-only context, execution is allowed when no action allowlist set
         result = ctx.execute_json("get_scene_info", "{}")
         assert result is not None
@@ -169,12 +169,12 @@ class TestSandboxContext:
 
 
 class TestAuditLog:
-    def _execute_n(self, ctx: dcc_mcp_core.SandboxContext, n: int, action: str = "act") -> None:
+    def _execute_n(self, ctx: meshy_dcc_core.SandboxContext, n: int, action: str = "act") -> None:
         for _ in range(n):
             ctx.execute_json(action, "{}")
 
-    def _open_ctx(self) -> dcc_mcp_core.SandboxContext:
-        return dcc_mcp_core.SandboxContext(dcc_mcp_core.SandboxPolicy())
+    def _open_ctx(self) -> meshy_dcc_core.SandboxContext:
+        return meshy_dcc_core.SandboxContext(meshy_dcc_core.SandboxPolicy())
 
     def test_len_matches_executions(self) -> None:
         ctx = self._open_ctx()
@@ -247,10 +247,10 @@ class TestAuditLog:
         assert "2" in r
 
     def test_denied_entry_recorded(self) -> None:
-        policy = dcc_mcp_core.SandboxPolicy()
+        policy = meshy_dcc_core.SandboxPolicy()
         policy.allow_actions(["safe"])
         policy.deny_actions(["dangerous"])
-        ctx = dcc_mcp_core.SandboxContext(policy)
+        ctx = meshy_dcc_core.SandboxContext(policy)
         with pytest.raises(RuntimeError):
             ctx.execute_json("dangerous", "{}")
         # After a denied attempt the log should contain a denial entry
@@ -264,78 +264,78 @@ class TestAuditLog:
 
 class TestInputValidator:
     def test_empty_validator_accepts_empty_object(self) -> None:
-        v = dcc_mcp_core.InputValidator()
+        v = meshy_dcc_core.InputValidator()
         ok, err = v.validate("{}")
         assert ok is True
         assert err is None
 
     def test_require_string_accepts_valid(self) -> None:
-        v = dcc_mcp_core.InputValidator()
+        v = meshy_dcc_core.InputValidator()
         v.require_string("name", max_length=100, min_length=None)
         ok, _err = v.validate('{"name": "sphere"}')
         assert ok is True
 
     def test_require_string_rejects_missing(self) -> None:
-        v = dcc_mcp_core.InputValidator()
+        v = meshy_dcc_core.InputValidator()
         v.require_string("name", max_length=None, min_length=None)
         ok, err = v.validate("{}")
         assert ok is False
         assert err is not None
 
     def test_require_string_rejects_too_long(self) -> None:
-        v = dcc_mcp_core.InputValidator()
+        v = meshy_dcc_core.InputValidator()
         v.require_string("name", max_length=5, min_length=None)
         ok, _err = v.validate('{"name": "this_is_too_long"}')
         assert ok is False
 
     def test_require_number_accepts_valid(self) -> None:
-        v = dcc_mcp_core.InputValidator()
+        v = meshy_dcc_core.InputValidator()
         v.require_number("count", min_value=0.0, max_value=1000.0)
         ok, _err = v.validate('{"count": 42}')
         assert ok is True
 
     def test_require_number_rejects_too_small(self) -> None:
-        v = dcc_mcp_core.InputValidator()
+        v = meshy_dcc_core.InputValidator()
         v.require_number("count", min_value=0.0, max_value=None)
         ok, _err = v.validate('{"count": -1}')
         assert ok is False
 
     def test_require_number_rejects_too_large(self) -> None:
-        v = dcc_mcp_core.InputValidator()
+        v = meshy_dcc_core.InputValidator()
         v.require_number("count", min_value=None, max_value=10.0)
         ok, _err = v.validate('{"count": 100}')
         assert ok is False
 
     def test_forbid_substrings_rejects_injection(self) -> None:
-        v = dcc_mcp_core.InputValidator()
+        v = meshy_dcc_core.InputValidator()
         v.forbid_substrings("script", ["__import__", "os.system", "eval("])
         ok, _err = v.validate('{"script": "eval(bad code)"}')
         assert ok is False
 
     def test_forbid_substrings_accepts_clean(self) -> None:
-        v = dcc_mcp_core.InputValidator()
+        v = meshy_dcc_core.InputValidator()
         v.forbid_substrings("script", ["__import__"])
         ok, _err = v.validate('{"script": "print(42)"}')
         assert ok is True
 
     def test_validate_invalid_json_raises(self) -> None:
-        v = dcc_mcp_core.InputValidator()
+        v = meshy_dcc_core.InputValidator()
         with pytest.raises(RuntimeError):
             v.validate("{ not valid json }")
 
     def test_repr_is_string(self) -> None:
-        v = dcc_mcp_core.InputValidator()
+        v = meshy_dcc_core.InputValidator()
         assert isinstance(repr(v), str)
 
     def test_multiple_fields(self) -> None:
-        v = dcc_mcp_core.InputValidator()
+        v = meshy_dcc_core.InputValidator()
         v.require_string("name", max_length=50, min_length=None)
         v.require_number("size", min_value=0.0, max_value=None)
         ok, _ = v.validate('{"name": "cube", "size": 1.5}')
         assert ok is True
 
     def test_multiple_fields_partial_miss(self) -> None:
-        v = dcc_mcp_core.InputValidator()
+        v = meshy_dcc_core.InputValidator()
         v.require_string("name", max_length=50, min_length=None)
         v.require_number("size", min_value=0.0, max_value=None)
         ok, err = v.validate('{"name": "cube"}')
@@ -345,14 +345,14 @@ class TestInputValidator:
 
     def test_require_string_min_length_rejects_too_short(self) -> None:
         """require_string with min_length rejects strings shorter than the minimum."""
-        v = dcc_mcp_core.InputValidator()
+        v = meshy_dcc_core.InputValidator()
         v.require_string("token", max_length=None, min_length=8)
         ok, err = v.validate('{"token": "abc"}')
         assert ok is False
         assert err is not None
 
     def test_require_string_min_length_accepts_exactly_at_minimum(self) -> None:
-        v = dcc_mcp_core.InputValidator()
+        v = meshy_dcc_core.InputValidator()
         v.require_string("token", max_length=None, min_length=3)
         ok, err = v.validate('{"token": "abc"}')
         assert ok is True
@@ -360,7 +360,7 @@ class TestInputValidator:
 
     def test_require_number_no_bounds_accepts_any_number(self) -> None:
         """require_number without bounds should accept any finite number."""
-        v = dcc_mcp_core.InputValidator()
+        v = meshy_dcc_core.InputValidator()
         v.require_number("value", min_value=None, max_value=None)
         for n in ["-99999", "0", "3.14"]:
             ok, err = v.validate(f'{{"value": {n}}}')
@@ -368,7 +368,7 @@ class TestInputValidator:
 
     def test_forbid_substrings_multiple_patterns_one_triggers(self) -> None:
         """Only one of the forbidden substrings needs to match for rejection."""
-        v = dcc_mcp_core.InputValidator()
+        v = meshy_dcc_core.InputValidator()
         v.forbid_substrings("code", ["exec(", "eval(", "__import__"])
         # 'eval(' triggers
         ok, err = v.validate('{"code": "result = eval(x)"}')
@@ -376,14 +376,14 @@ class TestInputValidator:
         assert err is not None
 
     def test_forbid_substrings_none_match_accepted(self) -> None:
-        v = dcc_mcp_core.InputValidator()
+        v = meshy_dcc_core.InputValidator()
         v.forbid_substrings("code", ["exec(", "eval(", "__import__"])
         ok, _ = v.validate('{"code": "print(hello)"}')
         assert ok is True
 
     def test_combined_string_number_and_forbid(self) -> None:
         """All rules pass for a valid payload."""
-        v = dcc_mcp_core.InputValidator()
+        v = meshy_dcc_core.InputValidator()
         v.require_string("name", max_length=50, min_length=None)
         v.require_number("radius", min_value=0.0, max_value=1000.0)
         v.forbid_substrings("name", ["__", "exec"])
@@ -393,7 +393,7 @@ class TestInputValidator:
 
     def test_combined_string_number_and_forbid_injection_fails(self) -> None:
         """All rules fail if the injection guard triggers."""
-        v = dcc_mcp_core.InputValidator()
+        v = meshy_dcc_core.InputValidator()
         v.require_string("name", max_length=50, min_length=None)
         v.require_number("radius", min_value=0.0, max_value=1000.0)
         v.forbid_substrings("name", ["exec"])
@@ -407,32 +407,32 @@ class TestInputValidator:
 class TestSandboxContextAdvanced:
     def test_deny_actions_overrides_allow(self) -> None:
         """An action in both allow and deny lists must be denied."""
-        policy = dcc_mcp_core.SandboxPolicy()
+        policy = meshy_dcc_core.SandboxPolicy()
         policy.allow_actions(["create_sphere", "delete_all"])
         policy.deny_actions(["delete_all"])
-        ctx = dcc_mcp_core.SandboxContext(policy)
+        ctx = meshy_dcc_core.SandboxContext(policy)
         assert ctx.is_allowed("create_sphere") is True
         assert ctx.is_allowed("delete_all") is False
 
     def test_deny_actions_blocks_execution(self) -> None:
         """Executing a denied action must raise RuntimeError."""
-        policy = dcc_mcp_core.SandboxPolicy()
+        policy = meshy_dcc_core.SandboxPolicy()
         policy.deny_actions(["nuke_scene"])
-        ctx = dcc_mcp_core.SandboxContext(policy)
+        ctx = meshy_dcc_core.SandboxContext(policy)
         with pytest.raises(RuntimeError):
             ctx.execute_json("nuke_scene", "{}")
 
     def test_is_allowed_unknown_action_no_allowlist(self) -> None:
         """With no allowlist, any action is allowed (open policy)."""
-        policy = dcc_mcp_core.SandboxPolicy()
-        ctx = dcc_mcp_core.SandboxContext(policy)
+        policy = meshy_dcc_core.SandboxPolicy()
+        ctx = meshy_dcc_core.SandboxContext(policy)
         assert ctx.is_allowed("completely_unknown_action") is True
 
     def test_is_allowed_empty_allowlist_denies_all(self) -> None:
         """An empty allowlist denies every action (no-allow-by-default)."""
-        policy = dcc_mcp_core.SandboxPolicy()
+        policy = meshy_dcc_core.SandboxPolicy()
         policy.allow_actions([])
-        ctx = dcc_mcp_core.SandboxContext(policy)
+        ctx = meshy_dcc_core.SandboxContext(policy)
         # Empty allowlist — nothing is explicitly allowed
         allowed = ctx.is_allowed("create_sphere")
         assert isinstance(allowed, bool)
@@ -440,16 +440,16 @@ class TestSandboxContextAdvanced:
     def test_multiple_deny_actions_blocked(self) -> None:
         """All actions in deny list are individually blocked."""
         forbidden = ["delete_scene", "format_disk", "exec_shell"]
-        policy = dcc_mcp_core.SandboxPolicy()
+        policy = meshy_dcc_core.SandboxPolicy()
         policy.deny_actions(forbidden)
-        ctx = dcc_mcp_core.SandboxContext(policy)
+        ctx = meshy_dcc_core.SandboxContext(policy)
         for action in forbidden:
             assert ctx.is_allowed(action) is False, f"Expected {action!r} to be denied"
 
     def test_set_actor_affects_repr(self) -> None:
         """set_actor should not raise and context should still function."""
-        policy = dcc_mcp_core.SandboxPolicy()
-        ctx = dcc_mcp_core.SandboxContext(policy)
+        policy = meshy_dcc_core.SandboxPolicy()
+        ctx = meshy_dcc_core.SandboxContext(policy)
         ctx.set_actor("agent-007")
         # Context should remain operational
         result = ctx.execute_json("list_objects", "{}")
@@ -457,9 +457,9 @@ class TestSandboxContextAdvanced:
 
     def test_action_count_with_denied_actions(self) -> None:
         """Denied actions should not increment action_count."""
-        policy = dcc_mcp_core.SandboxPolicy()
+        policy = meshy_dcc_core.SandboxPolicy()
         policy.allow_actions(["safe_action"])
-        ctx = dcc_mcp_core.SandboxContext(policy)
+        ctx = meshy_dcc_core.SandboxContext(policy)
         ctx.execute_json("safe_action", "{}")
         count_before = ctx.action_count
         with pytest.raises(RuntimeError):
@@ -474,11 +474,11 @@ class TestSandboxContextAdvanced:
 class TestAuditMiddleware:
     def _make_pipeline_with_audit(self):
         """Return (pipeline, audit_middleware) pair."""
-        reg = dcc_mcp_core.ToolRegistry()
+        reg = meshy_dcc_core.ToolRegistry()
         reg.register("test_action", description="test")
-        dispatcher = dcc_mcp_core.ToolDispatcher(reg)
+        dispatcher = meshy_dcc_core.ToolDispatcher(reg)
         dispatcher.register_handler("test_action", lambda params: {"status": "ok"})
-        pipeline = dcc_mcp_core.ToolPipeline(dispatcher)
+        pipeline = meshy_dcc_core.ToolPipeline(dispatcher)
         audit = pipeline.add_audit(record_params=True)
         return pipeline, audit
 
@@ -495,13 +495,13 @@ class TestAuditMiddleware:
         assert len(records) == 1
 
     def test_records_for_action_filters(self) -> None:
-        reg = dcc_mcp_core.ToolRegistry()
+        reg = meshy_dcc_core.ToolRegistry()
         reg.register("action_a", description="a")
         reg.register("action_b", description="b")
-        dispatcher = dcc_mcp_core.ToolDispatcher(reg)
+        dispatcher = meshy_dcc_core.ToolDispatcher(reg)
         dispatcher.register_handler("action_a", lambda p: {})
         dispatcher.register_handler("action_b", lambda p: {})
-        pipeline = dcc_mcp_core.ToolPipeline(dispatcher)
+        pipeline = meshy_dcc_core.ToolPipeline(dispatcher)
         audit = pipeline.add_audit()
         pipeline.dispatch("action_a", "{}")
         pipeline.dispatch("action_b", "{}")

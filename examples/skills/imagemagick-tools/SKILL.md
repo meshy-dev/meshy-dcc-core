@@ -20,7 +20,7 @@ metadata:
         bins: [magick]
     emoji: "🖼️"
     homepage: https://imagemagick.org
-  dcc-mcp:
+  meshy-dcc:
     dcc: python
     version: "1.0.0"
     layer: infrastructure

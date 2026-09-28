@@ -7,10 +7,10 @@ description: >-
   editing existing extensions or driving live DCC scenes — use domain
   skills for that.
 license: MIT-0
-compatibility: "dcc-mcp-core 0.17+, Python 3.7+"
+compatibility: "meshy-dcc-core 0.17+, Python 3.7+"
 allowed-tools: Bash Read Write
 metadata:
-  dcc-mcp:
+  meshy-dcc:
     dcc: python
     version: "0.18.9"  # x-release-please-version
     layer: infrastructure
@@ -22,21 +22,21 @@ metadata:
     skill-reference-docs:
       - "references/*.md"
   openclaw:
-    homepage: https://github.com/dcc-mcp/dcc-mcp-core/blob/main/skills/marketplace-create-extension/SKILL.md
+    homepage: https://github.com/meshy-dev/meshy-dcc-core/blob/main/skills/marketplace-create-extension/SKILL.md
 ---
 
 # Marketplace Create Extension
 
 ## CLI-First Control Path
 
-For marketplace and live-DCC operations, use the `dcc-mcp` skill and
-`dcc-mcp-cli` whenever shell access is available. Its consent-gated install and
+For marketplace and live-DCC operations, use the `meshy-dcc` skill and
+`meshy-dcc-cli` whenever shell access is available. Its consent-gated install and
 `update check` → `update apply` contract is the single source of truth; do not
 invent a package-local CLI bootstrap path.
 
-Scaffold a new marketplace extension package with the standard dcc-mcp
+Scaffold a new marketplace extension package with the standard meshy-dcc
 skill layout and MIT-0 licensing. Follows the same patterns as
-`dcc-mcp-skills-creator`.
+`meshy-dcc-skills-creator`.
 
 The scaffold tool creates one Skill. To distribute several generated Skills
 together, place them under `skills/` in an Agent Plugins 1.0 package with a root
@@ -48,11 +48,11 @@ uninstall boundary.
 ### `marketplace_create_extension__create`
 Scaffold a new extension directory containing SKILL.md (MIT-0), tools.yaml
 (with full annotations), and a scripts/ directory with a placeholder action
-script that uses `dcc_mcp_core.skills_helper`.
+script that uses `meshy_dcc_core.skills_helper`.
 
 ## Prerequisites
 
-- dcc-mcp-core installed
+- meshy-dcc-core installed
 - Write access to the target output directory
 
 ## Generated Layout
@@ -68,7 +68,7 @@ script that uses `dcc_mcp_core.skills_helper`.
 ## Quick Start
 
 ```python
-from dcc_mcp_core.skills_helper import call_tool
+from meshy_dcc_core.skills_helper import call_tool
 
 # Via MCP tool call:
 # marketplace_create_extension__create(
@@ -84,7 +84,7 @@ from dcc_mcp_core.skills_helper import call_tool
 
 1. Scaffold the extension with `marketplace_create_extension__create`.
 2. Implement the placeholder action script.
-3. Validate with `dcc_mcp_skills_creator__validate_skill_dir`.
+3. Validate with `meshy_dcc_skills_creator__validate_skill_dir`.
 4. Publish to a marketplace catalog with `marketplace_publish_extension__publish`.
 
 Read [MARKETPLACE_EXTENSION_GUIDE.md](references/MARKETPLACE_EXTENSION_GUIDE.md)

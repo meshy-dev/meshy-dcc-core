@@ -13,21 +13,21 @@ import json
 
 import pytest
 
-import dcc_mcp_core
-from dcc_mcp_core.runtime.postcondition import POSTCONDITION_SCHEMA_VERSION
-from dcc_mcp_core.runtime.postcondition import POSTCONDITION_UNVERIFIED
-from dcc_mcp_core.runtime.postcondition import PRESENT
-from dcc_mcp_core.runtime.postcondition import UNVERIFIED_FAIL
-from dcc_mcp_core.runtime.postcondition import UNVERIFIED_WARN
-from dcc_mcp_core.runtime.postcondition import ChangedFrom
-from dcc_mcp_core.runtime.postcondition import PostconditionCheck
-from dcc_mcp_core.runtime.postcondition import PostconditionError
-from dcc_mcp_core.runtime.postcondition import apply_postcondition
-from dcc_mcp_core.runtime.postcondition import changed_from
-from dcc_mcp_core.runtime.postcondition import verify_postcondition
-from dcc_mcp_core.runtime.postcondition import with_postcondition
-from dcc_mcp_core.skill import skill_error
-from dcc_mcp_core.skill import skill_success
+import meshy_dcc_core
+from meshy_dcc_core.runtime.postcondition import POSTCONDITION_SCHEMA_VERSION
+from meshy_dcc_core.runtime.postcondition import POSTCONDITION_UNVERIFIED
+from meshy_dcc_core.runtime.postcondition import PRESENT
+from meshy_dcc_core.runtime.postcondition import UNVERIFIED_FAIL
+from meshy_dcc_core.runtime.postcondition import UNVERIFIED_WARN
+from meshy_dcc_core.runtime.postcondition import ChangedFrom
+from meshy_dcc_core.runtime.postcondition import PostconditionCheck
+from meshy_dcc_core.runtime.postcondition import PostconditionError
+from meshy_dcc_core.runtime.postcondition import apply_postcondition
+from meshy_dcc_core.runtime.postcondition import changed_from
+from meshy_dcc_core.runtime.postcondition import verify_postcondition
+from meshy_dcc_core.runtime.postcondition import with_postcondition
+from meshy_dcc_core.skill import skill_error
+from meshy_dcc_core.skill import skill_success
 
 #: Mirrors ``postcondition._MAX_ITEMS`` / ``_MAX_STRING_CHARS``; kept local so
 #: the contract is asserted against the documented bound, not the private name.
@@ -40,11 +40,11 @@ def _success(**context):
 
 
 def test_postcondition_contract_is_top_level_exported() -> None:
-    assert dcc_mcp_core.PostconditionCheck is PostconditionCheck
-    assert dcc_mcp_core.PostconditionError is PostconditionError
-    assert dcc_mcp_core.verify_postcondition is verify_postcondition
-    assert dcc_mcp_core.with_postcondition is with_postcondition
-    assert dcc_mcp_core.changed_from is changed_from
+    assert meshy_dcc_core.PostconditionCheck is PostconditionCheck
+    assert meshy_dcc_core.PostconditionError is PostconditionError
+    assert meshy_dcc_core.verify_postcondition is verify_postcondition
+    assert meshy_dcc_core.with_postcondition is with_postcondition
+    assert meshy_dcc_core.changed_from is changed_from
 
 
 def test_readback_confirms_a_real_change() -> None:

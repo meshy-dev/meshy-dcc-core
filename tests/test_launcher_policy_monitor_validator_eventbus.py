@@ -19,16 +19,16 @@ import time
 
 import pytest
 
-from dcc_mcp_core import EventBus
-from dcc_mcp_core import InputValidator
-from dcc_mcp_core import PyBufferPool
-from dcc_mcp_core import PyCrashRecoveryPolicy
-from dcc_mcp_core import PyDccLauncher
-from dcc_mcp_core import PyProcessMonitor
-from dcc_mcp_core import SkillMetadata
-from dcc_mcp_core import ToolDeclaration
-from dcc_mcp_core import ToolRegistry
-from dcc_mcp_core import ToolValidator
+from meshy_dcc_core import EventBus
+from meshy_dcc_core import InputValidator
+from meshy_dcc_core import PyBufferPool
+from meshy_dcc_core import PyCrashRecoveryPolicy
+from meshy_dcc_core import PyDccLauncher
+from meshy_dcc_core import PyProcessMonitor
+from meshy_dcc_core import SkillMetadata
+from meshy_dcc_core import ToolDeclaration
+from meshy_dcc_core import ToolRegistry
+from meshy_dcc_core import ToolValidator
 
 # PyDccLauncher
 # ---------------------------------------------------------------------------
@@ -122,18 +122,18 @@ class TestPyDccLauncherLaunch:
 
     def test_launch_applies_child_environment_and_working_directory(self, monkeypatch):
         launcher = PyDccLauncher()
-        child_env_key = "DCC_MCP_TEST_CHILD_ENV_6E0B39B4"
+        child_env_key = "MESHY_DCC_TEST_CHILD_ENV_6E0B39B4"
         monkeypatch.setenv(child_env_key, "parent-value")
         with tempfile.TemporaryDirectory() as working_directory:
             output_path = Path(working_directory) / "child.json"
             ready_path = Path(working_directory) / "child.ready"
             script = (
                 "import json, os, pathlib, time; "
-                "pathlib.Path(os.environ['DCC_MCP_TEST_OUTPUT']).write_text("
-                "json.dumps({'env': os.environ.get(os.environ['DCC_MCP_TEST_ENV_KEY']), "
+                "pathlib.Path(os.environ['MESHY_DCC_TEST_OUTPUT']).write_text("
+                "json.dumps({'env': os.environ.get(os.environ['MESHY_DCC_TEST_ENV_KEY']), "
                 "'cwd': os.getcwd()}), encoding='utf-8'); "
-                "os.chdir(os.environ['DCC_MCP_TEST_RELEASE_CWD']); "
-                "pathlib.Path(os.environ['DCC_MCP_TEST_READY']).write_text("
+                "os.chdir(os.environ['MESHY_DCC_TEST_RELEASE_CWD']); "
+                "pathlib.Path(os.environ['MESHY_DCC_TEST_READY']).write_text("
                 "'ready', encoding='utf-8'); time.sleep(30)"
             )
             try:
@@ -143,10 +143,10 @@ class TestPyDccLauncherLaunch:
                     args=["-c", script],
                     environment={
                         child_env_key: "child-only",
-                        "DCC_MCP_TEST_ENV_KEY": child_env_key,
-                        "DCC_MCP_TEST_OUTPUT": str(output_path),
-                        "DCC_MCP_TEST_READY": str(ready_path),
-                        "DCC_MCP_TEST_RELEASE_CWD": str(Path(working_directory).parent),
+                        "MESHY_DCC_TEST_ENV_KEY": child_env_key,
+                        "MESHY_DCC_TEST_OUTPUT": str(output_path),
+                        "MESHY_DCC_TEST_READY": str(ready_path),
+                        "MESHY_DCC_TEST_RELEASE_CWD": str(Path(working_directory).parent),
                     },
                     working_directory=working_directory,
                 )
@@ -919,7 +919,7 @@ class TestPyBufferPool:
         assert pool.available() == 4
 
     def test_acquire_returns_buffer(self):
-        from dcc_mcp_core import PySharedBuffer
+        from meshy_dcc_core import PySharedBuffer
 
         pool = PyBufferPool(capacity=2, buffer_size=512)
         buf = pool.acquire()

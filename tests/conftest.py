@@ -1,9 +1,9 @@
-"""Shared fixtures for dcc-mcp-core tests.
+"""Shared fixtures for meshy-dcc-core tests.
 
 Auto-use fixtures in this file provide:
-- Session-scoped registry directory isolation (``DCC_MCP_REGISTRY_DIR``)
-- Gateway isolation for ordinary tests (``DCC_MCP_GATEWAY_PORT=0``)
-- Default skill-path isolation (``DCC_MCP_DISABLE_DEFAULT_SKILL_PATHS``)
+- Session-scoped registry directory isolation (``MESHY_DCC_REGISTRY_DIR``)
+- Gateway isolation for ordinary tests (``MESHY_DCC_GATEWAY_PORT=0``)
+- Default skill-path isolation (``MESHY_DCC_DISABLE_DEFAULT_SKILL_PATHS``)
 - Env-var restore guard that snapshots env before the session and restores
   on teardown, preventing env-var-based test-order dependency.
 - Global server/shutdown tracking (``register_shutdown_handle`` +
@@ -30,7 +30,7 @@ import urllib.request
 import pytest
 
 # Import local modules
-import dcc_mcp_core
+import meshy_dcc_core
 
 # Wheel-first CI invokes the pytest console script, which does not guarantee
 # that the repository root is importable.  Make repo-owned test helpers such
@@ -57,34 +57,34 @@ SKILLS_DIR = str(REPO_ROOT / "skills")
 
 #: Environment variable read by the Rust GatewayRunner / McpHttpConfig to
 #: override the default shared registry directory (issue #793).
-_DCC_MCP_REGISTRY_ENV = "DCC_MCP_REGISTRY_DIR"
-_DCC_MCP_GATEWAY_PORT_ENV = "DCC_MCP_GATEWAY_PORT"
-_DCC_MCP_DISABLE_DEFAULT_SKILL_PATHS_ENV = "DCC_MCP_DISABLE_DEFAULT_SKILL_PATHS"
-_DCC_MCP_CHECKPOINT_DIR_ENV = "DCC_MCP_CHECKPOINT_DIR"
+_MESHY_DCC_REGISTRY_ENV = "MESHY_DCC_REGISTRY_DIR"
+_MESHY_DCC_GATEWAY_PORT_ENV = "MESHY_DCC_GATEWAY_PORT"
+_MESHY_DCC_DISABLE_DEFAULT_SKILL_PATHS_ENV = "MESHY_DCC_DISABLE_DEFAULT_SKILL_PATHS"
+_MESHY_DCC_CHECKPOINT_DIR_ENV = "MESHY_DCC_CHECKPOINT_DIR"
 
 
 @pytest.fixture(scope="session", autouse=True)
 def _isolated_default_skill_paths():
     """Keep tests independent from skills installed in the real user profile."""
-    previous = os.environ.get(_DCC_MCP_DISABLE_DEFAULT_SKILL_PATHS_ENV)
-    os.environ[_DCC_MCP_DISABLE_DEFAULT_SKILL_PATHS_ENV] = "1"
+    previous = os.environ.get(_MESHY_DCC_DISABLE_DEFAULT_SKILL_PATHS_ENV)
+    os.environ[_MESHY_DCC_DISABLE_DEFAULT_SKILL_PATHS_ENV] = "1"
     yield
     if previous is None:
-        os.environ.pop(_DCC_MCP_DISABLE_DEFAULT_SKILL_PATHS_ENV, None)
+        os.environ.pop(_MESHY_DCC_DISABLE_DEFAULT_SKILL_PATHS_ENV, None)
     else:
-        os.environ[_DCC_MCP_DISABLE_DEFAULT_SKILL_PATHS_ENV] = previous
+        os.environ[_MESHY_DCC_DISABLE_DEFAULT_SKILL_PATHS_ENV] = previous
 
 
 @pytest.fixture(scope="session", autouse=True)
 def _disabled_default_gateway():
     """Keep ordinary tests from joining or preempting an operator gateway."""
-    previous = os.environ.get(_DCC_MCP_GATEWAY_PORT_ENV)
-    os.environ[_DCC_MCP_GATEWAY_PORT_ENV] = "0"
+    previous = os.environ.get(_MESHY_DCC_GATEWAY_PORT_ENV)
+    os.environ[_MESHY_DCC_GATEWAY_PORT_ENV] = "0"
     yield
     if previous is None:
-        os.environ.pop(_DCC_MCP_GATEWAY_PORT_ENV, None)
+        os.environ.pop(_MESHY_DCC_GATEWAY_PORT_ENV, None)
     else:
-        os.environ[_DCC_MCP_GATEWAY_PORT_ENV] = previous
+        os.environ[_MESHY_DCC_GATEWAY_PORT_ENV] = previous
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -93,11 +93,11 @@ def _isolated_registry_dir(tmp_path_factory: pytest.TempPathFactory):
 
     Many test modules start ``McpHttpServer`` / ``create_skill_server``
     instances without an explicit ``registry_dir``.  When they do, the Rust
-    runtime falls back to ``<os-tmp>/dcc-mcp-registry`` — a **shared**
+    runtime falls back to ``<os-tmp>/meshy-dcc-registry`` — a **shared**
     directory that persists between test runs and accumulates stale
     ``services.json`` entries (issue #793).
 
-    Setting ``DCC_MCP_REGISTRY_DIR`` to a fresh temporary directory ensures
+    Setting ``MESHY_DCC_REGISTRY_DIR`` to a fresh temporary directory ensures
     every server created during the session writes its registry entries in an
     isolated location that pytest cleans up automatically at session teardown.
 
@@ -107,33 +107,33 @@ def _isolated_registry_dir(tmp_path_factory: pytest.TempPathFactory):
     assignment takes precedence and is unaffected by this fixture.
     """
     registry_dir = tmp_path_factory.mktemp("session-registry", numbered=True)
-    previous = os.environ.get(_DCC_MCP_REGISTRY_ENV)
-    os.environ[_DCC_MCP_REGISTRY_ENV] = str(registry_dir)
+    previous = os.environ.get(_MESHY_DCC_REGISTRY_ENV)
+    os.environ[_MESHY_DCC_REGISTRY_ENV] = str(registry_dir)
     yield
     # Restore (or remove) the env-var so we don't leak state into other
     # processes that might be forked after the session ends.
     if previous is None:
-        os.environ.pop(_DCC_MCP_REGISTRY_ENV, None)
+        os.environ.pop(_MESHY_DCC_REGISTRY_ENV, None)
     else:
-        os.environ[_DCC_MCP_REGISTRY_ENV] = previous
+        os.environ[_MESHY_DCC_REGISTRY_ENV] = previous
 
 
 @pytest.fixture(scope="session", autouse=True)
 def _isolated_checkpoint_dir(tmp_path_factory: pytest.TempPathFactory):
-    """Keep durable checkpoints out of the real ``~/.dcc-mcp`` profile.
+    """Keep durable checkpoints out of the real ``~/.meshy-dcc`` profile.
 
     ``DccServerBase`` resolves a file-backed checkpoint store by default
     (issue #2300). Without this redirect, any test that saves a checkpoint
     would write into the developer's home directory.
     """
     checkpoint_dir = tmp_path_factory.mktemp("session-checkpoints", numbered=True)
-    previous = os.environ.get(_DCC_MCP_CHECKPOINT_DIR_ENV)
-    os.environ[_DCC_MCP_CHECKPOINT_DIR_ENV] = str(checkpoint_dir)
+    previous = os.environ.get(_MESHY_DCC_CHECKPOINT_DIR_ENV)
+    os.environ[_MESHY_DCC_CHECKPOINT_DIR_ENV] = str(checkpoint_dir)
     yield
     if previous is None:
-        os.environ.pop(_DCC_MCP_CHECKPOINT_DIR_ENV, None)
+        os.environ.pop(_MESHY_DCC_CHECKPOINT_DIR_ENV, None)
     else:
-        os.environ[_DCC_MCP_CHECKPOINT_DIR_ENV] = previous
+        os.environ[_MESHY_DCC_CHECKPOINT_DIR_ENV] = previous
 
 
 def create_skill_dir(
@@ -147,7 +147,7 @@ def create_skill_dir(
     """Create a temporary skill directory with a SKILL.md file.
 
     Auto-generated frontmatter emits the agentskills.io 1.0-compliant
-    nested ``metadata.dcc-mcp.*`` form (issue #356). Top-level keys
+    nested ``metadata.meshy-dcc.*`` form (issue #356). Top-level keys
     outside the spec allowlist are rejected by ``parse_skill_md``.
 
     Args:
@@ -155,7 +155,7 @@ def create_skill_dir(
         name: Skill directory name.
         frontmatter: Raw YAML frontmatter (excluding delimiters). If empty,
             a minimal ``name: <name>`` block is generated.
-        dcc: Optional DCC field placed under ``metadata.dcc-mcp.dcc``.
+        dcc: Optional DCC field placed under ``metadata.meshy-dcc.dcc``.
         body: Optional body text after the frontmatter.
 
     Returns:
@@ -167,7 +167,7 @@ def create_skill_dir(
     if not frontmatter:
         lines = [f"name: {name}"]
         if dcc:
-            lines.extend(["metadata:", "  dcc-mcp:", f"    dcc: {dcc}"])
+            lines.extend(["metadata:", "  meshy-dcc:", f"    dcc: {dcc}"])
         frontmatter = "\n".join(lines)
     content = f"---\n{frontmatter}\n---\n{body}"
     (skill_path / "SKILL.md").write_text(content, encoding="utf-8")
@@ -177,7 +177,7 @@ def create_skill_dir(
 def scan_and_find(
     examples_dir: str,
     skill_name: str,
-) -> dcc_mcp_core.SkillMetadata:
+) -> meshy_dcc_core.SkillMetadata:
     """Scan examples_dir and return parsed SkillMetadata for *skill_name*.
 
     Raises:
@@ -185,10 +185,10 @@ def scan_and_find(
         AssertionError: If parsing returns None.
 
     """
-    scanner = dcc_mcp_core.SkillScanner()
+    scanner = meshy_dcc_core.SkillScanner()
     dirs = scanner.scan(extra_paths=[examples_dir])
     skill_dir = next(d for d in dirs if Path(d).name == skill_name)
-    meta = dcc_mcp_core.parse_skill_md(skill_dir)
+    meta = meshy_dcc_core.parse_skill_md(skill_dir)
     assert meta is not None, f"parse_skill_md returned None for {skill_name}"
     return meta
 
@@ -210,16 +210,16 @@ def skills_dir() -> str:
 
 
 @pytest.fixture()
-def scanned_metas(examples_dir: str) -> list[dcc_mcp_core.SkillMetadata]:
+def scanned_metas(examples_dir: str) -> list[meshy_dcc_core.SkillMetadata]:
     """Scan all example skills and return a list of parsed SkillMetadata objects.
 
     Useful for tests in TestScanAndParseRoundTrip that iterate over all skills.
     """
-    scanner = dcc_mcp_core.SkillScanner()
+    scanner = meshy_dcc_core.SkillScanner()
     dirs = scanner.scan(extra_paths=[examples_dir])
     metas = []
     for d in dirs:
-        meta = dcc_mcp_core.parse_skill_md(d)
+        meta = meshy_dcc_core.parse_skill_md(d)
         assert meta is not None, f"Failed to parse {d}"
         metas.append(meta)
     return metas
@@ -399,7 +399,7 @@ def wait_tcp_unreachable(host: str, port: int, budget: float = 2.0) -> None:
 def _env_snapshot():
     """Snapshot ``os.environ`` before the first test and restore on teardown.
 
-    Every module-scoped fixture that sets ``DCC_MCP_*`` env vars
+    Every module-scoped fixture that sets ``MESHY_DCC_*`` env vars
     (e.g. ``_isolated_registry_dir``, ``gateway_with_skill_backend``)
     mutates the process-global environment.  Without this guard, a
     module that sets env var X and then fails to tear down cleanly

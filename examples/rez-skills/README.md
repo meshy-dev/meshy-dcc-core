@@ -1,6 +1,6 @@
 # Example Rez Skill Packages
 
-These packages show how to split DCC MCP skills by production context. They are
+These packages show how to split Meshy DCC skills by production context. They are
 tiny on purpose: each package contributes one focused skill, one tool schema,
 and a minimal script so pipeline teams can copy the layout into real Rez
 packages.

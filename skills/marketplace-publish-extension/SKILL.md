@@ -9,10 +9,10 @@ description: >-
   installing or searching extensions — use marketplace-install or
   marketplace-search for that.
 license: MIT-0
-compatibility: "dcc-mcp-core 0.17+, Python 3.7+"
+compatibility: "meshy-dcc-core 0.17+, Python 3.7+"
 allowed-tools: Bash Read Write
 metadata:
-  dcc-mcp:
+  meshy-dcc:
     dcc: python
     version: "0.18.9"  # x-release-please-version
     layer: infrastructure
@@ -23,26 +23,26 @@ metadata:
     tags: "marketplace, publishing, catalog, infrastructure"
     tools: tools.yaml
   openclaw:
-    homepage: https://github.com/dcc-mcp/dcc-mcp-core/blob/main/skills/marketplace-publish-extension/SKILL.md
+    homepage: https://github.com/meshy-dev/meshy-dcc-core/blob/main/skills/marketplace-publish-extension/SKILL.md
 ---
 
 # Marketplace Publish Extension
 
 ## CLI-First Control Path
 
-For marketplace and live-DCC operations, use the `dcc-mcp` skill and
-`dcc-mcp-cli` whenever shell access is available. Its consent-gated install and
+For marketplace and live-DCC operations, use the `meshy-dcc` skill and
+`meshy-dcc-cli` whenever shell access is available. Its consent-gated install and
 `update check` → `update apply` contract is the single source of truth; do not
 invent a package-local CLI bootstrap path.
 
-Publish (register or update) a DCC-MCP Skill, bundle, or Agent Plugin package
+Publish (register or update) a Meshy DCC Skill, bundle, or Agent Plugin package
 to a marketplace catalog (`marketplace.json`).
 
 Prefer the CLI for local and CI publishing:
 
 ```bash
-dcc-mcp-cli marketplace pack ./my-extension --out dist/
-dcc-mcp-cli marketplace publish ./my-extension \
+meshy-dcc-cli marketplace pack ./my-extension --out dist/
+meshy-dcc-cli marketplace publish ./my-extension \
   --catalog ./marketplace.json \
   --install-url https://github.com/<owner>/<repo>/releases/download/v0.1.0/my-extension.zip \
   --sha256 sha256:<digest> \
@@ -60,7 +60,7 @@ push the change.
 
 ## Prerequisites
 
-- dcc-mcp-core installed
+- meshy-dcc-core installed
 - Write access to the target marketplace catalog path
 - Git (if using commit+push mode)
 

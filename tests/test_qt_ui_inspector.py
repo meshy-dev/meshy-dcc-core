@@ -11,12 +11,12 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 import pytest
 
-from dcc_mcp_core import qt_describe_widget
-from dcc_mcp_core import qt_find_widgets
-from dcc_mcp_core import qt_list_windows
-from dcc_mcp_core import qt_snapshot_tree
-from dcc_mcp_core import qt_wait_for_widget
-from dcc_mcp_core import register_qt_ui_inspector
+from meshy_dcc_core import qt_describe_widget
+from meshy_dcc_core import qt_find_widgets
+from meshy_dcc_core import qt_list_windows
+from meshy_dcc_core import qt_snapshot_tree
+from meshy_dcc_core import qt_wait_for_widget
+from meshy_dcc_core import register_qt_ui_inspector
 
 
 @pytest.fixture
@@ -84,7 +84,7 @@ class TestInputValidationRunsBeforeBindingLoad:
 
 class TestWidgetIdentifiers:
     def test_pyside6_wrappers_for_same_native_widget_share_id(self, monkeypatch) -> None:
-        from dcc_mcp_core.skills.qt_ui_inspector import _widget_id
+        from meshy_dcc_core.skills.qt_ui_inspector import _widget_id
 
         class FakePySide6Widget:
             __module__ = "PySide6.QtWidgets"
@@ -166,7 +166,7 @@ class TestWithLiveQt:
     def test_widget_id_is_stable_and_unique(self, qtbot) -> None:
         from PySide6.QtWidgets import QWidget
 
-        from dcc_mcp_core.skills.qt_ui_inspector import _widget_id
+        from meshy_dcc_core.skills.qt_ui_inspector import _widget_id
 
         w1 = QWidget()
         w2 = QWidget()
@@ -235,8 +235,8 @@ class TestWithLiveQt:
     def test_describe_widget_returns_capped_property_snapshot(self, qtbot) -> None:
         from PySide6.QtWidgets import QPushButton
 
-        from dcc_mcp_core.skills.qt_ui_inspector import _PROPERTY_CAP
-        from dcc_mcp_core.skills.qt_ui_inspector import _widget_id
+        from meshy_dcc_core.skills.qt_ui_inspector import _PROPERTY_CAP
+        from meshy_dcc_core.skills.qt_ui_inspector import _widget_id
 
         btn = QPushButton("Click me")
         btn.setObjectName("describable")
@@ -264,7 +264,7 @@ class TestWithLiveQt:
     def test_snapshot_tree_respects_depth_and_node_budget(self, qtbot) -> None:
         from PySide6.QtWidgets import QWidget
 
-        from dcc_mcp_core.skills.qt_ui_inspector import _widget_id
+        from meshy_dcc_core.skills.qt_ui_inspector import _widget_id
 
         # 4-level nesting: root → a → b → c
         root = QWidget()

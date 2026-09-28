@@ -10,53 +10,53 @@ from pathlib import Path
 
 import pytest
 
-import dcc_mcp_core
+import meshy_dcc_core
 
 # ── ScriptLanguage enum ──────────────────────────────────────────────────────
 
 
 class TestScriptLanguage:
     def test_python_exists(self):
-        assert dcc_mcp_core.ScriptLanguage.PYTHON is not None
+        assert meshy_dcc_core.ScriptLanguage.PYTHON is not None
 
     def test_mel_exists(self):
-        assert dcc_mcp_core.ScriptLanguage.MEL is not None
+        assert meshy_dcc_core.ScriptLanguage.MEL is not None
 
     def test_maxscript_exists(self):
-        assert dcc_mcp_core.ScriptLanguage.MAXSCRIPT is not None
+        assert meshy_dcc_core.ScriptLanguage.MAXSCRIPT is not None
 
     def test_hscript_exists(self):
-        assert dcc_mcp_core.ScriptLanguage.HSCRIPT is not None
+        assert meshy_dcc_core.ScriptLanguage.HSCRIPT is not None
 
     def test_vex_exists(self):
-        assert dcc_mcp_core.ScriptLanguage.VEX is not None
+        assert meshy_dcc_core.ScriptLanguage.VEX is not None
 
     def test_lua_exists(self):
-        assert dcc_mcp_core.ScriptLanguage.LUA is not None
+        assert meshy_dcc_core.ScriptLanguage.LUA is not None
 
     def test_csharp_exists(self):
-        assert dcc_mcp_core.ScriptLanguage.CSHARP is not None
+        assert meshy_dcc_core.ScriptLanguage.CSHARP is not None
 
     def test_blueprint_exists(self):
-        assert dcc_mcp_core.ScriptLanguage.BLUEPRINT is not None
+        assert meshy_dcc_core.ScriptLanguage.BLUEPRINT is not None
 
     def test_repr_is_str(self):
-        assert isinstance(repr(dcc_mcp_core.ScriptLanguage.PYTHON), str)
+        assert isinstance(repr(meshy_dcc_core.ScriptLanguage.PYTHON), str)
 
     def test_str_is_str(self):
-        assert isinstance(str(dcc_mcp_core.ScriptLanguage.MEL), str)
+        assert isinstance(str(meshy_dcc_core.ScriptLanguage.MEL), str)
 
     def test_equality_same(self):
-        assert dcc_mcp_core.ScriptLanguage.PYTHON == dcc_mcp_core.ScriptLanguage.PYTHON
+        assert meshy_dcc_core.ScriptLanguage.PYTHON == meshy_dcc_core.ScriptLanguage.PYTHON
 
     def test_equality_different(self):
-        assert dcc_mcp_core.ScriptLanguage.PYTHON != dcc_mcp_core.ScriptLanguage.MEL
+        assert meshy_dcc_core.ScriptLanguage.PYTHON != meshy_dcc_core.ScriptLanguage.MEL
 
     def test_maxscript_ne_python(self):
-        assert dcc_mcp_core.ScriptLanguage.MAXSCRIPT != dcc_mcp_core.ScriptLanguage.PYTHON
+        assert meshy_dcc_core.ScriptLanguage.MAXSCRIPT != meshy_dcc_core.ScriptLanguage.PYTHON
 
     def test_csharp_ne_blueprint(self):
-        assert dcc_mcp_core.ScriptLanguage.CSHARP != dcc_mcp_core.ScriptLanguage.BLUEPRINT
+        assert meshy_dcc_core.ScriptLanguage.CSHARP != meshy_dcc_core.ScriptLanguage.BLUEPRINT
 
 
 # ── DccErrorCode enum ────────────────────────────────────────────────────────
@@ -64,55 +64,55 @@ class TestScriptLanguage:
 
 class TestDccErrorCode:
     def test_connection_failed_exists(self):
-        assert dcc_mcp_core.DccErrorCode.CONNECTION_FAILED is not None
+        assert meshy_dcc_core.DccErrorCode.CONNECTION_FAILED is not None
 
     def test_timeout_exists(self):
-        assert dcc_mcp_core.DccErrorCode.TIMEOUT is not None
+        assert meshy_dcc_core.DccErrorCode.TIMEOUT is not None
 
     def test_script_error_exists(self):
-        assert dcc_mcp_core.DccErrorCode.SCRIPT_ERROR is not None
+        assert meshy_dcc_core.DccErrorCode.SCRIPT_ERROR is not None
 
     def test_not_responding_exists(self):
-        assert dcc_mcp_core.DccErrorCode.NOT_RESPONDING is not None
+        assert meshy_dcc_core.DccErrorCode.NOT_RESPONDING is not None
 
     def test_unsupported_exists(self):
-        assert dcc_mcp_core.DccErrorCode.UNSUPPORTED is not None
+        assert meshy_dcc_core.DccErrorCode.UNSUPPORTED is not None
 
     def test_permission_denied_exists(self):
-        assert dcc_mcp_core.DccErrorCode.PERMISSION_DENIED is not None
+        assert meshy_dcc_core.DccErrorCode.PERMISSION_DENIED is not None
 
     def test_invalid_input_exists(self):
-        assert dcc_mcp_core.DccErrorCode.INVALID_INPUT is not None
+        assert meshy_dcc_core.DccErrorCode.INVALID_INPUT is not None
 
     def test_scene_error_exists(self):
-        assert dcc_mcp_core.DccErrorCode.SCENE_ERROR is not None
+        assert meshy_dcc_core.DccErrorCode.SCENE_ERROR is not None
 
     def test_internal_exists(self):
-        assert dcc_mcp_core.DccErrorCode.INTERNAL is not None
+        assert meshy_dcc_core.DccErrorCode.INTERNAL is not None
 
     def test_repr_is_str(self):
-        assert isinstance(repr(dcc_mcp_core.DccErrorCode.TIMEOUT), str)
+        assert isinstance(repr(meshy_dcc_core.DccErrorCode.TIMEOUT), str)
 
     def test_str_is_str(self):
-        assert isinstance(str(dcc_mcp_core.DccErrorCode.INTERNAL), str)
+        assert isinstance(str(meshy_dcc_core.DccErrorCode.INTERNAL), str)
 
     def test_equality_same(self):
-        assert dcc_mcp_core.DccErrorCode.TIMEOUT == dcc_mcp_core.DccErrorCode.TIMEOUT
+        assert meshy_dcc_core.DccErrorCode.TIMEOUT == meshy_dcc_core.DccErrorCode.TIMEOUT
 
     def test_equality_different(self):
-        assert dcc_mcp_core.DccErrorCode.TIMEOUT != dcc_mcp_core.DccErrorCode.INTERNAL
+        assert meshy_dcc_core.DccErrorCode.TIMEOUT != meshy_dcc_core.DccErrorCode.INTERNAL
 
     def test_all_nine_distinct(self):
         codes = [
-            dcc_mcp_core.DccErrorCode.CONNECTION_FAILED,
-            dcc_mcp_core.DccErrorCode.TIMEOUT,
-            dcc_mcp_core.DccErrorCode.SCRIPT_ERROR,
-            dcc_mcp_core.DccErrorCode.NOT_RESPONDING,
-            dcc_mcp_core.DccErrorCode.UNSUPPORTED,
-            dcc_mcp_core.DccErrorCode.PERMISSION_DENIED,
-            dcc_mcp_core.DccErrorCode.INVALID_INPUT,
-            dcc_mcp_core.DccErrorCode.SCENE_ERROR,
-            dcc_mcp_core.DccErrorCode.INTERNAL,
+            meshy_dcc_core.DccErrorCode.CONNECTION_FAILED,
+            meshy_dcc_core.DccErrorCode.TIMEOUT,
+            meshy_dcc_core.DccErrorCode.SCRIPT_ERROR,
+            meshy_dcc_core.DccErrorCode.NOT_RESPONDING,
+            meshy_dcc_core.DccErrorCode.UNSUPPORTED,
+            meshy_dcc_core.DccErrorCode.PERMISSION_DENIED,
+            meshy_dcc_core.DccErrorCode.INVALID_INPUT,
+            meshy_dcc_core.DccErrorCode.SCENE_ERROR,
+            meshy_dcc_core.DccErrorCode.INTERNAL,
         ]
         # Each pair should be unequal
         for i, a in enumerate(codes):
@@ -126,7 +126,7 @@ class TestDccErrorCode:
 
 class TestDccInfoCreate:
     def test_create_minimal(self):
-        info = dcc_mcp_core.DccInfo(
+        info = meshy_dcc_core.DccInfo(
             dcc_type="maya",
             version="2025",
             platform="windows",
@@ -138,20 +138,20 @@ class TestDccInfoCreate:
         assert info.pid == 12345
 
     def test_python_version_default_none(self):
-        info = dcc_mcp_core.DccInfo("blender", "4.0", "linux", 999)
+        info = meshy_dcc_core.DccInfo("blender", "4.0", "linux", 999)
         assert info.python_version is None
 
     def test_python_version_custom(self):
-        info = dcc_mcp_core.DccInfo("houdini", "20", "macos", 1, python_version="3.11.0")
+        info = meshy_dcc_core.DccInfo("houdini", "20", "macos", 1, python_version="3.11.0")
         assert info.python_version == "3.11.0"
 
     def test_metadata_default_empty(self):
-        info = dcc_mcp_core.DccInfo("3dsmax", "2024", "windows", 42)
+        info = meshy_dcc_core.DccInfo("3dsmax", "2024", "windows", 42)
         assert isinstance(info.metadata, dict)
         assert len(info.metadata) == 0
 
     def test_metadata_custom(self):
-        info = dcc_mcp_core.DccInfo(
+        info = meshy_dcc_core.DccInfo(
             "maya",
             "2025",
             "windows",
@@ -162,38 +162,38 @@ class TestDccInfoCreate:
         assert info.metadata["user"] == "artist"
 
     def test_to_dict_returns_dict(self):
-        info = dcc_mcp_core.DccInfo("maya", "2025", "windows", 12345)
+        info = meshy_dcc_core.DccInfo("maya", "2025", "windows", 12345)
         d = info.to_dict()
         assert isinstance(d, dict)
 
     def test_to_dict_contains_dcc_type(self):
-        info = dcc_mcp_core.DccInfo("blender", "4.2", "linux", 7)
+        info = meshy_dcc_core.DccInfo("blender", "4.2", "linux", 7)
         d = info.to_dict()
         assert "dcc_type" in d or "blender" in str(d)
 
     def test_to_dict_contains_pid(self):
-        info = dcc_mcp_core.DccInfo("maya", "2025", "windows", 9999)
+        info = meshy_dcc_core.DccInfo("maya", "2025", "windows", 9999)
         d = info.to_dict()
         assert 9999 in d.values() or str(9999) in str(d)
 
     def test_repr_is_str(self):
-        info = dcc_mcp_core.DccInfo("maya", "2025", "windows", 1)
+        info = meshy_dcc_core.DccInfo("maya", "2025", "windows", 1)
         assert isinstance(repr(info), str)
 
     def test_repr_nonempty(self):
-        info = dcc_mcp_core.DccInfo("maya", "2025", "windows", 1)
+        info = meshy_dcc_core.DccInfo("maya", "2025", "windows", 1)
         assert len(repr(info)) > 0
 
     def test_dcc_type_field_assignment(self):
-        info = dcc_mcp_core.DccInfo("maya", "2025", "windows", 1)
+        info = meshy_dcc_core.DccInfo("maya", "2025", "windows", 1)
         assert info.dcc_type == "maya"
 
     def test_pid_zero(self):
-        info = dcc_mcp_core.DccInfo("python", "3.11", "linux", 0)
+        info = meshy_dcc_core.DccInfo("python", "3.11", "linux", 0)
         assert info.pid == 0
 
     def test_large_pid(self):
-        info = dcc_mcp_core.DccInfo("maya", "2025", "windows", 999999)
+        info = meshy_dcc_core.DccInfo("maya", "2025", "windows", 999999)
         assert info.pid == 999999
 
 
@@ -202,7 +202,7 @@ class TestDccInfoCreate:
 
 class TestDccCapabilitiesCreate:
     def test_default_all_false(self):
-        caps = dcc_mcp_core.DccCapabilities()
+        caps = meshy_dcc_core.DccCapabilities()
         assert caps.scene_info is False
         assert caps.snapshot is False
         assert caps.undo_redo is False
@@ -211,61 +211,61 @@ class TestDccCapabilitiesCreate:
         assert caps.selection is False
 
     def test_default_script_languages_empty(self):
-        caps = dcc_mcp_core.DccCapabilities()
+        caps = meshy_dcc_core.DccCapabilities()
         assert isinstance(caps.script_languages, list)
         assert len(caps.script_languages) == 0
 
     def test_custom_scene_info_true(self):
-        caps = dcc_mcp_core.DccCapabilities(scene_info=True)
+        caps = meshy_dcc_core.DccCapabilities(scene_info=True)
         assert caps.scene_info is True
 
     def test_custom_snapshot_true(self):
-        caps = dcc_mcp_core.DccCapabilities(snapshot=True)
+        caps = meshy_dcc_core.DccCapabilities(snapshot=True)
         assert caps.snapshot is True
 
     def test_custom_undo_redo_true(self):
-        caps = dcc_mcp_core.DccCapabilities(undo_redo=True)
+        caps = meshy_dcc_core.DccCapabilities(undo_redo=True)
         assert caps.undo_redo is True
 
     def test_custom_progress_reporting_true(self):
-        caps = dcc_mcp_core.DccCapabilities(progress_reporting=True)
+        caps = meshy_dcc_core.DccCapabilities(progress_reporting=True)
         assert caps.progress_reporting is True
 
     def test_custom_file_operations_true(self):
-        caps = dcc_mcp_core.DccCapabilities(file_operations=True)
+        caps = meshy_dcc_core.DccCapabilities(file_operations=True)
         assert caps.file_operations is True
 
     def test_custom_selection_true(self):
-        caps = dcc_mcp_core.DccCapabilities(selection=True)
+        caps = meshy_dcc_core.DccCapabilities(selection=True)
         assert caps.selection is True
 
     def test_extensions_default_empty(self):
-        caps = dcc_mcp_core.DccCapabilities()
+        caps = meshy_dcc_core.DccCapabilities()
         assert isinstance(caps.extensions, dict)
         assert len(caps.extensions) == 0
 
     def test_extensions_custom(self):
-        caps = dcc_mcp_core.DccCapabilities(extensions={"gpu_instancing": True, "alembic": False})
+        caps = meshy_dcc_core.DccCapabilities(extensions={"gpu_instancing": True, "alembic": False})
         assert caps.extensions.get("gpu_instancing") is True
         assert caps.extensions.get("alembic") is False
 
     def test_script_languages_single(self):
-        caps = dcc_mcp_core.DccCapabilities(script_languages=[dcc_mcp_core.ScriptLanguage.PYTHON])
+        caps = meshy_dcc_core.DccCapabilities(script_languages=[meshy_dcc_core.ScriptLanguage.PYTHON])
         assert len(caps.script_languages) == 1
 
     def test_script_languages_multiple(self):
-        caps = dcc_mcp_core.DccCapabilities(
-            script_languages=[dcc_mcp_core.ScriptLanguage.PYTHON, dcc_mcp_core.ScriptLanguage.MEL]
+        caps = meshy_dcc_core.DccCapabilities(
+            script_languages=[meshy_dcc_core.ScriptLanguage.PYTHON, meshy_dcc_core.ScriptLanguage.MEL]
         )
         assert len(caps.script_languages) == 2
 
     def test_repr_is_str(self):
-        caps = dcc_mcp_core.DccCapabilities()
+        caps = meshy_dcc_core.DccCapabilities()
         assert isinstance(repr(caps), str)
 
     def test_full_maya_profile(self):
-        caps = dcc_mcp_core.DccCapabilities(
-            script_languages=[dcc_mcp_core.ScriptLanguage.PYTHON, dcc_mcp_core.ScriptLanguage.MEL],
+        caps = meshy_dcc_core.DccCapabilities(
+            script_languages=[meshy_dcc_core.ScriptLanguage.PYTHON, meshy_dcc_core.ScriptLanguage.MEL],
             scene_info=True,
             snapshot=True,
             undo_redo=True,
@@ -285,77 +285,77 @@ class TestDccCapabilitiesCreate:
 
 class TestDccErrorCreate:
     def test_create_minimal(self):
-        err = dcc_mcp_core.DccError(
-            code=dcc_mcp_core.DccErrorCode.TIMEOUT,
+        err = meshy_dcc_core.DccError(
+            code=meshy_dcc_core.DccErrorCode.TIMEOUT,
             message="Connection timed out",
         )
-        assert err.code == dcc_mcp_core.DccErrorCode.TIMEOUT
+        assert err.code == meshy_dcc_core.DccErrorCode.TIMEOUT
         assert err.message == "Connection timed out"
 
     def test_details_default_none(self):
-        err = dcc_mcp_core.DccError(dcc_mcp_core.DccErrorCode.INTERNAL, "Something broke")
+        err = meshy_dcc_core.DccError(meshy_dcc_core.DccErrorCode.INTERNAL, "Something broke")
         assert err.details is None
 
     def test_details_custom(self):
-        err = dcc_mcp_core.DccError(
-            code=dcc_mcp_core.DccErrorCode.SCRIPT_ERROR,
+        err = meshy_dcc_core.DccError(
+            code=meshy_dcc_core.DccErrorCode.SCRIPT_ERROR,
             message="Script failed",
             details="AttributeError: 'NoneType'",
         )
         assert err.details == "AttributeError: 'NoneType'"
 
     def test_recoverable_default_false(self):
-        err = dcc_mcp_core.DccError(dcc_mcp_core.DccErrorCode.INTERNAL, "oops")
+        err = meshy_dcc_core.DccError(meshy_dcc_core.DccErrorCode.INTERNAL, "oops")
         assert err.recoverable is False
 
     def test_recoverable_true(self):
-        err = dcc_mcp_core.DccError(
-            code=dcc_mcp_core.DccErrorCode.NOT_RESPONDING,
+        err = meshy_dcc_core.DccError(
+            code=meshy_dcc_core.DccErrorCode.NOT_RESPONDING,
             message="DCC not responding",
             recoverable=True,
         )
         assert err.recoverable is True
 
     def test_connection_failed_code(self):
-        err = dcc_mcp_core.DccError(dcc_mcp_core.DccErrorCode.CONNECTION_FAILED, "no host")
-        assert err.code == dcc_mcp_core.DccErrorCode.CONNECTION_FAILED
+        err = meshy_dcc_core.DccError(meshy_dcc_core.DccErrorCode.CONNECTION_FAILED, "no host")
+        assert err.code == meshy_dcc_core.DccErrorCode.CONNECTION_FAILED
 
     def test_permission_denied_code(self):
-        err = dcc_mcp_core.DccError(dcc_mcp_core.DccErrorCode.PERMISSION_DENIED, "access denied")
-        assert err.code == dcc_mcp_core.DccErrorCode.PERMISSION_DENIED
+        err = meshy_dcc_core.DccError(meshy_dcc_core.DccErrorCode.PERMISSION_DENIED, "access denied")
+        assert err.code == meshy_dcc_core.DccErrorCode.PERMISSION_DENIED
 
     def test_invalid_input_code(self):
-        err = dcc_mcp_core.DccError(dcc_mcp_core.DccErrorCode.INVALID_INPUT, "bad params")
-        assert err.code == dcc_mcp_core.DccErrorCode.INVALID_INPUT
+        err = meshy_dcc_core.DccError(meshy_dcc_core.DccErrorCode.INVALID_INPUT, "bad params")
+        assert err.code == meshy_dcc_core.DccErrorCode.INVALID_INPUT
 
     def test_scene_error_code(self):
-        err = dcc_mcp_core.DccError(dcc_mcp_core.DccErrorCode.SCENE_ERROR, "scene parse error")
-        assert err.code == dcc_mcp_core.DccErrorCode.SCENE_ERROR
+        err = meshy_dcc_core.DccError(meshy_dcc_core.DccErrorCode.SCENE_ERROR, "scene parse error")
+        assert err.code == meshy_dcc_core.DccErrorCode.SCENE_ERROR
 
     def test_unsupported_code(self):
-        err = dcc_mcp_core.DccError(dcc_mcp_core.DccErrorCode.UNSUPPORTED, "feature not available")
-        assert err.code == dcc_mcp_core.DccErrorCode.UNSUPPORTED
+        err = meshy_dcc_core.DccError(meshy_dcc_core.DccErrorCode.UNSUPPORTED, "feature not available")
+        assert err.code == meshy_dcc_core.DccErrorCode.UNSUPPORTED
 
     def test_repr_is_str(self):
-        err = dcc_mcp_core.DccError(dcc_mcp_core.DccErrorCode.TIMEOUT, "timeout")
+        err = meshy_dcc_core.DccError(meshy_dcc_core.DccErrorCode.TIMEOUT, "timeout")
         assert isinstance(repr(err), str)
 
     def test_str_is_str(self):
-        err = dcc_mcp_core.DccError(dcc_mcp_core.DccErrorCode.INTERNAL, "err")
+        err = meshy_dcc_core.DccError(meshy_dcc_core.DccErrorCode.INTERNAL, "err")
         assert isinstance(str(err), str)
 
     def test_repr_nonempty(self):
-        err = dcc_mcp_core.DccError(dcc_mcp_core.DccErrorCode.TIMEOUT, "timeout")
+        err = meshy_dcc_core.DccError(meshy_dcc_core.DccErrorCode.TIMEOUT, "timeout")
         assert len(repr(err)) > 0
 
     def test_full_construction(self):
-        err = dcc_mcp_core.DccError(
-            code=dcc_mcp_core.DccErrorCode.SCRIPT_ERROR,
+        err = meshy_dcc_core.DccError(
+            code=meshy_dcc_core.DccErrorCode.SCRIPT_ERROR,
             message="Python script raised an exception",
             details="AttributeError: 'NoneType' object has no attribute 'name'",
             recoverable=True,
         )
-        assert err.code == dcc_mcp_core.DccErrorCode.SCRIPT_ERROR
+        assert err.code == meshy_dcc_core.DccErrorCode.SCRIPT_ERROR
         assert err.message == "Python script raised an exception"
         assert "NoneType" in err.details
         assert err.recoverable is True
@@ -368,79 +368,79 @@ class TestDccErrorCreate:
 
 class TestSkillCatalogCreate:
     def test_create_with_registry(self):
-        reg = dcc_mcp_core.ToolRegistry()
-        catalog = dcc_mcp_core.SkillCatalog(reg)
+        reg = meshy_dcc_core.ToolRegistry()
+        catalog = meshy_dcc_core.SkillCatalog(reg)
         assert catalog is not None
 
     def test_repr_is_str(self):
-        reg = dcc_mcp_core.ToolRegistry()
-        catalog = dcc_mcp_core.SkillCatalog(reg)
+        reg = meshy_dcc_core.ToolRegistry()
+        catalog = meshy_dcc_core.SkillCatalog(reg)
         assert isinstance(repr(catalog), str)
 
     def test_list_skills_empty_initially(self):
-        reg = dcc_mcp_core.ToolRegistry()
-        catalog = dcc_mcp_core.SkillCatalog(reg)
+        reg = meshy_dcc_core.ToolRegistry()
+        catalog = meshy_dcc_core.SkillCatalog(reg)
         skills = catalog.list_skills()
         assert isinstance(skills, list)
 
     def test_loaded_count_zero_initially(self):
-        reg = dcc_mcp_core.ToolRegistry()
-        catalog = dcc_mcp_core.SkillCatalog(reg)
+        reg = meshy_dcc_core.ToolRegistry()
+        catalog = meshy_dcc_core.SkillCatalog(reg)
         assert catalog.loaded_count() == 0
 
     def test_discover_no_paths(self):
-        reg = dcc_mcp_core.ToolRegistry()
-        catalog = dcc_mcp_core.SkillCatalog(reg)
+        reg = meshy_dcc_core.ToolRegistry()
+        catalog = meshy_dcc_core.SkillCatalog(reg)
         # Should not raise
         catalog.discover()
 
     def test_discover_with_extra_paths_nonexistent(self):
-        reg = dcc_mcp_core.ToolRegistry()
-        catalog = dcc_mcp_core.SkillCatalog(reg)
+        reg = meshy_dcc_core.ToolRegistry()
+        catalog = meshy_dcc_core.SkillCatalog(reg)
         catalog.discover(extra_paths=["/nonexistent/path/xyz"])
         skills = catalog.list_skills()
         assert isinstance(skills, list)
 
     def test_discover_with_dcc_name(self):
-        reg = dcc_mcp_core.ToolRegistry()
-        catalog = dcc_mcp_core.SkillCatalog(reg)
+        reg = meshy_dcc_core.ToolRegistry()
+        catalog = meshy_dcc_core.SkillCatalog(reg)
         catalog.discover(dcc_name="maya")
         skills = catalog.list_skills()
         assert isinstance(skills, list)
 
     def test_search_skills_no_args(self):
-        reg = dcc_mcp_core.ToolRegistry()
-        catalog = dcc_mcp_core.SkillCatalog(reg)
+        reg = meshy_dcc_core.ToolRegistry()
+        catalog = meshy_dcc_core.SkillCatalog(reg)
         results = catalog.search_skills()
         assert isinstance(results, list)
 
     def test_search_skills_with_query(self):
-        reg = dcc_mcp_core.ToolRegistry()
-        catalog = dcc_mcp_core.SkillCatalog(reg)
+        reg = meshy_dcc_core.ToolRegistry()
+        catalog = meshy_dcc_core.SkillCatalog(reg)
         results = catalog.search_skills(query="maya")
         assert isinstance(results, list)
 
     def test_search_skills_with_tags(self):
-        reg = dcc_mcp_core.ToolRegistry()
-        catalog = dcc_mcp_core.SkillCatalog(reg)
+        reg = meshy_dcc_core.ToolRegistry()
+        catalog = meshy_dcc_core.SkillCatalog(reg)
         results = catalog.search_skills(tags=["geometry"])
         assert isinstance(results, list)
 
     def test_search_skills_with_dcc(self):
-        reg = dcc_mcp_core.ToolRegistry()
-        catalog = dcc_mcp_core.SkillCatalog(reg)
+        reg = meshy_dcc_core.ToolRegistry()
+        catalog = meshy_dcc_core.SkillCatalog(reg)
         results = catalog.search_skills(dcc="maya")
         assert isinstance(results, list)
 
     def test_search_skills_combined_filters(self):
-        reg = dcc_mcp_core.ToolRegistry()
-        catalog = dcc_mcp_core.SkillCatalog(reg)
+        reg = meshy_dcc_core.ToolRegistry()
+        catalog = meshy_dcc_core.SkillCatalog(reg)
         results = catalog.search_skills(query="sphere", tags=["create"], dcc="maya")
         assert isinstance(results, list)
 
     def test_load_skill_nonexistent_raises_or_false(self):
-        reg = dcc_mcp_core.ToolRegistry()
-        catalog = dcc_mcp_core.SkillCatalog(reg)
+        reg = meshy_dcc_core.ToolRegistry()
+        catalog = meshy_dcc_core.SkillCatalog(reg)
         # Unknown skill: either returns False/empty list or raises ValueError
         try:
             result = catalog.load_skill("nonexistent-skill-xyz")
@@ -449,8 +449,8 @@ class TestSkillCatalogCreate:
             pass  # expected when skill not found
 
     def test_unload_skill_nonexistent_raises_or_false(self):
-        reg = dcc_mcp_core.ToolRegistry()
-        catalog = dcc_mcp_core.SkillCatalog(reg)
+        reg = meshy_dcc_core.ToolRegistry()
+        catalog = meshy_dcc_core.SkillCatalog(reg)
         try:
             result = catalog.unload_skill("nonexistent-skill-xyz")
             assert result is False or result == 0 or isinstance(result, int)
@@ -458,39 +458,39 @@ class TestSkillCatalogCreate:
             pass
 
     def test_is_loaded_nonexistent_false(self):
-        reg = dcc_mcp_core.ToolRegistry()
-        catalog = dcc_mcp_core.SkillCatalog(reg)
+        reg = meshy_dcc_core.ToolRegistry()
+        catalog = meshy_dcc_core.SkillCatalog(reg)
         assert catalog.is_loaded("nonexistent-skill-xyz") is False
 
     def test_get_skill_info_nonexistent_returns_none(self):
-        reg = dcc_mcp_core.ToolRegistry()
-        catalog = dcc_mcp_core.SkillCatalog(reg)
+        reg = meshy_dcc_core.ToolRegistry()
+        catalog = meshy_dcc_core.SkillCatalog(reg)
         result = catalog.get_skill_info("nonexistent-skill-xyz")
         assert result is None
 
     def test_list_skills_status_loaded_empty(self):
-        reg = dcc_mcp_core.ToolRegistry()
-        catalog = dcc_mcp_core.SkillCatalog(reg)
+        reg = meshy_dcc_core.ToolRegistry()
+        catalog = meshy_dcc_core.SkillCatalog(reg)
         skills = catalog.list_skills(status="loaded")
         assert isinstance(skills, list)
         assert len(skills) == 0
 
     def test_list_skills_status_unloaded(self):
-        reg = dcc_mcp_core.ToolRegistry()
-        catalog = dcc_mcp_core.SkillCatalog(reg)
+        reg = meshy_dcc_core.ToolRegistry()
+        catalog = meshy_dcc_core.SkillCatalog(reg)
         skills = catalog.list_skills(status="unloaded")
         assert isinstance(skills, list)
 
     def test_discover_returns_none_or_int(self):
-        reg = dcc_mcp_core.ToolRegistry()
-        catalog = dcc_mcp_core.SkillCatalog(reg)
+        reg = meshy_dcc_core.ToolRegistry()
+        catalog = meshy_dcc_core.SkillCatalog(reg)
         result = catalog.discover()
         # discover() may return None or int count
         assert result is None or isinstance(result, int)
 
     def test_loaded_count_returns_int(self):
-        reg = dcc_mcp_core.ToolRegistry()
-        catalog = dcc_mcp_core.SkillCatalog(reg)
+        reg = meshy_dcc_core.ToolRegistry()
+        catalog = meshy_dcc_core.SkillCatalog(reg)
         count = catalog.loaded_count()
         assert isinstance(count, int)
         assert count >= 0
@@ -503,8 +503,8 @@ class TestSkillCatalogWithRealSkills:
     def catalog_with_skills(self):
         """Create catalog with actual skill examples."""
         skills_dir = Path(__file__).parent.parent / "examples" / "skills"
-        reg = dcc_mcp_core.ToolRegistry()
-        catalog = dcc_mcp_core.SkillCatalog(reg)
+        reg = meshy_dcc_core.ToolRegistry()
+        catalog = meshy_dcc_core.SkillCatalog(reg)
         if skills_dir.is_dir():
             catalog.discover(extra_paths=[str(skills_dir)])
         return catalog
@@ -583,8 +583,8 @@ class TestSkillSummaryFields:
     @pytest.fixture
     def first_summary(self):
         skills_dir = Path(__file__).parent.parent / "examples" / "skills"
-        reg = dcc_mcp_core.ToolRegistry()
-        catalog = dcc_mcp_core.SkillCatalog(reg)
+        reg = meshy_dcc_core.ToolRegistry()
+        catalog = meshy_dcc_core.SkillCatalog(reg)
         if skills_dir.is_dir():
             catalog.discover(extra_paths=[str(skills_dir)])
         skills = catalog.list_skills()

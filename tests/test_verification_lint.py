@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import pytest
 
-from dcc_mcp_core.verification import DeclarationFinding
-from dcc_mcp_core.verification import find_unpaired_write_verbs
-from dcc_mcp_core.verification import lint_tool_table
+from meshy_dcc_core.verification import DeclarationFinding
+from meshy_dcc_core.verification import find_unpaired_write_verbs
+from meshy_dcc_core.verification import lint_tool_table
 
 
 def _tool(name, read_only=False, **extra):
@@ -114,10 +114,10 @@ class TestKeySpellingCompatibility:
         from pathlib import Path
 
         # yaml_loads is Rust-backed, so this one test needs the native extension.
-        pytest.importorskip("dcc_mcp_core._core", reason="native extension not compiled")
-        from dcc_mcp_core import yaml_loads
+        pytest.importorskip("meshy_dcc_core._core", reason="native extension not compiled")
+        from meshy_dcc_core import yaml_loads
 
-        tools_yaml = Path(__file__).parent.parent / "python" / "dcc_mcp_core" / "skills" / "media" / "tools.yaml"
+        tools_yaml = Path(__file__).parent.parent / "python" / "meshy_dcc_core" / "skills" / "media" / "tools.yaml"
         table = yaml_loads(tools_yaml.read_text(encoding="utf-8")) or {}
         tools = table.get("tools") or []
         assert tools, "the bundled media skill must declare a tool table"

@@ -26,11 +26,11 @@ entries:
       reason: "The Meshy Blender adapter build is not published yet."
     install:
       type: host-package
-      url: "https://cdn.meshy.ai/meshy-dcc-core/adapters/blender/0.2.11/dcc_mcp_blender_addon_macos_v0.2.11.zip"
+      url: "https://cdn.meshy.ai/meshy-dcc-core/adapters/blender/0.2.11/meshy_dcc_blender_addon_macos_v0.2.11.zip"
       sha256: "b91a136be5af9a13b6dc8d6d3c914de997a135748b6a70200ef388f5de0c937b"
       host:
         uninstall:
-          - ["{dcc_path}", "--command", "extension", "remove", "user_default.dcc_mcp_blender"]
+          - ["{dcc_path}", "--command", "extension", "remove", "user_default.meshy_dcc_blender"]
         steps:
           - ["{dcc_path}", "--command", "extension", "install-file", "-r", "user_default", "-e", "{package}"]
         launch: ["{executable}"]

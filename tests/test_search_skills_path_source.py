@@ -1,14 +1,14 @@
 """End-to-end regression for the search_skills path-source rank penalty (#1403).
 
 Skills discovered from user-curated locations (`extra_paths`,
-`DCC_MCP_*_SKILL_PATHS`, `~/.dcc-mcp/<dcc>/skills`) must outrank skills
+`MESHY_DCC_*_SKILL_PATHS`, `~/.meshy-dcc/<dcc>/skills`) must outrank skills
 that come from bundled / platform-installed directories for neutral
 queries. This protects the "I'm iterating on my local skill" workflow
 from being drowned out by starter material shipped with the package.
 
 Exercises the full Rust catalog → Python binding path; the source
-tagging happens in `crates/dcc-mcp-skills/src/scanner.rs::scan_with_sources`
-and the rank multiplier in `crates/dcc-mcp-skills/src/catalog/scoring.rs`.
+tagging happens in `crates/meshy-dcc-skills/src/scanner.rs::scan_with_sources`
+and the rank multiplier in `crates/meshy-dcc-skills/src/catalog/scoring.rs`.
 """
 
 from __future__ import annotations
@@ -18,8 +18,8 @@ from pathlib import Path
 
 import pytest
 
-from dcc_mcp_core import SkillCatalog
-from dcc_mcp_core import ToolRegistry
+from meshy_dcc_core import SkillCatalog
+from meshy_dcc_core import ToolRegistry
 
 
 def _write_skill(skills_root: Path, name: str, *, description: str, dcc: str = "maya") -> None:
@@ -33,7 +33,7 @@ def _write_skill(skills_root: Path, name: str, *, description: str, dcc: str = "
                 f"name: {name}",
                 f"description: {description}",
                 "metadata:",
-                "  dcc-mcp:",
+                "  meshy-dcc:",
                 f"    dcc: {dcc}",
                 "---",
                 f"# {name}",
@@ -56,17 +56,17 @@ def test_env_var_outranks_explicit_arg_only_when_bundled(tmp_path: Path) -> None
     _write_skill(explicit_root, "alpha-render", description="render bake helpers")
     _write_skill(env_root, "beta-render", description="render bake helpers")
 
-    saved = os.environ.get("DCC_MCP_MAYA_SKILL_PATHS")
-    os.environ["DCC_MCP_MAYA_SKILL_PATHS"] = str(env_root)
+    saved = os.environ.get("MESHY_DCC_MAYA_SKILL_PATHS")
+    os.environ["MESHY_DCC_MAYA_SKILL_PATHS"] = str(env_root)
     try:
         catalog = SkillCatalog(ToolRegistry())
         catalog.discover(extra_paths=[str(explicit_root)], dcc_name="maya")
         names = [s.name for s in catalog.search_skills(query="render bake")]
     finally:
         if saved is None:
-            os.environ.pop("DCC_MCP_MAYA_SKILL_PATHS", None)
+            os.environ.pop("MESHY_DCC_MAYA_SKILL_PATHS", None)
         else:
-            os.environ["DCC_MCP_MAYA_SKILL_PATHS"] = saved
+            os.environ["MESHY_DCC_MAYA_SKILL_PATHS"] = saved
 
     assert "alpha-render" in names
     assert "beta-render" in names

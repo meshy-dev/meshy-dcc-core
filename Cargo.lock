@@ -1105,1042 +1105,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a4ae5f15dda3c708c0ade84bfee31ccab44a3da4f88015ed22f63732abe300c8"
 
 [[package]]
-name = "dcc-mcp-actions"
-version = "0.20.36"
-dependencies = [
- "dashmap",
- "dcc-mcp-models",
- "dcc-mcp-naming",
- "dcc-mcp-pybridge",
- "parking_lot",
- "pyo3",
- "pyo3-stub-gen",
- "pyo3-stub-gen-derive",
- "serde",
- "serde_json",
- "tracing",
- "workspace-hack",
-]
-
-[[package]]
-name = "dcc-mcp-artefact"
-version = "0.20.36"
-dependencies = [
- "chrono",
- "hex",
- "parking_lot",
- "pyo3",
- "pyo3-stub-gen",
- "pyo3-stub-gen-derive",
- "serde",
- "serde_json",
- "sha2 0.11.0",
- "tempfile",
- "thiserror",
- "tracing",
- "uuid",
- "workspace-hack",
-]
-
-[[package]]
-name = "dcc-mcp-attestation"
-version = "0.20.36"
-dependencies = [
- "sha2 0.11.0",
- "sigstore-verify",
- "thiserror",
- "workspace-hack",
-]
-
-[[package]]
-name = "dcc-mcp-capture"
-version = "0.20.36"
-dependencies = [
- "image",
- "libc",
- "pyo3",
- "pyo3-stub-gen",
- "pyo3-stub-gen-derive",
- "serde",
- "serde_json",
- "tempfile",
- "thiserror",
- "tracing",
- "windows",
- "workspace-hack",
-]
-
-[[package]]
-name = "dcc-mcp-catalog"
-version = "0.20.36"
-dependencies = [
- "dcc-mcp-gateway-search",
- "jsonschema",
- "serde",
- "serde_json",
- "serde_yaml_ng",
- "sha2 0.11.0",
- "tempfile",
- "thiserror",
- "uuid",
- "workspace-hack",
-]
-
-[[package]]
-name = "dcc-mcp-cli"
-version = "0.20.36"
-dependencies = [
- "anyhow",
- "axum",
- "base64 0.22.1",
- "clap",
- "dcc-mcp-actions",
- "dcc-mcp-attestation",
- "dcc-mcp-catalog",
- "dcc-mcp-gateway-ensure",
- "dcc-mcp-http",
- "dcc-mcp-http-server",
- "dcc-mcp-jsonrpc",
- "dcc-mcp-marketplace",
- "dcc-mcp-models",
- "dcc-mcp-sidecar",
- "dcc-mcp-skills",
- "dcc-mcp-transport",
- "dcc-mcp-updater",
- "dirs",
- "flate2",
- "hex",
- "jsonschema",
- "libc",
- "reqwest 0.13.4",
- "semver",
- "serde",
- "serde_json",
- "sha2 0.11.0",
- "tar",
- "tempfile",
- "thiserror",
- "tokio",
- "toon-format",
- "uuid",
- "windows-sys 0.61.2",
- "workspace-hack",
- "zip",
-]
-
-[[package]]
-name = "dcc-mcp-core"
-version = "0.20.36"
-dependencies = [
- "dcc-mcp-actions",
- "dcc-mcp-artefact",
- "dcc-mcp-capture",
- "dcc-mcp-gateway",
- "dcc-mcp-host",
- "dcc-mcp-http",
- "dcc-mcp-http-py",
- "dcc-mcp-logging",
- "dcc-mcp-models",
- "dcc-mcp-naming",
- "dcc-mcp-paths",
- "dcc-mcp-process",
- "dcc-mcp-protocols",
- "dcc-mcp-pybridge",
- "dcc-mcp-sandbox",
- "dcc-mcp-scheduler",
- "dcc-mcp-shm",
- "dcc-mcp-skills",
- "dcc-mcp-telemetry",
- "dcc-mcp-transport",
- "dcc-mcp-usd",
- "dcc-mcp-wire",
- "dcc-mcp-workflow",
- "pyo3",
- "pyo3-stub-gen",
- "reqwest 0.13.4",
- "serde_json",
- "workspace-hack",
-]
-
-[[package]]
-name = "dcc-mcp-db"
-version = "0.20.36"
-dependencies = [
- "dcc-mcp-models",
- "dcc-mcp-paths",
- "rusqlite",
- "serde",
- "serde_json",
- "tempfile",
- "thiserror",
- "tracing",
- "workspace-hack",
-]
-
-[[package]]
-name = "dcc-mcp-gateway"
-version = "0.20.36"
-dependencies = [
- "axum",
- "base64 0.22.1",
- "chrono",
- "criterion",
- "dashmap",
- "dcc-mcp-actions",
- "dcc-mcp-attestation",
- "dcc-mcp-catalog",
- "dcc-mcp-db",
- "dcc-mcp-gateway-admin",
- "dcc-mcp-gateway-core",
- "dcc-mcp-gateway-ensure",
- "dcc-mcp-jsonrpc",
- "dcc-mcp-marketplace",
- "dcc-mcp-models",
- "dcc-mcp-naming",
- "dcc-mcp-skill-rest",
- "dcc-mcp-skills",
- "dcc-mcp-telemetry",
- "dcc-mcp-test-utils",
- "dcc-mcp-transport",
- "dcc-mcp-updater",
- "dcc-mcp-workflow",
- "futures",
- "futures-util",
- "http",
- "lru",
- "opentelemetry",
- "parking_lot",
- "prometheus",
- "proptest",
- "reqwest 0.13.4",
- "rusqlite",
- "serde",
- "serde_json",
- "serde_yaml_ng",
- "slab",
- "socket2",
- "sysinfo",
- "tempfile",
- "thiserror",
- "tokio",
- "tokio-stream",
- "tokio-util",
- "toon-format",
- "tower",
- "tower-http",
- "tracing",
- "uuid",
- "workspace-hack",
-]
-
-[[package]]
-name = "dcc-mcp-gateway-admin"
-version = "0.20.36"
-dependencies = [
- "axum",
- "chrono",
- "dcc-mcp-catalog",
- "dcc-mcp-db",
- "dcc-mcp-models",
- "dcc-mcp-test-utils",
- "dcc-mcp-transport",
- "dunce",
- "parking_lot",
- "proptest",
- "reqwest 0.13.4",
- "serde",
- "serde_json",
- "tempfile",
- "uuid",
- "workspace-hack",
-]
-
-[[package]]
-name = "dcc-mcp-gateway-core"
-version = "0.20.36"
-dependencies = [
- "chrono",
- "dcc-mcp-gateway-search",
- "dcc-mcp-jsonrpc",
- "dcc-mcp-naming",
- "serde",
- "serde_json",
- "tracing",
- "uuid",
- "workspace-hack",
-]
-
-[[package]]
-name = "dcc-mcp-gateway-ensure"
-version = "0.20.36"
-dependencies = [
- "anyhow",
- "dcc-mcp-test-utils",
- "libc",
- "reqwest 0.13.4",
- "serde",
- "serde_json",
- "tempfile",
- "tokio",
- "tracing",
- "workspace-hack",
-]
-
-[[package]]
-name = "dcc-mcp-gateway-search"
-version = "0.20.36"
-dependencies = [
- "nucleo-matcher",
- "serde",
- "serde_json",
- "uuid",
- "workspace-hack",
-]
-
-[[package]]
-name = "dcc-mcp-host"
-version = "0.20.36"
-dependencies = [
- "parking_lot",
- "pyo3",
- "pyo3-stub-gen",
- "pyo3-stub-gen-derive",
- "thiserror",
- "tokio",
- "tracing",
- "workspace-hack",
-]
-
-[[package]]
-name = "dcc-mcp-host-rpc"
-version = "0.20.36"
-dependencies = [
- "async-trait",
- "futures-util",
- "serde",
- "serde_json",
- "thiserror",
- "tokio",
- "tokio-tungstenite",
- "workspace-hack",
-]
-
-[[package]]
-name = "dcc-mcp-http"
-version = "0.20.36"
-dependencies = [
- "axum",
- "axum-test",
- "base64 0.22.1",
- "chrono",
- "dashmap",
- "dcc-mcp-actions",
- "dcc-mcp-artefact",
- "dcc-mcp-capture",
- "dcc-mcp-gateway",
- "dcc-mcp-host",
- "dcc-mcp-http-server",
- "dcc-mcp-http-types",
- "dcc-mcp-job",
- "dcc-mcp-jsonrpc",
- "dcc-mcp-models",
- "dcc-mcp-naming",
- "dcc-mcp-protocols",
- "dcc-mcp-pybridge",
- "dcc-mcp-sandbox",
- "dcc-mcp-skill-rest",
- "dcc-mcp-skills",
- "dcc-mcp-telemetry",
- "dcc-mcp-transport",
- "dcc-mcp-workflow",
- "futures",
- "http",
- "http-body-util",
- "parking_lot",
- "pin-project-lite",
- "pyo3",
- "pyo3-stub-gen",
- "pyo3-stub-gen-derive",
- "reqwest 0.13.4",
- "rmcp",
- "rstest",
- "serde",
- "serde_json",
- "serde_yaml_ng",
- "socket2",
- "tempfile",
- "thiserror",
- "tokio",
- "tokio-stream",
- "tokio-util",
- "tower",
- "tower-http",
- "tracing",
- "tracing-subscriber",
- "uuid",
- "workspace-hack",
-]
-
-[[package]]
-name = "dcc-mcp-http-py"
-version = "0.20.36"
-dependencies = [
- "dcc-mcp-actions",
- "dcc-mcp-artefact",
- "dcc-mcp-host",
- "dcc-mcp-http",
- "dcc-mcp-http-types",
- "dcc-mcp-jsonrpc",
- "dcc-mcp-models",
- "dcc-mcp-pybridge",
- "dcc-mcp-skill-rest",
- "dcc-mcp-skills",
- "parking_lot",
- "pyo3",
- "pyo3-stub-gen",
- "pyo3-stub-gen-derive",
- "serde_json",
- "tokio",
- "tracing",
- "workspace-hack",
-]
-
-[[package]]
-name = "dcc-mcp-http-server"
-version = "0.20.36"
-dependencies = [
- "async-trait",
- "base64 0.22.1",
- "chrono",
- "dashmap",
- "dcc-mcp-actions",
- "dcc-mcp-gateway-core",
- "dcc-mcp-host",
- "dcc-mcp-http-types",
- "dcc-mcp-job",
- "dcc-mcp-jsonrpc",
- "dcc-mcp-models",
- "dcc-mcp-naming",
- "dcc-mcp-protocols",
- "dcc-mcp-skill-rest",
- "dcc-mcp-skills",
- "dcc-mcp-telemetry",
- "dcc-mcp-workflow",
- "parking_lot",
- "rmcp",
- "serde",
- "serde_json",
- "tempfile",
- "thiserror",
- "tokio",
- "tokio-util",
- "tracing",
- "uuid",
- "workspace-hack",
-]
-
-[[package]]
-name = "dcc-mcp-http-types"
-version = "0.20.36"
-dependencies = [
- "base64 0.22.1",
- "dcc-mcp-gateway-core",
- "dcc-mcp-jsonrpc",
- "dcc-mcp-models",
- "serde",
- "serde_json",
- "serde_yaml_ng",
- "thiserror",
- "workspace-hack",
-]
-
-[[package]]
-name = "dcc-mcp-job"
-version = "0.20.36"
-dependencies = [
- "chrono",
- "dashmap",
- "fs4",
- "parking_lot",
- "rusqlite",
- "serde",
- "serde_json",
- "thiserror",
- "tokio-util",
- "tracing",
- "uuid",
- "windows-sys 0.61.2",
- "workspace-hack",
-]
-
-[[package]]
-name = "dcc-mcp-jsonrpc"
-version = "0.20.36"
-dependencies = [
- "base64 0.22.1",
- "dcc-mcp-protocols",
- "dcc-mcp-wire",
- "serde",
- "serde_json",
- "workspace-hack",
-]
-
-[[package]]
-name = "dcc-mcp-logging"
-version = "0.20.36"
-dependencies = [
- "dcc-mcp-paths",
- "parking_lot",
- "pyo3",
- "pyo3-stub-gen",
- "pyo3-stub-gen-derive",
- "sysinfo",
- "time",
- "tracing",
- "tracing-appender",
- "tracing-subscriber",
- "tracing-tracy",
- "workspace-hack",
-]
-
-[[package]]
-name = "dcc-mcp-marketplace"
-version = "0.20.36"
-dependencies = [
- "dcc-mcp-attestation",
- "dcc-mcp-catalog",
- "dcc-mcp-test-utils",
- "reqwest 0.13.4",
- "semver",
- "serde",
- "serde_json",
- "serde_yaml_ng",
- "sha2 0.11.0",
- "tempfile",
- "thiserror",
- "tokio",
- "workspace-hack",
- "zip",
-]
-
-[[package]]
-name = "dcc-mcp-models"
-version = "0.20.36"
-dependencies = [
- "dcc-mcp-naming",
- "dcc-mcp-pybridge",
- "jsonschema",
- "pyo3",
- "pyo3-stub-gen",
- "pyo3-stub-gen-derive",
- "rmp-serde",
- "serde",
- "serde_json",
- "sha2 0.11.0",
- "thiserror",
- "uuid",
- "workspace-hack",
-]
-
-[[package]]
-name = "dcc-mcp-naming"
-version = "0.20.36"
-dependencies = [
- "pyo3",
- "pyo3-stub-gen",
- "pyo3-stub-gen-derive",
- "thiserror",
- "workspace-hack",
-]
-
-[[package]]
-name = "dcc-mcp-paths"
-version = "0.20.36"
-dependencies = [
- "dirs",
- "pyo3",
- "pyo3-stub-gen",
- "pyo3-stub-gen-derive",
- "serde_json",
- "workspace-hack",
-]
-
-[[package]]
-name = "dcc-mcp-process"
-version = "0.20.36"
-dependencies = [
- "dcc-mcp-models",
- "ipckit",
- "parking_lot",
- "pyo3",
- "pyo3-stub-gen",
- "pyo3-stub-gen-derive",
- "rstest",
- "serde",
- "serde_json",
- "sysinfo",
- "thiserror",
- "tokio",
- "tracing",
- "windows-sys 0.61.2",
- "workspace-hack",
-]
-
-[[package]]
-name = "dcc-mcp-protocols"
-version = "0.20.36"
-dependencies = [
- "dcc-mcp-models",
- "parking_lot",
- "pyo3",
- "pyo3-stub-gen",
- "pyo3-stub-gen-derive",
- "serde",
- "serde_json",
- "uuid",
- "workspace-hack",
-]
-
-[[package]]
-name = "dcc-mcp-pybridge"
-version = "0.20.36"
-dependencies = [
- "dcc-mcp-pybridge-derive",
- "pyo3",
- "pyo3-stub-gen",
- "pyo3-stub-gen-derive",
- "serde",
- "serde_json",
- "serde_yaml_ng",
- "tracing",
- "workspace-hack",
-]
-
-[[package]]
-name = "dcc-mcp-pybridge-derive"
-version = "0.20.36"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
- "workspace-hack",
-]
-
-[[package]]
-name = "dcc-mcp-sandbox"
-version = "0.20.36"
-dependencies = [
- "dcc-mcp-pybridge",
- "parking_lot",
- "pyo3",
- "pyo3-stub-gen",
- "pyo3-stub-gen-derive",
- "serde",
- "serde_json",
- "thiserror",
- "tokio",
- "tracing",
- "workspace-hack",
-]
-
-[[package]]
-name = "dcc-mcp-scheduler"
-version = "0.20.36"
-dependencies = [
- "axum",
- "bytes",
- "chrono",
- "chrono-tz",
- "cron",
- "dashmap",
- "dcc-mcp-workflow",
- "hex",
- "hmac 0.13.0",
- "parking_lot",
- "pyo3",
- "pyo3-stub-gen",
- "pyo3-stub-gen-derive",
- "rand 0.10.1",
- "serde",
- "serde_json",
- "serde_yaml_ng",
- "sha2 0.11.0",
- "subtle",
- "tempfile",
- "thiserror",
- "tokio",
- "tracing",
- "uuid",
- "workspace-hack",
-]
-
-[[package]]
-name = "dcc-mcp-semantic"
-version = "0.20.36"
-dependencies = [
- "anyhow",
- "fastembed",
- "pyo3",
- "thiserror",
- "tracing",
- "workspace-hack",
-]
-
-[[package]]
-name = "dcc-mcp-server"
-version = "0.20.36"
-dependencies = [
- "anyhow",
- "axum",
- "clap",
- "dcc-mcp-actions",
- "dcc-mcp-capture",
- "dcc-mcp-catalog",
- "dcc-mcp-gateway",
- "dcc-mcp-http",
- "dcc-mcp-jsonrpc",
- "dcc-mcp-logging",
- "dcc-mcp-protocols",
- "dcc-mcp-sidecar",
- "dcc-mcp-skills",
- "dcc-mcp-telemetry",
- "dcc-mcp-test-utils",
- "dcc-mcp-transport",
- "dcc-mcp-updater",
- "futures-util",
- "reqwest 0.13.4",
- "rusqlite",
- "sentry",
- "serde",
- "serde_json",
- "serde_yaml_ng",
- "sysinfo",
- "tempfile",
- "tokio",
- "tokio-stream",
- "tokio-tungstenite",
- "tower-http",
- "tracing",
- "tracing-subscriber",
- "uuid",
- "workspace-hack",
-]
-
-[[package]]
-name = "dcc-mcp-shm"
-version = "0.20.36"
-dependencies = [
- "bytemuck",
- "ipckit",
- "libc",
- "lz4_flex",
- "parking_lot",
- "pyo3",
- "pyo3-stub-gen",
- "pyo3-stub-gen-derive",
- "serde",
- "serde_json",
- "thiserror",
- "tracing",
- "uuid",
- "workspace-hack",
-]
-
-[[package]]
-name = "dcc-mcp-sidecar"
-version = "0.20.36"
-dependencies = [
- "anyhow",
- "axum",
- "clap",
- "dcc-mcp-gateway",
- "dcc-mcp-gateway-ensure",
- "dcc-mcp-host-rpc",
- "dcc-mcp-jsonrpc",
- "dcc-mcp-test-utils",
- "dcc-mcp-transport",
- "libc",
- "reqwest 0.13.4",
- "serde",
- "serde_json",
- "socket2",
- "sysinfo",
- "tempfile",
- "tokio",
- "tracing",
- "uuid",
- "workspace-hack",
-]
-
-[[package]]
-name = "dcc-mcp-skill-rest"
-version = "0.20.36"
-dependencies = [
- "async-trait",
- "axum",
- "axum-test",
- "chrono",
- "dcc-mcp-actions",
- "dcc-mcp-gateway-search",
- "dcc-mcp-models",
- "dcc-mcp-skills",
- "dcc-mcp-test-utils",
- "futures",
- "parking_lot",
- "serde",
- "serde_json",
- "tokio",
- "tokio-stream",
- "tokio-util",
- "tracing",
- "utoipa",
- "utoipa-scalar",
- "uuid",
- "workspace-hack",
-]
-
-[[package]]
-name = "dcc-mcp-skills"
-version = "0.20.36"
-dependencies = [
- "criterion",
- "dashmap",
- "dcc-mcp-actions",
- "dcc-mcp-gateway-search",
- "dcc-mcp-models",
- "dcc-mcp-naming",
- "dcc-mcp-paths",
- "dcc-mcp-pybridge",
- "dcc-mcp-test-utils",
- "dirs",
- "notify",
- "parking_lot",
- "pyo3",
- "pyo3-stub-gen",
- "pyo3-stub-gen-derive",
- "rand 0.10.1",
- "serde",
- "serde_json",
- "serde_yaml_ng",
- "sha2 0.11.0",
- "tempfile",
- "thiserror",
- "tracing",
- "uuid",
- "workspace-hack",
-]
-
-[[package]]
-name = "dcc-mcp-skills-bench"
-version = "0.20.36"
-dependencies = [
- "criterion",
- "dcc-mcp-actions",
- "dcc-mcp-gateway-search",
- "dcc-mcp-models",
- "dcc-mcp-skills",
- "rand 0.10.1",
- "serde",
- "serde_json",
- "workspace-hack",
-]
-
-[[package]]
-name = "dcc-mcp-telemetry"
-version = "0.20.36"
-dependencies = [
- "opentelemetry",
- "opentelemetry-otlp",
- "opentelemetry-stdout",
- "opentelemetry_sdk",
- "parking_lot",
- "prometheus",
- "pyo3",
- "pyo3-stub-gen",
- "pyo3-stub-gen-derive",
- "rstest",
- "serde",
- "serde_json",
- "thiserror",
- "tokio",
- "tonic",
- "tracing",
- "tracing-opentelemetry",
- "tracing-subscriber",
- "workspace-hack",
-]
-
-[[package]]
-name = "dcc-mcp-test-utils"
-version = "0.20.36"
-dependencies = [
- "dcc-mcp-skill-rest",
- "serde_json",
- "tokio",
- "workspace-hack",
-]
-
-[[package]]
-name = "dcc-mcp-transport"
-version = "0.20.36"
-dependencies = [
- "criterion",
- "dashmap",
- "dcc-mcp-models",
- "dcc-mcp-pybridge",
- "fs4",
- "ipckit",
- "mdns-sd",
- "parking_lot",
- "pyo3",
- "pyo3-stub-gen",
- "pyo3-stub-gen-derive",
- "rmp-serde",
- "rstest",
- "serde",
- "serde_json",
- "sysinfo",
- "tempfile",
- "thiserror",
- "tokio",
- "tracing",
- "turmoil",
- "uuid",
- "workspace-hack",
-]
-
-[[package]]
-name = "dcc-mcp-tunnel-agent"
-version = "0.20.36"
-dependencies = [
- "anyhow",
- "clap",
- "dashmap",
- "dcc-mcp-tunnel-protocol",
- "serde",
- "thiserror",
- "tokio",
- "tracing",
- "tracing-subscriber",
- "workspace-hack",
-]
-
-[[package]]
-name = "dcc-mcp-tunnel-protocol"
-version = "0.20.36"
-dependencies = [
- "jsonwebtoken",
- "rmp-serde",
- "serde",
- "serde_json",
- "thiserror",
- "tokio",
- "workspace-hack",
-]
-
-[[package]]
-name = "dcc-mcp-tunnel-relay"
-version = "0.20.36"
-dependencies = [
- "anyhow",
- "axum",
- "clap",
- "dashmap",
- "dcc-mcp-tunnel-agent",
- "dcc-mcp-tunnel-protocol",
- "futures-util",
- "parking_lot",
- "reqwest 0.13.4",
- "serde",
- "serde_json",
- "tokio",
- "tokio-tungstenite",
- "tracing",
- "tracing-subscriber",
- "uuid",
- "workspace-hack",
-]
-
-[[package]]
-name = "dcc-mcp-updater"
-version = "0.20.36"
-dependencies = [
- "anyhow",
- "fs4",
- "reqwest 0.13.4",
- "serde",
- "serde_json",
- "sha2 0.11.0",
- "tempfile",
- "thiserror",
- "tokio",
- "tracing",
- "workspace-hack",
-]
-
-[[package]]
-name = "dcc-mcp-usd"
-version = "0.20.36"
-dependencies = [
- "dcc-mcp-protocols",
- "pyo3",
- "pyo3-stub-gen",
- "pyo3-stub-gen-derive",
- "serde",
- "serde_json",
- "thiserror",
- "tracing",
- "uuid",
- "workspace-hack",
-]
-
-[[package]]
-name = "dcc-mcp-wire"
-version = "0.20.36"
-dependencies = [
- "dcc-mcp-protocols",
- "dcc-mcp-pybridge",
- "pyo3",
- "pyo3-stub-gen",
- "pyo3-stub-gen-derive",
- "serde",
- "serde_json",
- "thiserror",
- "workspace-hack",
-]
-
-[[package]]
-name = "dcc-mcp-workflow"
-version = "0.20.36"
-dependencies = [
- "base64 0.22.1",
- "chrono",
- "criterion",
- "dcc-mcp-actions",
- "dcc-mcp-artefact",
- "dcc-mcp-models",
- "dcc-mcp-naming",
- "glob",
- "jsonpath-rust",
- "parking_lot",
- "pyo3",
- "pyo3-stub-gen",
- "pyo3-stub-gen-derive",
- "rusqlite",
- "serde",
- "serde_json",
- "serde_yaml_ng",
- "sha2 0.11.0",
- "tempfile",
- "thiserror",
- "tokio",
- "tokio-util",
- "tracing",
- "uuid",
- "workspace-hack",
-]
-
-[[package]]
 name = "debugid"
 version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3988,6 +2952,1042 @@ name = "memchr"
 version = "2.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6b947ae49db0d222b1dbc6b113ce7248a3fc3a6ca21b696717bfc000ba4484d8"
+
+[[package]]
+name = "meshy-dcc-actions"
+version = "0.2.0"
+dependencies = [
+ "dashmap",
+ "meshy-dcc-models",
+ "meshy-dcc-naming",
+ "meshy-dcc-pybridge",
+ "parking_lot",
+ "pyo3",
+ "pyo3-stub-gen",
+ "pyo3-stub-gen-derive",
+ "serde",
+ "serde_json",
+ "tracing",
+ "workspace-hack",
+]
+
+[[package]]
+name = "meshy-dcc-artefact"
+version = "0.2.0"
+dependencies = [
+ "chrono",
+ "hex",
+ "parking_lot",
+ "pyo3",
+ "pyo3-stub-gen",
+ "pyo3-stub-gen-derive",
+ "serde",
+ "serde_json",
+ "sha2 0.11.0",
+ "tempfile",
+ "thiserror",
+ "tracing",
+ "uuid",
+ "workspace-hack",
+]
+
+[[package]]
+name = "meshy-dcc-attestation"
+version = "0.2.0"
+dependencies = [
+ "sha2 0.11.0",
+ "sigstore-verify",
+ "thiserror",
+ "workspace-hack",
+]
+
+[[package]]
+name = "meshy-dcc-capture"
+version = "0.2.0"
+dependencies = [
+ "image",
+ "libc",
+ "pyo3",
+ "pyo3-stub-gen",
+ "pyo3-stub-gen-derive",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror",
+ "tracing",
+ "windows",
+ "workspace-hack",
+]
+
+[[package]]
+name = "meshy-dcc-catalog"
+version = "0.2.0"
+dependencies = [
+ "jsonschema",
+ "meshy-dcc-gateway-search",
+ "serde",
+ "serde_json",
+ "serde_yaml_ng",
+ "sha2 0.11.0",
+ "tempfile",
+ "thiserror",
+ "uuid",
+ "workspace-hack",
+]
+
+[[package]]
+name = "meshy-dcc-cli"
+version = "0.2.0"
+dependencies = [
+ "anyhow",
+ "axum",
+ "base64 0.22.1",
+ "clap",
+ "dirs",
+ "flate2",
+ "hex",
+ "jsonschema",
+ "libc",
+ "meshy-dcc-actions",
+ "meshy-dcc-attestation",
+ "meshy-dcc-catalog",
+ "meshy-dcc-gateway-ensure",
+ "meshy-dcc-http",
+ "meshy-dcc-http-server",
+ "meshy-dcc-jsonrpc",
+ "meshy-dcc-marketplace",
+ "meshy-dcc-models",
+ "meshy-dcc-sidecar",
+ "meshy-dcc-skills",
+ "meshy-dcc-transport",
+ "meshy-dcc-updater",
+ "reqwest 0.13.4",
+ "semver",
+ "serde",
+ "serde_json",
+ "sha2 0.11.0",
+ "tar",
+ "tempfile",
+ "thiserror",
+ "tokio",
+ "toon-format",
+ "uuid",
+ "windows-sys 0.61.2",
+ "workspace-hack",
+ "zip",
+]
+
+[[package]]
+name = "meshy-dcc-core"
+version = "0.2.0"
+dependencies = [
+ "meshy-dcc-actions",
+ "meshy-dcc-artefact",
+ "meshy-dcc-capture",
+ "meshy-dcc-gateway",
+ "meshy-dcc-host",
+ "meshy-dcc-http",
+ "meshy-dcc-http-py",
+ "meshy-dcc-logging",
+ "meshy-dcc-models",
+ "meshy-dcc-naming",
+ "meshy-dcc-paths",
+ "meshy-dcc-process",
+ "meshy-dcc-protocols",
+ "meshy-dcc-pybridge",
+ "meshy-dcc-sandbox",
+ "meshy-dcc-scheduler",
+ "meshy-dcc-shm",
+ "meshy-dcc-skills",
+ "meshy-dcc-telemetry",
+ "meshy-dcc-transport",
+ "meshy-dcc-usd",
+ "meshy-dcc-wire",
+ "meshy-dcc-workflow",
+ "pyo3",
+ "pyo3-stub-gen",
+ "reqwest 0.13.4",
+ "serde_json",
+ "workspace-hack",
+]
+
+[[package]]
+name = "meshy-dcc-db"
+version = "0.2.0"
+dependencies = [
+ "meshy-dcc-models",
+ "meshy-dcc-paths",
+ "rusqlite",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror",
+ "tracing",
+ "workspace-hack",
+]
+
+[[package]]
+name = "meshy-dcc-gateway"
+version = "0.2.0"
+dependencies = [
+ "axum",
+ "base64 0.22.1",
+ "chrono",
+ "criterion",
+ "dashmap",
+ "futures",
+ "futures-util",
+ "http",
+ "lru",
+ "meshy-dcc-actions",
+ "meshy-dcc-attestation",
+ "meshy-dcc-catalog",
+ "meshy-dcc-db",
+ "meshy-dcc-gateway-admin",
+ "meshy-dcc-gateway-core",
+ "meshy-dcc-gateway-ensure",
+ "meshy-dcc-jsonrpc",
+ "meshy-dcc-marketplace",
+ "meshy-dcc-models",
+ "meshy-dcc-naming",
+ "meshy-dcc-skill-rest",
+ "meshy-dcc-skills",
+ "meshy-dcc-telemetry",
+ "meshy-dcc-test-utils",
+ "meshy-dcc-transport",
+ "meshy-dcc-updater",
+ "meshy-dcc-workflow",
+ "opentelemetry",
+ "parking_lot",
+ "prometheus",
+ "proptest",
+ "reqwest 0.13.4",
+ "rusqlite",
+ "serde",
+ "serde_json",
+ "serde_yaml_ng",
+ "slab",
+ "socket2",
+ "sysinfo",
+ "tempfile",
+ "thiserror",
+ "tokio",
+ "tokio-stream",
+ "tokio-util",
+ "toon-format",
+ "tower",
+ "tower-http",
+ "tracing",
+ "uuid",
+ "workspace-hack",
+]
+
+[[package]]
+name = "meshy-dcc-gateway-admin"
+version = "0.2.0"
+dependencies = [
+ "axum",
+ "chrono",
+ "dunce",
+ "meshy-dcc-catalog",
+ "meshy-dcc-db",
+ "meshy-dcc-models",
+ "meshy-dcc-test-utils",
+ "meshy-dcc-transport",
+ "parking_lot",
+ "proptest",
+ "reqwest 0.13.4",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "uuid",
+ "workspace-hack",
+]
+
+[[package]]
+name = "meshy-dcc-gateway-core"
+version = "0.2.0"
+dependencies = [
+ "chrono",
+ "meshy-dcc-gateway-search",
+ "meshy-dcc-jsonrpc",
+ "meshy-dcc-naming",
+ "serde",
+ "serde_json",
+ "tracing",
+ "uuid",
+ "workspace-hack",
+]
+
+[[package]]
+name = "meshy-dcc-gateway-ensure"
+version = "0.2.0"
+dependencies = [
+ "anyhow",
+ "libc",
+ "meshy-dcc-test-utils",
+ "reqwest 0.13.4",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "tokio",
+ "tracing",
+ "workspace-hack",
+]
+
+[[package]]
+name = "meshy-dcc-gateway-search"
+version = "0.2.0"
+dependencies = [
+ "nucleo-matcher",
+ "serde",
+ "serde_json",
+ "uuid",
+ "workspace-hack",
+]
+
+[[package]]
+name = "meshy-dcc-host"
+version = "0.2.0"
+dependencies = [
+ "parking_lot",
+ "pyo3",
+ "pyo3-stub-gen",
+ "pyo3-stub-gen-derive",
+ "thiserror",
+ "tokio",
+ "tracing",
+ "workspace-hack",
+]
+
+[[package]]
+name = "meshy-dcc-host-rpc"
+version = "0.2.0"
+dependencies = [
+ "async-trait",
+ "futures-util",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "tokio",
+ "tokio-tungstenite",
+ "workspace-hack",
+]
+
+[[package]]
+name = "meshy-dcc-http"
+version = "0.2.0"
+dependencies = [
+ "axum",
+ "axum-test",
+ "base64 0.22.1",
+ "chrono",
+ "dashmap",
+ "futures",
+ "http",
+ "http-body-util",
+ "meshy-dcc-actions",
+ "meshy-dcc-artefact",
+ "meshy-dcc-capture",
+ "meshy-dcc-gateway",
+ "meshy-dcc-host",
+ "meshy-dcc-http-server",
+ "meshy-dcc-http-types",
+ "meshy-dcc-job",
+ "meshy-dcc-jsonrpc",
+ "meshy-dcc-models",
+ "meshy-dcc-naming",
+ "meshy-dcc-protocols",
+ "meshy-dcc-pybridge",
+ "meshy-dcc-sandbox",
+ "meshy-dcc-skill-rest",
+ "meshy-dcc-skills",
+ "meshy-dcc-telemetry",
+ "meshy-dcc-transport",
+ "meshy-dcc-workflow",
+ "parking_lot",
+ "pin-project-lite",
+ "pyo3",
+ "pyo3-stub-gen",
+ "pyo3-stub-gen-derive",
+ "reqwest 0.13.4",
+ "rmcp",
+ "rstest",
+ "serde",
+ "serde_json",
+ "serde_yaml_ng",
+ "socket2",
+ "tempfile",
+ "thiserror",
+ "tokio",
+ "tokio-stream",
+ "tokio-util",
+ "tower",
+ "tower-http",
+ "tracing",
+ "tracing-subscriber",
+ "uuid",
+ "workspace-hack",
+]
+
+[[package]]
+name = "meshy-dcc-http-py"
+version = "0.2.0"
+dependencies = [
+ "meshy-dcc-actions",
+ "meshy-dcc-artefact",
+ "meshy-dcc-host",
+ "meshy-dcc-http",
+ "meshy-dcc-http-types",
+ "meshy-dcc-jsonrpc",
+ "meshy-dcc-models",
+ "meshy-dcc-pybridge",
+ "meshy-dcc-skill-rest",
+ "meshy-dcc-skills",
+ "parking_lot",
+ "pyo3",
+ "pyo3-stub-gen",
+ "pyo3-stub-gen-derive",
+ "serde_json",
+ "tokio",
+ "tracing",
+ "workspace-hack",
+]
+
+[[package]]
+name = "meshy-dcc-http-server"
+version = "0.2.0"
+dependencies = [
+ "async-trait",
+ "base64 0.22.1",
+ "chrono",
+ "dashmap",
+ "meshy-dcc-actions",
+ "meshy-dcc-gateway-core",
+ "meshy-dcc-host",
+ "meshy-dcc-http-types",
+ "meshy-dcc-job",
+ "meshy-dcc-jsonrpc",
+ "meshy-dcc-models",
+ "meshy-dcc-naming",
+ "meshy-dcc-protocols",
+ "meshy-dcc-skill-rest",
+ "meshy-dcc-skills",
+ "meshy-dcc-telemetry",
+ "meshy-dcc-workflow",
+ "parking_lot",
+ "rmcp",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror",
+ "tokio",
+ "tokio-util",
+ "tracing",
+ "uuid",
+ "workspace-hack",
+]
+
+[[package]]
+name = "meshy-dcc-http-types"
+version = "0.2.0"
+dependencies = [
+ "base64 0.22.1",
+ "meshy-dcc-gateway-core",
+ "meshy-dcc-jsonrpc",
+ "meshy-dcc-models",
+ "serde",
+ "serde_json",
+ "serde_yaml_ng",
+ "thiserror",
+ "workspace-hack",
+]
+
+[[package]]
+name = "meshy-dcc-job"
+version = "0.2.0"
+dependencies = [
+ "chrono",
+ "dashmap",
+ "fs4",
+ "parking_lot",
+ "rusqlite",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "tokio-util",
+ "tracing",
+ "uuid",
+ "windows-sys 0.61.2",
+ "workspace-hack",
+]
+
+[[package]]
+name = "meshy-dcc-jsonrpc"
+version = "0.2.0"
+dependencies = [
+ "base64 0.22.1",
+ "meshy-dcc-protocols",
+ "meshy-dcc-wire",
+ "serde",
+ "serde_json",
+ "workspace-hack",
+]
+
+[[package]]
+name = "meshy-dcc-logging"
+version = "0.2.0"
+dependencies = [
+ "meshy-dcc-paths",
+ "parking_lot",
+ "pyo3",
+ "pyo3-stub-gen",
+ "pyo3-stub-gen-derive",
+ "sysinfo",
+ "time",
+ "tracing",
+ "tracing-appender",
+ "tracing-subscriber",
+ "tracing-tracy",
+ "workspace-hack",
+]
+
+[[package]]
+name = "meshy-dcc-marketplace"
+version = "0.2.0"
+dependencies = [
+ "meshy-dcc-attestation",
+ "meshy-dcc-catalog",
+ "meshy-dcc-test-utils",
+ "reqwest 0.13.4",
+ "semver",
+ "serde",
+ "serde_json",
+ "serde_yaml_ng",
+ "sha2 0.11.0",
+ "tempfile",
+ "thiserror",
+ "tokio",
+ "workspace-hack",
+ "zip",
+]
+
+[[package]]
+name = "meshy-dcc-models"
+version = "0.2.0"
+dependencies = [
+ "jsonschema",
+ "meshy-dcc-naming",
+ "meshy-dcc-pybridge",
+ "pyo3",
+ "pyo3-stub-gen",
+ "pyo3-stub-gen-derive",
+ "rmp-serde",
+ "serde",
+ "serde_json",
+ "sha2 0.11.0",
+ "thiserror",
+ "uuid",
+ "workspace-hack",
+]
+
+[[package]]
+name = "meshy-dcc-naming"
+version = "0.2.0"
+dependencies = [
+ "pyo3",
+ "pyo3-stub-gen",
+ "pyo3-stub-gen-derive",
+ "thiserror",
+ "workspace-hack",
+]
+
+[[package]]
+name = "meshy-dcc-paths"
+version = "0.2.0"
+dependencies = [
+ "dirs",
+ "pyo3",
+ "pyo3-stub-gen",
+ "pyo3-stub-gen-derive",
+ "serde_json",
+ "workspace-hack",
+]
+
+[[package]]
+name = "meshy-dcc-process"
+version = "0.2.0"
+dependencies = [
+ "ipckit",
+ "meshy-dcc-models",
+ "parking_lot",
+ "pyo3",
+ "pyo3-stub-gen",
+ "pyo3-stub-gen-derive",
+ "rstest",
+ "serde",
+ "serde_json",
+ "sysinfo",
+ "thiserror",
+ "tokio",
+ "tracing",
+ "windows-sys 0.61.2",
+ "workspace-hack",
+]
+
+[[package]]
+name = "meshy-dcc-protocols"
+version = "0.2.0"
+dependencies = [
+ "meshy-dcc-models",
+ "parking_lot",
+ "pyo3",
+ "pyo3-stub-gen",
+ "pyo3-stub-gen-derive",
+ "serde",
+ "serde_json",
+ "uuid",
+ "workspace-hack",
+]
+
+[[package]]
+name = "meshy-dcc-pybridge"
+version = "0.2.0"
+dependencies = [
+ "meshy-dcc-pybridge-derive",
+ "pyo3",
+ "pyo3-stub-gen",
+ "pyo3-stub-gen-derive",
+ "serde",
+ "serde_json",
+ "serde_yaml_ng",
+ "tracing",
+ "workspace-hack",
+]
+
+[[package]]
+name = "meshy-dcc-pybridge-derive"
+version = "0.2.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+ "workspace-hack",
+]
+
+[[package]]
+name = "meshy-dcc-sandbox"
+version = "0.2.0"
+dependencies = [
+ "meshy-dcc-pybridge",
+ "parking_lot",
+ "pyo3",
+ "pyo3-stub-gen",
+ "pyo3-stub-gen-derive",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "tokio",
+ "tracing",
+ "workspace-hack",
+]
+
+[[package]]
+name = "meshy-dcc-scheduler"
+version = "0.2.0"
+dependencies = [
+ "axum",
+ "bytes",
+ "chrono",
+ "chrono-tz",
+ "cron",
+ "dashmap",
+ "hex",
+ "hmac 0.13.0",
+ "meshy-dcc-workflow",
+ "parking_lot",
+ "pyo3",
+ "pyo3-stub-gen",
+ "pyo3-stub-gen-derive",
+ "rand 0.10.1",
+ "serde",
+ "serde_json",
+ "serde_yaml_ng",
+ "sha2 0.11.0",
+ "subtle",
+ "tempfile",
+ "thiserror",
+ "tokio",
+ "tracing",
+ "uuid",
+ "workspace-hack",
+]
+
+[[package]]
+name = "meshy-dcc-semantic"
+version = "0.2.0"
+dependencies = [
+ "anyhow",
+ "fastembed",
+ "pyo3",
+ "thiserror",
+ "tracing",
+ "workspace-hack",
+]
+
+[[package]]
+name = "meshy-dcc-server"
+version = "0.2.0"
+dependencies = [
+ "anyhow",
+ "axum",
+ "clap",
+ "futures-util",
+ "meshy-dcc-actions",
+ "meshy-dcc-capture",
+ "meshy-dcc-catalog",
+ "meshy-dcc-gateway",
+ "meshy-dcc-http",
+ "meshy-dcc-jsonrpc",
+ "meshy-dcc-logging",
+ "meshy-dcc-protocols",
+ "meshy-dcc-sidecar",
+ "meshy-dcc-skills",
+ "meshy-dcc-telemetry",
+ "meshy-dcc-test-utils",
+ "meshy-dcc-transport",
+ "meshy-dcc-updater",
+ "reqwest 0.13.4",
+ "rusqlite",
+ "sentry",
+ "serde",
+ "serde_json",
+ "serde_yaml_ng",
+ "sysinfo",
+ "tempfile",
+ "tokio",
+ "tokio-stream",
+ "tokio-tungstenite",
+ "tower-http",
+ "tracing",
+ "tracing-subscriber",
+ "uuid",
+ "workspace-hack",
+]
+
+[[package]]
+name = "meshy-dcc-shm"
+version = "0.2.0"
+dependencies = [
+ "bytemuck",
+ "ipckit",
+ "libc",
+ "lz4_flex",
+ "parking_lot",
+ "pyo3",
+ "pyo3-stub-gen",
+ "pyo3-stub-gen-derive",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "tracing",
+ "uuid",
+ "workspace-hack",
+]
+
+[[package]]
+name = "meshy-dcc-sidecar"
+version = "0.2.0"
+dependencies = [
+ "anyhow",
+ "axum",
+ "clap",
+ "libc",
+ "meshy-dcc-gateway",
+ "meshy-dcc-gateway-ensure",
+ "meshy-dcc-host-rpc",
+ "meshy-dcc-jsonrpc",
+ "meshy-dcc-test-utils",
+ "meshy-dcc-transport",
+ "reqwest 0.13.4",
+ "serde",
+ "serde_json",
+ "socket2",
+ "sysinfo",
+ "tempfile",
+ "tokio",
+ "tracing",
+ "uuid",
+ "workspace-hack",
+]
+
+[[package]]
+name = "meshy-dcc-skill-rest"
+version = "0.2.0"
+dependencies = [
+ "async-trait",
+ "axum",
+ "axum-test",
+ "chrono",
+ "futures",
+ "meshy-dcc-actions",
+ "meshy-dcc-gateway-search",
+ "meshy-dcc-models",
+ "meshy-dcc-skills",
+ "meshy-dcc-test-utils",
+ "parking_lot",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tokio-stream",
+ "tokio-util",
+ "tracing",
+ "utoipa",
+ "utoipa-scalar",
+ "uuid",
+ "workspace-hack",
+]
+
+[[package]]
+name = "meshy-dcc-skills"
+version = "0.2.0"
+dependencies = [
+ "criterion",
+ "dashmap",
+ "dirs",
+ "meshy-dcc-actions",
+ "meshy-dcc-gateway-search",
+ "meshy-dcc-models",
+ "meshy-dcc-naming",
+ "meshy-dcc-paths",
+ "meshy-dcc-pybridge",
+ "meshy-dcc-test-utils",
+ "notify",
+ "parking_lot",
+ "pyo3",
+ "pyo3-stub-gen",
+ "pyo3-stub-gen-derive",
+ "rand 0.10.1",
+ "serde",
+ "serde_json",
+ "serde_yaml_ng",
+ "sha2 0.11.0",
+ "tempfile",
+ "thiserror",
+ "tracing",
+ "uuid",
+ "workspace-hack",
+]
+
+[[package]]
+name = "meshy-dcc-skills-bench"
+version = "0.2.0"
+dependencies = [
+ "criterion",
+ "meshy-dcc-actions",
+ "meshy-dcc-gateway-search",
+ "meshy-dcc-models",
+ "meshy-dcc-skills",
+ "rand 0.10.1",
+ "serde",
+ "serde_json",
+ "workspace-hack",
+]
+
+[[package]]
+name = "meshy-dcc-telemetry"
+version = "0.2.0"
+dependencies = [
+ "opentelemetry",
+ "opentelemetry-otlp",
+ "opentelemetry-stdout",
+ "opentelemetry_sdk",
+ "parking_lot",
+ "prometheus",
+ "pyo3",
+ "pyo3-stub-gen",
+ "pyo3-stub-gen-derive",
+ "rstest",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "tokio",
+ "tonic",
+ "tracing",
+ "tracing-opentelemetry",
+ "tracing-subscriber",
+ "workspace-hack",
+]
+
+[[package]]
+name = "meshy-dcc-test-utils"
+version = "0.2.0"
+dependencies = [
+ "meshy-dcc-skill-rest",
+ "serde_json",
+ "tokio",
+ "workspace-hack",
+]
+
+[[package]]
+name = "meshy-dcc-transport"
+version = "0.2.0"
+dependencies = [
+ "criterion",
+ "dashmap",
+ "fs4",
+ "ipckit",
+ "mdns-sd",
+ "meshy-dcc-models",
+ "meshy-dcc-pybridge",
+ "parking_lot",
+ "pyo3",
+ "pyo3-stub-gen",
+ "pyo3-stub-gen-derive",
+ "rmp-serde",
+ "rstest",
+ "serde",
+ "serde_json",
+ "sysinfo",
+ "tempfile",
+ "thiserror",
+ "tokio",
+ "tracing",
+ "turmoil",
+ "uuid",
+ "workspace-hack",
+]
+
+[[package]]
+name = "meshy-dcc-tunnel-agent"
+version = "0.2.0"
+dependencies = [
+ "anyhow",
+ "clap",
+ "dashmap",
+ "meshy-dcc-tunnel-protocol",
+ "serde",
+ "thiserror",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+ "workspace-hack",
+]
+
+[[package]]
+name = "meshy-dcc-tunnel-protocol"
+version = "0.2.0"
+dependencies = [
+ "jsonwebtoken",
+ "rmp-serde",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "tokio",
+ "workspace-hack",
+]
+
+[[package]]
+name = "meshy-dcc-tunnel-relay"
+version = "0.2.0"
+dependencies = [
+ "anyhow",
+ "axum",
+ "clap",
+ "dashmap",
+ "futures-util",
+ "meshy-dcc-tunnel-agent",
+ "meshy-dcc-tunnel-protocol",
+ "parking_lot",
+ "reqwest 0.13.4",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tokio-tungstenite",
+ "tracing",
+ "tracing-subscriber",
+ "uuid",
+ "workspace-hack",
+]
+
+[[package]]
+name = "meshy-dcc-updater"
+version = "0.2.0"
+dependencies = [
+ "anyhow",
+ "fs4",
+ "reqwest 0.13.4",
+ "serde",
+ "serde_json",
+ "sha2 0.11.0",
+ "tempfile",
+ "thiserror",
+ "tokio",
+ "tracing",
+ "workspace-hack",
+]
+
+[[package]]
+name = "meshy-dcc-usd"
+version = "0.2.0"
+dependencies = [
+ "meshy-dcc-protocols",
+ "pyo3",
+ "pyo3-stub-gen",
+ "pyo3-stub-gen-derive",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "tracing",
+ "uuid",
+ "workspace-hack",
+]
+
+[[package]]
+name = "meshy-dcc-wire"
+version = "0.2.0"
+dependencies = [
+ "meshy-dcc-protocols",
+ "meshy-dcc-pybridge",
+ "pyo3",
+ "pyo3-stub-gen",
+ "pyo3-stub-gen-derive",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "workspace-hack",
+]
+
+[[package]]
+name = "meshy-dcc-workflow"
+version = "0.2.0"
+dependencies = [
+ "base64 0.22.1",
+ "chrono",
+ "criterion",
+ "glob",
+ "jsonpath-rust",
+ "meshy-dcc-actions",
+ "meshy-dcc-artefact",
+ "meshy-dcc-models",
+ "meshy-dcc-naming",
+ "parking_lot",
+ "pyo3",
+ "pyo3-stub-gen",
+ "pyo3-stub-gen-derive",
+ "rusqlite",
+ "serde",
+ "serde_json",
+ "serde_yaml_ng",
+ "sha2 0.11.0",
+ "tempfile",
+ "thiserror",
+ "tokio",
+ "tokio-util",
+ "tracing",
+ "uuid",
+ "workspace-hack",
+]
 
 [[package]]
 name = "mime"

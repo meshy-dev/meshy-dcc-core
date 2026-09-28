@@ -29,7 +29,7 @@ def _install_sop_report() -> dict:
                 "id": "execute",
                 "description": "Execute the validated plan.",
                 "why": "Planning does not mutate the host.",
-                "command": ["dcc-mcp-example", "install", "--yes"],
+                "command": ["meshy-dcc-example", "install", "--yes"],
             }
         ],
         "receipt_path": None,
@@ -42,14 +42,14 @@ def _install_sop_report() -> dict:
 
 
 def _verify_install_sop_validation(profile: str) -> None:
-    from dcc_mcp_core import validate_install_sop_report
+    from meshy_dcc_core import validate_install_sop_report
 
     report = _install_sop_report()
     if profile == "lite_py37":
         try:
             validate_install_sop_report(report)
         except RuntimeError as exc:
-            if "native dcc-mcp-core wheel" not in str(exc):
+            if "native meshy-dcc-core wheel" not in str(exc):
                 raise
         else:
             raise RuntimeError("lite_py37 silently claimed native Install SOP validation")
@@ -79,35 +79,35 @@ def _verify_profile(profile: str) -> None:
     _verify_install_sop_validation(profile)
 
     if profile == "native_py37":
-        from dcc_mcp_core import ToolRegistry
+        from meshy_dcc_core import ToolRegistry
 
         registry = ToolRegistry()
         if registry.count_actions() != 0:
             raise RuntimeError("new ToolRegistry must be empty")
     else:
         try:
-            importlib.import_module("dcc_mcp_core._core")
+            importlib.import_module("meshy_dcc_core._core")
         except ImportError:
             pass
         else:
-            raise RuntimeError("lite_py37 must not contain dcc_mcp_core._core")
+            raise RuntimeError("lite_py37 must not contain meshy_dcc_core._core")
 
-        from dcc_mcp_core import ENV_DISABLE_ACCUMULATED_SKILLS
-        from dcc_mcp_core import ENV_DISABLE_DEFAULT_SKILL_PATHS
-        from dcc_mcp_core import ENV_SKILL_PATHS
-        from dcc_mcp_core import ENV_TEAM_SKILL_PATHS
-        from dcc_mcp_core import ENV_USER_SKILL_PATHS
-        from dcc_mcp_core import create_skill_server
-        from dcc_mcp_core import json_dumps
-        from dcc_mcp_core import json_loads
-        from dcc_mcp_core import parse_skill_md
-        from dcc_mcp_core import skills_helper
-        import dcc_mcp_core._json_codec as json_codec
-        from dcc_mcp_core.host import BlockingDispatcher
-        from dcc_mcp_core.host import StandaloneHost
-        from dcc_mcp_core.skill import skill_success
-        from dcc_mcp_core.wire import normalize_tool_arguments
-        from dcc_mcp_core.wire import normalize_tool_meta
+        from meshy_dcc_core import ENV_DISABLE_ACCUMULATED_SKILLS
+        from meshy_dcc_core import ENV_DISABLE_DEFAULT_SKILL_PATHS
+        from meshy_dcc_core import ENV_SKILL_PATHS
+        from meshy_dcc_core import ENV_TEAM_SKILL_PATHS
+        from meshy_dcc_core import ENV_USER_SKILL_PATHS
+        from meshy_dcc_core import create_skill_server
+        from meshy_dcc_core import json_dumps
+        from meshy_dcc_core import json_loads
+        from meshy_dcc_core import parse_skill_md
+        from meshy_dcc_core import skills_helper
+        import meshy_dcc_core._json_codec as json_codec
+        from meshy_dcc_core.host import BlockingDispatcher
+        from meshy_dcc_core.host import StandaloneHost
+        from meshy_dcc_core.skill import skill_success
+        from meshy_dcc_core.wire import normalize_tool_arguments
+        from meshy_dcc_core.wire import normalize_tool_meta
 
         if json_dumps is not skills_helper.json_dumps or json_dumps is not json_codec.json_dumps:
             raise RuntimeError("lite_py37 json_dumps aliases do not share one callable")
@@ -129,18 +129,18 @@ def _verify_profile(profile: str) -> None:
             else:
                 raise RuntimeError("lite_py37 arguments accepted a non-object root")
 
-        if ENV_DISABLE_DEFAULT_SKILL_PATHS != "DCC_MCP_DISABLE_DEFAULT_SKILL_PATHS":
+        if ENV_DISABLE_DEFAULT_SKILL_PATHS != "MESHY_DCC_DISABLE_DEFAULT_SKILL_PATHS":
             raise RuntimeError("lite_py37 exposed an invalid default-skill-path flag")
-        if ENV_DISABLE_ACCUMULATED_SKILLS != "DCC_MCP_DISABLE_ACCUMULATED_SKILLS":
+        if ENV_DISABLE_ACCUMULATED_SKILLS != "MESHY_DCC_DISABLE_ACCUMULATED_SKILLS":
             raise RuntimeError("lite_py37 exposed an invalid accumulated-skill flag")
-        if ENV_SKILL_PATHS != "DCC_MCP_SKILL_PATHS":
+        if ENV_SKILL_PATHS != "MESHY_DCC_SKILL_PATHS":
             raise RuntimeError("lite_py37 exposed an invalid skill-path variable")
-        if ENV_USER_SKILL_PATHS != "DCC_MCP_USER_SKILL_PATHS":
+        if ENV_USER_SKILL_PATHS != "MESHY_DCC_USER_SKILL_PATHS":
             raise RuntimeError("lite_py37 exposed an invalid user skill-path variable")
-        if ENV_TEAM_SKILL_PATHS != "DCC_MCP_TEAM_SKILL_PATHS":
+        if ENV_TEAM_SKILL_PATHS != "MESHY_DCC_TEAM_SKILL_PATHS":
             raise RuntimeError("lite_py37 exposed an invalid team skill-path variable")
 
-        original_skill_paths = os.environ.get("DCC_MCP_SKILL_PATHS")
+        original_skill_paths = os.environ.get("MESHY_DCC_SKILL_PATHS")
         with tempfile.TemporaryDirectory() as skill_dir:
             skill_path = Path(skill_dir) / "public-smoke"
             skill_path.mkdir()
@@ -151,7 +151,7 @@ def _verify_profile(profile: str) -> None:
                 b"name: py37-public-smoke\n"
                 b"description: Public factory discovery smoke\n"
                 b"metadata:\n"
-                b"  dcc-mcp:\n"
+                b"  meshy-dcc:\n"
                 b"    dcc: maya\n"
                 b'    version: "1.2.3"  # smoke version\n'
                 b"    tags: [py37, smoke]\n"
@@ -174,9 +174,9 @@ def _verify_profile(profile: str) -> None:
                 if getattr(parsed, field) != getattr(discovered, field):
                     raise RuntimeError(f"lite_py37 skill metadata diverged for {field}")
             launch_env = server._launch_environment()
-            if skill_dir not in launch_env.get("DCC_MCP_SKILL_PATHS", "").split(os.pathsep):
+            if skill_dir not in launch_env.get("MESHY_DCC_SKILL_PATHS", "").split(os.pathsep):
                 raise RuntimeError("lite_py37 extra_paths did not reach the sidecar launch environment")
-            if launch_env.get("DCC_MCP_DISABLE_ACCUMULATED_SKILLS") != "1":
+            if launch_env.get("MESHY_DCC_DISABLE_ACCUMULATED_SKILLS") != "1":
                 raise RuntimeError("lite_py37 accumulated=False did not reach the sidecar launch environment")
             try:
                 server.load_skill("py37-public-smoke")
@@ -185,7 +185,7 @@ def _verify_profile(profile: str) -> None:
                     raise
             else:
                 raise RuntimeError("lite_py37 metadata-only server silently claimed skill activation")
-        if os.environ.get("DCC_MCP_SKILL_PATHS") != original_skill_paths:
+        if os.environ.get("MESHY_DCC_SKILL_PATHS") != original_skill_paths:
             raise RuntimeError("lite_py37 public factory mutated the host skill-path environment")
 
         try:

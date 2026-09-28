@@ -191,11 +191,11 @@ def _verify_isolated_root(root: Path) -> None:
     sys.path.insert(0, str(root))
     sys.meta_path.insert(0, _BlockTypingExtensions())
 
-    from dcc_mcp_core._typing import Literal
-    from dcc_mcp_core._typing import Protocol
-    from dcc_mcp_core._typing import runtime_checkable
-    from dcc_mcp_core.batch import EvalContext
-    from dcc_mcp_core.schema import derive_schema
+    from meshy_dcc_core._typing import Literal
+    from meshy_dcc_core._typing import Protocol
+    from meshy_dcc_core._typing import runtime_checkable
+    from meshy_dcc_core.batch import EvalContext
+    from meshy_dcc_core.schema import derive_schema
 
     _verify_protocol(Protocol, runtime_checkable)
     alias = Literal["fbx", "usd", 1, True, None, -0.5]
@@ -224,15 +224,15 @@ def _verify_isolated_root(root: Path) -> None:
     _verify_annotation_execution()
 
     callers = (
-        "dcc_mcp_core._server._inprocess_contracts",
-        "dcc_mcp_core._server.callable_dispatcher",
-        "dcc_mcp_core._server.host_pump",
-        "dcc_mcp_core.agent_memory",
-        "dcc_mcp_core.cancellation",
-        "dcc_mcp_core.host._protocols",
-        "dcc_mcp_core.skill_index._protocol",
-        "dcc_mcp_core.skill_index._vector",
-        "dcc_mcp_core.vector_embedder",
+        "meshy_dcc_core._server._inprocess_contracts",
+        "meshy_dcc_core._server.callable_dispatcher",
+        "meshy_dcc_core._server.host_pump",
+        "meshy_dcc_core.agent_memory",
+        "meshy_dcc_core.cancellation",
+        "meshy_dcc_core.host._protocols",
+        "meshy_dcc_core.skill_index._protocol",
+        "meshy_dcc_core.skill_index._vector",
+        "meshy_dcc_core.vector_embedder",
     )
     for module_name in callers:
         importlib.import_module(module_name)
@@ -242,8 +242,8 @@ def _verify_isolated_root(root: Path) -> None:
 
 def _verify_annotation_execution() -> None:
     """Schema-valid annotations must survive materialization and sandbox execution."""
-    from dcc_mcp_core.dcc_api_executor import DccApiExecutor
-    from dcc_mcp_core.script_execution import normalize_file_backed_script_execution_params
+    from meshy_dcc_core.dcc_api_executor import DccApiExecutor
+    from meshy_dcc_core.script_execution import normalize_file_backed_script_execution_params
 
     with tempfile.TemporaryDirectory() as directory:
         root = Path(directory)

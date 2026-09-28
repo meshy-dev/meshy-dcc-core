@@ -1,5 +1,5 @@
 """E2E multi-service test — validates that a Python client works with
-multiple independent DCC MCP services running simultaneously.
+multiple independent Meshy DCC services running simultaneously.
 
 Addresses GitHub issue #705: Comprehensive end-to-end testing for a
 realistic mixed-runtime environment where:
@@ -39,11 +39,11 @@ from conftest import McpClient
 from conftest import allocate_gateway_port
 
 # Import local modules
-import dcc_mcp_core
-from dcc_mcp_core import McpHttpConfig
-from dcc_mcp_core import McpHttpServer
-from dcc_mcp_core import ToolRegistry
-from dcc_mcp_core import create_skill_server
+import meshy_dcc_core
+from meshy_dcc_core import McpHttpConfig
+from meshy_dcc_core import McpHttpServer
+from meshy_dcc_core import ToolRegistry
+from meshy_dcc_core import create_skill_server
 
 # ── Constants ──────────────────────────────────────────────────────────────
 
@@ -358,7 +358,7 @@ def five_services():
 
 
 class TestMultiServiceE2E:
-    """Black-box E2E scenario with 5 independent DCC MCP services."""
+    """Black-box E2E scenario with 5 independent Meshy DCC services."""
 
     # ── 1. All services are reachable ───────────────────────────────────
 

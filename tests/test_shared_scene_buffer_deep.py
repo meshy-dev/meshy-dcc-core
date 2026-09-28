@@ -10,8 +10,8 @@ import json
 
 import pytest
 
-from dcc_mcp_core import PySceneDataKind
-from dcc_mcp_core import PySharedSceneBuffer
+from meshy_dcc_core import PySceneDataKind
+from meshy_dcc_core import PySharedSceneBuffer
 
 
 class TestPySharedSceneBufferWrite:

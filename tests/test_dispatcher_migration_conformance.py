@@ -2,7 +2,7 @@
 
 These tests model the small adapter-owned layer that should remain after
 adapters move queueing, pump lifecycle, and sidecar payload handling into
-dcc-mcp-core.
+meshy-dcc-core.
 """
 
 from __future__ import annotations
@@ -13,19 +13,19 @@ from typing import Mapping
 
 import pytest
 
-from dcc_mcp_core._server.callable_dispatcher import AdaptivePumpPolicy
-from dcc_mcp_core._server.host_pump import HostPumpController
-from dcc_mcp_core._server.host_pump import ManualHostTimerAdapter
-from dcc_mcp_core._server.host_ui_dispatcher import DispatcherErrorCode
-from dcc_mcp_core._server.host_ui_dispatcher import HostUiDispatcherBase
-from dcc_mcp_core.cancellation import check_dcc_cancelled
-from dcc_mcp_core.sidecar import ERROR_DISPATCH_FAILED
-from dcc_mcp_core.sidecar import ERROR_NO_SOURCE_FILE
-from dcc_mcp_core.sidecar import ERROR_PAYLOAD_MALFORMED
-from dcc_mcp_core.sidecar import ERROR_SERVER_NOT_RUNNING
-from dcc_mcp_core.sidecar import ERROR_UNKNOWN_ACTION
-from dcc_mcp_core.sidecar import SidecarActionDispatcher
-from dcc_mcp_core.sidecar import SidecarDispatchRequest
+from meshy_dcc_core._server.callable_dispatcher import AdaptivePumpPolicy
+from meshy_dcc_core._server.host_pump import HostPumpController
+from meshy_dcc_core._server.host_pump import ManualHostTimerAdapter
+from meshy_dcc_core._server.host_ui_dispatcher import DispatcherErrorCode
+from meshy_dcc_core._server.host_ui_dispatcher import HostUiDispatcherBase
+from meshy_dcc_core.cancellation import check_dcc_cancelled
+from meshy_dcc_core.sidecar import ERROR_DISPATCH_FAILED
+from meshy_dcc_core.sidecar import ERROR_NO_SOURCE_FILE
+from meshy_dcc_core.sidecar import ERROR_PAYLOAD_MALFORMED
+from meshy_dcc_core.sidecar import ERROR_SERVER_NOT_RUNNING
+from meshy_dcc_core.sidecar import ERROR_UNKNOWN_ACTION
+from meshy_dcc_core.sidecar import SidecarActionDispatcher
+from meshy_dcc_core.sidecar import SidecarDispatchRequest
 
 
 class _ImmediateManualTimer(ManualHostTimerAdapter):

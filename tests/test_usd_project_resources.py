@@ -7,16 +7,16 @@ from pathlib import Path
 from typing import Any
 
 from conftest import McpClient
-from dcc_mcp_core import USD_ASSETS_URI
-from dcc_mcp_core import USD_JSON_MIME
-from dcc_mcp_core import USD_LAYERS_URI
-from dcc_mcp_core import USD_STAGE_URI
-from dcc_mcp_core import USD_TEXT_MIME
-from dcc_mcp_core import McpHttpConfig
-from dcc_mcp_core import McpHttpServer
-from dcc_mcp_core import ToolRegistry
-from dcc_mcp_core import build_usd_project_resources
-from dcc_mcp_core import register_usd_project_resources
+from meshy_dcc_core import USD_ASSETS_URI
+from meshy_dcc_core import USD_JSON_MIME
+from meshy_dcc_core import USD_LAYERS_URI
+from meshy_dcc_core import USD_STAGE_URI
+from meshy_dcc_core import USD_TEXT_MIME
+from meshy_dcc_core import McpHttpConfig
+from meshy_dcc_core import McpHttpServer
+from meshy_dcc_core import ToolRegistry
+from meshy_dcc_core import build_usd_project_resources
+from meshy_dcc_core import register_usd_project_resources
 
 
 def _post_json(url: str, body: dict[str, Any]) -> tuple[int, dict[str, Any]]:

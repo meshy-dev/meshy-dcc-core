@@ -12,16 +12,16 @@ import tempfile
 
 import pytest
 
-from dcc_mcp_core import CaptureFrame
-from dcc_mcp_core import Capturer
-from dcc_mcp_core import PromptArgument
-from dcc_mcp_core import PromptDefinition
-from dcc_mcp_core import PySharedBuffer
-from dcc_mcp_core import SandboxContext
-from dcc_mcp_core import SandboxPolicy
-from dcc_mcp_core import ToolRegistry
-from dcc_mcp_core import VersionConstraint
-from dcc_mcp_core import VersionedRegistry
+from meshy_dcc_core import CaptureFrame
+from meshy_dcc_core import Capturer
+from meshy_dcc_core import PromptArgument
+from meshy_dcc_core import PromptDefinition
+from meshy_dcc_core import PySharedBuffer
+from meshy_dcc_core import SandboxContext
+from meshy_dcc_core import SandboxPolicy
+from meshy_dcc_core import ToolRegistry
+from meshy_dcc_core import VersionConstraint
+from meshy_dcc_core import VersionedRegistry
 
 # ─────────────────────────── CaptureFrame ────────────────────────────
 

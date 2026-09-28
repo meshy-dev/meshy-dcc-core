@@ -11,10 +11,10 @@ import textwrap
 
 import pytest
 
-import dcc_mcp_core
+import meshy_dcc_core
 
 pytestmark = pytest.mark.skipif(
-    dcc_mcp_core.WorkflowSpec is None,
+    meshy_dcc_core.WorkflowSpec is None,
     reason="Built without the `workflow` Cargo feature",
 )
 
@@ -46,16 +46,16 @@ VALID_YAML = textwrap.dedent(
 
 
 def test_parse_and_validate() -> None:
-    spec = dcc_mcp_core.WorkflowSpec.from_yaml_str(VALID_YAML)
+    spec = meshy_dcc_core.WorkflowSpec.from_yaml_str(VALID_YAML)
     assert spec.name == "vendor_intake"
     assert spec.step_count == 2
     spec.validate()
 
 
 def test_round_trip_yaml() -> None:
-    spec = dcc_mcp_core.WorkflowSpec.from_yaml_str(VALID_YAML)
+    spec = meshy_dcc_core.WorkflowSpec.from_yaml_str(VALID_YAML)
     serialized = spec.to_yaml()
-    again = dcc_mcp_core.WorkflowSpec.from_yaml_str(serialized)
+    again = meshy_dcc_core.WorkflowSpec.from_yaml_str(serialized)
     assert again.name == spec.name
     assert again.step_count == spec.step_count
     again.validate()
@@ -72,7 +72,7 @@ def test_duplicate_step_id_rejected() -> None:
             tool: t2
         """
     ).strip()
-    spec = dcc_mcp_core.WorkflowSpec.from_yaml_str(yaml)
+    spec = meshy_dcc_core.WorkflowSpec.from_yaml_str(yaml)
     with pytest.raises(ValueError, match="duplicate step id"):
         spec.validate()
 
@@ -86,27 +86,27 @@ def test_bad_tool_name_rejected() -> None:
             tool: "bad/tool"
         """
     ).strip()
-    spec = dcc_mcp_core.WorkflowSpec.from_yaml_str(yaml)
+    spec = meshy_dcc_core.WorkflowSpec.from_yaml_str(yaml)
     with pytest.raises(ValueError, match="tool name"):
         spec.validate()
 
 
 def test_invalid_yaml_raises_value_error() -> None:
     with pytest.raises(ValueError):
-        dcc_mcp_core.WorkflowSpec.from_yaml_str("name: broken\nsteps: [not closed\n")
+        meshy_dcc_core.WorkflowSpec.from_yaml_str("name: broken\nsteps: [not closed\n")
 
 
 def test_workflow_status_terminal_flags() -> None:
-    assert not dcc_mcp_core.WorkflowStatus("pending").is_terminal
-    assert not dcc_mcp_core.WorkflowStatus("running").is_terminal
+    assert not meshy_dcc_core.WorkflowStatus("pending").is_terminal
+    assert not meshy_dcc_core.WorkflowStatus("running").is_terminal
     for term in ("completed", "failed", "cancelled", "interrupted"):
-        assert dcc_mcp_core.WorkflowStatus(term).is_terminal
+        assert meshy_dcc_core.WorkflowStatus(term).is_terminal
 
     with pytest.raises(ValueError):
-        dcc_mcp_core.WorkflowStatus("bogus")
+        meshy_dcc_core.WorkflowStatus("bogus")
 
 
 def test_workflow_status_value_is_lowercase() -> None:
-    s = dcc_mcp_core.WorkflowStatus("running")
+    s = meshy_dcc_core.WorkflowStatus("running")
     assert s.value == "running"
     assert str(s) == "running"

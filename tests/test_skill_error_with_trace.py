@@ -6,7 +6,7 @@ Covers:
 - _meta block is absent when no trace fields are given
 - underlying_call is truncated to 500 chars
 - All individual trace fields are optional
-- skill_error_with_trace is importable from top-level dcc_mcp_core
+- skill_error_with_trace is importable from top-level meshy_dcc_core
 - context kwargs are preserved alongside _meta
 """
 
@@ -16,7 +16,7 @@ import pytest
 
 
 def test_basic_contract():
-    from dcc_mcp_core import skill_error_with_trace
+    from meshy_dcc_core import skill_error_with_trace
 
     result = skill_error_with_trace("Something failed", "RuntimeError: oops")
     assert result["success"] is False
@@ -25,7 +25,7 @@ def test_basic_contract():
 
 
 def test_raw_trace_block_present():
-    from dcc_mcp_core import skill_error_with_trace
+    from meshy_dcc_core import skill_error_with_trace
 
     result = skill_error_with_trace(
         "Failed to create sphere",
@@ -44,14 +44,14 @@ def test_raw_trace_block_present():
 
 
 def test_meta_absent_when_no_trace_fields():
-    from dcc_mcp_core import skill_error_with_trace
+    from meshy_dcc_core import skill_error_with_trace
 
     result = skill_error_with_trace("Failed", "error string")
     assert "_meta" not in result
 
 
 def test_underlying_call_truncated():
-    from dcc_mcp_core import skill_error_with_trace
+    from meshy_dcc_core import skill_error_with_trace
 
     long_call = "x" * 600
     result = skill_error_with_trace("msg", "err", underlying_call=long_call)
@@ -59,7 +59,7 @@ def test_underlying_call_truncated():
 
 
 def test_partial_trace_fields():
-    from dcc_mcp_core import skill_error_with_trace
+    from meshy_dcc_core import skill_error_with_trace
 
     result = skill_error_with_trace("msg", "err", recipe_hint="RECIPES.md#foo")
     trace = result["_meta"]["dcc.raw_trace"]
@@ -69,7 +69,7 @@ def test_partial_trace_fields():
 
 
 def test_context_kwargs_preserved():
-    from dcc_mcp_core import skill_error_with_trace
+    from meshy_dcc_core import skill_error_with_trace
 
     result = skill_error_with_trace(
         "msg",
@@ -83,7 +83,7 @@ def test_context_kwargs_preserved():
 
 
 def test_possible_solutions_in_context():
-    from dcc_mcp_core import skill_error_with_trace
+    from meshy_dcc_core import skill_error_with_trace
 
     result = skill_error_with_trace(
         "msg",
@@ -94,21 +94,21 @@ def test_possible_solutions_in_context():
 
 
 def test_importable_from_top_level():
-    import dcc_mcp_core
+    import meshy_dcc_core
 
-    assert hasattr(dcc_mcp_core, "skill_error_with_trace")
-    assert callable(dcc_mcp_core.skill_error_with_trace)
+    assert hasattr(meshy_dcc_core, "skill_error_with_trace")
+    assert callable(meshy_dcc_core.skill_error_with_trace)
 
 
 def test_custom_prompt():
-    from dcc_mcp_core import skill_error_with_trace
+    from meshy_dcc_core import skill_error_with_trace
 
     result = skill_error_with_trace("msg", "err", prompt="Custom recovery hint")
     assert result["prompt"] == "Custom recovery hint"
 
 
 def test_default_prompt_present():
-    from dcc_mcp_core import skill_error_with_trace
+    from meshy_dcc_core import skill_error_with_trace
 
     result = skill_error_with_trace("msg", "err")
     assert result["prompt"]
@@ -126,7 +126,7 @@ def test_default_prompt_present():
     ],
 )
 def test_skill_entry_import_error_reports_actual_bridge_host(exc, expected_label):
-    from dcc_mcp_core.skill import skill_entry
+    from meshy_dcc_core.skill import skill_entry
 
     @skill_entry
     def bridge_tool():
@@ -147,8 +147,8 @@ def test_skill_entry_import_error_reports_actual_bridge_host(exc, expected_label
 def test_run_main_emits_non_maya_bridge_error_json(capsys):
     import json
 
-    from dcc_mcp_core.skill import run_main
-    from dcc_mcp_core.skill import skill_entry
+    from meshy_dcc_core.skill import run_main
+    from meshy_dcc_core.skill import skill_entry
 
     @skill_entry
     def zbrush_bridge_tool():

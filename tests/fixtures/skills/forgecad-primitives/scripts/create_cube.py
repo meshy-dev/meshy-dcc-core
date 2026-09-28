@@ -1,7 +1,7 @@
 """ForgeCAD-style skill script — create a CAD cube.
 
 Parameter resolution order:
-1. stdin JSON: {"edge": ..., "marker": "..."} — used by dcc-mcp-core execute_script
+1. stdin JSON: {"edge": ..., "marker": "..."} — used by meshy-dcc-core execute_script
 2. CLI positional arg: create_cube.py <edge> — used by direct invocation
 3. Defaults: edge=1.0, marker=""
 """

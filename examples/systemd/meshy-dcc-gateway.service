@@ -1,0 +1,64 @@
+[Unit]
+Description=Meshy DCC gateway server
+Documentation=https://github.com/meshy-dev/meshy-dcc-core/blob/main/docs/guide/production-deployment.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=exec
+ExecStart=/usr/local/bin/meshy-dcc-server --host 127.0.0.1 --dcc generic
+Restart=on-failure
+RestartSec=2s
+
+# ── Environment ───────────────────────────────────────────────────────────
+# Override in `systemctl edit meshy-dcc-gateway.service`.
+Environment=MESHY_DCC_GATEWAY_PORT=19765
+Environment=MESHY_DCC_REGISTRY_DIR=%S/meshy-dcc/registry
+Environment=MESHY_DCC_LOG_FILE=true
+Environment=MESHY_DCC_LOG_DIR=%L/meshy-dcc
+Environment=MESHY_DCC_HEARTBEAT_INTERVAL=2
+Environment=MESHY_DCC_STALE_TIMEOUT=10
+
+# ── Privilege & filesystem hardening ──────────────────────────────────────
+DynamicUser=true
+StateDirectory=meshy-dcc
+LogsDirectory=meshy-dcc
+RuntimeDirectory=meshy-dcc
+UMask=0077
+
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectHostname=true
+ProtectClock=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+ProtectProc=invisible
+ProcSubset=pid
+LockPersonality=true
+MemoryDenyWriteExecute=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+RestrictNamespaces=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+SystemCallFilter=@system-service
+SystemCallErrorNumber=EPERM
+SystemCallArchitectures=native
+CapabilityBoundingSet=
+AmbientCapabilities=
+
+# ── Networking ────────────────────────────────────────────────────────────
+# Bind to loopback by default; expose publicly only through a reverse proxy
+# that terminates TLS (nginx / haproxy / …). Change ExecStart --host or set
+# IPAddressAllow= accordingly.
+
+# ── Resource caps (tune per host) ─────────────────────────────────────────
+LimitNOFILE=65536
+TasksMax=512
+
+[Install]
+WantedBy=multi-user.target

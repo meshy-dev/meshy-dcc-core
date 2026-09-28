@@ -105,7 +105,7 @@ class HttpTransport:
 
     def fetch(self, url: str, limit: int, optional: bool = False):
         _https_url(url)
-        headers = {"User-Agent": "dcc-mcp-install-catalog-verifier"}
+        headers = {"User-Agent": "meshy-dcc-install-catalog-verifier"}
         if urlsplit(url).hostname == "api.github.com":
             headers["Accept"] = "application/vnd.github+json"
             headers["X-GitHub-Api-Version"] = "2022-11-28"
@@ -263,9 +263,9 @@ def _verify_pip(transport, entry: dict) -> None:
 
 
 def _official_repo(entry: dict) -> str:
-    match = re.fullmatch(r"https://github\.com/(dcc-mcp/[A-Za-z0-9_.-]+)/?", entry.get("url", ""))
+    match = re.fullmatch(r"https://github\.com/(meshy-dcc/[A-Za-z0-9_.-]+)/?", entry.get("url", ""))
     if not match:
-        raise CatalogPreparationError("install entry must own an official dcc-mcp repository")
+        raise CatalogPreparationError("install entry must own an official meshy-dcc repository")
     return match.group(1)
 
 
@@ -479,7 +479,7 @@ def _load_document(text: str):
 def main(argv=None) -> int:
     """Prepare a payload for a separate protected attestation/publish step."""
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--catalog", type=Path, default=Path("dcc-mcp-catalog.yml"))
+    parser.add_argument("--catalog", type=Path, default=Path("meshy-dcc-catalog.yml"))
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--source-revision", required=True)
     parser.add_argument(

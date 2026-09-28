@@ -10,7 +10,7 @@ Covers:
 
 These tests exercise the Python-visible API surface (McpHttpConfig,
 McpHttpServer, SessionManager) plus some subprocess-level checks for the
-dcc-mcp-server binary.
+meshy-dcc-server binary.
 """
 
 from __future__ import annotations
@@ -32,10 +32,10 @@ import urllib.request
 import pytest
 
 from conftest import McpClient
-import dcc_mcp_core
-from dcc_mcp_core import McpHttpConfig
-from dcc_mcp_core import McpHttpServer
-from dcc_mcp_core import ToolRegistry
+import meshy_dcc_core
+from meshy_dcc_core import McpHttpConfig
+from meshy_dcc_core import McpHttpServer
+from meshy_dcc_core import ToolRegistry
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 EXAMPLES_SKILLS = REPO_ROOT / "examples" / "skills"
@@ -515,16 +515,16 @@ class TestToolCallExecution:
             handle.shutdown()
 
 
-# ── dcc-mcp-server binary smoke tests ────────────────────────────────────────
+# ── meshy-dcc-server binary smoke tests ────────────────────────────────────────
 
 
 def _find_server_binary() -> Path | None:
-    """Locate the dcc-mcp-server binary in the Cargo target tree."""
+    """Locate the meshy-dcc-server binary in the Cargo target tree."""
     candidates = [
-        REPO_ROOT / "target" / "debug" / "dcc-mcp-server",
-        REPO_ROOT / "target" / "debug" / "dcc-mcp-server.exe",
-        REPO_ROOT / "target" / "release" / "dcc-mcp-server",
-        REPO_ROOT / "target" / "release" / "dcc-mcp-server.exe",
+        REPO_ROOT / "target" / "debug" / "meshy-dcc-server",
+        REPO_ROOT / "target" / "debug" / "meshy-dcc-server.exe",
+        REPO_ROOT / "target" / "release" / "meshy-dcc-server",
+        REPO_ROOT / "target" / "release" / "meshy-dcc-server.exe",
     ]
     for c in candidates:
         if c.exists():
@@ -534,10 +534,10 @@ def _find_server_binary() -> Path | None:
 
 @pytest.mark.skipif(
     _find_server_binary() is None,
-    reason="dcc-mcp-server binary not built (run: just build-server)",
+    reason="meshy-dcc-server binary not built (run: just build-server)",
 )
 class TestServerBinarySidecar:
-    """Smoke tests for the compiled dcc-mcp-server binary."""
+    """Smoke tests for the compiled meshy-dcc-server binary."""
 
     @pytest.fixture
     def binary(self) -> Path:
@@ -603,7 +603,7 @@ class TestServerBinarySidecar:
                     break
                 time.sleep(0.1)
             if proc.poll() is not None:
-                pytest.fail(f"dcc-mcp-server exited before health check (code={proc.returncode})")
+                pytest.fail(f"meshy-dcc-server exited before health check (code={proc.returncode})")
             assert health[0] == 200
 
             code, body = _get(f"{base}/v1/healthz")

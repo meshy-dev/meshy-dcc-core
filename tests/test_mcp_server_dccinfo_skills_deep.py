@@ -30,27 +30,27 @@ import tempfile
 
 import pytest
 
-import dcc_mcp_core as d
-from dcc_mcp_core import DccCapabilities
-from dcc_mcp_core import DccInfo
-from dcc_mcp_core import McpHttpConfig
-from dcc_mcp_core import McpHttpServer
-from dcc_mcp_core import SkillScanner
-from dcc_mcp_core import ToolRegistry
-from dcc_mcp_core import copy_skill_to_team_dir
-from dcc_mcp_core import copy_skill_to_user_dir
-from dcc_mcp_core import expand_transitive_dependencies
-from dcc_mcp_core import get_skill_feedback
-from dcc_mcp_core import get_skill_version_manifest
-from dcc_mcp_core import parse_skill_md
-from dcc_mcp_core import record_skill_feedback
-from dcc_mcp_core import resolve_dependencies
-from dcc_mcp_core import scan_and_load
-from dcc_mcp_core import scan_and_load_lenient
-from dcc_mcp_core import scan_and_load_team
-from dcc_mcp_core import scan_and_load_user
-from dcc_mcp_core import scan_skill_paths
-from dcc_mcp_core import validate_dependencies
+import meshy_dcc_core as d
+from meshy_dcc_core import DccCapabilities
+from meshy_dcc_core import DccInfo
+from meshy_dcc_core import McpHttpConfig
+from meshy_dcc_core import McpHttpServer
+from meshy_dcc_core import SkillScanner
+from meshy_dcc_core import ToolRegistry
+from meshy_dcc_core import copy_skill_to_team_dir
+from meshy_dcc_core import copy_skill_to_user_dir
+from meshy_dcc_core import expand_transitive_dependencies
+from meshy_dcc_core import get_skill_feedback
+from meshy_dcc_core import get_skill_version_manifest
+from meshy_dcc_core import parse_skill_md
+from meshy_dcc_core import record_skill_feedback
+from meshy_dcc_core import resolve_dependencies
+from meshy_dcc_core import scan_and_load
+from meshy_dcc_core import scan_and_load_lenient
+from meshy_dcc_core import scan_and_load_team
+from meshy_dcc_core import scan_and_load_user
+from meshy_dcc_core import scan_skill_paths
+from meshy_dcc_core import validate_dependencies
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -78,7 +78,7 @@ def _make_skill_dir(
         f"name: {name}\n"
         f"description: Test skill {name}\n"
         f"metadata:\n"
-        f"  dcc-mcp:\n"
+        f"  meshy-dcc:\n"
         f"    dcc: {dcc}\n"
         f"    version: {version}\n"
         f"    tags: [test]"
@@ -111,9 +111,9 @@ class TestMcpHttpConfigAttributes:
         assert cfg.port == 9999
 
     def test_default_server_name(self) -> None:
-        """Default server_name is 'dcc-mcp'."""
+        """Default server_name is 'meshy-dcc'."""
         cfg = McpHttpConfig()
-        assert cfg.server_name == "dcc-mcp"
+        assert cfg.server_name == "meshy-dcc"
 
     def test_custom_server_name(self) -> None:
         """Custom server_name is stored."""
@@ -621,29 +621,29 @@ class TestSkillScannerLifecycle:
         assert result == []
 
     def test_scan_with_env_var(self) -> None:
-        """scan() respects DCC_MCP_SKILL_PATHS env var."""
-        os.environ["DCC_MCP_SKILL_PATHS"] = EXAMPLES_SKILLS_DIR
+        """scan() respects MESHY_DCC_SKILL_PATHS env var."""
+        os.environ["MESHY_DCC_SKILL_PATHS"] = EXAMPLES_SKILLS_DIR
         try:
             scanner = SkillScanner()
             paths = scanner.scan()
             assert isinstance(paths, list)
             assert len(paths) >= 1
         finally:
-            del os.environ["DCC_MCP_SKILL_PATHS"]
+            del os.environ["MESHY_DCC_SKILL_PATHS"]
 
     def test_discovered_skills_populated_after_scan(self) -> None:
         """discovered_skills is populated after scanning examples dir."""
-        os.environ["DCC_MCP_SKILL_PATHS"] = EXAMPLES_SKILLS_DIR
+        os.environ["MESHY_DCC_SKILL_PATHS"] = EXAMPLES_SKILLS_DIR
         try:
             scanner = SkillScanner()
             scanner.scan()
             assert len(scanner.discovered_skills) >= 1
         finally:
-            del os.environ["DCC_MCP_SKILL_PATHS"]
+            del os.environ["MESHY_DCC_SKILL_PATHS"]
 
     def test_clear_cache_resets_discovered(self) -> None:
         """clear_cache() resets the discovered_skills list."""
-        os.environ["DCC_MCP_SKILL_PATHS"] = EXAMPLES_SKILLS_DIR
+        os.environ["MESHY_DCC_SKILL_PATHS"] = EXAMPLES_SKILLS_DIR
         try:
             scanner = SkillScanner()
             scanner.scan()
@@ -652,7 +652,7 @@ class TestSkillScannerLifecycle:
             # After clear_cache, discovered_skills should be empty again
             assert len(scanner.discovered_skills) == 0 or pre >= 0
         finally:
-            del os.environ["DCC_MCP_SKILL_PATHS"]
+            del os.environ["MESHY_DCC_SKILL_PATHS"]
 
     def test_instance_type(self) -> None:
         """SkillScanner instance is the correct type."""
@@ -823,14 +823,14 @@ class TestScanAndLoad:
 
     def test_empty_paths_returns_empty_skills(self) -> None:
         """scan_and_load with no env and empty extra_paths gives empty skills."""
-        # Clear env to ensure no DCC_MCP_SKILL_PATHS is set
-        old = os.environ.pop("DCC_MCP_SKILL_PATHS", None)
+        # Clear env to ensure no MESHY_DCC_SKILL_PATHS is set
+        old = os.environ.pop("MESHY_DCC_SKILL_PATHS", None)
         try:
             skills, _ = scan_and_load(extra_paths=[])
             assert isinstance(skills, list)
         finally:
             if old is not None:
-                os.environ["DCC_MCP_SKILL_PATHS"] = old
+                os.environ["MESHY_DCC_SKILL_PATHS"] = old
 
 
 # ---------------------------------------------------------------------------
@@ -1072,32 +1072,32 @@ class TestAccumulatedSkills:
         assert skipped == []
 
     def test_scan_and_load_user_with_env_var(self) -> None:
-        """scan_and_load_user discovers skills from DCC_MCP_USER_SKILL_PATHS."""
+        """scan_and_load_user discovers skills from MESHY_DCC_USER_SKILL_PATHS."""
         import os
 
         with tempfile.TemporaryDirectory() as tmp:
             _make_skill_dir(tmp, "user-skill")
-            os.environ["DCC_MCP_USER_SKILL_PATHS"] = tmp
+            os.environ["MESHY_DCC_USER_SKILL_PATHS"] = tmp
             try:
                 skills, _skipped = scan_and_load_user()
                 assert len(skills) == 1
                 assert skills[0].name == "user-skill"
             finally:
-                del os.environ["DCC_MCP_USER_SKILL_PATHS"]
+                del os.environ["MESHY_DCC_USER_SKILL_PATHS"]
 
     def test_scan_and_load_team_with_env_var(self) -> None:
-        """scan_and_load_team discovers skills from DCC_MCP_TEAM_SKILL_PATHS."""
+        """scan_and_load_team discovers skills from MESHY_DCC_TEAM_SKILL_PATHS."""
         import os
 
         with tempfile.TemporaryDirectory() as tmp:
             _make_skill_dir(tmp, "team-skill")
-            os.environ["DCC_MCP_TEAM_SKILL_PATHS"] = tmp
+            os.environ["MESHY_DCC_TEAM_SKILL_PATHS"] = tmp
             try:
                 skills, _skipped = scan_and_load_team()
                 assert len(skills) == 1
                 assert skills[0].name == "team-skill"
             finally:
-                del os.environ["DCC_MCP_TEAM_SKILL_PATHS"]
+                del os.environ["MESHY_DCC_TEAM_SKILL_PATHS"]
 
     def test_copy_skill_to_user_dir(self) -> None:
         """copy_skill_to_user_dir copies a valid skill and returns the dest path."""
@@ -1146,7 +1146,7 @@ class TestAccumulatedSkills:
 
             # Update skill (second version)
             skill_md = Path(src_tmp) / skill_name / "SKILL.md"
-            skill_md.write_text("---\nname: evolvable-skill\nmetadata:\n  dcc-mcp:\n    version: 2.0.0\n---\n")
+            skill_md.write_text("---\nname: evolvable-skill\nmetadata:\n  meshy-dcc:\n    version: 2.0.0\n---\n")
             dest2 = copy_skill_to_user_dir(str(Path(src_tmp) / skill_name))
             assert dest2 == dest
 
@@ -1175,9 +1175,9 @@ class TestBundledSkillToolCount:
     without loading the skill first.
 
     Root cause: the bundled SKILL.md used the legacy flat metadata format
-    (``dcc-mcp.tools: tools.yaml``) instead of the nested form
-    (``dcc-mcp: {tools: tools.yaml}``).  The Rust loader dropped the
-    ``metadata.dcc-mcp.*`` flat form in 0.15, so ``tools.yaml`` was never
+    (``meshy-dcc.tools: tools.yaml``) instead of the nested form
+    (``meshy-dcc: {tools: tools.yaml}``).  The Rust loader dropped the
+    ``metadata.meshy-dcc.*`` flat form in 0.15, so ``tools.yaml`` was never
     parsed, leaving ``tool_count == 0``.
     """
 
@@ -1196,7 +1196,7 @@ class TestBundledSkillToolCount:
         assert diag is not None, "dcc-diagnostics not found in bundled skills"
         assert diag.tool_count > 0, (
             f"dcc-diagnostics tool_count is {diag.tool_count} after discovery; "
-            "expected > 0. Check that SKILL.md uses the nested dcc-mcp: format."
+            "expected > 0. Check that SKILL.md uses the nested meshy-dcc: format."
         )
 
     def test_dcc_diagnostics_tool_names_include_error_report(self):

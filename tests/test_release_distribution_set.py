@@ -20,18 +20,18 @@ from scripts.ci.check_release_distribution_set import verify_distribution_set
 
 VERSION = "0.20.8"
 WHEEL_NAMES = [
-    f"dcc_mcp_core-{VERSION}-cp37-cp37m-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
-    f"dcc_mcp_core-{VERSION}-cp37-cp37m-win_amd64.whl",
-    (f"dcc_mcp_core-{VERSION}-cp38-abi3-macosx_10_12_x86_64.macosx_11_0_arm64.macosx_10_12_universal2.whl"),
-    f"dcc_mcp_core-{VERSION}-cp38-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
-    f"dcc_mcp_core-{VERSION}-cp38-abi3-win_amd64.whl",
-    f"dcc_mcp_core-{VERSION}-py3-none-any.whl",
+    f"meshy_dcc_core-{VERSION}-cp37-cp37m-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+    f"meshy_dcc_core-{VERSION}-cp37-cp37m-win_amd64.whl",
+    (f"meshy_dcc_core-{VERSION}-cp38-abi3-macosx_10_12_x86_64.macosx_11_0_arm64.macosx_10_12_universal2.whl"),
+    f"meshy_dcc_core-{VERSION}-cp38-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+    f"meshy_dcc_core-{VERSION}-cp38-abi3-win_amd64.whl",
+    f"meshy_dcc_core-{VERSION}-py3-none-any.whl",
 ]
-SDIST_NAME = f"dcc_mcp_core-{VERSION}.tar.gz"
+SDIST_NAME = f"meshy_dcc_core-{VERSION}.tar.gz"
 
 
 def test_classify_distribution_assets_rebuilds_when_release_has_no_core_assets() -> None:
-    payload = {"assets": [{"name": "dcc_mcp_server-0.20.8-py3-none-any.whl"}]}
+    payload = {"assets": [{"name": "meshy_dcc_server-0.20.8-py3-none-any.whl"}]}
 
     assert classify_distribution_assets(payload, VERSION) == "rebuild"
 
@@ -52,9 +52,9 @@ def test_classify_distribution_assets_reuses_complete_core_asset_sets() -> None:
 @pytest.mark.parametrize("requirement", ["typing-extensions==4.7.1", "typing.extensions==4.7.1"])
 def test_sdist_rejects_typing_extensions_runtime_dependency(tmp_path: Path, requirement: str) -> None:
     sdist = tmp_path / SDIST_NAME
-    pkg_info = _metadata_bytes("dcc-mcp-core", VERSION, (requirement,))
+    pkg_info = _metadata_bytes("meshy-dcc-core", VERSION, (requirement,))
     with tarfile.open(sdist, "w:gz") as archive:
-        member = tarfile.TarInfo(f"dcc_mcp_core-{VERSION}/PKG-INFO")
+        member = tarfile.TarInfo(f"meshy_dcc_core-{VERSION}/PKG-INFO")
         member.size = len(pkg_info)
         archive.addfile(member, io.BytesIO(pkg_info))
 
@@ -64,7 +64,7 @@ def test_sdist_rejects_typing_extensions_runtime_dependency(tmp_path: Path, requ
             VERSION,
             {
                 "distributions": {
-                    "dcc-mcp-core": {
+                    "meshy-dcc-core": {
                         "forbidden_runtime_dependencies": [{"name": "typing-extensions", "from_version": "0.20.0"}]
                     }
                 }
@@ -75,21 +75,21 @@ def test_sdist_rejects_typing_extensions_runtime_dependency(tmp_path: Path, requ
 @pytest.mark.parametrize(
     "member_name",
     [
-        "dcc_mcp_core-1.0.0/typing_extensions.py",
-        "dcc_mcp_core-1.0.0/./Typing-Extensions.py",
-        "dcc_mcp_core-1.0.0/vendor/typing_extensions/__init__.py",
-        "dcc_mcp_core-1.0.0/typing_extensions-4.12.2.dist-info/METADATA",
-        "dcc_mcp_core-1.0.0/typing_extensions.py.",
-        "dcc_mcp_core-1.0.0/typing_extensions.py ",
-        "dcc_mcp_core-1.0.0/typing\uff3fextensions.py",
-        "dcc_mcp_core-1.0.0/TYPING_EXTENSIONS.PY",
+        "meshy_dcc_core-1.0.0/typing_extensions.py",
+        "meshy_dcc_core-1.0.0/./Typing-Extensions.py",
+        "meshy_dcc_core-1.0.0/vendor/typing_extensions/__init__.py",
+        "meshy_dcc_core-1.0.0/typing_extensions-4.12.2.dist-info/METADATA",
+        "meshy_dcc_core-1.0.0/typing_extensions.py.",
+        "meshy_dcc_core-1.0.0/typing_extensions.py ",
+        "meshy_dcc_core-1.0.0/typing\uff3fextensions.py",
+        "meshy_dcc_core-1.0.0/TYPING_EXTENSIONS.PY",
     ],
 )
 def test_sdist_rejects_normalized_typing_extensions_payloads(tmp_path: Path, member_name: str) -> None:
-    sdist = tmp_path / "dcc_mcp_core-1.0.0.tar.gz"
-    pkg_info = b"Metadata-Version: 2.1\nName: dcc-mcp-core\nVersion: 1.0.0\nRequires-Python: >=3.7\n"
+    sdist = tmp_path / "meshy_dcc_core-1.0.0.tar.gz"
+    pkg_info = b"Metadata-Version: 2.1\nName: meshy-dcc-core\nVersion: 1.0.0\nRequires-Python: >=3.7\n"
     with tarfile.open(sdist, "w:gz") as archive:
-        metadata = tarfile.TarInfo("dcc_mcp_core-1.0.0/PKG-INFO")
+        metadata = tarfile.TarInfo("meshy_dcc_core-1.0.0/PKG-INFO")
         metadata.size = len(pkg_info)
         archive.addfile(metadata, io.BytesIO(pkg_info))
         injected = tarfile.TarInfo(member_name)
@@ -103,17 +103,17 @@ def test_sdist_rejects_normalized_typing_extensions_payloads(tmp_path: Path, mem
 @pytest.mark.parametrize(
     "member_name",
     [
-        "dcc_mcp_core-1.0.0/CON.py",
-        "dcc_mcp_core-1.0.0/payload.py:typing_extensions.py",
-        "dcc_mcp_core-1.0.0/trailing. /payload.py",
-        "dcc_mcp_core-1.0.0//payload.py",
+        "meshy_dcc_core-1.0.0/CON.py",
+        "meshy_dcc_core-1.0.0/payload.py:typing_extensions.py",
+        "meshy_dcc_core-1.0.0/trailing. /payload.py",
+        "meshy_dcc_core-1.0.0//payload.py",
     ],
 )
 def test_sdist_rejects_windows_unsafe_aliases(tmp_path: Path, member_name: str) -> None:
-    sdist = tmp_path / "dcc_mcp_core-1.0.0.tar.gz"
-    pkg_info = _metadata_bytes("dcc-mcp-core", "1.0.0")
+    sdist = tmp_path / "meshy_dcc_core-1.0.0.tar.gz"
+    pkg_info = _metadata_bytes("meshy-dcc-core", "1.0.0")
     with tarfile.open(sdist, "w:gz") as archive:
-        metadata = tarfile.TarInfo("dcc_mcp_core-1.0.0/PKG-INFO")
+        metadata = tarfile.TarInfo("meshy_dcc_core-1.0.0/PKG-INFO")
         metadata.size = len(pkg_info)
         archive.addfile(metadata, io.BytesIO(pkg_info))
         injected = tarfile.TarInfo(member_name)
@@ -125,13 +125,13 @@ def test_sdist_rejects_windows_unsafe_aliases(tmp_path: Path, member_name: str) 
 
 
 def test_sdist_rejects_duplicate_portable_member_paths(tmp_path: Path) -> None:
-    sdist = tmp_path / "dcc_mcp_core-1.0.0.tar.gz"
-    pkg_info = _metadata_bytes("dcc-mcp-core", "1.0.0")
+    sdist = tmp_path / "meshy_dcc_core-1.0.0.tar.gz"
+    pkg_info = _metadata_bytes("meshy-dcc-core", "1.0.0")
     with tarfile.open(sdist, "w:gz") as archive:
-        metadata = tarfile.TarInfo("dcc_mcp_core-1.0.0/PKG-INFO")
+        metadata = tarfile.TarInfo("meshy_dcc_core-1.0.0/PKG-INFO")
         metadata.size = len(pkg_info)
         archive.addfile(metadata, io.BytesIO(pkg_info))
-        for name in ("dcc_mcp_core-1.0.0/duplicate.py", "dcc_mcp_core-1.0.0/./duplicate.py"):
+        for name in ("meshy_dcc_core-1.0.0/duplicate.py", "meshy_dcc_core-1.0.0/./duplicate.py"):
             member = tarfile.TarInfo(name)
             member.size = 1
             archive.addfile(member, io.BytesIO(b"x"))
@@ -142,13 +142,13 @@ def test_sdist_rejects_duplicate_portable_member_paths(tmp_path: Path) -> None:
 
 @pytest.mark.parametrize("link_type", [tarfile.SYMTYPE, tarfile.LNKTYPE])
 def test_sdist_rejects_links_and_traversal_targets(tmp_path: Path, link_type: bytes) -> None:
-    sdist = tmp_path / "dcc_mcp_core-1.0.0.tar.gz"
-    pkg_info = _metadata_bytes("dcc-mcp-core", "1.0.0")
+    sdist = tmp_path / "meshy_dcc_core-1.0.0.tar.gz"
+    pkg_info = _metadata_bytes("meshy-dcc-core", "1.0.0")
     with tarfile.open(sdist, "w:gz") as archive:
-        metadata = tarfile.TarInfo("dcc_mcp_core-1.0.0/PKG-INFO")
+        metadata = tarfile.TarInfo("meshy_dcc_core-1.0.0/PKG-INFO")
         metadata.size = len(pkg_info)
         archive.addfile(metadata, io.BytesIO(pkg_info))
-        link = tarfile.TarInfo("dcc_mcp_core-1.0.0/pkg/link.py")
+        link = tarfile.TarInfo("meshy_dcc_core-1.0.0/pkg/link.py")
         link.type = link_type
         link.linkname = "../../typing_extensions.py"
         archive.addfile(link)
@@ -158,13 +158,13 @@ def test_sdist_rejects_links_and_traversal_targets(tmp_path: Path, link_type: by
 
 
 def test_sdist_rejects_special_device_members(tmp_path: Path) -> None:
-    sdist = tmp_path / "dcc_mcp_core-1.0.0.tar.gz"
-    pkg_info = _metadata_bytes("dcc-mcp-core", "1.0.0")
+    sdist = tmp_path / "meshy_dcc_core-1.0.0.tar.gz"
+    pkg_info = _metadata_bytes("meshy-dcc-core", "1.0.0")
     with tarfile.open(sdist, "w:gz") as archive:
-        metadata = tarfile.TarInfo("dcc_mcp_core-1.0.0/PKG-INFO")
+        metadata = tarfile.TarInfo("meshy_dcc_core-1.0.0/PKG-INFO")
         metadata.size = len(pkg_info)
         archive.addfile(metadata, io.BytesIO(pkg_info))
-        fifo = tarfile.TarInfo("dcc_mcp_core-1.0.0/pkg/channel")
+        fifo = tarfile.TarInfo("meshy_dcc_core-1.0.0/pkg/channel")
         fifo.type = tarfile.FIFOTYPE
         archive.addfile(fifo)
 
@@ -189,12 +189,12 @@ def _write_fixture_set(dist_dir: Path) -> None:
     for name in WHEEL_NAMES:
         with zipfile.ZipFile(dist_dir / name, "w") as archive:
             archive.writestr(
-                f"dcc_mcp_core-{VERSION}.dist-info/METADATA",
-                _metadata_bytes("dcc-mcp-core", VERSION),
+                f"meshy_dcc_core-{VERSION}.dist-info/METADATA",
+                _metadata_bytes("meshy-dcc-core", VERSION),
             )
-    pkg_info = _metadata_bytes("dcc-mcp-core", VERSION)
+    pkg_info = _metadata_bytes("meshy-dcc-core", VERSION)
     with tarfile.open(dist_dir / SDIST_NAME, "w:gz") as archive:
-        member = tarfile.TarInfo(f"dcc_mcp_core-{VERSION}/PKG-INFO")
+        member = tarfile.TarInfo(f"meshy_dcc_core-{VERSION}/PKG-INFO")
         member.size = len(pkg_info)
         archive.addfile(member, io.BytesIO(pkg_info))
 
@@ -283,7 +283,7 @@ def test_release_distribution_gate_rejects_injected_wheel_payload_before_contrac
 def test_release_distribution_gate_rejects_wheel_symlink(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     dist_dir = tmp_path / "dist"
     _write_fixture_set(dist_dir)
-    link = zipfile.ZipInfo("dcc_mcp_core/link.py")
+    link = zipfile.ZipInfo("meshy_dcc_core/link.py")
     link.create_system = 3
     link.external_attr = 0o120777 << 16
     with zipfile.ZipFile(dist_dir / WHEEL_NAMES[-1], "a") as archive:
@@ -305,7 +305,7 @@ def test_release_distribution_gate_rejects_sdist_hardlink(monkeypatch: pytest.Mo
         for member in source.getmembers():
             stream = source.extractfile(member) if member.isfile() else None
             target.addfile(member, stream)
-        link = tarfile.TarInfo(f"dcc_mcp_core-{VERSION}/pkg/hard.py")
+        link = tarfile.TarInfo(f"meshy_dcc_core-{VERSION}/pkg/hard.py")
         link.type = tarfile.LNKTYPE
         link.linkname = "../../typing_extensions.py"
         target.addfile(link)

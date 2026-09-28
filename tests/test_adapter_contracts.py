@@ -4,39 +4,39 @@ from __future__ import annotations
 
 import json
 
-from dcc_mcp_core.adapter_contracts import DebugPathMapping
-from dcc_mcp_core.adapter_contracts import DebugSessionDescriptor
-from dcc_mcp_core.adapter_contracts import DebugSessionStatus
-from dcc_mcp_core.adapter_contracts import UiActionKind
-from dcc_mcp_core.adapter_contracts import UiActionRequest
-from dcc_mcp_core.adapter_contracts import UiActionResult
-from dcc_mcp_core.adapter_contracts import UiArtifactRef
-from dcc_mcp_core.adapter_contracts import UiBounds
-from dcc_mcp_core.adapter_contracts import UiControlAuditRecord
-from dcc_mcp_core.adapter_contracts import UiControlNode
-from dcc_mcp_core.adapter_contracts import UiControlPolicy
-from dcc_mcp_core.adapter_contracts import UiErrorCode
-from dcc_mcp_core.adapter_contracts import UiPoint
-from dcc_mcp_core.adapter_contracts import UiSnapshot
-from dcc_mcp_core.adapter_contracts import UiWaitCondition
-from dcc_mcp_core.adapter_contracts import UiWaitConditionKind
-from dcc_mcp_core.adapter_contracts import UiWaitResult
+from meshy_dcc_core.adapter_contracts import DebugPathMapping
+from meshy_dcc_core.adapter_contracts import DebugSessionDescriptor
+from meshy_dcc_core.adapter_contracts import DebugSessionStatus
+from meshy_dcc_core.adapter_contracts import UiActionKind
+from meshy_dcc_core.adapter_contracts import UiActionRequest
+from meshy_dcc_core.adapter_contracts import UiActionResult
+from meshy_dcc_core.adapter_contracts import UiArtifactRef
+from meshy_dcc_core.adapter_contracts import UiBounds
+from meshy_dcc_core.adapter_contracts import UiControlAuditRecord
+from meshy_dcc_core.adapter_contracts import UiControlNode
+from meshy_dcc_core.adapter_contracts import UiControlPolicy
+from meshy_dcc_core.adapter_contracts import UiErrorCode
+from meshy_dcc_core.adapter_contracts import UiPoint
+from meshy_dcc_core.adapter_contracts import UiSnapshot
+from meshy_dcc_core.adapter_contracts import UiWaitCondition
+from meshy_dcc_core.adapter_contracts import UiWaitConditionKind
+from meshy_dcc_core.adapter_contracts import UiWaitResult
 
 
 def test_ui_point_is_available_from_the_top_level_package() -> None:
-    import dcc_mcp_core
+    import meshy_dcc_core
 
-    assert dcc_mcp_core.UiPoint is UiPoint
+    assert meshy_dcc_core.UiPoint is UiPoint
 
 
 def test_removed_app_ui_contract_aliases_are_not_exported() -> None:
-    import dcc_mcp_core
-    import dcc_mcp_core.adapter_contracts as contracts
+    import meshy_dcc_core
+    import meshy_dcc_core.adapter_contracts as contracts
 
     for removed_name in ("AppUiPolicy", "AppUiAuditRecord"):
-        assert removed_name not in dcc_mcp_core.__all__
+        assert removed_name not in meshy_dcc_core.__all__
         assert removed_name not in contracts.__all__
-        assert not hasattr(dcc_mcp_core, removed_name)
+        assert not hasattr(meshy_dcc_core, removed_name)
         assert not hasattr(contracts, removed_name)
 
 

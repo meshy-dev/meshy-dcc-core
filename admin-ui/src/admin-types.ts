@@ -975,7 +975,7 @@ export type SkillAdoptionMetrics = {
 };
 
 /// Author-supplied visual identity for a skill's marketplace card.
-/// Mirrors `dcc_mcp_models::SkillBranding` — see Rust source for field semantics.
+/// Mirrors `meshy_dcc_models::SkillBranding` — see Rust source for field semantics.
 export type SkillBranding = {
   accent_color?: string | null;
   secondary_color?: string | null;
@@ -984,7 +984,7 @@ export type SkillBranding = {
   tagline?: string | null;
 };
 
-/// Author-supplied external link set. Mirrors `dcc_mcp_models::SkillLinks`.
+/// Author-supplied external link set. Mirrors `meshy_dcc_models::SkillLinks`.
 export type SkillLinks = {
   docs?: string | null;
   repo?: string | null;
@@ -1285,7 +1285,7 @@ export function normalizeSkillDetailPayload(raw: unknown): SkillDetailPayload {
   };
 }
 
-/// Marketplace catalog entry — mirrors dcc_mcp_catalog::CatalogEntry.
+/// Marketplace catalog entry — mirrors meshy_dcc_catalog::CatalogEntry.
 export type MarketplaceEntry = {
   name: string;
   description: string;

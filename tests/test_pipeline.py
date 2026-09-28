@@ -6,7 +6,7 @@ system by exercising the pattern in pure Python, verifying that:
 - The dispatch flow with middleware hooks works as expected
 - Rate limiting, audit, and logging middleware semantics are correct
 
-Note: The actual ToolPipeline is implemented in Rust (dcc_mcp_core._core),
+Note: The actual ToolPipeline is implemented in Rust (meshy_dcc_core._core),
 but the conceptual tests here ensure Python-side integration expectations
 are documented and verifiable.
 """

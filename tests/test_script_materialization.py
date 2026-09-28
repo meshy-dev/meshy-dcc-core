@@ -9,22 +9,22 @@ from pathlib import Path
 
 import pytest
 
-import dcc_mcp_core
-from dcc_mcp_core.script_execution import cleanup_temp_scripts
-from dcc_mcp_core.script_execution import write_temp_script
-from dcc_mcp_core.script_materialization import MaterializedScript
-from dcc_mcp_core.script_materialization import cleanup_materialized_scripts
-from dcc_mcp_core.script_materialization import materialize_script
-from dcc_mcp_core.script_materialization import resolve_materialized_script
-from dcc_mcp_core.script_materialization import sanitize_materialization_segment
+import meshy_dcc_core
+from meshy_dcc_core.script_execution import cleanup_temp_scripts
+from meshy_dcc_core.script_execution import write_temp_script
+from meshy_dcc_core.script_materialization import MaterializedScript
+from meshy_dcc_core.script_materialization import cleanup_materialized_scripts
+from meshy_dcc_core.script_materialization import materialize_script
+from meshy_dcc_core.script_materialization import resolve_materialized_script
+from meshy_dcc_core.script_materialization import sanitize_materialization_segment
 
 
 def test_materialization_helpers_are_exported() -> None:
-    assert dcc_mcp_core.MaterializedScript is MaterializedScript
-    assert dcc_mcp_core.materialize_script is materialize_script
-    assert dcc_mcp_core.resolve_materialized_script is resolve_materialized_script
-    assert "MaterializedScript" in dcc_mcp_core.__all__
-    assert "materialize_script" in dcc_mcp_core.__all__
+    assert meshy_dcc_core.MaterializedScript is MaterializedScript
+    assert meshy_dcc_core.materialize_script is materialize_script
+    assert meshy_dcc_core.resolve_materialized_script is resolve_materialized_script
+    assert "MaterializedScript" in meshy_dcc_core.__all__
+    assert "materialize_script" in meshy_dcc_core.__all__
 
 
 def test_sanitize_materialization_segment_blocks_traversal_and_windows_paths() -> None:

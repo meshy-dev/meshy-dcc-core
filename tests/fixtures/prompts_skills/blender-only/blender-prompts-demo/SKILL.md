@@ -8,7 +8,7 @@ description: >-
 license: MIT
 compatibility: Python 3.7+
 metadata:
-  dcc-mcp:
+  meshy-dcc:
     dcc: blender
     version: "1.0.0"
     layer: example

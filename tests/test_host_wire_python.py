@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import pytest
 
-import dcc_mcp_core
-from dcc_mcp_core import _json_codec
-from dcc_mcp_core import wire as native_wire
-from dcc_mcp_core.wire import _fallback as lite_wire
-from dcc_mcp_core.wire import normalize_tool_arguments
-from dcc_mcp_core.wire import normalize_tool_meta
+import meshy_dcc_core
+from meshy_dcc_core import _json_codec
+from meshy_dcc_core import wire as native_wire
+from meshy_dcc_core.wire import _fallback as lite_wire
+from meshy_dcc_core.wire import normalize_tool_arguments
+from meshy_dcc_core.wire import normalize_tool_meta
 
 
 @pytest.fixture(params=("native", "lite"))
@@ -109,13 +109,13 @@ def test_normalize_tool_meta_rejects_non_object_shapes() -> None:
 
 
 def test_top_level_lazy_exports_wire_helpers() -> None:
-    assert dcc_mcp_core.normalize_tool_arguments('{"x": 1}') == {"x": 1}
-    assert dcc_mcp_core.normalize_tool_meta(None) is None
+    assert meshy_dcc_core.normalize_tool_arguments('{"x": 1}') == {"x": 1}
+    assert meshy_dcc_core.normalize_tool_meta(None) is None
 
 
 def test_host_keeps_backward_compatible_wire_aliases() -> None:
-    from dcc_mcp_core.host import normalize_tool_arguments as host_normalize_arguments
-    from dcc_mcp_core.host import normalize_tool_meta as host_normalize_meta
+    from meshy_dcc_core.host import normalize_tool_arguments as host_normalize_arguments
+    from meshy_dcc_core.host import normalize_tool_meta as host_normalize_meta
 
     assert host_normalize_arguments('{"legacy": true}') == {"legacy": True}
     assert host_normalize_meta(None) is None

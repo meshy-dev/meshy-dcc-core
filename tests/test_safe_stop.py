@@ -6,7 +6,7 @@ import json
 import urllib.error
 import urllib.request
 
-from dcc_mcp_core.safe_stop import serve_safe_stop
+from meshy_dcc_core.safe_stop import serve_safe_stop
 
 
 def _post(url: str, body: bytes, content_type: str) -> tuple[int, dict]:

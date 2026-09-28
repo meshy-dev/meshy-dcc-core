@@ -22,15 +22,15 @@ import json
 
 import pytest
 
-import dcc_mcp_core
-from dcc_mcp_core import SerializeFormat
-from dcc_mcp_core import ToolResult
-from dcc_mcp_core import deserialize_result
-from dcc_mcp_core import error_result
-from dcc_mcp_core import from_exception
-from dcc_mcp_core import serialize_result
-from dcc_mcp_core import success_result
-from dcc_mcp_core import validate_action_result
+import meshy_dcc_core
+from meshy_dcc_core import SerializeFormat
+from meshy_dcc_core import ToolResult
+from meshy_dcc_core import deserialize_result
+from meshy_dcc_core import error_result
+from meshy_dcc_core import from_exception
+from meshy_dcc_core import serialize_result
+from meshy_dcc_core import success_result
+from meshy_dcc_core import validate_action_result
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -463,10 +463,10 @@ class TestDeserializeResultErrors:
 
 
 class TestSkillSerializeResult:
-    """Tests for the _serialize_result helper in dcc_mcp_core.skill."""
+    """Tests for the _serialize_result helper in meshy_dcc_core.skill."""
 
     def test_serialize_result_helper_returns_json_str(self):
-        from dcc_mcp_core.skill import _serialize_result
+        from meshy_dcc_core.skill import _serialize_result
 
         result = {"success": True, "message": "test", "prompt": None, "error": None, "context": {}}
         output = _serialize_result(result)
@@ -476,7 +476,7 @@ class TestSkillSerializeResult:
         assert parsed["message"] == "test"
 
     def test_serialize_result_helper_success(self):
-        from dcc_mcp_core.skill import _serialize_result
+        from meshy_dcc_core.skill import _serialize_result
 
         # Pass context as top-level kwargs (as skill functions do via skill_success)
         # so count ends up directly in context, not nested under context["context"].
@@ -492,7 +492,7 @@ class TestSkillSerializeResult:
         assert parsed["context"]["count"] == 5
 
     def test_serialize_result_helper_error(self):
-        from dcc_mcp_core.skill import _serialize_result
+        from meshy_dcc_core.skill import _serialize_result
 
         result = {
             "success": False,
@@ -508,7 +508,7 @@ class TestSkillSerializeResult:
 
     def test_serialize_result_is_independent_of_native_json_helpers(self, monkeypatch):
         """Skill JSON projection is identical when native helpers are unavailable."""
-        import dcc_mcp_core.skill as skill_mod
+        import meshy_dcc_core.skill as skill_mod
 
         result = {
             "success": False,
@@ -526,7 +526,7 @@ class TestSkillSerializeResult:
         native_available = skill_mod._serialize_result(result)
         with monkeypatch.context() as mp:
             mp.setattr(
-                dcc_mcp_core,
+                meshy_dcc_core,
                 "json_dumps",
                 lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError("native JSON helper used")),
                 raising=False,
@@ -539,7 +539,7 @@ class TestSkillSerializeResult:
         assert "_meta" not in parsed["context"]
 
     def test_serialize_result_preserves_json_tuple_and_large_integer_semantics(self):
-        from dcc_mcp_core.skill import _serialize_result
+        from meshy_dcc_core.skill import _serialize_result
 
         large_integer = 2**80 + 1
         parsed = json.loads(
@@ -556,7 +556,7 @@ class TestSkillSerializeResult:
         assert parsed["context"]["asset_id"] == large_integer
 
     def test_serialize_result_replaces_non_json_context_with_failure(self):
-        from dcc_mcp_core.skill import _serialize_result
+        from meshy_dcc_core.skill import _serialize_result
 
         parsed = json.loads(
             _serialize_result(

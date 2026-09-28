@@ -1,12 +1,12 @@
-"""Tests for dcc_mcp_core._tool_registration (ToolSpec + register_tools)."""
+"""Tests for meshy_dcc_core._tool_registration (ToolSpec + register_tools)."""
 
 from __future__ import annotations
 
 import json
 from unittest.mock import MagicMock
 
-from dcc_mcp_core._tool_registration import ToolSpec
-from dcc_mcp_core._tool_registration import register_tools
+from meshy_dcc_core._tool_registration import ToolSpec
+from meshy_dcc_core._tool_registration import register_tools
 
 
 def _make_fake_server() -> tuple[MagicMock, dict]:

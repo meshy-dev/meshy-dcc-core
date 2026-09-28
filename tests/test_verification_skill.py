@@ -9,7 +9,7 @@ import sys
 
 import pytest
 
-_SKILL_DIR = Path(__file__).parent.parent / "python" / "dcc_mcp_core" / "skills" / "verification"
+_SKILL_DIR = Path(__file__).parent.parent / "python" / "meshy_dcc_core" / "skills" / "verification"
 _SCRIPTS = _SKILL_DIR / "scripts"
 
 
@@ -39,7 +39,7 @@ def _load_script(name: str):
 
 
 def test_verification_skill_declares_expected_tools():
-    from dcc_mcp_core import parse_skill_md
+    from meshy_dcc_core import parse_skill_md
 
     meta = parse_skill_md(str(_SKILL_DIR))
     assert meta is not None
@@ -53,8 +53,8 @@ def test_verification_skill_declares_expected_tools():
 
 
 def test_verification_skill_discoverable_and_loadable():
-    from dcc_mcp_core import SkillCatalog
-    from dcc_mcp_core import ToolRegistry
+    from meshy_dcc_core import SkillCatalog
+    from meshy_dcc_core import ToolRegistry
 
     registry = ToolRegistry()
     catalog = SkillCatalog(registry)
@@ -72,7 +72,7 @@ def test_verification_skill_discoverable_and_loadable():
 
 
 def test_read_only_tools_are_limited_to_verification_reads():
-    from dcc_mcp_core import parse_skill_md
+    from meshy_dcc_core import parse_skill_md
 
     meta = parse_skill_md(str(_SKILL_DIR))
     assert meta is not None

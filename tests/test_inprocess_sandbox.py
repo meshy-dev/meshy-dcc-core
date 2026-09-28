@@ -7,11 +7,11 @@ from typing import Any
 from unittest.mock import MagicMock
 from unittest.mock import patch
 
-from dcc_mcp_core import SandboxContext
-from dcc_mcp_core import SandboxPolicy
-from dcc_mcp_core._server.inprocess_executor import HostExecutionBridge
-from dcc_mcp_core._server.options import DccServerOptions
-from dcc_mcp_core.server_base import DccServerBase
+from meshy_dcc_core import SandboxContext
+from meshy_dcc_core import SandboxPolicy
+from meshy_dcc_core._server.inprocess_executor import HostExecutionBridge
+from meshy_dcc_core._server.options import DccServerOptions
+from meshy_dcc_core.server_base import DccServerBase
 
 
 def _write_script(tmp_path: Path, body: str) -> Path:
@@ -32,7 +32,7 @@ def test_denied_action_records_audit_without_importing_script(tmp_path: Path) ->
     )
 
     with patch(
-        "dcc_mcp_core._server.inprocess_executor.run_skill_script",
+        "meshy_dcc_core._server.inprocess_executor.run_skill_script",
         side_effect=AssertionError("skill script must not be imported"),
     ) as mocked:
         result = bridge.execute_script(
@@ -85,7 +85,7 @@ def test_sandbox_uses_script_stem_when_action_name_missing(tmp_path: Path) -> No
     )
 
     with patch(
-        "dcc_mcp_core._server.inprocess_executor.run_skill_script",
+        "meshy_dcc_core._server.inprocess_executor.run_skill_script",
         side_effect=AssertionError("skill script must not be imported"),
     ) as mocked:
         result = bridge.execute_script(str(script), {})
@@ -108,7 +108,7 @@ def _make_base_with_captured_executor(tmp_path: Path) -> tuple[DccServerBase, li
         enable_job_persistence=False,
         enable_telemetry=False,
     )
-    with patch("dcc_mcp_core.server_base.create_adapter_server", return_value=MagicMock()):
+    with patch("meshy_dcc_core.server_base.create_adapter_server", return_value=MagicMock()):
         base = DccServerBase(opts)
 
     captured: list[Any] = []

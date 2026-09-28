@@ -1,14 +1,14 @@
 ---
 name: hello-world
 description: >-
-  Example skill — minimal greeting tool demonstrating the dcc-mcp-core skill
+  Example skill — minimal greeting tool demonstrating the meshy-dcc-core skill
   system. Use only when testing a new skill installation or onboarding to the
   skill authoring workflow. Not intended for production use.
 license: MIT
 compatibility: Python 3.7+
 allowed-tools: Bash Read
 metadata:
-  dcc-mcp:
+  meshy-dcc:
     dcc: python
     version: "1.0.0"
     layer: example
@@ -18,7 +18,7 @@ metadata:
 
 # Hello World
 
-A minimal demonstration skill for the dcc-mcp-core Skills system.
+A minimal demonstration skill for the meshy-dcc-core Skills system.
 
 ## Usage
 

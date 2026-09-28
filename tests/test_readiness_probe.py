@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-import dcc_mcp_core
+import meshy_dcc_core
 
 
 def test_readiness_probe_reports_bridge_bits() -> None:
-    probe = dcc_mcp_core.ReadinessProbe()
+    probe = meshy_dcc_core.ReadinessProbe()
 
     report = probe.report()
     assert report["process"] is True
@@ -29,6 +29,6 @@ def test_readiness_probe_reports_bridge_bits() -> None:
 
 
 def test_fully_ready_probe_marks_all_bits_green() -> None:
-    report = dcc_mcp_core.ReadinessProbe.fully_ready().report()
+    report = meshy_dcc_core.ReadinessProbe.fully_ready().report()
 
     assert all(report.values())

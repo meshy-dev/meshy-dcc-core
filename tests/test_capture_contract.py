@@ -6,9 +6,9 @@ import base64
 
 import pytest
 
-from dcc_mcp_core import CaptureReturnMode
-from dcc_mcp_core import CaptureTargetSpec
-from dcc_mcp_core import build_capture_response
+from meshy_dcc_core import CaptureReturnMode
+from meshy_dcc_core import CaptureTargetSpec
+from meshy_dcc_core import build_capture_response
 
 FRAME = b"deterministic-pixels"
 

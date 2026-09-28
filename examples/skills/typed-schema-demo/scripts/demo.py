@@ -19,9 +19,9 @@ from dataclasses import field
 import json
 from typing import Tuple
 
-from dcc_mcp_core import tool_spec_from_callable
-from dcc_mcp_core._tool_registration import ToolSpec
-from dcc_mcp_core._typing import Literal
+from meshy_dcc_core import tool_spec_from_callable
+from meshy_dcc_core._tool_registration import ToolSpec
+from meshy_dcc_core._typing import Literal
 
 
 @dataclass

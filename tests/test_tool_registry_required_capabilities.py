@@ -6,9 +6,9 @@ from __future__ import annotations
 import pytest
 
 # Import local modules
-import dcc_mcp_core
-from dcc_mcp_core import ToolRegistry
-from dcc_mcp_core import WebViewAdapter
+import meshy_dcc_core
+from meshy_dcc_core import ToolRegistry
+from meshy_dcc_core import WebViewAdapter
 
 
 @pytest.fixture
@@ -103,6 +103,6 @@ class TestRequiredCapabilitiesSearchListRoundTrip:
 
 def test_capability_keys_exposed() -> None:
     """Sanity: predefined capability keys are importable from the package root."""
-    assert "scene" in dcc_mcp_core.CAPABILITY_KEYS
-    assert "timeline" in dcc_mcp_core.CAPABILITY_KEYS
-    assert "selection" in dcc_mcp_core.CAPABILITY_KEYS
+    assert "scene" in meshy_dcc_core.CAPABILITY_KEYS
+    assert "timeline" in meshy_dcc_core.CAPABILITY_KEYS
+    assert "selection" in meshy_dcc_core.CAPABILITY_KEYS

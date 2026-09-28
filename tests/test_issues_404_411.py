@@ -9,7 +9,7 @@ Covers the pure-Python modules added in this feature branch:
 - dcc_api_executor.py (issue #411)
 
 These modules are pure-Python and have no dependency on the compiled _core
-extension.  They import directly from dcc_mcp_core sub-modules after the
+extension.  They import directly from meshy_dcc_core sub-modules after the
 package has been built with maturin develop.
 """
 
@@ -22,13 +22,13 @@ import time
 
 import pytest
 
-import dcc_mcp_core.auth as _auth
-import dcc_mcp_core.batch as _batch
-import dcc_mcp_core.dcc_api_executor as _dcc_api_executor
-import dcc_mcp_core.elicitation as _elicitation
-import dcc_mcp_core.plugin_manifest as _plugin_manifest
-import dcc_mcp_core.rich_content as _rich_content
-from dcc_mcp_core.script_materialization import materialize_script
+import meshy_dcc_core.auth as _auth
+import meshy_dcc_core.batch as _batch
+import meshy_dcc_core.dcc_api_executor as _dcc_api_executor
+import meshy_dcc_core.elicitation as _elicitation
+import meshy_dcc_core.plugin_manifest as _plugin_manifest
+import meshy_dcc_core.rich_content as _rich_content
+from meshy_dcc_core.script_materialization import materialize_script
 
 # ── issue #406: batch_dispatch + EvalContext ─────────────────────────────────
 

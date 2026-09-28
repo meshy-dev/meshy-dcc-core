@@ -2,13 +2,13 @@ FROM python:3.14-slim
 
 WORKDIR /app
 
-RUN pip install --no-cache-dir dcc-mcp-core
+RUN pip install --no-cache-dir meshy-dcc-core
 
 COPY server.py .
 COPY skills/ ./skills/
 
-ENV DCC_MCP_HOST=0.0.0.0
-ENV DCC_MCP_PORT=8765
+ENV MESHY_DCC_HOST=0.0.0.0
+ENV MESHY_DCC_PORT=8765
 
 EXPOSE 8765
 

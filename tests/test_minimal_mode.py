@@ -10,19 +10,19 @@ from unittest.mock import MagicMock
 import pytest
 
 # Import local modules
-import dcc_mcp_core
-from dcc_mcp_core._server.minimal_mode import MinimalModeConfig
-from dcc_mcp_core._server.minimal_mode import apply_minimal_mode
-from dcc_mcp_core._server.minimal_mode import resolve_default_tools
-from dcc_mcp_core._server.minimal_mode import resolve_minimal_disabled
+import meshy_dcc_core
+from meshy_dcc_core._server.minimal_mode import MinimalModeConfig
+from meshy_dcc_core._server.minimal_mode import apply_minimal_mode
+from meshy_dcc_core._server.minimal_mode import resolve_default_tools
+from meshy_dcc_core._server.minimal_mode import resolve_minimal_disabled
 
 # ── public surface ───────────────────────────────────────────────────────────
 
 
 def test_minimal_mode_config_is_exported() -> None:
-    assert hasattr(dcc_mcp_core, "MinimalModeConfig")
-    assert "MinimalModeConfig" in dcc_mcp_core.__all__
-    assert dcc_mcp_core.MinimalModeConfig is MinimalModeConfig
+    assert hasattr(meshy_dcc_core, "MinimalModeConfig")
+    assert "MinimalModeConfig" in meshy_dcc_core.__all__
+    assert meshy_dcc_core.MinimalModeConfig is MinimalModeConfig
 
 
 def test_dataclass_is_frozen() -> None:
@@ -36,8 +36,8 @@ def test_dataclass_is_frozen() -> None:
 
 def test_default_env_var_names() -> None:
     cfg = MinimalModeConfig(skills=())
-    assert cfg.env_var_minimal == "DCC_MCP_MINIMAL"
-    assert cfg.env_var_default_tools == "DCC_MCP_DEFAULT_TOOLS"
+    assert cfg.env_var_minimal == "MESHY_DCC_MINIMAL"
+    assert cfg.env_var_default_tools == "MESHY_DCC_DEFAULT_TOOLS"
 
 
 # ── env-var resolvers ────────────────────────────────────────────────────────
@@ -61,12 +61,12 @@ def test_default_env_var_names() -> None:
     ],
 )
 def test_resolve_minimal_disabled(value: str | None, expected: bool) -> None:
-    env = {} if value is None else {"DCC_MCP_MINIMAL": value}
-    assert resolve_minimal_disabled("DCC_MCP_MINIMAL", env) is expected
+    env = {} if value is None else {"MESHY_DCC_MINIMAL": value}
+    assert resolve_minimal_disabled("MESHY_DCC_MINIMAL", env) is expected
 
 
 def test_resolve_default_tools_unset_returns_none() -> None:
-    assert resolve_default_tools("DCC_MCP_DEFAULT_TOOLS", {}) is None
+    assert resolve_default_tools("MESHY_DCC_DEFAULT_TOOLS", {}) is None
 
 
 def test_resolve_default_tools_empty_returns_none() -> None:
@@ -146,7 +146,7 @@ def test_explicit_override_via_default_tools_env() -> None:
     loaded = apply_minimal_mode(
         server,
         cfg,
-        environ={"DCC_MCP_DEFAULT_TOOLS": "skill_x, skill_y"},
+        environ={"MESHY_DCC_DEFAULT_TOOLS": "skill_x, skill_y"},
     )
     assert loaded == 2
     assert server.loaded == ["skill_x", "skill_y"]
@@ -157,7 +157,7 @@ def test_explicit_override_via_default_tools_env() -> None:
 def test_minimal_disabled_loads_all_discovered_skills() -> None:
     server = _FakeServer(discovered=["a", "b", "c"])
     cfg = MinimalModeConfig(skills=("a",))
-    loaded = apply_minimal_mode(server, cfg, environ={"DCC_MCP_MINIMAL": "0"})
+    loaded = apply_minimal_mode(server, cfg, environ={"MESHY_DCC_MINIMAL": "0"})
     assert loaded == 3
     assert sorted(server.loaded) == ["a", "b", "c"]
     assert server.deactivated == []
@@ -169,7 +169,7 @@ def test_default_tools_takes_precedence_over_minimal_disabled() -> None:
     loaded = apply_minimal_mode(
         server,
         cfg,
-        environ={"DCC_MCP_MINIMAL": "0", "DCC_MCP_DEFAULT_TOOLS": "x,y"},
+        environ={"MESHY_DCC_MINIMAL": "0", "MESHY_DCC_DEFAULT_TOOLS": "x,y"},
     )
     assert loaded == 2
     assert server.loaded == ["x", "y"]

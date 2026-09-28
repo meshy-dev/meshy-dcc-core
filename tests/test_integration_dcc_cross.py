@@ -1,8 +1,8 @@
-"""Cross-DCC pipeline integration tests for dcc-mcp-core.
+"""Cross-DCC pipeline integration tests for meshy-dcc-core.
 
 Tests that verify the skill system works consistently across all supported DCCs.
 These tests run without any external DCC binary — they only exercise
-dcc-mcp-core's Python/Rust bindings with DCC-themed data.
+meshy-dcc-core's Python/Rust bindings with DCC-themed data.
 
 Run:  pytest tests/test_integration_dcc_cross.py -v
 """
@@ -15,7 +15,7 @@ import json
 from pathlib import Path
 
 # Import local modules
-import dcc_mcp_core
+import meshy_dcc_core
 
 # All supported DCCs for cross-DCC pipeline tests (module-level constant to avoid RUF012)
 _ALL_DCC_LIST = ["blender", "freecad", "godot", "openscad", "maya", "houdini"]
@@ -25,12 +25,12 @@ class TestCrossDCCPipeline:
     """Tests that verify the skill system works consistently across all DCCs.
 
     These tests run without any external DCC binary — they only exercise
-    dcc-mcp-core's Python/Rust bindings with DCC-themed data.
+    meshy-dcc-core's Python/Rust bindings with DCC-themed data.
     """
 
     def test_multi_dcc_action_registry(self) -> None:
         """Register actions for multiple DCCs and verify isolation."""
-        reg = dcc_mcp_core.ToolRegistry()
+        reg = meshy_dcc_core.ToolRegistry()
         for dcc in _ALL_DCC_LIST:
             for action in ["create", "export", "validate"]:
                 reg.register(name=f"{dcc}_{action}", dcc=dcc, description=f"{dcc}: {action}")
@@ -48,7 +48,7 @@ class TestCrossDCCPipeline:
 
         for dcc in _ALL_DCC_LIST:
             create_skill_dir(str(tmp_path), f"{dcc}-tools", dcc=dcc)
-        scanner = dcc_mcp_core.SkillScanner()
+        scanner = meshy_dcc_core.SkillScanner()
         dirs = scanner.scan(extra_paths=[str(tmp_path)])
         names = {Path(d).name for d in dirs}
         for dcc in _ALL_DCC_LIST:
@@ -56,7 +56,7 @@ class TestCrossDCCPipeline:
 
     def test_multi_dcc_event_routing(self) -> None:
         """Verify EventBus correctly routes events per DCC."""
-        bus = dcc_mcp_core.EventBus()
+        bus = meshy_dcc_core.EventBus()
         log: dict[str, list] = {dcc: [] for dcc in _ALL_DCC_LIST}
         for dcc in _ALL_DCC_LIST:
             bus.subscribe(f"{dcc}.action.completed", lambda d=dcc, **kw: log[d].append(kw))
@@ -69,8 +69,8 @@ class TestCrossDCCPipeline:
     def test_multi_dcc_result_models(self) -> None:
         """Generate success/error results for each DCC and verify type consistency."""
         for dcc in _ALL_DCC_LIST:
-            success = dcc_mcp_core.success_result(f"Action completed for {dcc}", dcc=dcc)
-            error = dcc_mcp_core.error_result(
+            success = meshy_dcc_core.success_result(f"Action completed for {dcc}", dcc=dcc)
+            error = meshy_dcc_core.error_result(
                 f"Action failed for {dcc}",
                 "Timeout",
                 dcc=dcc,
@@ -84,7 +84,7 @@ class TestCrossDCCPipeline:
     def test_dcc_specific_tool_definitions(self) -> None:
         """Create ToolDefinition objects for each DCC and verify serialization."""
         for dcc in _ALL_DCC_LIST:
-            td = dcc_mcp_core.ToolDefinition(
+            td = meshy_dcc_core.ToolDefinition(
                 name=f"{dcc}_create_object",
                 description=f"Create a 3D object in {dcc}",
                 input_schema=json.dumps(
@@ -110,12 +110,12 @@ class TestCrossDCCPipeline:
             create_skill_dir(
                 str(tmp_path),
                 f"{dcc}-skill-v{i}",
-                frontmatter=(f"name: {dcc}-skill\nmetadata:\n  dcc-mcp:\n    dcc: {dcc}\n    version: {version}"),
+                frontmatter=(f"name: {dcc}-skill\nmetadata:\n  meshy-dcc:\n    dcc: {dcc}\n    version: {version}"),
             )
-        scanner = dcc_mcp_core.SkillScanner()
+        scanner = meshy_dcc_core.SkillScanner()
         dirs = scanner.scan(extra_paths=[str(tmp_path)])
         for skill_dir in dirs:
-            meta = dcc_mcp_core.parse_skill_md(skill_dir)
+            meta = meshy_dcc_core.parse_skill_md(skill_dir)
             assert meta is not None
             assert meta.version != "", f"Missing version for {meta.name}"
             assert meta.dcc in _ALL_DCC_LIST, f"Unexpected DCC: {meta.dcc}"
@@ -129,7 +129,7 @@ class TestCrossDCCPipeline:
         and the core ``SceneStats.matches()`` helper adjudicates round-trip
         fidelity without any DCC binary being involved.
         """
-        produced = dcc_mcp_core.SceneStats(
+        produced = meshy_dcc_core.SceneStats(
             object_count=1,
             vertex_count=482,
             has_mesh=True,
@@ -138,14 +138,14 @@ class TestCrossDCCPipeline:
 
         # Simulate the verifier's final wrap: ToolResult context nests the
         # stats dict alongside a human-readable status message.
-        verifier_result = dcc_mcp_core.success_result(
+        verifier_result = meshy_dcc_core.success_result(
             "Imported and inspected asset",
             verifier_dcc="godot",
             stats=produced.to_dict(),
         )
         assert verifier_result.success is True
         nested = verifier_result.context["stats"]
-        observed = dcc_mcp_core.SceneStats.from_dict(nested)
+        observed = meshy_dcc_core.SceneStats.from_dict(nested)
 
         # Observed stats survive the producer → JSON → verifier round-trip.
         assert observed == produced

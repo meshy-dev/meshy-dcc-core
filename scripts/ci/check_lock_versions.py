@@ -12,8 +12,8 @@ Two independent invariants are enforced, one per lockfile.
 
 ``uv.lock``
     ``pkg/*/pyproject.toml`` builds PyPI distributions that the root project
-    consumes as ordinary registry dependencies (``dcc-mcp-server`` and
-    ``dcc-mcp-core-semantic``). Those wheels only exist once a release is
+    consumes as ordinary registry dependencies (``meshy-dcc-server`` and
+    ``meshy-dcc-core-semantic``). Those wheels only exist once a release is
     published, so ``uv.lock`` can never pin the version an open release-please
     PR is declaring: resolution reads the index, not this checkout. The
     enforceable invariant is therefore that the lock must not fall behind the
@@ -48,7 +48,7 @@ except ModuleNotFoundError:  # pragma: no cover - exercised by the Python 3.7 CI
     import tomli as tomllib
 
 # Release-please names its PR branches after the target branch and component,
-# e.g. ``release-please--branches--main--components--dcc-mcp-core``.
+# e.g. ``release-please--branches--main--components--meshy-dcc-core``.
 RELEASE_PR_REF_PREFIX = "release-please--"
 # ``GITHUB_HEAD_REF`` is the head branch of a pull request run; ``GITHUB_REF``
 # is the fallback for branch pushes, where it is ``refs/heads/<branch>``.

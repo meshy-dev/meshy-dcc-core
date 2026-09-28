@@ -4,15 +4,15 @@ from __future__ import annotations
 
 from typing import Any
 
-from dcc_mcp_core._lifecycle_events import LifecycleEventDispatcher
-from dcc_mcp_core._server import ExecutionBridgeBinder
-from dcc_mcp_core._server import LifecycleController
-from dcc_mcp_core._server import ObservabilityFacade
-from dcc_mcp_core._server import ServerLifecycleController
-from dcc_mcp_core._server import ServerRuntimeController
-from dcc_mcp_core._server import SkillDiscoveryController
-from dcc_mcp_core._server import SkillQueryClient
-from dcc_mcp_core._server import WindowResolver
+from meshy_dcc_core._lifecycle_events import LifecycleEventDispatcher
+from meshy_dcc_core._server import ExecutionBridgeBinder
+from meshy_dcc_core._server import LifecycleController
+from meshy_dcc_core._server import ObservabilityFacade
+from meshy_dcc_core._server import ServerLifecycleController
+from meshy_dcc_core._server import ServerRuntimeController
+from meshy_dcc_core._server import SkillDiscoveryController
+from meshy_dcc_core._server import SkillQueryClient
+from meshy_dcc_core._server import WindowResolver
 
 
 def make_test_server(
@@ -25,7 +25,7 @@ def make_test_server(
     **extra_attrs: Any,
 ) -> Any:
     """Build a ``DccServerBase`` shell with its standard collaborators."""
-    from dcc_mcp_core.server_base import DccServerBase
+    from meshy_dcc_core.server_base import DccServerBase
 
     obj = DccServerBase.__new__(DccServerBase)
     obj.__dict__.update(

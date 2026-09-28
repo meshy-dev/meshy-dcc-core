@@ -1,0 +1,58 @@
+[package]
+name = "meshy-dcc-sidecar"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Sidecar and gateway-daemon runtime support for Meshy DCC hosts"
+
+[dependencies]
+meshy-dcc-gateway = { workspace = true, optional = true }
+meshy-dcc-gateway-ensure.workspace = true
+meshy-dcc-host-rpc.workspace = true
+meshy-dcc-jsonrpc.workspace = true
+meshy-dcc-transport.workspace = true
+anyhow.workspace = true
+axum = { workspace = true, features = ["http1", "tokio"] }
+clap = { version = "4", features = ["derive", "env"] }
+reqwest.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sysinfo.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+uuid.workspace = true
+workspace-hack = { version = "0.1", path = "../workspace-hack" }
+
+[features]
+default = ["gateway-auto", "gateway-daemon"]
+
+# Per-DCC sidecar lifecycle, diagnostic MCP listener, and legacy embedded
+# gateway failover path.
+gateway-auto = ["dep:meshy-dcc-gateway"]
+
+# Machine-wide gateway daemon CLI/runtime plus daemon guardian helpers.
+gateway-daemon = ["dep:meshy-dcc-gateway"]
+
+admin = [
+    "meshy-dcc-gateway?/admin",
+    "meshy-dcc-gateway?/admin-persist-sqlite",
+]
+
+mdns = [
+    "meshy-dcc-transport/mdns",
+    "meshy-dcc-gateway?/mdns",
+]
+
+prometheus = ["meshy-dcc-gateway?/prometheus"]
+
+[dev-dependencies]
+socket2.workspace = true
+tempfile.workspace = true
+reqwest = { version = "0.13", default-features = false, features = ["json", "rustls"] }
+meshy-dcc-test-utils = { workspace = true }
+
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"

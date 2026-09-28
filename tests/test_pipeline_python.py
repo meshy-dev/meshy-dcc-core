@@ -18,13 +18,13 @@ import json
 
 import pytest
 
-from dcc_mcp_core import AuditMiddleware
-from dcc_mcp_core import LoggingMiddleware
-from dcc_mcp_core import RateLimitMiddleware
-from dcc_mcp_core import TimingMiddleware
-from dcc_mcp_core import ToolDispatcher
-from dcc_mcp_core import ToolPipeline
-from dcc_mcp_core import ToolRegistry
+from meshy_dcc_core import AuditMiddleware
+from meshy_dcc_core import LoggingMiddleware
+from meshy_dcc_core import RateLimitMiddleware
+from meshy_dcc_core import TimingMiddleware
+from meshy_dcc_core import ToolDispatcher
+from meshy_dcc_core import ToolPipeline
+from meshy_dcc_core import ToolRegistry
 
 # ── Fixtures ──────────────────────────────────────────────────────────────────
 

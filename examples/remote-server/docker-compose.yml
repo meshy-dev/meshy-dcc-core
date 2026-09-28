@@ -6,8 +6,8 @@ services:
     ports:
       - "127.0.0.1:8765:8765"
     environment:
-      DCC_MCP_HOST: "0.0.0.0"
-      DCC_MCP_PORT: "8765"
+      MESHY_DCC_HOST: "0.0.0.0"
+      MESHY_DCC_PORT: "8765"
     volumes:
       - ./skills:/app/skills:ro
     restart: unless-stopped

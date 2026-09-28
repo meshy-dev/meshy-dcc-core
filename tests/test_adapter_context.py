@@ -6,18 +6,18 @@ import json
 from typing import Any
 
 from _support import make_test_server
-import dcc_mcp_core
-from dcc_mcp_core import AdapterInstructionSet
-from dcc_mcp_core import DccContextSnapshot
-from dcc_mcp_core import DccToolsetProfile
-from dcc_mcp_core import ResponseShapePolicy
-from dcc_mcp_core import ToolsetProfileRegistry
-from dcc_mcp_core import VisualFeedbackPolicy
-from dcc_mcp_core import append_context_snapshot
-from dcc_mcp_core import build_visual_feedback_context
-from dcc_mcp_core import register_adapter_instruction_resources
-from dcc_mcp_core import shape_response
-from dcc_mcp_core.server_base import DccServerBase
+import meshy_dcc_core
+from meshy_dcc_core import AdapterInstructionSet
+from meshy_dcc_core import DccContextSnapshot
+from meshy_dcc_core import DccToolsetProfile
+from meshy_dcc_core import ResponseShapePolicy
+from meshy_dcc_core import ToolsetProfileRegistry
+from meshy_dcc_core import VisualFeedbackPolicy
+from meshy_dcc_core import append_context_snapshot
+from meshy_dcc_core import build_visual_feedback_context
+from meshy_dcc_core import register_adapter_instruction_resources
+from meshy_dcc_core import shape_response
+from meshy_dcc_core.server_base import DccServerBase
 
 
 class _FakeServer:
@@ -38,8 +38,8 @@ def test_adapter_context_symbols_exported() -> None:
         "ToolsetProfileRegistry",
         "register_adapter_instruction_resources",
     ):
-        assert hasattr(dcc_mcp_core, name)
-        assert name in dcc_mcp_core.__all__
+        assert hasattr(meshy_dcc_core, name)
+        assert name in meshy_dcc_core.__all__
 
 
 def test_register_adapter_instruction_resources() -> None:

@@ -30,9 +30,9 @@ import urllib.request
 import pytest
 
 from conftest import McpClient
-from dcc_mcp_core import McpHttpConfig
-from dcc_mcp_core import McpHttpServer
-from dcc_mcp_core import ToolRegistry
+from meshy_dcc_core import McpHttpConfig
+from meshy_dcc_core import McpHttpServer
+from meshy_dcc_core import ToolRegistry
 
 
 @contextlib.contextmanager
@@ -86,7 +86,7 @@ def _feature_enabled() -> bool:
 _FEATURE = _feature_enabled()
 pytestmark = pytest.mark.skipif(
     not _FEATURE,
-    reason="dcc-mcp-core wheel was built without the job-persist-sqlite feature",
+    reason="meshy-dcc-core wheel was built without the job-persist-sqlite feature",
 )
 
 

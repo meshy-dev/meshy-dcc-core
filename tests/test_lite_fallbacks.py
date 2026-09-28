@@ -25,19 +25,19 @@ _FALLBACK_PUBLIC_NAMES = (
 def _reset_lite_fallback_module_after_stub_core():
     """Drop cached lite modules so xdist workers do not keep fallback bindings."""
     yield
-    sys.modules.pop("dcc_mcp_core._lite_fallback", None)
-    sys.modules.pop("dcc_mcp_core._py37_fallback", None)
-    package = sys.modules.get("dcc_mcp_core")
+    sys.modules.pop("meshy_dcc_core._lite_fallback", None)
+    sys.modules.pop("meshy_dcc_core._py37_fallback", None)
+    package = sys.modules.get("meshy_dcc_core")
     if package is not None:
         for name in _FALLBACK_PUBLIC_NAMES:
             package.__dict__.pop(name, None)
 
 
 def _import_without_core(monkeypatch, *module_names: str):
-    monkeypatch.setitem(sys.modules, "dcc_mcp_core._core", None)
-    import dcc_mcp_core
+    monkeypatch.setitem(sys.modules, "meshy_dcc_core._core", None)
+    import meshy_dcc_core
 
-    dcc_mcp_core.__dict__.pop("_core", None)
+    meshy_dcc_core.__dict__.pop("_core", None)
     for name in module_names:
         existing = sys.modules.get(name)
         if existing is not None:
@@ -53,27 +53,27 @@ def _import_without_core(monkeypatch, *module_names: str):
 
 
 def test_legacy_py37_module_warns_and_forwards_to_lite_fallback() -> None:
-    sys.modules.pop("dcc_mcp_core._py37_fallback", None)
+    sys.modules.pop("meshy_dcc_core._py37_fallback", None)
     with pytest.warns(DeprecationWarning, match="_lite_fallback"):
-        legacy = importlib.import_module("dcc_mcp_core._py37_fallback")
-    lite = importlib.import_module("dcc_mcp_core._lite_fallback")
+        legacy = importlib.import_module("meshy_dcc_core._py37_fallback")
+    lite = importlib.import_module("meshy_dcc_core._lite_fallback")
     assert legacy.DccCapabilities is lite.DccCapabilities
 
 
 def test_host_namespace_falls_back_without_core(monkeypatch) -> None:
     modules = _import_without_core(
         monkeypatch,
-        "dcc_mcp_core.host._protocols",
-        "dcc_mcp_core.wire._fallback",
-        "dcc_mcp_core.wire",
-        "dcc_mcp_core.host._adapter",
-        "dcc_mcp_core.host._standalone",
-        "dcc_mcp_core.host._fallback",
-        "dcc_mcp_core.host",
+        "meshy_dcc_core.host._protocols",
+        "meshy_dcc_core.wire._fallback",
+        "meshy_dcc_core.wire",
+        "meshy_dcc_core.host._adapter",
+        "meshy_dcc_core.host._standalone",
+        "meshy_dcc_core.host._fallback",
+        "meshy_dcc_core.host",
     )
-    host = modules["dcc_mcp_core.host"]
-    wire = modules["dcc_mcp_core.wire"]
-    fallback = modules["dcc_mcp_core.host._fallback"]
+    host = modules["meshy_dcc_core.host"]
+    wire = modules["meshy_dcc_core.wire"]
+    fallback = modules["meshy_dcc_core.host._fallback"]
 
     assert host.BlockingDispatcher is fallback.BlockingDispatcher
     assert host.QueueDispatcher is fallback.QueueDispatcher
@@ -98,26 +98,26 @@ def test_host_namespace_falls_back_without_core(monkeypatch) -> None:
 
 
 def test_json_codec_and_aliases_import_without_core(monkeypatch) -> None:
-    import dcc_mcp_core
+    import meshy_dcc_core
 
     for name in ("json_dumps", "json_loads"):
-        dcc_mcp_core.__dict__.pop(name, None)
+        meshy_dcc_core.__dict__.pop(name, None)
 
     modules = _import_without_core(
         monkeypatch,
-        "dcc_mcp_core._json_codec",
-        "dcc_mcp_core.skills_helper",
-        "dcc_mcp_core.wire._fallback",
-        "dcc_mcp_core.wire",
+        "meshy_dcc_core._json_codec",
+        "meshy_dcc_core.skills_helper",
+        "meshy_dcc_core.wire._fallback",
+        "meshy_dcc_core.wire",
     )
-    codec = modules["dcc_mcp_core._json_codec"]
-    skills_helper = modules["dcc_mcp_core.skills_helper"]
-    wire = modules["dcc_mcp_core.wire"]
+    codec = modules["meshy_dcc_core._json_codec"]
+    skills_helper = modules["meshy_dcc_core.skills_helper"]
+    wire = modules["meshy_dcc_core.wire"]
 
     assert skills_helper.json_dumps is codec.json_dumps
     assert skills_helper.json_loads is codec.json_loads
-    assert dcc_mcp_core.json_dumps is skills_helper.json_dumps
-    assert dcc_mcp_core.json_loads is skills_helper.json_loads
+    assert meshy_dcc_core.json_dumps is skills_helper.json_dumps
+    assert meshy_dcc_core.json_loads is skills_helper.json_loads
     assert codec.json_loads(codec.json_dumps({"name": "café"}, ensure_ascii=False)) == {"name": "café"}
     assert wire.normalize_tool_arguments('{"name": "cube"}') == {"name": "cube"}
 
@@ -125,13 +125,13 @@ def test_json_codec_and_aliases_import_without_core(monkeypatch) -> None:
 def test_server_and_skill_helpers_fallback_without_core(monkeypatch, tmp_path) -> None:
     modules = _import_without_core(
         monkeypatch,
-        "dcc_mcp_core._server.config",
-        "dcc_mcp_core._server.skill_discovery",
-        "dcc_mcp_core.server_base",
+        "meshy_dcc_core._server.config",
+        "meshy_dcc_core._server.skill_discovery",
+        "meshy_dcc_core.server_base",
     )
-    config = modules["dcc_mcp_core._server.config"]
-    skill_discovery = modules["dcc_mcp_core._server.skill_discovery"]
-    server_base = modules["dcc_mcp_core.server_base"]
+    config = modules["meshy_dcc_core._server.config"]
+    skill_discovery = modules["meshy_dcc_core._server.skill_discovery"]
+    server_base = modules["meshy_dcc_core.server_base"]
 
     cfg = config.McpHttpConfig(port=8765, server_name="fallback", enable_cors=True, request_timeout_ms=1234)
     assert cfg.host == "127.0.0.1"
@@ -143,10 +143,10 @@ def test_server_and_skill_helpers_fallback_without_core(monkeypatch, tmp_path) -
     cfg.job_recovery = "Requeue"
     assert cfg.job_recovery == "requeue"
 
-    monkeypatch.setenv("DCC_MCP_SKILL_PATHS", os.pathsep.join([str(tmp_path / "a"), str(tmp_path / "b")]))
+    monkeypatch.setenv("MESHY_DCC_SKILL_PATHS", os.pathsep.join([str(tmp_path / "a"), str(tmp_path / "b")]))
     assert skill_discovery.get_skill_paths_from_env() == [str(tmp_path / "a"), str(tmp_path / "b")]
-    assert skill_discovery.get_local_skills_dir("maya").endswith(str(Path(".dcc-mcp") / "maya" / "skills"))
-    assert skill_discovery.get_skills_dir("maya").endswith(str(Path(".dcc-mcp") / "skills" / "maya"))
+    assert skill_discovery.get_local_skills_dir("maya").endswith(str(Path(".meshy-dcc") / "maya" / "skills"))
+    assert skill_discovery.get_skills_dir("maya").endswith(str(Path(".meshy-dcc") / "skills" / "maya"))
 
     assert server_base._PKG_VERSION == "0.0.0-dev"
 
@@ -156,11 +156,11 @@ def test_parse_skill_md_fallback(monkeypatch, tmp_path, allowed_tools_key: str) 
     """The public parser and lite catalog share canonical metadata semantics."""
     modules = _import_without_core(
         monkeypatch,
-        "dcc_mcp_core._lite_fallback",
-        "dcc_mcp_core._runtime.pure_skill_catalog",
+        "meshy_dcc_core._lite_fallback",
+        "meshy_dcc_core._runtime.pure_skill_catalog",
     )
-    fallback = modules["dcc_mcp_core._lite_fallback"]
-    catalog_module = modules["dcc_mcp_core._runtime.pure_skill_catalog"]
+    fallback = modules["meshy_dcc_core._lite_fallback"]
+    catalog_module = modules["meshy_dcc_core._runtime.pure_skill_catalog"]
 
     skill_dir = tmp_path / "test-skill"
     skill_dir.mkdir()
@@ -172,7 +172,7 @@ def test_parse_skill_md_fallback(monkeypatch, tmp_path, allowed_tools_key: str) 
         "  for shared discovery.\n"
         f"{allowed_tools_key}: [Read]\n"
         "metadata:\n"
-        "  dcc-mcp:\n"
+        "  meshy-dcc:\n"
         "    dcc: maya\n"
         '    version: "1.0.0"  # release version\n'
         "    tags: [modeling, test]\n"
@@ -222,11 +222,11 @@ def test_parse_skill_md_fallback(monkeypatch, tmp_path, allowed_tools_key: str) 
 def test_shared_lite_parser_rejects_legacy_top_level_extensions(monkeypatch, tmp_path) -> None:
     modules = _import_without_core(
         monkeypatch,
-        "dcc_mcp_core._lite_fallback",
-        "dcc_mcp_core._runtime.pure_skill_catalog",
+        "meshy_dcc_core._lite_fallback",
+        "meshy_dcc_core._runtime.pure_skill_catalog",
     )
-    fallback = modules["dcc_mcp_core._lite_fallback"]
-    catalog_module = modules["dcc_mcp_core._runtime.pure_skill_catalog"]
+    fallback = modules["meshy_dcc_core._lite_fallback"]
+    catalog_module = modules["meshy_dcc_core._runtime.pure_skill_catalog"]
     skill_dir = tmp_path / "legacy-skill"
     skill_dir.mkdir()
     (skill_dir / "SKILL.md").write_text(
@@ -260,11 +260,11 @@ def test_shared_lite_parser_rejects_legacy_top_level_extensions(monkeypatch, tmp
 def test_shared_lite_parser_keeps_indented_markdown_separator(monkeypatch, tmp_path) -> None:
     modules = _import_without_core(
         monkeypatch,
-        "dcc_mcp_core._lite_fallback",
-        "dcc_mcp_core._runtime.pure_skill_catalog",
+        "meshy_dcc_core._lite_fallback",
+        "meshy_dcc_core._runtime.pure_skill_catalog",
     )
-    fallback = modules["dcc_mcp_core._lite_fallback"]
-    catalog_module = modules["dcc_mcp_core._runtime.pure_skill_catalog"]
+    fallback = modules["meshy_dcc_core._lite_fallback"]
+    catalog_module = modules["meshy_dcc_core._runtime.pure_skill_catalog"]
     skill_dir = tmp_path / "markdown-separator"
     skill_dir.mkdir()
     (skill_dir / "SKILL.md").write_text(
@@ -275,7 +275,7 @@ def test_shared_lite_parser_keeps_indented_markdown_separator(monkeypatch, tmp_p
         "  ---\n"
         "  Final paragraph\n"
         "metadata:\n"
-        "  dcc-mcp:\n"
+        "  meshy-dcc:\n"
         "    dcc: maya\n"
         "    tags: [rule]\n"
         "---\n",
@@ -295,12 +295,12 @@ def test_shared_lite_parser_keeps_indented_markdown_separator(monkeypatch, tmp_p
 def test_shared_lite_parser_matches_core_runtime_skill(monkeypatch) -> None:
     modules = _import_without_core(
         monkeypatch,
-        "dcc_mcp_core._lite_fallback",
-        "dcc_mcp_core._runtime.pure_skill_catalog",
+        "meshy_dcc_core._lite_fallback",
+        "meshy_dcc_core._runtime.pure_skill_catalog",
     )
-    fallback = modules["dcc_mcp_core._lite_fallback"]
-    catalog_module = modules["dcc_mcp_core._runtime.pure_skill_catalog"]
-    skill_dir = Path(__file__).resolve().parents[1] / "python" / "dcc_mcp_core" / "skills" / "workflow"
+    fallback = modules["meshy_dcc_core._lite_fallback"]
+    catalog_module = modules["meshy_dcc_core._runtime.pure_skill_catalog"]
+    skill_dir = Path(__file__).resolve().parents[1] / "python" / "meshy_dcc_core" / "skills" / "workflow"
 
     parsed = fallback.parse_skill_md(str(skill_dir))
     catalog = catalog_module.PurePythonSkillCatalog("python")
@@ -315,9 +315,9 @@ def test_dcc_capabilities_fallback(monkeypatch) -> None:
     """DccCapabilities works without _core (py37-lite)."""
     modules = _import_without_core(
         monkeypatch,
-        "dcc_mcp_core._lite_fallback",
+        "meshy_dcc_core._lite_fallback",
     )
-    fallback = modules["dcc_mcp_core._lite_fallback"]
+    fallback = modules["meshy_dcc_core._lite_fallback"]
 
     caps = fallback.DccCapabilities(
         scene_info=True,
@@ -353,9 +353,9 @@ def test_py_pumped_dispatcher_fallback(monkeypatch) -> None:
     """PyPumpedDispatcher works without _core (py37-lite)."""
     modules = _import_without_core(
         monkeypatch,
-        "dcc_mcp_core._lite_fallback",
+        "meshy_dcc_core._lite_fallback",
     )
-    fallback = modules["dcc_mcp_core._lite_fallback"]
+    fallback = modules["meshy_dcc_core._lite_fallback"]
 
     disp = fallback.PyPumpedDispatcher(budget_ms=100)
     assert disp.budget_ms == 100
@@ -398,36 +398,36 @@ def test_py_pumped_dispatcher_fallback(monkeypatch) -> None:
 
 def test_fallback_imports_from_top_level(monkeypatch) -> None:
     """Top-level imports resolve via _lite_fallback when _core is absent."""
-    monkeypatch.setitem(sys.modules, "dcc_mcp_core._core", None)
-    import dcc_mcp_core
+    monkeypatch.setitem(sys.modules, "meshy_dcc_core._core", None)
+    import meshy_dcc_core
 
-    dcc_mcp_core.__dict__.pop("_core", None)
+    meshy_dcc_core.__dict__.pop("_core", None)
 
     # Clear the fallback module cache so it re-imports without _core
-    sys.modules.pop("dcc_mcp_core._lite_fallback", None)
+    sys.modules.pop("meshy_dcc_core._lite_fallback", None)
 
     # parse_skill_md should come from _lite_fallback
-    parse = dcc_mcp_core.parse_skill_md
+    parse = meshy_dcc_core.parse_skill_md
     assert callable(parse)
 
     # DccCapabilities should come from _lite_fallback
-    caps = dcc_mcp_core.DccCapabilities(scene_info=True)
+    caps = meshy_dcc_core.DccCapabilities(scene_info=True)
     assert caps.scene_info is True
 
     # PyPumpedDispatcher should come from _lite_fallback
-    disp = dcc_mcp_core.PyPumpedDispatcher()
+    disp = meshy_dcc_core.PyPumpedDispatcher()
     assert disp.budget_ms == 8
 
     # scan_and_load_strict should come from _lite_fallback
-    strict = dcc_mcp_core.scan_and_load_strict
+    strict = meshy_dcc_core.scan_and_load_strict
     assert callable(strict)
 
     # GUI executable helpers should come from _lite_fallback
-    assert callable(dcc_mcp_core.is_gui_executable)
-    assert callable(dcc_mcp_core.correct_python_executable)
+    assert callable(meshy_dcc_core.is_gui_executable)
+    assert callable(meshy_dcc_core.correct_python_executable)
 
     # ReadinessProbe should come from _lite_fallback
-    probe = dcc_mcp_core.ReadinessProbe()
+    probe = meshy_dcc_core.ReadinessProbe()
     assert probe.report()["process"] is True
     assert probe.is_ready() is False
 
@@ -436,11 +436,11 @@ def test_readiness_probe_fallback_without_core(monkeypatch) -> None:
     """ReadinessProbe and AdapterReadinessBinder work without _core (py37-lite)."""
     modules = _import_without_core(
         monkeypatch,
-        "dcc_mcp_core._lite_fallback",
-        "dcc_mcp_core.readiness",
+        "meshy_dcc_core._lite_fallback",
+        "meshy_dcc_core.readiness",
     )
-    fallback = modules["dcc_mcp_core._lite_fallback"]
-    readiness = modules["dcc_mcp_core.readiness"]
+    fallback = modules["meshy_dcc_core._lite_fallback"]
+    readiness = modules["meshy_dcc_core.readiness"]
 
     probe = fallback.ReadinessProbe()
     report = probe.report()
@@ -482,9 +482,9 @@ def test_gui_executable_fallback(monkeypatch, tmp_path) -> None:
     """is_gui_executable / correct_python_executable work without _core."""
     modules = _import_without_core(
         monkeypatch,
-        "dcc_mcp_core._lite_fallback",
+        "meshy_dcc_core._lite_fallback",
     )
-    fallback = modules["dcc_mcp_core._lite_fallback"]
+    fallback = modules["meshy_dcc_core._lite_fallback"]
 
     maya = tmp_path / "maya.exe"
     mayapy = tmp_path / "mayapy.exe"
@@ -506,14 +506,14 @@ def test_scan_and_load_strict_fallback(monkeypatch, tmp_path) -> None:
     """scan_and_load_strict works without _core (py37-lite)."""
     modules = _import_without_core(
         monkeypatch,
-        "dcc_mcp_core._lite_fallback",
+        "meshy_dcc_core._lite_fallback",
     )
-    fallback = modules["dcc_mcp_core._lite_fallback"]
+    fallback = modules["meshy_dcc_core._lite_fallback"]
 
     good = tmp_path / "good-skill"
     good.mkdir()
     (good / "SKILL.md").write_text(
-        "---\nname: good-skill\ndescription: ok\nmetadata:\n  dcc-mcp:\n    dcc: maya\n---\n# Good\n",
+        "---\nname: good-skill\ndescription: ok\nmetadata:\n  meshy-dcc:\n    dcc: maya\n---\n# Good\n",
         encoding="utf-8",
     )
 

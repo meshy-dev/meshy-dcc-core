@@ -12,8 +12,8 @@ Machine-readable contracts that CI enforces on every pull request.
 A published `*-vN.schema.json` is a contract: once a release carries it, clients resolve it
 by `$id` and by digest, so its bytes must never change. Editing a released schema in place
 is invisible to the four live digest pins (`compatibility/python.json`,
-`python/dcc_mcp_core/deployment/install_sop.py`,
-`crates/dcc-mcp-models/src/schema_validation.rs`, and the cross-assert in
+`python/meshy_dcc_core/deployment/install_sop.py`,
+`crates/meshy-dcc-models/src/schema_validation.rs`, and the cross-assert in
 `tests/test_install_catalog_provenance_contract.py`) because all four are computed from the
 current file — updating them in the same commit keeps CI green. That is exactly how the
 0.20.30 rewrite of `adapter-install-sop-v1` reached `main`.
@@ -22,11 +22,11 @@ current file — updating them in the same commit keeps CI green. That is exactl
 released core tags to the sha256 of the committed bytes at that tag:
 
 ```json
-"https://dcc-mcp.github.io/schemas/adapter-install-sop-v1.schema.json": {
-  "path": "python/dcc_mcp_core/schemas/adapter-install-sop-v1.schema.json",
+"https://www.meshy.ai/meshy-dcc/schemas/adapter-install-sop-v1.schema.json": {
+  "path": "python/meshy_dcc_core/schemas/adapter-install-sop-v1.schema.json",
   "released": {
     "v0.20.29": "3ca25788439917b4d4c0617230a762f9797756b5b54f45c8c4149f975b90f904",
-    "v0.20.30": "2b3a8a101384a5163c7569c4a2b0de6586c672c5ee291735f94334a33b7d37a0"
+    "v0.20.30": "78271120374b0e23e47097de168d99a025671d913454884d28cf650bbc10a10f"
   }
 }
 ```
@@ -44,7 +44,7 @@ The gate asserts two things:
 Add a `(tag, sha256)` pair under the schema's `$id` when you cut a release:
 
 ```bash
-git cat-file blob v0.20.34:python/dcc_mcp_core/schemas/adapter-install-sop-v1.schema.json | sha256sum
+git cat-file blob v0.20.34:python/meshy_dcc_core/schemas/adapter-install-sop-v1.schema.json | sha256sum
 ```
 
 Rules:

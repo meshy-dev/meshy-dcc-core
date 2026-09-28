@@ -4,11 +4,11 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from dcc_mcp_core import json_dumps
-from dcc_mcp_core.project import PROJECT_DIR_NAME
-from dcc_mcp_core.project import PROJECT_STATE_FILE
-from dcc_mcp_core.project import DccProject
-from dcc_mcp_core.project import ProjectState
+from meshy_dcc_core import json_dumps
+from meshy_dcc_core.project import PROJECT_DIR_NAME
+from meshy_dcc_core.project import PROJECT_STATE_FILE
+from meshy_dcc_core.project import DccProject
+from meshy_dcc_core.project import ProjectState
 
 
 def test_project_state_round_trips_dict() -> None:
@@ -187,7 +187,7 @@ def test_dcc_project_resume_session_payload(tmp_path: Path) -> None:
 def test_dcc_project_checkpoints_property_returns_store_rooted_at_project_dir(
     tmp_path: Path,
 ) -> None:
-    from dcc_mcp_core.checkpoint import CheckpointStore
+    from meshy_dcc_core.checkpoint import CheckpointStore
 
     project = DccProject.open(tmp_path / "shot_cp.ma")
 

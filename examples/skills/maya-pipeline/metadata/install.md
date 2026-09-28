@@ -18,14 +18,14 @@
 
 2. Set environment variable for skill discovery:
    ```bash
-   export DCC_MCP_SKILL_PATHS="/path/to/skills"
+   export MESHY_DCC_SKILL_PATHS="/path/to/skills"
    ```
 
 3. Verify installation:
    ```bash
    python -c "
-   import dcc_mcp_core
-   scanner = dcc_mcp_core.SkillScanner()
+   import meshy_dcc_core
+   scanner = meshy_dcc_core.SkillScanner()
    dirs = scanner.scan(dcc_name='maya')
    print(f'Found {len(dirs)} skills')
    "
@@ -34,9 +34,9 @@
 ## Post-Install Validation
 
 ```python
-import dcc_mcp_core
+import meshy_dcc_core
 
-meta = dcc_mcp_core._core.parse_skill_md("/path/to/maya-pipeline")
+meta = meshy_dcc_core._core.parse_skill_md("/path/to/maya-pipeline")
 assert meta is not None
 assert meta.name == "maya-pipeline"
 assert len(meta.scripts) >= 2

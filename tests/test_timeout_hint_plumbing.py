@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 
-from dcc_mcp_core._server.inprocess_executor import timeout_hint_secs_to_ms
+from meshy_dcc_core._server.inprocess_executor import timeout_hint_secs_to_ms
 
 
 def test_timeout_hint_secs_to_ms_converts_seconds() -> None:

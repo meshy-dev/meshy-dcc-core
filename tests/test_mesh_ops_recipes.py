@@ -28,14 +28,14 @@ from jsonschema import Draft202012Validator
 from jsonschema import ValidationError
 import pytest
 
-import dcc_mcp_core
-from dcc_mcp_core import yaml_loads
-from dcc_mcp_core._runtime.recipe_schema import _RecipeSchemaValidator
-from dcc_mcp_core.recipes import find_recipe_entry
-from dcc_mcp_core.recipes import list_recipe_entries
-from dcc_mcp_core.recipes import load_recipe_pack
-from dcc_mcp_core.recipes import register_recipes_tools
-from dcc_mcp_core.recipes import validate_recipe_inputs
+import meshy_dcc_core
+from meshy_dcc_core import yaml_loads
+from meshy_dcc_core._runtime.recipe_schema import _RecipeSchemaValidator
+from meshy_dcc_core.recipes import find_recipe_entry
+from meshy_dcc_core.recipes import list_recipe_entries
+from meshy_dcc_core.recipes import load_recipe_pack
+from meshy_dcc_core.recipes import register_recipes_tools
+from meshy_dcc_core.recipes import validate_recipe_inputs
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 MESH_OPS_SKILL_DIR = REPO_ROOT / "skills" / "mesh-ops"
@@ -224,7 +224,7 @@ def _make_metadata(skill_path: str) -> MagicMock:
     md = MagicMock()
     md.name = "mesh-ops"
     md.skill_path = skill_path
-    md.metadata = {"dcc-mcp": {"recipes": "RECIPES.yaml"}}
+    md.metadata = {"meshy-dcc": {"recipes": "RECIPES.yaml"}}
     return md
 
 
@@ -269,7 +269,7 @@ def _residual_placeholders(arguments: dict[str, Any]) -> list[str]:
 
 def test_skill_declares_recipe_pack() -> None:
     assert (MESH_OPS_SKILL_DIR / "SKILL.md").is_file()
-    report = dcc_mcp_core.validate_skill(str(MESH_OPS_SKILL_DIR))
+    report = meshy_dcc_core.validate_skill(str(MESH_OPS_SKILL_DIR))
     assert report.is_clean, f"mesh-ops skill is not clean: {report.issues}"
 
 

@@ -18,13 +18,13 @@ import json
 
 import pytest
 
-from dcc_mcp_core import SdfPath
-from dcc_mcp_core import TelemetryConfig
-from dcc_mcp_core import ToolDispatcher
-from dcc_mcp_core import ToolRegistry
-from dcc_mcp_core import ToolValidator
-from dcc_mcp_core import UsdStage
-from dcc_mcp_core import VtValue
+from meshy_dcc_core import SdfPath
+from meshy_dcc_core import TelemetryConfig
+from meshy_dcc_core import ToolDispatcher
+from meshy_dcc_core import ToolRegistry
+from meshy_dcc_core import ToolValidator
+from meshy_dcc_core import UsdStage
+from meshy_dcc_core import VtValue
 
 # ---------------------------------------------------------------------------
 # Helpers

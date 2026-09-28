@@ -17,17 +17,17 @@ from __future__ import annotations
 
 import pytest
 
-from dcc_mcp_core import BooleanWrapper
-from dcc_mcp_core import FloatWrapper
-from dcc_mcp_core import IntWrapper
-from dcc_mcp_core import SkillMetadata
-from dcc_mcp_core import StringWrapper
-from dcc_mcp_core import expand_transitive_dependencies
-from dcc_mcp_core import resolve_dependencies
-from dcc_mcp_core import unwrap_parameters
-from dcc_mcp_core import unwrap_value
-from dcc_mcp_core import validate_dependencies
-from dcc_mcp_core import wrap_value
+from meshy_dcc_core import BooleanWrapper
+from meshy_dcc_core import FloatWrapper
+from meshy_dcc_core import IntWrapper
+from meshy_dcc_core import SkillMetadata
+from meshy_dcc_core import StringWrapper
+from meshy_dcc_core import expand_transitive_dependencies
+from meshy_dcc_core import resolve_dependencies
+from meshy_dcc_core import unwrap_parameters
+from meshy_dcc_core import unwrap_value
+from meshy_dcc_core import validate_dependencies
+from meshy_dcc_core import wrap_value
 
 # ---------------------------------------------------------------------------
 # BooleanWrapper

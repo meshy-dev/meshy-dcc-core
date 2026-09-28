@@ -6,13 +6,13 @@ import threading
 
 import pytest
 
-from dcc_mcp_core import CancelToken
-from dcc_mcp_core import ChunkedRunner
-from dcc_mcp_core import ChunkedStep
-from dcc_mcp_core import chunked_job
-from dcc_mcp_core import reset_cancel_token
-from dcc_mcp_core import set_cancel_token
-from dcc_mcp_core._server.host_ui_dispatcher import HostUiDispatcherBase
+from meshy_dcc_core import CancelToken
+from meshy_dcc_core import ChunkedRunner
+from meshy_dcc_core import ChunkedStep
+from meshy_dcc_core import chunked_job
+from meshy_dcc_core import reset_cancel_token
+from meshy_dcc_core import set_cancel_token
+from meshy_dcc_core._server.host_ui_dispatcher import HostUiDispatcherBase
 
 
 class _ManualDispatcher(HostUiDispatcherBase):
@@ -25,10 +25,10 @@ class _ManualDispatcher(HostUiDispatcherBase):
 
 
 def test_public_exports() -> None:
-    import dcc_mcp_core
+    import meshy_dcc_core
 
     for name in ("ChunkedRunner", "ChunkedProgress", "ChunkedOutcome", "ChunkedStep", "chunked_job"):
-        assert name in dcc_mcp_core.__all__
+        assert name in meshy_dcc_core.__all__
 
 
 def test_host_pump_runs_one_step_per_tick_and_unrelated_work_continues() -> None:

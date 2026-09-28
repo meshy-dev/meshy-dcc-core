@@ -7,7 +7,7 @@ from typing import Any
 
 from conftest import REPO_ROOT
 
-_CLIENT_PATH = REPO_ROOT / "python" / "dcc_mcp_core" / "skills" / "ui-control" / "scripts" / "_cua_cli_host_client.py"
+_CLIENT_PATH = REPO_ROOT / "python" / "meshy_dcc_core" / "skills" / "ui-control" / "scripts" / "_cua_cli_host_client.py"
 _BACKEND_PATH = _CLIENT_PATH.with_name("_cua_backend.py")
 
 

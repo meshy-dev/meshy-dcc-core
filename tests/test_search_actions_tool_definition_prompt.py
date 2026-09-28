@@ -17,13 +17,13 @@ import json
 
 import pytest
 
-from dcc_mcp_core import McpHttpConfig
-from dcc_mcp_core import McpHttpServer
-from dcc_mcp_core import PromptDefinition
-from dcc_mcp_core import ResourceDefinition
-from dcc_mcp_core import ToolAnnotations
-from dcc_mcp_core import ToolDefinition
-from dcc_mcp_core import ToolRegistry
+from meshy_dcc_core import McpHttpConfig
+from meshy_dcc_core import McpHttpServer
+from meshy_dcc_core import PromptDefinition
+from meshy_dcc_core import ResourceDefinition
+from meshy_dcc_core import ToolAnnotations
+from meshy_dcc_core import ToolDefinition
+from meshy_dcc_core import ToolRegistry
 
 # ── Fixtures ─────────────────────────────────────────────────────────────────
 
@@ -584,7 +584,7 @@ class TestMcpHttpConfigExtra:
 
     def test_default_server_name(self):
         cfg = McpHttpConfig()
-        assert cfg.server_name == "dcc-mcp"
+        assert cfg.server_name == "meshy-dcc"
 
     def test_server_version_default_nonempty(self):
         cfg = McpHttpConfig()

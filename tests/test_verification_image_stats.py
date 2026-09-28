@@ -4,10 +4,10 @@ from __future__ import annotations
 
 import pytest
 
-from dcc_mcp_core import ImageStatsFlags
-from dcc_mcp_core import classify_image_stats
-from dcc_mcp_core import compute_image_stats
-from dcc_mcp_core import decode_ppm
+from meshy_dcc_core import ImageStatsFlags
+from meshy_dcc_core import classify_image_stats
+from meshy_dcc_core import compute_image_stats
+from meshy_dcc_core import decode_ppm
 
 
 def _rgb(width: int, height: int, r: int, g: int, b: int) -> bytes:

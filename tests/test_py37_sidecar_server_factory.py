@@ -10,17 +10,17 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from dcc_mcp_core._runtime.config_bridge import resolve_mcp_http_config_class
-from dcc_mcp_core._runtime.core_availability import is_core_extension_available
-from dcc_mcp_core._runtime.mcp_http_config import McpHttpConfig as PureMcpHttpConfig
-from dcc_mcp_core._runtime.server_factory import create_adapter_server
-from dcc_mcp_core._runtime.sidecar_skill_server import SidecarBackedSkillServer
-from dcc_mcp_core._server.skill_query import SkillQueryClient
-from dcc_mcp_core.constants import ENV_DISABLE_ACCUMULATED_SKILLS
-from dcc_mcp_core.constants import ENV_DISABLE_DEFAULT_SKILL_PATHS
-from dcc_mcp_core.constants import ENV_JOB_RETENTION_HOURS
-from dcc_mcp_core.constants import ENV_JOB_STORAGE_PATH
-from dcc_mcp_core.constants import ENV_SKILL_PATHS
+from meshy_dcc_core._runtime.config_bridge import resolve_mcp_http_config_class
+from meshy_dcc_core._runtime.core_availability import is_core_extension_available
+from meshy_dcc_core._runtime.mcp_http_config import McpHttpConfig as PureMcpHttpConfig
+from meshy_dcc_core._runtime.server_factory import create_adapter_server
+from meshy_dcc_core._runtime.sidecar_skill_server import SidecarBackedSkillServer
+from meshy_dcc_core._server.skill_query import SkillQueryClient
+from meshy_dcc_core.constants import ENV_DISABLE_ACCUMULATED_SKILLS
+from meshy_dcc_core.constants import ENV_DISABLE_DEFAULT_SKILL_PATHS
+from meshy_dcc_core.constants import ENV_JOB_RETENTION_HOURS
+from meshy_dcc_core.constants import ENV_JOB_STORAGE_PATH
+from meshy_dcc_core.constants import ENV_SKILL_PATHS
 
 
 @dataclass(frozen=True)
@@ -50,7 +50,7 @@ def _write_skill(root: Path, name: str, *, dcc: str = "maya", tags: str = "[test
     skill_dir.mkdir(parents=True)
     (skill_dir / "SKILL.md").write_text(
         f"---\nname: {name}\ndescription: {name} metadata skill\n"
-        f"metadata:\n  dcc-mcp:\n    dcc: {dcc}\n    tags: {tags}\n---\n",
+        f"metadata:\n  meshy-dcc:\n    dcc: {dcc}\n    tags: {tags}\n---\n",
         encoding="utf-8",
     )
     return skill_dir
@@ -63,10 +63,10 @@ class TestPureMcpHttpConfig:
     def test_defaults_match_rust_surface(self):
         cfg = PureMcpHttpConfig()
         assert cfg.port == 0
-        assert cfg.server_name == "dcc-mcp"
+        assert cfg.server_name == "meshy-dcc"
         assert isinstance(cfg.server_version, str)
         assert len(cfg.server_version) > 0
-        assert cfg.gateway_port == 9765
+        assert cfg.gateway_port == 19765
         assert cfg.session_ttl_secs == 3600
 
     def test_repr_contains_name_and_port(self):
@@ -80,14 +80,14 @@ class TestPureMcpHttpConfig:
 class TestServerFactoryRouting:
     def test_uses_sidecar_backend_when_core_unavailable(self, monkeypatch: pytest.MonkeyPatch):
         monkeypatch.setattr(
-            "dcc_mcp_core._runtime.server_factory.is_core_extension_available",
+            "meshy_dcc_core._runtime.server_factory.is_core_extension_available",
             lambda: False,
         )
         options = _OptionsStub(
             dcc_name="maya",
             sidecar=_SidecarStub(
                 host_rpc="commandport://127.0.0.1:6000",
-                server_bin="dcc-mcp-server-test",
+                server_bin="meshy-dcc-server-test",
                 extra_args=("--ppid-poll-ms", "50"),
             ),
         )
@@ -95,7 +95,7 @@ class TestServerFactoryRouting:
         server = create_adapter_server("maya", config, options)
         assert isinstance(server, SidecarBackedSkillServer)
         assert server.backend == "sidecar"
-        assert server._server_bin == "dcc-mcp-server-test"
+        assert server._server_bin == "meshy-dcc-server-test"
         assert server._extra_args == ("--ppid-poll-ms", "50")
 
     def test_uses_create_skill_server_when_core_available(self, monkeypatch: pytest.MonkeyPatch):
@@ -103,7 +103,7 @@ class TestServerFactoryRouting:
         import types
 
         fake_server = MagicMock(name="embedded-server")
-        fake_core = types.ModuleType("dcc_mcp_core._core")
+        fake_core = types.ModuleType("meshy_dcc_core._core")
 
         def _fake_create_skill_server(app_name, config):
             assert app_name == "maya"
@@ -111,9 +111,9 @@ class TestServerFactoryRouting:
             return fake_server
 
         fake_core.create_skill_server = _fake_create_skill_server
-        monkeypatch.setitem(sys.modules, "dcc_mcp_core._core", fake_core)
+        monkeypatch.setitem(sys.modules, "meshy_dcc_core._core", fake_core)
         monkeypatch.setattr(
-            "dcc_mcp_core._runtime.server_factory.is_core_extension_available",
+            "meshy_dcc_core._runtime.server_factory.is_core_extension_available",
             lambda: True,
         )
         options = SimpleNamespace(sidecar=_SidecarStub(host_rpc="commandport://127.0.0.1:6000"))
@@ -192,10 +192,10 @@ class TestSidecarBackedSkillServer:
         _write_skill(global_root, "global-skill")
         _write_skill(accumulated_root, "accumulated-skill")
         _write_skill(team_root, "team-skill")
-        monkeypatch.setenv("DCC_MCP_MAYA_SKILL_PATHS", str(app_root))
+        monkeypatch.setenv("MESHY_DCC_MAYA_SKILL_PATHS", str(app_root))
         monkeypatch.setenv(ENV_SKILL_PATHS, str(global_root))
-        monkeypatch.setenv("DCC_MCP_USER_MAYA_SKILL_PATHS", str(accumulated_root))
-        monkeypatch.setenv("DCC_MCP_TEAM_MAYA_SKILL_PATHS", str(team_root))
+        monkeypatch.setenv("MESHY_DCC_USER_MAYA_SKILL_PATHS", str(accumulated_root))
+        monkeypatch.setenv("MESHY_DCC_TEAM_MAYA_SKILL_PATHS", str(team_root))
         monkeypatch.setenv(ENV_DISABLE_DEFAULT_SKILL_PATHS, "1")
         server = SidecarBackedSkillServer(
             "maya",
@@ -241,7 +241,7 @@ class TestSidecarBackedSkillServer:
             "  Folded geometry creation\n"
             "  metadata for discovery.\n"
             "metadata:\n"
-            "  dcc-mcp:\n"
+            "  meshy-dcc:\n"
             "    dcc: maya\n"
             '    version: "0.19.20"  # release version\n'
             '    tags: "geometry, discovery"\n'
@@ -297,8 +297,8 @@ class TestSidecarBackedSkillServer:
         accumulated_root = tmp_path / "custom-user"
         _write_skill(app_root, "custom-app-skill", dcc="my-dcc")
         _write_skill(accumulated_root, "custom-user-skill", dcc="my-dcc")
-        monkeypatch.setenv("DCC_MCP_MY_DCC_SKILL_PATHS", str(app_root))
-        monkeypatch.setenv("DCC_MCP_USER_MY_DCC_SKILL_PATHS", str(accumulated_root))
+        monkeypatch.setenv("MESHY_DCC_MY_DCC_SKILL_PATHS", str(app_root))
+        monkeypatch.setenv("MESHY_DCC_USER_MY_DCC_SKILL_PATHS", str(accumulated_root))
         monkeypatch.setenv(ENV_DISABLE_DEFAULT_SKILL_PATHS, "1")
         server = SidecarBackedSkillServer(
             "my-dcc",
@@ -341,7 +341,7 @@ class TestSidecarBackedSkillServer:
             host_rpc="stub://localhost",
         )
 
-        runtime_skills = _REPO_ROOT / "python" / "dcc_mcp_core" / "skills"
+        runtime_skills = _REPO_ROOT / "python" / "meshy_dcc_core" / "skills"
         assert server.discover([str(runtime_skills)], accumulated=False) >= 1
         skill_file = (runtime_skills / "workflow" / "SKILL.md").read_text(encoding="utf-8")
         version_line = next(line for line in skill_file.splitlines() if line.strip().startswith("version:"))
@@ -355,7 +355,7 @@ class TestSidecarBackedSkillServer:
         )
 
         monkeypatch.setattr(
-            "dcc_mcp_core._runtime.sidecar_skill_server.launch_sidecar",
+            "meshy_dcc_core._runtime.sidecar_skill_server.launch_sidecar",
             lambda **kwargs: {
                 "success": True,
                 "readiness": {"mcp_url": "http://127.0.0.1:9876/mcp"},
@@ -388,18 +388,18 @@ class TestSidecarBackedSkillServer:
             }
 
         monkeypatch.setattr(
-            "dcc_mcp_core._runtime.sidecar_skill_server.build_sidecar_command",
+            "meshy_dcc_core._runtime.sidecar_skill_server.build_sidecar_command",
             _fake_build,
         )
         monkeypatch.setattr(
-            "dcc_mcp_core._runtime.sidecar_skill_server.launch_sidecar",
+            "meshy_dcc_core._runtime.sidecar_skill_server.launch_sidecar",
             _fake_launch,
         )
         server = SidecarBackedSkillServer(
             "maya",
             PureMcpHttpConfig(port=8765),
             host_rpc="commandport://127.0.0.1:6000",
-            server_bin="dcc-mcp-server-test",
+            server_bin="meshy-dcc-server-test",
             extra_args=("--ppid-poll-ms", "50"),
         )
         server.discover(extra_paths=["/tmp/skills"], accumulated=False)
@@ -409,23 +409,23 @@ class TestSidecarBackedSkillServer:
         assert command["env"] == launch["env"]
         assert launch["env"][ENV_DISABLE_ACCUMULATED_SKILLS] == "1"
         assert "/tmp/skills" in launch["env"][ENV_SKILL_PATHS]
-        assert launch["server_bin"] == "dcc-mcp-server-test"
+        assert launch["server_bin"] == "meshy-dcc-server-test"
         assert launch["extra_args"] == ("--ppid-poll-ms", "50")
 
 
 def test_public_lite_factory_preserves_discovery_contract(monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
-    import dcc_mcp_core.server_base as server_base
+    import meshy_dcc_core.server_base as server_base
 
     explicit_root = tmp_path / "skills"
     _write_skill(explicit_root, "public-factory-skill", tags="[factory, smoke]")
     explicit = str(explicit_root)
     monkeypatch.delenv(ENV_SKILL_PATHS, raising=False)
-    monkeypatch.delenv("DCC_MCP_MAYA_SKILL_PATHS", raising=False)
+    monkeypatch.delenv("MESHY_DCC_MAYA_SKILL_PATHS", raising=False)
     monkeypatch.setenv(ENV_DISABLE_DEFAULT_SKILL_PATHS, "1")
     monkeypatch.setattr(server_base, "_core", None)
     monkeypatch.setattr(server_base, "is_core_extension_available", lambda: False)
     monkeypatch.setattr(
-        "dcc_mcp_core._runtime.server_factory.is_core_extension_available",
+        "meshy_dcc_core._runtime.server_factory.is_core_extension_available",
         lambda: False,
     )
 
@@ -440,7 +440,7 @@ def test_public_lite_factory_preserves_discovery_contract(monkeypatch: pytest.Mo
 
 
 def test_public_factory_rejects_unknown_keywords() -> None:
-    import dcc_mcp_core.server_base as server_base
+    import meshy_dcc_core.server_base as server_base
 
     with pytest.raises(TypeError, match="unexpected keyword argument"):
         server_base.create_skill_server("maya", unsupported=True)
@@ -450,16 +450,16 @@ def test_public_factory_preserves_app_env_paths_with_dcc_override(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
-    import dcc_mcp_core.server_base as server_base
+    import meshy_dcc_core.server_base as server_base
 
     app_root = tmp_path / "app-server"
     _write_skill(app_root, "app-owned-maya-skill", dcc="maya")
-    monkeypatch.setenv("DCC_MCP_APP_SERVER_SKILL_PATHS", str(app_root))
+    monkeypatch.setenv("MESHY_DCC_APP_SERVER_SKILL_PATHS", str(app_root))
     monkeypatch.setenv(ENV_DISABLE_DEFAULT_SKILL_PATHS, "1")
     monkeypatch.setattr(server_base, "_core", None)
     monkeypatch.setattr(server_base, "is_core_extension_available", lambda: False)
     monkeypatch.setattr(
-        "dcc_mcp_core._runtime.server_factory.is_core_extension_available",
+        "meshy_dcc_core._runtime.server_factory.is_core_extension_available",
         lambda: False,
     )
 
@@ -469,22 +469,22 @@ def test_public_factory_preserves_app_env_paths_with_dcc_override(
 
 
 def test_default_skill_path_flag_is_available_without_core() -> None:
-    import dcc_mcp_core
+    import meshy_dcc_core
 
-    assert dcc_mcp_core.ENV_DISABLE_ACCUMULATED_SKILLS == "DCC_MCP_DISABLE_ACCUMULATED_SKILLS"
-    assert dcc_mcp_core.ENV_DISABLE_DEFAULT_SKILL_PATHS == "DCC_MCP_DISABLE_DEFAULT_SKILL_PATHS"
-    assert dcc_mcp_core.ENV_SKILL_PATHS == "DCC_MCP_SKILL_PATHS"
-    assert dcc_mcp_core.ENV_TEAM_SKILL_PATHS == "DCC_MCP_TEAM_SKILL_PATHS"
-    assert dcc_mcp_core.ENV_USER_SKILL_PATHS == "DCC_MCP_USER_SKILL_PATHS"
+    assert meshy_dcc_core.ENV_DISABLE_ACCUMULATED_SKILLS == "MESHY_DCC_DISABLE_ACCUMULATED_SKILLS"
+    assert meshy_dcc_core.ENV_DISABLE_DEFAULT_SKILL_PATHS == "MESHY_DCC_DISABLE_DEFAULT_SKILL_PATHS"
+    assert meshy_dcc_core.ENV_SKILL_PATHS == "MESHY_DCC_SKILL_PATHS"
+    assert meshy_dcc_core.ENV_TEAM_SKILL_PATHS == "MESHY_DCC_TEAM_SKILL_PATHS"
+    assert meshy_dcc_core.ENV_USER_SKILL_PATHS == "MESHY_DCC_USER_SKILL_PATHS"
 
 
 class TestExecutionBridgeLazyCore:
     def test_sandbox_context_skips_core_when_unavailable(self, monkeypatch: pytest.MonkeyPatch):
         monkeypatch.setattr(
-            "dcc_mcp_core._server.execution_bridge.is_core_extension_available",
+            "meshy_dcc_core._server.execution_bridge.is_core_extension_available",
             lambda: False,
         )
-        from dcc_mcp_core._server.execution_bridge import _sandbox_context
+        from meshy_dcc_core._server.execution_bridge import _sandbox_context
 
         assert _sandbox_context(MagicMock()) is None
 
@@ -494,7 +494,7 @@ class TestServerBaseImportLight:
     def test_server_base_imports_fallbacks_without_core(self, monkeypatch: pytest.MonkeyPatch):
         import importlib
 
-        module = importlib.import_module("dcc_mcp_core.server_base")
+        module = importlib.import_module("meshy_dcc_core.server_base")
 
         assert "create_skill_server" in module.__dict__
         assert "create_adapter_server" in module.__dict__

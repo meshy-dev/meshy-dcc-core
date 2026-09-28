@@ -17,7 +17,7 @@ gateway port, then drive the gateway's MCP endpoint directly to verify:
   ``resources.listChanged: true`` so clients know to subscribe to SSE.
 
 These tests run on real TCP so they need short timeouts and an unused port
-range; we pick a fixed port far above the default (9765) to avoid collisions
+range; we pick a fixed port far above the default (19765) to avoid collisions
 with concurrent development instances.
 """
 
@@ -38,9 +38,9 @@ from conftest import McpClient
 from conftest import allocate_gateway_port
 
 # Import local modules
-from dcc_mcp_core import McpHttpConfig
-from dcc_mcp_core import McpHttpServer
-from dcc_mcp_core import ToolRegistry
+from meshy_dcc_core import McpHttpConfig
+from meshy_dcc_core import McpHttpServer
+from meshy_dcc_core import ToolRegistry
 
 # ── helpers ───────────────────────────────────────────────────────────────────
 

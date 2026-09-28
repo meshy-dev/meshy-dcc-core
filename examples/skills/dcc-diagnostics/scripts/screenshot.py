@@ -1,4 +1,4 @@
-"""Capture a screenshot using dcc_mcp_core.Capturer.
+"""Capture a screenshot using meshy_dcc_core.Capturer.
 
 Works on Windows (DXGI), Linux (X11), and falls back to a mock backend
 in headless/CI environments. Returns the image as base64-encoded bytes.
@@ -24,9 +24,9 @@ def main() -> None:
     args = parser.parse_args()
 
     try:
-        from dcc_mcp_core import Capturer
+        from meshy_dcc_core import Capturer
     except ImportError:
-        print(json.dumps({"success": False, "message": "dcc_mcp_core not available. Install the package first."}))
+        print(json.dumps({"success": False, "message": "meshy_dcc_core not available. Install the package first."}))
         sys.exit(1)
 
     try:

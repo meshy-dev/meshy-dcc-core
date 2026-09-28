@@ -21,9 +21,9 @@ import json
 
 import pytest
 
-from dcc_mcp_core import ToolDispatcher
-from dcc_mcp_core import ToolPipeline
-from dcc_mcp_core import ToolRegistry
+from meshy_dcc_core import ToolDispatcher
+from meshy_dcc_core import ToolPipeline
+from meshy_dcc_core import ToolRegistry
 
 # ---------------------------------------------------------------------------
 # Helpers

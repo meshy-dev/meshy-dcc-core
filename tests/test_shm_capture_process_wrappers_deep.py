@@ -17,24 +17,24 @@ import os
 import pytest
 
 from _support.watcher import wait_for_event
-from dcc_mcp_core import BooleanWrapper
-from dcc_mcp_core import CaptureFrame
-from dcc_mcp_core import Capturer
-from dcc_mcp_core import CaptureResult
-from dcc_mcp_core import FloatWrapper
-from dcc_mcp_core import IntWrapper
-from dcc_mcp_core import PyBufferPool
-from dcc_mcp_core import PyCrashRecoveryPolicy
-from dcc_mcp_core import PyDccLauncher
-from dcc_mcp_core import PyProcessMonitor
-from dcc_mcp_core import PyProcessWatcher
-from dcc_mcp_core import PySceneDataKind
-from dcc_mcp_core import PySharedBuffer
-from dcc_mcp_core import PySharedSceneBuffer
-from dcc_mcp_core import StringWrapper
-from dcc_mcp_core import unwrap_parameters
-from dcc_mcp_core import unwrap_value
-from dcc_mcp_core import wrap_value
+from meshy_dcc_core import BooleanWrapper
+from meshy_dcc_core import CaptureFrame
+from meshy_dcc_core import Capturer
+from meshy_dcc_core import CaptureResult
+from meshy_dcc_core import FloatWrapper
+from meshy_dcc_core import IntWrapper
+from meshy_dcc_core import PyBufferPool
+from meshy_dcc_core import PyCrashRecoveryPolicy
+from meshy_dcc_core import PyDccLauncher
+from meshy_dcc_core import PyProcessMonitor
+from meshy_dcc_core import PyProcessWatcher
+from meshy_dcc_core import PySceneDataKind
+from meshy_dcc_core import PySharedBuffer
+from meshy_dcc_core import PySharedSceneBuffer
+from meshy_dcc_core import StringWrapper
+from meshy_dcc_core import unwrap_parameters
+from meshy_dcc_core import unwrap_value
+from meshy_dcc_core import wrap_value
 
 # ---------------------------------------------------------------------------
 # Helpers

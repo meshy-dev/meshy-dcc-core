@@ -9,7 +9,7 @@ license: MIT
 compatibility: Python 3.7+
 allowed-tools: Bash Read
 metadata:
-  dcc-mcp:
+  meshy-dcc:
     dcc: forgecad
     version: "1.0.0"
     layer: domain

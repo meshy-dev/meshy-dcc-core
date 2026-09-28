@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import pytest
 
-import dcc_mcp_core
-from dcc_mcp_core import AdaptivePumpPolicy
-from dcc_mcp_core import AdaptivePumpStats
+import meshy_dcc_core
+from meshy_dcc_core import AdaptivePumpPolicy
+from meshy_dcc_core import AdaptivePumpStats
 
 
 class _Clock:
@@ -21,10 +21,10 @@ class _Clock:
 
 
 def test_adaptive_pump_policy_exported() -> None:
-    assert dcc_mcp_core.AdaptivePumpPolicy is AdaptivePumpPolicy
-    assert dcc_mcp_core.AdaptivePumpStats is AdaptivePumpStats
-    assert "AdaptivePumpPolicy" in dcc_mcp_core.__all__
-    assert "AdaptivePumpStats" in dcc_mcp_core.__all__
+    assert meshy_dcc_core.AdaptivePumpPolicy is AdaptivePumpPolicy
+    assert meshy_dcc_core.AdaptivePumpStats is AdaptivePumpStats
+    assert "AdaptivePumpPolicy" in meshy_dcc_core.__all__
+    assert "AdaptivePumpStats" in meshy_dcc_core.__all__
 
 
 def test_policy_starts_active_then_backs_off_after_idle_delay() -> None:

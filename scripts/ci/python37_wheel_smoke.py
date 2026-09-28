@@ -44,7 +44,7 @@ def smoke_wheel(wheel: Path, profile: str, historical: bool, has_contract: bool 
     # No backport is bundled, injected into metadata, or installed for current code.
     subprocess.run([*install, str(wheel)], check=True)
     if historical and not has_contract:
-        subprocess.run([sys.executable, "-I", "-c", "import dcc_mcp_core"], check=True)
+        subprocess.run([sys.executable, "-I", "-c", "import meshy_dcc_core"], check=True)
     else:
         subprocess.run(
             [sys.executable, "-I", str(scripts / "smoke_python37_runtime.py"), "--profile", profile], check=True
@@ -67,7 +67,7 @@ def main() -> int:
         if len(names) != 1:
             raise ValueError("wheel must contain exactly one METADATA file")
         version = Parser().parsestr(archive.read(names[0]).decode("utf-8"))["Version"]
-    rules = load_contract()["distributions"]["dcc-mcp-core"]["forbidden_runtime_dependencies"]
+    rules = load_contract()["distributions"]["meshy-dcc-core"]["forbidden_runtime_dependencies"]
     cutoff = next(rule["from_version"] for rule in rules if rule["name"] == "typing-extensions")
     historical = False
     has_contract = True

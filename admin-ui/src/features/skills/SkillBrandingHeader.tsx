@@ -9,7 +9,7 @@ type Translator = (key: MessageKey, values?: InterpolationValues) => string;
 /// Card header — avatar (author logo, DCC icon, or initial), name,
 /// summary, and the loaded/unloaded state pill.
 ///
-/// Author-supplied branding (`metadata.dcc-mcp.branding` → `SkillRow.branding`)
+/// Author-supplied branding (`metadata.meshy-dcc.branding` → `SkillRow.branding`)
 /// overrides the fallbacks: a `logo_url` replaces the DCC icon, an
 /// `emoji` overrides the initial, and `accent_color` replaces the
 /// hash-derived hue passed through the `--skill-accent` custom property.

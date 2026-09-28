@@ -1,4 +1,4 @@
-"""E2E-style coverage for :class:`~dcc_mcp_core.gateway_election.DccGatewayElection`.
+"""E2E-style coverage for :class:`~meshy_dcc_core.gateway_election.DccGatewayElection`.
 
 Uses a real background ``HTTPServer`` answering ``GET /health`` so the probe
 path matches production (``urllib`` → HTTP), then tears the listener down to
@@ -57,7 +57,7 @@ class _HealthHandler(BaseHTTPRequestHandler):
 
 def test_live_health_probe_then_death_triggers_promotion() -> None:
     """Health stays green, server stops answering, promotion runs once."""
-    from dcc_mcp_core.gateway_election import DccGatewayElection
+    from meshy_dcc_core.gateway_election import DccGatewayElection
 
     httpd = _ReuseHTTPServer(("127.0.0.1", 0), _HealthHandler)
     port = httpd.server_address[1]
@@ -123,7 +123,7 @@ def test_live_health_probe_then_death_triggers_promotion() -> None:
 
 def test_stable_health_never_calls_promotion() -> None:
     """While /health keeps returning 200, the promotion hook must stay cold."""
-    from dcc_mcp_core.gateway_election import DccGatewayElection
+    from meshy_dcc_core.gateway_election import DccGatewayElection
 
     httpd = _ReuseHTTPServer(("127.0.0.1", 0), _HealthHandler)
     port = httpd.server_address[1]
@@ -167,7 +167,7 @@ def test_stable_health_never_calls_promotion() -> None:
 
 def test_gateway_instance_skips_probe_and_promotion() -> None:
     """When ``server.is_gateway`` is true, failures must reset without promoting."""
-    from dcc_mcp_core.gateway_election import DccGatewayElection
+    from meshy_dcc_core.gateway_election import DccGatewayElection
 
     httpd = _ReuseHTTPServer(("127.0.0.1", 0), _HealthHandler)
     port = httpd.server_address[1]

@@ -12,8 +12,8 @@ SCRIPT = Path(__file__).resolve().parents[1] / "scripts" / "release" / "generate
 
 
 def _run(tmp_path: Path, platform: str) -> subprocess.CompletedProcess[str]:
-    server = tmp_path / ("dcc-mcp-server.exe" if platform.startswith("windows-") else "dcc-mcp-server")
-    cli = tmp_path / ("dcc-mcp-cli.exe" if platform.startswith("windows-") else "dcc-mcp-cli")
+    server = tmp_path / ("meshy-dcc-server.exe" if platform.startswith("windows-") else "meshy-dcc-server")
+    cli = tmp_path / ("meshy-dcc-cli.exe" if platform.startswith("windows-") else "meshy-dcc-cli")
     server.write_bytes(b"server")
     cli.write_bytes(b"cli")
     command = [
@@ -26,7 +26,7 @@ def _run(tmp_path: Path, platform: str) -> subprocess.CompletedProcess[str]:
         "--release-tag",
         "v1.2.3",
         "--repo",
-        "dcc-mcp/dcc-mcp-core",
+        "meshy-dev/meshy-dcc-core",
         "--server-bin",
         str(server),
         "--cli-bin",
@@ -40,7 +40,7 @@ def _run(tmp_path: Path, platform: str) -> subprocess.CompletedProcess[str]:
 def test_platform_manifests_publish_only_core_binaries(tmp_path: Path) -> None:
     result = _run(tmp_path, "windows-x86_64")
     assert result.returncode == 0, result.stderr
-    manifest = json.loads((tmp_path / "dist" / "dcc-mcp-update-manifest-windows-x86_64.json").read_text())
-    assert set(manifest) == {"dcc-mcp-server", "dcc-mcp-cli"}
-    assert manifest["dcc-mcp-server"]["sha256"] == hashlib.sha256(b"server").hexdigest()
-    assert manifest["dcc-mcp-cli"]["sha256"] == hashlib.sha256(b"cli").hexdigest()
+    manifest = json.loads((tmp_path / "dist" / "meshy-dcc-update-manifest-windows-x86_64.json").read_text())
+    assert set(manifest) == {"meshy-dcc-server", "meshy-dcc-cli"}
+    assert manifest["meshy-dcc-server"]["sha256"] == hashlib.sha256(b"server").hexdigest()
+    assert manifest["meshy-dcc-cli"]["sha256"] == hashlib.sha256(b"cli").hexdigest()

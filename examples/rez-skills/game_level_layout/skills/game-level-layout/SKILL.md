@@ -4,7 +4,7 @@ description: "Game level layout review helpers for editor contexts."
 license: MIT
 allowed-tools: Bash Read Write
 metadata:
-  dcc-mcp:
+  meshy-dcc:
     dcc: unreal
     version: "1.0.0"
     layer: domain

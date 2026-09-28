@@ -1,4 +1,4 @@
-"""Tests for dcc_mcp_core.schema — zero-dep type → JSON Schema derivation (#242)."""
+"""Tests for meshy_dcc_core.schema — zero-dep type → JSON Schema derivation (#242)."""
 
 # ruff: noqa: UP006, UP037, UP045
 
@@ -28,18 +28,18 @@ try:
 except ImportError:  # pragma: no cover - exercised by the Python 3.7 LTS gate
     from typing_extensions import TypedDict
 
-from dcc_mcp_core._typing import Literal
-from dcc_mcp_core.schema import derive_parameters_schema
-from dcc_mcp_core.schema import derive_schema
-from dcc_mcp_core.schema import derive_script_parameters_schema
-from dcc_mcp_core.schema import schema_from_doc
-from dcc_mcp_core.schema import tool_spec_from_callable
+from meshy_dcc_core._typing import Literal
+from meshy_dcc_core.schema import derive_parameters_schema
+from meshy_dcc_core.schema import derive_schema
+from meshy_dcc_core.schema import derive_script_parameters_schema
+from meshy_dcc_core.schema import schema_from_doc
+from meshy_dcc_core.schema import tool_spec_from_callable
 
 # ── Primitives ─────────────────────────────────────────────────────────────
 
 
 def test_schema_module_loads_standalone_without_package_import() -> None:
-    schema_path = Path(__file__).parents[1] / "python" / "dcc_mcp_core" / "schema.py"
+    schema_path = Path(__file__).parents[1] / "python" / "meshy_dcc_core" / "schema.py"
     script = """
 import importlib.util
 import json
@@ -49,11 +49,11 @@ from dataclasses import dataclass
 from typing import List, Optional, Tuple
 
 # Blender can load this module directly from an adapter bundle where the
-# dcc_mcp_core package is not importable.  Make accidental package imports
+# meshy_dcc_core package is not importable.  Make accidental package imports
 # fail even when the test runner itself uses an editable installation.
-sys.modules["dcc_mcp_core"] = None
+sys.modules["meshy_dcc_core"] = None
 
-spec = importlib.util.spec_from_file_location("dcc_mcp_schema", pathlib.Path(sys.argv[1]))
+spec = importlib.util.spec_from_file_location("meshy_dcc_schema", pathlib.Path(sys.argv[1]))
 schema = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(schema)
 

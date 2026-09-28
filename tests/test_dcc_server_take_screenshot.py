@@ -10,7 +10,7 @@ import json
 # Import third-party modules
 import pytest
 
-from dcc_mcp_core._server.diagnostic_state import get_default_diagnostic_state
+from meshy_dcc_core._server.diagnostic_state import get_default_diagnostic_state
 
 _instance_context = get_default_diagnostic_state().instance_context
 
@@ -45,7 +45,7 @@ def _skip_if_screen_capture_unavailable(data: dict) -> None:
 
 
 def test_take_screenshot_handler_registered():
-    from dcc_mcp_core.dcc_server import register_diagnostic_handlers
+    from meshy_dcc_core.dcc_server import register_diagnostic_handlers
 
     server = _MockServer()
     register_diagnostic_handlers(server, dcc_name="test-dcc")
@@ -54,7 +54,7 @@ def test_take_screenshot_handler_registered():
 
 def test_take_screenshot_full_screen_returns_base64_png():
     """full_screen=True uses the auto capturer (mock backend in CI)."""
-    from dcc_mcp_core.dcc_server import _handle_take_screenshot
+    from meshy_dcc_core.dcc_server import _handle_take_screenshot
 
     result = _handle_take_screenshot(json.dumps({"full_screen": True, "format": "png"}))
     data = json.loads(result)
@@ -71,7 +71,7 @@ def test_take_screenshot_full_screen_returns_base64_png():
 
 
 def test_take_screenshot_full_screen_raw_format():
-    from dcc_mcp_core.dcc_server import _handle_take_screenshot
+    from meshy_dcc_core.dcc_server import _handle_take_screenshot
 
     result = _handle_take_screenshot(json.dumps({"full_screen": True, "format": "raw_bgra"}))
     data = json.loads(result)
@@ -84,7 +84,7 @@ def test_take_screenshot_full_screen_raw_format():
 def test_take_screenshot_empty_params_errors_without_target():
     """Without full_screen AND without instance context, must return success=False."""
     # Import local modules
-    import dcc_mcp_core.dcc_server as mod
+    import meshy_dcc_core.dcc_server as mod
 
     original = dict(_instance_context)
     _instance_context.update({"dcc_pid": None, "dcc_window_handle": None, "dcc_window_title": None, "resolver": None})
@@ -101,8 +101,8 @@ def test_take_screenshot_invalid_json_is_graceful():
     # Invalid JSON falls back to empty dict; then full_screen defaults False and
     # no context is set → should return a structured error, not raise.
     # Import local modules
-    import dcc_mcp_core.dcc_server as mod
-    from dcc_mcp_core.dcc_server import _handle_take_screenshot
+    import meshy_dcc_core.dcc_server as mod
+    from meshy_dcc_core.dcc_server import _handle_take_screenshot
 
     original = dict(_instance_context)
     _instance_context.update({"dcc_pid": None, "dcc_window_handle": None, "dcc_window_title": None, "resolver": None})
@@ -117,7 +117,7 @@ def test_take_screenshot_invalid_json_is_graceful():
 def test_take_screenshot_uses_resolver_when_no_explicit_handle():
     """When only a resolver is available, it must be invoked."""
     # Import local modules
-    import dcc_mcp_core.dcc_server as mod
+    import meshy_dcc_core.dcc_server as mod
 
     calls: list[int] = []
 
@@ -148,7 +148,7 @@ def test_take_screenshot_uses_resolver_when_no_explicit_handle():
 
 
 def test_take_screenshot_window_rect_none_for_full_screen():
-    from dcc_mcp_core.dcc_server import _handle_take_screenshot
+    from meshy_dcc_core.dcc_server import _handle_take_screenshot
 
     result = _handle_take_screenshot(json.dumps({"full_screen": True}))
     data = json.loads(result)
@@ -188,7 +188,7 @@ class _WindowCapturer:
 
 
 def test_take_screenshot_exposes_exact_window_metadata(monkeypatch):
-    import dcc_mcp_core.dcc_server as mod
+    import meshy_dcc_core.dcc_server as mod
 
     capturer = _WindowCapturer(health="degraded")
     monkeypatch.setattr(mod, "_get_window_capturer", lambda _state=None: capturer)
@@ -206,7 +206,7 @@ def test_take_screenshot_exposes_exact_window_metadata(monkeypatch):
 
 
 def test_take_screenshot_rejects_backend_marked_unusable_frame(monkeypatch):
-    import dcc_mcp_core.dcc_server as mod
+    import meshy_dcc_core.dcc_server as mod
 
     monkeypatch.setattr(
         mod,
@@ -222,7 +222,7 @@ def test_take_screenshot_rejects_backend_marked_unusable_frame(monkeypatch):
 
 
 def test_take_screenshot_preserves_desktop_unavailable_error(monkeypatch):
-    import dcc_mcp_core.dcc_server as mod
+    import meshy_dcc_core.dcc_server as mod
 
     class _UnavailableCapturer:
         def capture(self, **_kwargs):

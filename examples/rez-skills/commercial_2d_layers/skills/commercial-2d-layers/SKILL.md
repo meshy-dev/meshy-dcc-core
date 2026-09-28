@@ -4,7 +4,7 @@ description: "Photoshop layer checks for commercial 2D motion deliverables."
 license: MIT
 allowed-tools: Bash Read Write
 metadata:
-  dcc-mcp:
+  meshy-dcc:
     dcc: photoshop
     version: "1.0.0"
     layer: domain

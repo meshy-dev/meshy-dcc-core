@@ -1,6 +1,6 @@
 """Cross-process regression for issue #303.
 
-Spawns ``dcc-mcp-server`` as a subprocess with gateway enabled, waits
+Spawns ``meshy-dcc-server`` as a subprocess with gateway enabled, waits
 for it to announce a gateway port in its logs, then opens a TCP socket
 to confirm the listener is actually accepting. The standalone binary
 runs under ``#[tokio::main]`` and therefore uses the ``Ambient`` spawn
@@ -9,7 +9,7 @@ mode — this test provides the opposite-end coverage to
 path.
 
 Skipped if the binary has not been built (``cargo build --release -p
-dcc-mcp-server`` or equivalent).
+meshy-dcc-server`` or equivalent).
 """
 
 from __future__ import annotations
@@ -30,8 +30,8 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 
 
 def _find_exe() -> Path | None:
-    """Locate the ``dcc-mcp-server`` binary built by cargo."""
-    exe_name = "dcc-mcp-server.exe" if os.name == "nt" else "dcc-mcp-server"
+    """Locate the ``meshy-dcc-server`` binary built by cargo."""
+    exe_name = "meshy-dcc-server.exe" if os.name == "nt" else "meshy-dcc-server"
     candidates = [
         REPO_ROOT / "target" / "debug" / exe_name,
         REPO_ROOT / "target" / "release" / exe_name,
@@ -58,7 +58,7 @@ def _wait_for_listener(port: int, timeout: float = 5.0) -> bool:
     return False
 
 
-@pytest.mark.skipif(_find_exe() is None, reason="dcc-mcp-server binary not built")
+@pytest.mark.skipif(_find_exe() is None, reason="meshy-dcc-server binary not built")
 def test_standalone_server_gateway_listener_reachable(tmp_path):
     """The standalone exe must answer on its gateway port within 5s."""
     exe = _find_exe()
@@ -70,7 +70,7 @@ def test_standalone_server_gateway_listener_reachable(tmp_path):
     mcp_port = _allocate_port()
 
     env = os.environ.copy()
-    env["DCC_MCP_REGISTRY_DIR"] = str(tmp_path)
+    env["MESHY_DCC_REGISTRY_DIR"] = str(tmp_path)
     env["RUST_LOG"] = "info"
 
     proc = subprocess.Popen(
@@ -97,7 +97,7 @@ def test_standalone_server_gateway_listener_reachable(tmp_path):
         if not reachable and proc.poll() is not None:
             out = proc.stdout.read().decode("utf-8", "replace") if proc.stdout else ""
             pytest.skip(
-                f"dcc-mcp-server exited early (code={proc.returncode}) — likely port race. stdout:\n{out[:2000]}"
+                f"meshy-dcc-server exited early (code={proc.returncode}) — likely port race. stdout:\n{out[:2000]}"
             )
 
         assert reachable, f"gateway listener on port {gateway_port} unreachable 5s after start"

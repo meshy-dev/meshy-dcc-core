@@ -11,7 +11,7 @@ test.describe('Admin Page', () => {
     await page.goto('/admin/');
     await expect(page.locator('html')).toHaveAttribute('lang', 'en');
     await expect(page.locator('html')).toHaveAttribute('data-admin-locale', 'en');
-    await expect(page.getByRole('img', { name: 'DCC MCP' })).toBeVisible();
+    await expect(page.getByRole('img', { name: 'Meshy DCC' })).toBeVisible();
     const preferenceBox = await page.locator('.sidebar-preferences').boundingBox();
     expect(preferenceBox?.height ?? 0).toBeLessThanOrEqual(48);
     await expect(page.locator('.sidebar-preferences .preference-icon')).toHaveCount(2);
@@ -75,19 +75,19 @@ test.describe('Admin Page', () => {
     await expect(page.locator('.brand-logo-image-light')).toBeHidden();
     await expect(page.locator('.brand-logo-image-dark')).toBeVisible();
     await expect(page.locator('.command-agent-prompt [data-slot="button"]').first()).toBeVisible();
-    await expect(page.locator('.brand-tag')).toContainText('DCC-MCP Gateway');
+    await expect(page.locator('.brand-tag')).toContainText('Meshy DCC Gateway');
     await expect(page.locator('h1')).toContainText('Admin Dashboard');
     await expect(page.getByRole('navigation').getByRole('link', { name: 'Command Center' })).toHaveClass(/active/);
     for (const label of ['Command Center', 'Debug', 'Activity', 'Health', 'Instances', 'Tools', 'Workflows', 'Agent Experiments', 'Tasks', 'Sessions', 'Calls', 'Traces', 'Overview', 'Analytics', 'Reliability', 'OpenAPI Inspector', 'Skills', 'Marketplace', 'Integrations', 'Logs', 'Docs']) {
       await expect(page.getByRole('navigation').getByRole('link', { name: label })).toBeVisible();
     }
-    await expect(page.getByRole('navigation').getByRole('link', { name: 'Docs' })).toHaveAttribute('href', 'https://github.com/dcc-mcp/dcc-mcp-core/tree/main/docs');
+    await expect(page.getByRole('navigation').getByRole('link', { name: 'Docs' })).toHaveAttribute('href', 'https://github.com/meshy-dev/meshy-dcc-core/tree/main/docs');
     await expect(page.locator('.setup-panel')).toContainText('Claude Desktop');
     await expect(page.locator('.setup-panel')).toContainText('DCC CLI Command Center');
     await expect(page.getByRole('tab', { name: /Agent Prompt/ })).toHaveAttribute('aria-selected', 'true');
     await expect(page.getByRole('tab', { name: /Agent CLI/ })).toBeVisible();
     await expect(page.getByRole('tab', { name: /Human CLI/ })).toBeVisible();
-    await expect(page.locator('.command-agent-prompt')).toContainText('Gateway target: http://127.0.0.1:9765/mcp');
+    await expect(page.locator('.command-agent-prompt')).toContainText('Gateway target: http://127.0.0.1:19765/mcp');
     await expect(page.locator('.command-agent-prompt')).toContainText('search for a real tool slug');
     const promptCopy = page.locator('.command-agent-prompt [data-slot="button"]');
     await promptCopy.click();
@@ -95,21 +95,21 @@ test.describe('Admin Page', () => {
     await expect(page.locator('.setup-panel')).toContainText('Copied Agent prompt');
     await page.getByRole('tab', { name: /Agent CLI/ }).click();
     await expect(page.getByRole('tab', { name: /Agent CLI/ })).toHaveAttribute('aria-selected', 'true');
-    await expect(page.locator('.setup-panel')).toContainText('dcc-mcp-cli list');
-    await expect(page.locator('.setup-panel')).toContainText('dcc-mcp-cli search --query "create sphere" --dcc-type <dcc_type> --limit 20');
-    await expect(page.locator('.setup-panel')).toContainText('dcc-mcp-cli describe <tool_slug>');
-    await expect(page.locator('.setup-panel')).toContainText('dcc-mcp-cli call <tool_slug> --json');
-    await expect(page.locator('.setup-panel')).toContainText('dcc-mcp-cli load-skill <skill_name>');
-    await expect(page.locator('.setup-panel')).not.toContainText('dcc-mcp-cli update apply');
+    await expect(page.locator('.setup-panel')).toContainText('meshy-dcc-cli list');
+    await expect(page.locator('.setup-panel')).toContainText('meshy-dcc-cli search --query "create sphere" --dcc-type <dcc_type> --limit 20');
+    await expect(page.locator('.setup-panel')).toContainText('meshy-dcc-cli describe <tool_slug>');
+    await expect(page.locator('.setup-panel')).toContainText('meshy-dcc-cli call <tool_slug> --json');
+    await expect(page.locator('.setup-panel')).toContainText('meshy-dcc-cli load-skill <skill_name>');
+    await expect(page.locator('.setup-panel')).not.toContainText('meshy-dcc-cli update apply');
     await page.getByRole('tab', { name: /Human CLI/ }).click();
     await expect(page.getByRole('tab', { name: /Human CLI/ })).toHaveAttribute('aria-selected', 'true');
-    await expect(page.locator('.setup-panel')).toContainText('dcc-mcp-cli list');
-    await expect(page.locator('.setup-panel')).not.toContainText('dcc-mcp-cli gateway ensure');
-    await expect(page.locator('.setup-panel')).not.toContainText('dcc-mcp-cli call <tool_slug> --json');
-    await expect(page.locator('.setup-panel')).toContainText('dcc-mcp-cli marketplace search --query "rigging" --dcc maya --limit 20');
-    await expect(page.locator('.setup-panel')).toContainText('dcc-mcp-cli marketplace install <package_name> --dcc maya');
-    await expect(page.locator('.setup-panel')).toContainText('dcc-mcp-cli marketplace update <package_name> --dcc maya');
-    await expect(page.locator('.setup-panel')).toContainText('dcc-mcp-cli update check --binary dcc-mcp-server --current-version <server_version>');
+    await expect(page.locator('.setup-panel')).toContainText('meshy-dcc-cli list');
+    await expect(page.locator('.setup-panel')).not.toContainText('meshy-dcc-cli gateway ensure');
+    await expect(page.locator('.setup-panel')).not.toContainText('meshy-dcc-cli call <tool_slug> --json');
+    await expect(page.locator('.setup-panel')).toContainText('meshy-dcc-cli marketplace search --query "rigging" --dcc maya --limit 20');
+    await expect(page.locator('.setup-panel')).toContainText('meshy-dcc-cli marketplace install <package_name> --dcc maya');
+    await expect(page.locator('.setup-panel')).toContainText('meshy-dcc-cli marketplace update <package_name> --dcc maya');
+    await expect(page.locator('.setup-panel')).toContainText('meshy-dcc-cli update check --binary meshy-dcc-server --current-version <server_version>');
     await expect(page.locator('.command-aside-action')).toHaveCount(2);
     await expect(page.locator('.command-aside-action').first()).toContainText('Manage loaded skills');
     await expect(page.locator('.command-aside-action').last()).toContainText('Install and update skill packages');
@@ -135,14 +135,14 @@ test.describe('Admin Page', () => {
     await expect(firstCommandCopy).toContainText('Copied');
     await expect(firstCommandCopy).toHaveAttribute('data-copied', 'true');
     await expect(page.locator('.setup-panel')).toContainText('Copied Auto gateway');
-    await expect(page.locator('.setup-panel')).toContainText('http://127.0.0.1:9765/mcp');
+    await expect(page.locator('.setup-panel')).toContainText('http://127.0.0.1:19765/mcp');
     await expect(page.locator('.setup-panel')).not.toContainText('http://127.0.0.1:3721/mcp');
     await expect(page.locator('.setup-panel img.ide-icon')).toHaveCount(6);
-    await expect(page.locator('.setup-panel .ide-config-preview').first()).toContainText('"dcc-mcp-gateway"');
+    await expect(page.locator('.setup-panel .ide-config-preview').first()).toContainText('"meshy-dcc-gateway"');
     const codexCard = page.locator('.setup-panel .ide-card').filter({ hasText: 'Codex / OpenAI' });
     await expect(codexCard).toContainText('%USERPROFILE%\\.codex\\config.toml');
-    await expect(codexCard.locator('.ide-config-preview')).toContainText('[mcp_servers.dcc-mcp-gateway]');
-    await expect(codexCard.locator('.ide-config-preview')).toContainText('url = "http://127.0.0.1:9765/mcp"');
+    await expect(codexCard.locator('.ide-config-preview')).toContainText('[mcp_servers.meshy-dcc-gateway]');
+    await expect(codexCard.locator('.ide-config-preview')).toContainText('url = "http://127.0.0.1:19765/mcp"');
     await page.locator('.setup-panel .ide-card').first().getByRole('button', { name: 'Copy' }).click();
     await expect(page.locator('.setup-panel')).toContainText('Copied Claude Desktop config');
     await page.getByRole('button', { name: 'Direct' }).click();
@@ -158,7 +158,7 @@ test.describe('Admin Page', () => {
     await expect(page.locator('.debug-panel')).toContainText('250 payload tokens');
     await page.getByRole('navigation').getByRole('link', { name: 'Health' }).click();
     await expect(page.locator('.health-panel')).toContainText('0.17.7');
-    await expect(page.locator('.health-panel')).toContainText('toon / dcc-mcp-byte4-v1');
+    await expect(page.locator('.health-panel')).toContainText('toon / meshy-dcc-byte4-v1');
   });
 
   test('keeps setup IDE card action rows aligned', async ({ page }) => {
@@ -262,7 +262,7 @@ test.describe('Admin Page', () => {
 
     await page.getByRole('tab', { name: /Human CLI/ }).click();
     await expect(page.getByRole('tab', { name: /Human CLI/ })).toHaveAttribute('aria-selected', 'true');
-    await expect(page.locator('.setup-panel')).toContainText('dcc-mcp-cli marketplace update <package_name> --dcc maya');
+    await expect(page.locator('.setup-panel')).toContainText('meshy-dcc-cli marketplace update <package_name> --dcc maya');
 
     const cliLayout = await page.locator('.command-center-layout').evaluate((layout) => {
       const rows = Array.from(layout.querySelectorAll('.cli-command-row')) as HTMLElement[];
@@ -291,7 +291,7 @@ test.describe('Admin Page', () => {
 
     await expect(page.locator('html')).toHaveAttribute('lang', 'ja');
     await expect(page.locator('html')).toHaveAttribute('data-admin-locale-source', 'navigator');
-    await expect(page.locator('.brand-tag')).toContainText('DCC-MCP ゲートウェイ');
+    await expect(page.locator('.brand-tag')).toContainText('Meshy DCC ゲートウェイ');
     await expect(page.locator('#admin-locale-select .preference-select-visible-value')).toHaveText('JA');
     await expect(page.locator('#admin-locale-select')).toHaveAttribute('aria-label', '言語: 日本語');
 
@@ -391,7 +391,7 @@ test.describe('Admin Page', () => {
     await page.goto('/admin/');
 
     const setup = page.locator('.setup-panel');
-    await expect(setup).toContainText('http://127.0.0.1:9765/mcp');
+    await expect(setup).toContainText('http://127.0.0.1:19765/mcp');
     await expect(setup).not.toContainText('http://127.0.0.1:3721/mcp');
   });
 
@@ -443,7 +443,7 @@ test.describe('Admin Page', () => {
     await expect(mayaRow).toContainText('Current version: 0.19.56');
     await expect(mayaRow.locator('.instance-update-button')).toHaveAttribute('data-slot', 'button');
     await expect(mayaRow.locator('.instance-update-button')).toContainText('Check update');
-    await expect(mayaRow.locator('.instance-update-help')).toContainText('dcc-mcp-server update apply');
+    await expect(mayaRow.locator('.instance-update-help')).toContainText('meshy-dcc-server update apply');
     const updateChrome = await mayaRow.locator('.instance-update-cell').evaluate((cell) => {
       const cellStyle = window.getComputedStyle(cell as HTMLElement);
       const meta = cell.querySelector('.instance-update-meta') as HTMLElement | null;
@@ -463,7 +463,7 @@ test.describe('Admin Page', () => {
     expect(parseFloat(updateChrome.metaRadius)).toBeGreaterThanOrEqual(20);
     expect(updateChrome.linkBlockBorderWidth).toBe('1px');
     expect(parseFloat(updateChrome.linkBlockRadius)).toBeGreaterThanOrEqual(4);
-    await expect(mayaRow).not.toContainText('dcc-mcp-cli update check');
+    await expect(mayaRow).not.toContainText('meshy-dcc-cli update check');
     const mayaUpdateRequest = page.waitForRequest((request) =>
       request.method() === 'POST'
       && request.url().includes('/instances/maya-1234567890/update')
@@ -471,7 +471,7 @@ test.describe('Admin Page', () => {
     await mayaRow.getByRole('button', { name: 'Check server update for Maya Layout' }).click();
     await expect((await mayaUpdateRequest).postDataJSON()).toEqual({
       apply: false,
-      binary: 'dcc-mcp-server',
+      binary: 'meshy-dcc-server',
     });
     await expect(mayaRow.locator('.instance-update-result.warn')).toContainText('Available 0.18.0');
     await expect(mayaRow.locator('.instance-update-result.warn')).not.toContainText('Restart this DCC backend');
@@ -484,9 +484,9 @@ test.describe('Admin Page', () => {
     await blenderRow.getByRole('button', { name: 'Check server update for Blender Lookdev' }).click();
     await expect((await blenderUpdateRequest).postDataJSON()).toEqual({
       apply: false,
-      binary: 'dcc-mcp-server',
+      binary: 'meshy-dcc-server',
     });
-    await expect(blenderRow.locator('.instance-update-result.warn')).toContainText('dcc-mcp-server is not listed in the update manifest.');
+    await expect(blenderRow.locator('.instance-update-result.warn')).toContainText('meshy-dcc-server is not listed in the update manifest.');
     await expect(blenderRow).not.toContainText('Update API is unavailable');
     await expect(mayaRow.getByRole('link', { name: 'docs' }).first()).toHaveAttribute('href', 'http://127.0.0.1:8765/docs');
     await page.getByLabel('Filter current panel').fill('blender');
@@ -615,7 +615,7 @@ test.describe('Admin Page', () => {
     await expect(page.locator('.agent-timeline-card')).toContainText('Observation 1');
     await expect(page.locator('.agent-timeline-card')).toContainText('Sphere created.');
     await expect(page.locator('.trace-detail-panel')).toContainText('Token accounting');
-    await expect(page.locator('.trace-detail-panel')).toContainText('dcc-mcp-byte4-v1');
+    await expect(page.locator('.trace-detail-panel')).toContainText('meshy-dcc-byte4-v1');
     await expect(page.locator('.trace-detail-panel')).toContainText(/Input tokens\s*3/);
     await expect(page.locator('.trace-detail-panel')).toContainText(/Total tokens\s*6/);
     await expect(page.locator('.trace-detail-panel')).toContainText('Returned40');
@@ -1205,7 +1205,7 @@ test.describe('Admin Page', () => {
     await expect(page.locator('.logs-panel')).not.toContainText('req-123');
     await page.locator('.logs-panel .log-severity-card.severity-debug').click();
     await expect(page.locator('.logs-panel')).toContainText('dispatch cache hit');
-    await expect(page.locator('.logs-panel')).toContainText('dcc_mcp_http_server:executor');
+    await expect(page.locator('.logs-panel')).toContainText('meshy_dcc_http_server:executor');
     await expect(page.locator('.logs-panel')).toContainText('ThreadId(01)');
     await expect(page.locator('.logs-panel')).not.toContainText('tools/call ok');
     await page.getByLabel('Filter current panel').fill('missing');
@@ -1245,7 +1245,7 @@ test.describe('Admin Page', () => {
     await chooseSidebarSelectOption(page, 'admin-theme-select', 'Dark');
     await expect(page.locator('html')).toHaveClass(/dark/);
     await expect(page.locator('html')).toHaveAttribute('data-admin-theme', 'dark');
-    expect(await page.evaluate(() => localStorage.getItem('dcc-mcp-admin-theme'))).toBe('dark');
+    expect(await page.evaluate(() => localStorage.getItem('meshy-dcc-admin-theme'))).toBe('dark');
 
     await chooseSidebarSelectOption(page, 'admin-theme-select', 'Light');
     await expect(page.locator('html')).not.toHaveClass(/dark/);
@@ -1274,7 +1274,7 @@ test.describe('Admin Page', () => {
       await expect(page.locator('.integration-card[data-kind="sentry"]')).not.toContainText('examplePublicKey');
       await expect(page.locator('.integration-card[data-kind="webhooks"]')).toContainText('Event Webhooks');
       await expect(page.locator('.integration-card[data-kind="webhooks"] .badge-muted')).toContainText('Inactive');
-      await expect(page.locator('.integration-card[data-kind="webhooks"] .integration-config-value').first()).toContainText('~/dcc-mcp/etc/webhooks.yaml');
+      await expect(page.locator('.integration-card[data-kind="webhooks"] .integration-config-value').first()).toContainText('~/meshy-dcc/etc/webhooks.yaml');
       await expect(page.locator('.integration-card[data-kind="wecom"]')).toContainText('WeCom Message Push');
       await expect(page.locator('.integration-card[data-kind="wecom"] .badge-muted')).toContainText('Inactive');
       await expect(page.locator('.integration-card[data-kind="wecom"] .integration-config-value').first()).toContainText('Not set');
@@ -1338,10 +1338,10 @@ test.describe('Admin Page', () => {
               status: 'inactive',
               config: {
                 config_path: '',
-                config_text: 'queue_capacity: 1024\nwebhooks:\n  - name: studio-events\n    url: http://127.0.0.1:9000/dcc-mcp-events\n    events:\n      - tool.failed\n',
+                config_text: 'queue_capacity: 1024\nwebhooks:\n  - name: studio-events\n    url: http://127.0.0.1:9000/meshy-dcc-events\n    events:\n      - tool.failed\n',
               },
               env_locked_fields: [
-                { key: 'config_path', locked: false, env_var: 'DCC_MCP_WEBHOOKS_CONFIG' },
+                { key: 'config_path', locked: false, env_var: 'MESHY_DCC_WEBHOOKS_CONFIG' },
               ],
             }],
           }),
@@ -1350,10 +1350,10 @@ test.describe('Admin Page', () => {
 
       await page.goto('/admin/?panel=integrations');
       const webhooks = page.locator('.integration-card[data-kind="webhooks"]');
-      await expect(webhooks).toContainText('~/dcc-mcp/etc/webhooks.yaml');
+      await expect(webhooks).toContainText('~/meshy-dcc/etc/webhooks.yaml');
       await openIntegrationEditor(page, 'webhooks');
       const form = page.locator('.integration-edit-form');
-      await expect(form.locator('.integration-config-path-note')).toContainText('~/dcc-mcp/etc/webhooks.yaml');
+      await expect(form.locator('.integration-config-path-note')).toContainText('~/meshy-dcc/etc/webhooks.yaml');
       await expect(form.locator('textarea#integration-webhooks-config_text')).toBeVisible();
     });
 
@@ -1374,11 +1374,11 @@ test.describe('Admin Page', () => {
               status: 'active',
               config: {
                 config_path: 'C:/runtime/webhooks.yaml',
-                write_config_path: 'C:/Users/example/dcc-mcp/etc/webhooks.yaml',
-                config_text: 'queue_capacity: 1024\nwebhooks:\n  - name: runtime\n    url: http://127.0.0.1:9000/dcc-mcp-events\n    events:\n      - tool.failed\n',
+                write_config_path: 'C:/Users/example/meshy-dcc/etc/webhooks.yaml',
+                config_text: 'queue_capacity: 1024\nwebhooks:\n  - name: runtime\n    url: http://127.0.0.1:9000/meshy-dcc-events\n    events:\n      - tool.failed\n',
               },
               env_locked_fields: [
-                { key: 'config_path', locked: true, env_var: 'DCC_MCP_WEBHOOKS_CONFIG' },
+                { key: 'config_path', locked: true, env_var: 'MESHY_DCC_WEBHOOKS_CONFIG' },
               ],
             }],
           }),
@@ -1390,7 +1390,7 @@ test.describe('Admin Page', () => {
       await expect(webhooks).toContainText('C:/runtime/webhooks.yaml');
       await openIntegrationEditor(page, 'webhooks');
       const form = page.locator('.integration-edit-form');
-      await expect(form.locator('.integration-config-path-note')).toContainText('C:/Users/example/dcc-mcp/etc/webhooks.yaml');
+      await expect(form.locator('.integration-config-path-note')).toContainText('C:/Users/example/meshy-dcc/etc/webhooks.yaml');
       await expect(form.locator('.integration-config-path-note')).not.toContainText('C:/runtime/webhooks.yaml');
     });
 
@@ -1404,7 +1404,7 @@ test.describe('Admin Page', () => {
       await expect(dsnField.locator('input')).toHaveValue('');
       await expect(dsnField.locator('input')).toHaveAttribute('placeholder', /override after restart/i);
       // Shows env var hint
-      await expect(page.locator('.integration-env-hint')).toContainText('DCC_MCP_SENTRY_DSN');
+      await expect(page.locator('.integration-env-hint')).toContainText('MESHY_DCC_SENTRY_DSN');
       // Other fields are editable
       await expect(page.locator('#integration-sentry-environment')).toBeEnabled();
       await expect(page.locator('#integration-sentry-release')).toBeEnabled();
@@ -1448,10 +1448,10 @@ test.describe('Admin Page', () => {
       await page.locator('#integration-wecom-webhook_url').fill('https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=abc123');
       await page.locator('#integration-wecom-event_types').fill('tool.failed, gateway.instance.*');
       const template = page.locator('#integration-wecom-template');
-      await template.fill('DCC-MCP $event\nDCC: $dcc-type');
+      await template.fill('Meshy DCC $event\nDCC: $dcc-type');
       await form.getByRole('button', { name: '$instance-id' }).click();
       await form.getByRole('button', { name: '$url' }).click();
-      await expect(template).toHaveValue('DCC-MCP $event\nDCC: $dcc-type $instance-id $url');
+      await expect(template).toHaveValue('Meshy DCC $event\nDCC: $dcc-type $instance-id $url');
       const updateRequest = page.waitForRequest((request) =>
         request.url().endsWith('/admin/api/integrations') && request.method() === 'PUT',
       );
@@ -1461,7 +1461,7 @@ test.describe('Admin Page', () => {
       expect(payload.kind).toBe('wecom');
       expect(payload.config.webhook_url).toBe('https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=abc123');
       expect(payload.config.event_types).toEqual(['tool.failed', 'gateway.instance.*']);
-      expect(payload.config.template).toBe('DCC-MCP $event\nDCC: $dcc-type $instance-id $url');
+      expect(payload.config.template).toBe('Meshy DCC $event\nDCC: $dcc-type $instance-id $url');
       await expect(page.locator('.integration-card[data-kind="wecom"].pending-restart')).toBeVisible({ timeout: 5000 });
       await expect(page.locator('.integration-card[data-kind="wecom"] .integration-config-value').first()).toContainText('key=********');
     });
@@ -1472,7 +1472,7 @@ test.describe('Admin Page', () => {
       const form = page.locator('.integration-edit-form');
       await page.locator('#integration-wecom-webhook_url').fill('https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=abc123');
       await page.locator('#integration-wecom-event_types').fill('tool.failed, gateway.instance.*');
-      await page.locator('#integration-wecom-template').fill('DCC-MCP $event\nDCC: $dcc-type');
+      await page.locator('#integration-wecom-template').fill('Meshy DCC $event\nDCC: $dcc-type');
 
       const testRequest = page.waitForRequest((request) =>
         request.url().endsWith('/admin/api/integrations/test') && request.method() === 'POST',
@@ -1483,7 +1483,7 @@ test.describe('Admin Page', () => {
       expect(payload.kind).toBe('wecom');
       expect(payload.config.webhook_url).toBe('https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=abc123');
       expect(payload.config.event_types).toEqual(['tool.failed', 'gateway.instance.*']);
-      expect(payload.config.template).toBe('DCC-MCP $event\nDCC: $dcc-type');
+      expect(payload.config.template).toBe('Meshy DCC $event\nDCC: $dcc-type');
       await expect(page.locator('.status-bar')).toContainText('wecom test message sent');
       await expect(page.locator('.integration-edit-form')).toBeVisible();
     });
@@ -1497,7 +1497,7 @@ test.describe('Admin Page', () => {
       await expect(form).toBeVisible();
       await expect(form).toContainText('Webhooks YAML');
       await expect(form).toContainText('Saved to');
-      await expect(form.locator('.integration-config-path-note')).toContainText('~/dcc-mcp/etc/webhooks.yaml');
+      await expect(form.locator('.integration-config-path-note')).toContainText('~/meshy-dcc/etc/webhooks.yaml');
       await expect(form.locator('#integration-webhooks-config_path')).toHaveCount(0);
       await expect(form.locator('.integration-edit-field.is-textarea')).toBeVisible();
 
@@ -1517,7 +1517,7 @@ test.describe('Admin Page', () => {
 
       await expect(page.locator('.integration-card[data-kind="webhooks"].pending-restart')).toBeVisible({ timeout: 5000 });
       await expect(page.locator('.integration-card[data-kind="webhooks"] .badge-warn')).toContainText('Pending Restart');
-      await expect(page.locator('.integration-card[data-kind="webhooks"]')).toContainText('~/dcc-mcp/etc/webhooks.yaml');
+      await expect(page.locator('.integration-card[data-kind="webhooks"]')).toContainText('~/meshy-dcc/etc/webhooks.yaml');
     });
 
     test('shows error for invalid DSN', async ({ page }) => {
@@ -1623,7 +1623,7 @@ test.describe('Sessions and Reliability panels', () => {
 
     const panel = page.locator('section.reliability-panel');
     await expect(panel).toBeVisible();
-    await expect(panel).toContainText('local-gateway (127.0.0.1:9765)');
+    await expect(panel).toContainText('local-gateway (127.0.0.1:19765)');
     const circuitTiles = panel.locator('.reliability-section').nth(1).locator('.metric-tile .metric-value');
     await expect(circuitTiles).toHaveText(['2', '0']);
     const funnelTiles = panel.locator('.reliability-section').nth(2).locator('.metric-tile .metric-value');

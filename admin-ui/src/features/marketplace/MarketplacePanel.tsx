@@ -42,7 +42,7 @@ export type MarketplacePanelProps = {
   onUpdated: (text: string) => void;
   onError: (error: unknown) => void;
   onCountsChange?: (counts: { total: number; installed: number }) => void;
-  /** Current dcc-mcp-core version (from /health) for compatibility warning. */
+  /** Current meshy-dcc-core version (from /health) for compatibility warning. */
   coreVersion?: string | null;
   /** Navigate to Skills panel and highlight the given skill name. */
   onNavigateToSkills?: (skillName: string) => void;

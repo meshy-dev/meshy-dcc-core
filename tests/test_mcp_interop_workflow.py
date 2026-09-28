@@ -15,7 +15,7 @@ def test_modern_sdk_gate_is_explicit_bounded_and_keeps_normal_rust_tests():
     step = step.group(1)
     assert "if: matrix.rust-validation == 'full'" in step
     assert "timeout-minutes: 15" in step
-    assert 'DCC_MCP_SDK_SMOKE: "1"' in step
+    assert 'MESHY_DCC_SDK_SMOKE: "1"' in step
     assert "vx npm --prefix tests/interop/mcp-2026 ci --ignore-scripts" in step
     assert "vx node tests/interop/mcp-2026/request-oracle.mjs" in step
     assert "--no-default-features --features mcp-2026-07-28" in step

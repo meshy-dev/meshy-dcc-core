@@ -34,7 +34,7 @@ tools:
       on-failure: [dcc_diagnostics__audit_log, dcc_diagnostics__process_status]
 
   - name: audit_log
-    description: "Query the dcc-mcp-core sandbox audit log — list recent action invocations, filter by outcome (success/denied), or search by action name. Helps diagnose why an action was blocked or what the agent did recently."
+    description: "Query the meshy-dcc-core sandbox audit log — list recent action invocations, filter by outcome (success/denied), or search by action name. Helps diagnose why an action was blocked or what the agent did recently."
     input_schema:
       type: object
       properties:

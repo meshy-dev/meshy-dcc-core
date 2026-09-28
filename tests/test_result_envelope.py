@@ -6,8 +6,8 @@ import json
 
 import pytest
 
-import dcc_mcp_core
-from dcc_mcp_core.result_envelope import ToolResultEnvelope
+import meshy_dcc_core
+from meshy_dcc_core.result_envelope import ToolResultEnvelope
 
 
 def test_tool_result_ok_puts_kwargs_in_context() -> None:
@@ -80,7 +80,7 @@ def test_tool_result_envelope_round_trips_canonical_shape() -> None:
 
 
 def test_legacy_module_tool_result_alias_is_deprecated() -> None:
-    from dcc_mcp_core import result_envelope
+    from meshy_dcc_core import result_envelope
 
     with pytest.warns(DeprecationWarning, match="ToolResultEnvelope"):
         legacy = result_envelope.ToolResult
@@ -96,8 +96,8 @@ def test_legacy_module_tool_result_alias_is_deprecated() -> None:
 
 
 def test_runtime_model_and_wire_envelope_have_distinct_public_names() -> None:
-    assert dcc_mcp_core.ToolResultEnvelope is ToolResultEnvelope
-    assert dcc_mcp_core.ToolResult is not ToolResultEnvelope
+    assert meshy_dcc_core.ToolResultEnvelope is ToolResultEnvelope
+    assert meshy_dcc_core.ToolResult is not ToolResultEnvelope
 
 
 def test_tool_result_envelope_rejects_object_error_on_direct_construction() -> None:

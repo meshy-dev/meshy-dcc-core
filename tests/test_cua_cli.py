@@ -8,11 +8,11 @@ from typing import List
 
 import pytest
 
-from dcc_mcp_core.cua_cli import CuaCliBridge
-from dcc_mcp_core.cua_cli import CuaCliError
-from dcc_mcp_core.cua_cli import _read_shared_image
-from dcc_mcp_core.cua_cli import inspect_cua_contract
-from dcc_mcp_core.cua_cli import resolve_cua_command
+from meshy_dcc_core.cua_cli import CuaCliBridge
+from meshy_dcc_core.cua_cli import CuaCliError
+from meshy_dcc_core.cua_cli import _read_shared_image
+from meshy_dcc_core.cua_cli import inspect_cua_contract
+from meshy_dcc_core.cua_cli import resolve_cua_command
 
 _FAKE_CLI = r"""from __future__ import print_function
 import json
@@ -147,7 +147,7 @@ def test_configured_binary_must_be_absolute(tmp_path: Path) -> None:
 
 
 def test_cli_sibling_precedes_an_unrelated_path_cua(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    cli = tmp_path / ("dcc-mcp-cli.exe" if os.name == "nt" else "dcc-mcp-cli")
+    cli = tmp_path / ("meshy-dcc-cli.exe" if os.name == "nt" else "meshy-dcc-cli")
     sibling = tmp_path / ("dcc-cua.exe" if os.name == "nt" else "dcc-cua")
     other = tmp_path / "other" / ("dcc-cua.exe" if os.name == "nt" else "dcc-cua")
     other.parent.mkdir()
@@ -155,34 +155,34 @@ def test_cli_sibling_precedes_an_unrelated_path_cua(tmp_path: Path, monkeypatch:
         path.write_bytes(b"test")
 
     def fake_which(name: str) -> str | None:
-        return str(cli) if name == "dcc-mcp-cli" else str(other)
+        return str(cli) if name == "meshy-dcc-cli" else str(other)
 
-    monkeypatch.setattr("dcc_mcp_core.cua_cli.shutil.which", fake_which)
+    monkeypatch.setattr("meshy_dcc_core.cua_cli.shutil.which", fake_which)
     assert resolve_cua_command() == [str(sibling.resolve())]
 
 
 def test_official_install_dir_is_probed_without_path(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     binary = tmp_path / ("dcc-cua.exe" if os.name == "nt" else "dcc-cua")
     binary.write_bytes(b"test")
-    monkeypatch.delenv("DCC_MCP_CUA_BINARY", raising=False)
-    monkeypatch.setenv("DCC_MCP_INSTALL_DIR", str(tmp_path))
-    monkeypatch.setattr("dcc_mcp_core.cua_cli.shutil.which", lambda _name: None)
+    monkeypatch.delenv("MESHY_DCC_CUA_BINARY", raising=False)
+    monkeypatch.setenv("MESHY_DCC_INSTALL_DIR", str(tmp_path))
+    monkeypatch.setattr("meshy_dcc_core.cua_cli.shutil.which", lambda _name: None)
 
     assert resolve_cua_command() == [str(binary.resolve())]
 
 
 @pytest.mark.skipif(os.name != "nt", reason="Windows installer default")
-def test_windows_default_dcc_mcp_bin_is_probed_without_path(
+def test_windows_default_meshy_dcc_bin_is_probed_without_path(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    binary = tmp_path / "dcc-mcp" / "bin" / "dcc-cua.exe"
+    binary = tmp_path / "meshy-dcc" / "bin" / "dcc-cua.exe"
     binary.parent.mkdir(parents=True)
     binary.write_bytes(b"test")
-    monkeypatch.delenv("DCC_MCP_CUA_BINARY", raising=False)
-    monkeypatch.delenv("DCC_MCP_INSTALL_DIR", raising=False)
+    monkeypatch.delenv("MESHY_DCC_CUA_BINARY", raising=False)
+    monkeypatch.delenv("MESHY_DCC_INSTALL_DIR", raising=False)
     monkeypatch.setenv("LOCALAPPDATA", str(tmp_path))
-    monkeypatch.setattr("dcc_mcp_core.cua_cli.shutil.which", lambda _name: None)
+    monkeypatch.setattr("meshy_dcc_core.cua_cli.shutil.which", lambda _name: None)
 
     assert resolve_cua_command() == [str(binary.resolve())]
 
@@ -194,11 +194,11 @@ def test_latest_stable_versioned_install_is_probed(tmp_path: Path, monkeypatch: 
         path = versions / version / executable_name
         path.parent.mkdir(parents=True)
         path.write_bytes(b"test")
-    monkeypatch.delenv("DCC_MCP_CUA_BINARY", raising=False)
-    monkeypatch.delenv("DCC_MCP_INSTALL_DIR", raising=False)
-    monkeypatch.setattr("dcc_mcp_core.cua_cli._standard_cua_candidates", lambda: ())
-    monkeypatch.setattr("dcc_mcp_core.cua_cli._standalone_cua_versions_dir", lambda: versions)
-    monkeypatch.setattr("dcc_mcp_core.cua_cli.shutil.which", lambda _name: None)
+    monkeypatch.delenv("MESHY_DCC_CUA_BINARY", raising=False)
+    monkeypatch.delenv("MESHY_DCC_INSTALL_DIR", raising=False)
+    monkeypatch.setattr("meshy_dcc_core.cua_cli._standard_cua_candidates", lambda: ())
+    monkeypatch.setattr("meshy_dcc_core.cua_cli._standalone_cua_versions_dir", lambda: versions)
+    monkeypatch.setattr("meshy_dcc_core.cua_cli.shutil.which", lambda _name: None)
 
     assert resolve_cua_command() == [str((versions / "1.1.0" / executable_name).resolve())]
 
@@ -217,13 +217,13 @@ def test_binary_frame_fallback_reads_and_removes_cli_output(tmp_path: Path) -> N
 def test_binary_frame_fallback_accepts_the_legacy_core_output_field(tmp_path: Path) -> None:
     script = tmp_path / "fake_legacy_cua.py"
     script.write_text(
-        _FAKE_CLI.replace('"_dcc_cua_binary_output"', '"_dcc_mcp_binary_output"'),
+        _FAKE_CLI.replace('"_dcc_cua_binary_output"', '"_meshy_dcc_binary_output"'),
         encoding="utf-8",
     )
     bridge = CuaCliBridge([sys.executable, str(script)], snapshot_transport="binary_frame")
     try:
         response = bridge.call("image")
-        output = Path(response["_dcc_mcp_binary_output"])
+        output = Path(response["_meshy_dcc_binary_output"])
         assert bridge.read_image(response) == b"png"
         assert not output.exists()
     finally:
@@ -248,9 +248,9 @@ def test_cua_shared_image_reader_opens_the_cross_platform_named_mapping() -> Non
         mapping.unlink()
 
 
-@pytest.mark.skipif(not os.environ.get("DCC_MCP_CUA_E2E_BINARY"), reason="standalone CUA binary not configured")
+@pytest.mark.skipif(not os.environ.get("MESHY_DCC_CUA_E2E_BINARY"), reason="standalone CUA binary not configured")
 def test_real_standalone_cua_process_boundary() -> None:
-    binary = str(Path(os.environ["DCC_MCP_CUA_E2E_BINARY"]).resolve())
+    binary = str(Path(os.environ["MESHY_DCC_CUA_E2E_BINARY"]).resolve())
     with CuaCliBridge([binary], shared_host=False) as bridge:
         assert bridge.contract.version == "0.4.0"
         assert "session_health" in bridge.contract.capabilities

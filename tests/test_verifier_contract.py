@@ -1,8 +1,8 @@
 """Contract tests for the cross-DCC verifier shape (issue #688).
 
-These tests freeze the :class:`dcc_mcp_core.SceneStats` contract that
-downstream DCC repos (``dcc-mcp-blender``, ``dcc-mcp-maya``,
-``dcc-mcp-unreal``, ``dcc-mcp-photoshop``) build their verifier skills
+These tests freeze the :class:`meshy_dcc_core.SceneStats` contract that
+downstream DCC repos (``meshy-dcc-blender``, ``meshy-dcc-maya``,
+``meshy-dcc-unreal``, ``meshy-dcc-photoshop``) build their verifier skills
 against. They are pure-Python and require no DCC binary — the verifier
 *implementations* are tested in the respective downstream repositories.
 
@@ -19,8 +19,8 @@ import json
 import pytest
 
 # Import local modules
-import dcc_mcp_core
-from dcc_mcp_core import SceneStats
+import meshy_dcc_core
+from meshy_dcc_core import SceneStats
 
 
 class TestSceneStatsContract:
@@ -103,9 +103,9 @@ class TestSceneStatsContract:
         assert not empty_a.matches(different)
 
     def test_scene_stats_is_top_level_exported(self) -> None:
-        """``dcc_mcp_core.SceneStats`` is part of the documented public API."""
-        assert hasattr(dcc_mcp_core, "SceneStats")
-        assert "SceneStats" in dcc_mcp_core.__all__
+        """``meshy_dcc_core.SceneStats`` is part of the documented public API."""
+        assert hasattr(meshy_dcc_core, "SceneStats")
+        assert "SceneStats" in meshy_dcc_core.__all__
 
     def test_scene_stats_stub_payload_is_json_safe(self) -> None:
         """A zeroed SceneStats payload is JSON-safe and shape-complete."""

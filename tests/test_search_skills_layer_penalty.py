@@ -6,8 +6,8 @@ filters by a layer tag (`tags=["infrastructure"]`), in which case the raw
 BM25 order is honoured inside the filtered slice.
 
 Exercises the full Rust catalog → Python binding path; layer detection
-lives in `crates/dcc-mcp-skills/src/catalog/catalog.rs` and the penalty in
-`crates/dcc-mcp-skills/src/catalog/scoring.rs`.
+lives in `crates/meshy-dcc-skills/src/catalog/catalog.rs` and the penalty in
+`crates/meshy-dcc-skills/src/catalog/scoring.rs`.
 """
 
 from __future__ import annotations
@@ -15,8 +15,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Sequence
 
-from dcc_mcp_core import SkillCatalog
-from dcc_mcp_core import ToolRegistry
+from meshy_dcc_core import SkillCatalog
+from meshy_dcc_core import ToolRegistry
 
 
 def _write_skill(
@@ -36,7 +36,7 @@ def _write_skill(
         f"name: {name}",
         f"description: {description}",
         "metadata:",
-        "  dcc-mcp:",
+        "  meshy-dcc:",
         f"    dcc: {dcc}",
     ]
     if tags:

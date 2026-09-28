@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { createMcpHandler, isLegacyRequest, McpServer } from '@modelcontextprotocol/server';
 
-const fixtures = new URL('../../../crates/dcc-mcp-jsonrpc/tests/fixtures/modern_request_cases.json', import.meta.url);
+const fixtures = new URL('../../../crates/meshy-dcc-jsonrpc/tests/fixtures/modern_request_cases.json', import.meta.url);
 const cases = JSON.parse(await readFile(fixtures, 'utf8'));
 let invocations = 0;
 const handler = createMcpHandler(() => {

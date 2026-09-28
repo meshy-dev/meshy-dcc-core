@@ -8,12 +8,12 @@ from pathlib import Path
 import sys
 from typing import Any
 
-import dcc_mcp_core
+import meshy_dcc_core
 
 SCRIPT = (
     Path(__file__).resolve().parents[1]
     / "python"
-    / "dcc_mcp_core"
+    / "meshy_dcc_core"
     / "skills"
     / "dcc-diagnostics"
     / "scripts"
@@ -73,7 +73,7 @@ class _Capturer:
 def test_screenshot_main_returns_dict_for_inprocess_executor(monkeypatch) -> None:
     module = _load_screenshot_module()
     monkeypatch.setattr(module, "_try_ipc_capture", lambda _params: None)
-    monkeypatch.setattr(dcc_mcp_core, "Capturer", _Capturer)
+    monkeypatch.setattr(meshy_dcc_core, "Capturer", _Capturer)
 
     result = module.main()
 
@@ -145,7 +145,7 @@ def test_screenshot_main_does_not_mock_desktop_unavailable(monkeypatch) -> None:
 
     module = _load_screenshot_module()
     monkeypatch.setattr(module, "_try_ipc_capture", lambda _params: None)
-    monkeypatch.setattr(dcc_mcp_core, "Capturer", _UnavailableCapturer)
+    monkeypatch.setattr(meshy_dcc_core, "Capturer", _UnavailableCapturer)
 
     result = module.main()
 

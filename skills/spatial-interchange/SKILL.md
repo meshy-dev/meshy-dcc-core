@@ -5,9 +5,9 @@ description: >-
   engines, and interchange formats from explicit right/up/forward axes and
   meters-per-unit values.
 license: "MIT"
-compatibility: "dcc-mcp-core 0.19.91+, Python 3.7+"
+compatibility: "meshy-dcc-core 0.19.91+, Python 3.7+"
 metadata:
-  dcc-mcp:
+  meshy-dcc:
     dcc: python
     layer: infrastructure
     stage: interchange

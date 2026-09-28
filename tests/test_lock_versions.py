@@ -126,8 +126,8 @@ def test_uv_lock_at_last_released_version_passes(tmp_path: Path) -> None:
     # release is the expected state during a release-please PR.
     _write_uv_pkg(
         tmp_path,
-        pkg_dir="dcc-mcp-server-bin",
-        name="dcc-mcp-server",
+        pkg_dir="meshy-dcc-server-bin",
+        name="meshy-dcc-server",
         declared="0.20.34",
         lock_version="0.20.33",
     )
@@ -140,8 +140,8 @@ def test_uv_lock_behind_last_released_version_fails(tmp_path: Path) -> None:
     _write_changelog(tmp_path, ["0.20.33", "0.20.34"])
     _write_uv_pkg(
         tmp_path,
-        pkg_dir="dcc-mcp-server-bin",
-        name="dcc-mcp-server",
+        pkg_dir="meshy-dcc-server-bin",
+        name="meshy-dcc-server",
         declared="0.20.34",
         lock_version="0.20.12",
     )
@@ -151,7 +151,7 @@ def test_uv_lock_behind_last_released_version_fails(tmp_path: Path) -> None:
     assert len(errors) == 1
     assert "0.20.12" in errors[0]
     assert "0.20.33" in errors[0]
-    assert "uv lock --upgrade-package dcc-mcp-server" in errors[0]
+    assert "uv lock --upgrade-package meshy-dcc-server" in errors[0]
 
 
 def test_uv_lock_on_release_pr_allows_one_release_behind(tmp_path: Path) -> None:
@@ -162,8 +162,8 @@ def test_uv_lock_on_release_pr_allows_one_release_behind(tmp_path: Path) -> None
     _write_changelog(tmp_path, ["0.20.36", "0.20.35", "0.20.34"])
     _write_uv_pkg(
         tmp_path,
-        pkg_dir="dcc-mcp-server-bin",
-        name="dcc-mcp-server",
+        pkg_dir="meshy-dcc-server-bin",
+        name="meshy-dcc-server",
         declared="0.20.36",
         lock_version="0.20.34",
     )
@@ -178,8 +178,8 @@ def test_uv_lock_off_release_pr_rejects_one_release_behind(tmp_path: Path) -> No
     _write_changelog(tmp_path, ["0.20.36", "0.20.35", "0.20.34"])
     _write_uv_pkg(
         tmp_path,
-        pkg_dir="dcc-mcp-server-bin",
-        name="dcc-mcp-server",
+        pkg_dir="meshy-dcc-server-bin",
+        name="meshy-dcc-server",
         declared="0.20.36",
         lock_version="0.20.34",
     )
@@ -196,8 +196,8 @@ def test_uv_lock_on_release_pr_still_reports_several_releases_stale(tmp_path: Pa
     _write_changelog(tmp_path, ["0.20.36", "0.20.35", "0.20.34"])
     _write_uv_pkg(
         tmp_path,
-        pkg_dir="dcc-mcp-server-bin",
-        name="dcc-mcp-server",
+        pkg_dir="meshy-dcc-server-bin",
+        name="meshy-dcc-server",
         declared="0.20.36",
         lock_version="0.20.12",
     )
@@ -211,11 +211,11 @@ def test_uv_lock_on_release_pr_still_reports_several_releases_stale(tmp_path: Pa
 @pytest.mark.parametrize(
     ("ref", "expected"),
     [
-        ("release-please--branches--main--components--dcc-mcp-core", True),
+        ("release-please--branches--main--components--meshy-dcc-core", True),
         ("refs/heads/release-please--branches--main", True),
         # A branch that merely mentions release-please is not a release PR.
         ("fix/release-please--branches--main", False),
-        ("task/dcc-mcp-core-release-please-pr-2585", False),
+        ("task/meshy-dcc-core-release-please-pr-2585", False),
         ("main", False),
         ("", False),
         (None, False),
@@ -245,8 +245,8 @@ def test_main_reads_release_pr_state_from_the_environment(
     _write_changelog(tmp_path, ["0.20.36", "0.20.35", "0.20.34"])
     _write_uv_pkg(
         tmp_path,
-        pkg_dir="dcc-mcp-server-bin",
-        name="dcc-mcp-server",
+        pkg_dir="meshy-dcc-server-bin",
+        name="meshy-dcc-server",
         declared="0.20.36",
         lock_version="0.20.34",
     )
@@ -263,8 +263,8 @@ def test_uv_lock_without_earlier_release_is_skipped(tmp_path: Path) -> None:
     _write_changelog(tmp_path, ["0.20.34"])
     _write_uv_pkg(
         tmp_path,
-        pkg_dir="dcc-mcp-server-bin",
-        name="dcc-mcp-server",
+        pkg_dir="meshy-dcc-server-bin",
+        name="meshy-dcc-server",
         declared="0.20.34",
         lock_version="0.20.12",
     )
@@ -331,8 +331,8 @@ def test_main_reports_errors_and_returns_failure(tmp_path: Path, capsys) -> None
     _write_changelog(tmp_path, ["0.20.33", "0.20.34"])
     _write_uv_pkg(
         tmp_path,
-        pkg_dir="dcc-mcp-core-semantic",
-        name="dcc-mcp-core-semantic",
+        pkg_dir="meshy-dcc-core-semantic",
+        name="meshy-dcc-core-semantic",
         declared="0.20.34",
         lock_version="0.20.12",
     )

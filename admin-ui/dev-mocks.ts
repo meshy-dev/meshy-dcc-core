@@ -317,7 +317,7 @@ const SKILLS_PAYLOAD = {
 
 const SKILL_PATHS_PAYLOAD = {
   paths: [
-    { source: 'env:DCC_MCP_SKILL_PATHS', path: 'G:/studio/skills', status: 'present', exists: true },
+    { source: 'env:MESHY_DCC_SKILL_PATHS', path: 'G:/studio/skills', status: 'present', exists: true },
     { id: 7, source: 'admin_custom', path: 'G:/custom/admin-skills', status: 'present', exists: true },
     { id: 9, source: 'admin_custom', path: 'D:/old/skills', status: 'missing', exists: false },
   ],
@@ -393,13 +393,13 @@ const INTEGRATIONS_PAYLOAD = {
         environment: 'production',
         release: '0.18.0',
         sample_rate: 1.0,
-        write_config_path: '~/dcc-mcp/etc/sentry.json',
+        write_config_path: '~/meshy-dcc/etc/sentry.json',
       },
       env_locked_fields: [
-        { key: 'dsn', locked: true, env_var: 'DCC_MCP_SENTRY_DSN' },
-        { key: 'environment', locked: false, env_var: 'DCC_MCP_SENTRY_ENVIRONMENT' },
-        { key: 'release', locked: false, env_var: 'DCC_MCP_SENTRY_RELEASE' },
-        { key: 'sample_rate', locked: false, env_var: 'DCC_MCP_SENTRY_SAMPLE_RATE' },
+        { key: 'dsn', locked: true, env_var: 'MESHY_DCC_SENTRY_DSN' },
+        { key: 'environment', locked: false, env_var: 'MESHY_DCC_SENTRY_ENVIRONMENT' },
+        { key: 'release', locked: false, env_var: 'MESHY_DCC_SENTRY_RELEASE' },
+        { key: 'sample_rate', locked: false, env_var: 'MESHY_DCC_SENTRY_SAMPLE_RATE' },
       ],
     },
     {
@@ -409,27 +409,27 @@ const INTEGRATIONS_PAYLOAD = {
       status: 'inactive',
       config: {
         config_path: '',
-        write_config_path: '~/dcc-mcp/etc/webhooks.yaml',
+        write_config_path: '~/meshy-dcc/etc/webhooks.yaml',
       },
       env_locked_fields: [
-        { key: 'config_path', locked: false, env_var: 'DCC_MCP_WEBHOOKS_CONFIG' },
+        { key: 'config_path', locked: false, env_var: 'MESHY_DCC_WEBHOOKS_CONFIG' },
       ],
     },
     {
       kind: 'wecom',
       label: 'WeCom Message Push',
-      description: 'Push selected DCC-MCP events to an Enterprise WeChat group robot.',
+      description: 'Push selected Meshy DCC events to an Enterprise WeChat group robot.',
       status: 'inactive',
       config: {
         webhook_url: '',
         event_types: [],
         template: '',
-        write_config_path: '~/dcc-mcp/etc/webhooks.yaml',
+        write_config_path: '~/meshy-dcc/etc/webhooks.yaml',
       },
       env_locked_fields: [
-        { key: 'webhook_url', locked: false, env_var: 'DCC_MCP_WECOM_WEBHOOK_URL' },
-        { key: 'event_types', locked: false, env_var: 'DCC_MCP_WECOM_EVENTS' },
-        { key: 'template', locked: false, env_var: 'DCC_MCP_WECOM_TEMPLATE' },
+        { key: 'webhook_url', locked: false, env_var: 'MESHY_DCC_WECOM_WEBHOOK_URL' },
+        { key: 'event_types', locked: false, env_var: 'MESHY_DCC_WECOM_EVENTS' },
+        { key: 'template', locked: false, env_var: 'MESHY_DCC_WECOM_TEMPLATE' },
       ],
     },
     {
@@ -439,9 +439,9 @@ const INTEGRATIONS_PAYLOAD = {
       status: 'inactive',
       config: {
         endpoint: '',
-        service_name: 'dcc-mcp',
+        service_name: 'meshy-dcc',
         headers: '',
-        write_config_path: '~/dcc-mcp/etc/otlp.json',
+        write_config_path: '~/meshy-dcc/etc/otlp.json',
       },
       env_locked_fields: [
         { key: 'endpoint', locked: false, env_var: 'OTEL_EXPORTER_OTLP_ENDPOINT' },
@@ -453,7 +453,7 @@ const INTEGRATIONS_PAYLOAD = {
 let devWecomWebhookUrl: string | null = null;
 
 const GOVERNANCE_PAYLOAD = {
-  schema_version: 'dcc-mcp.admin.governance.v1',
+  schema_version: 'meshy-dcc.admin.governance.v1',
   generated_at: NOW,
   mode: {
     admin_mutations: 'disabled',
@@ -618,7 +618,7 @@ const CALLS = [
     source_ip: '127.0.0.1',
     token_accounting: {
       response_format: 'toon',
-      token_estimator: 'dcc-mcp-byte4-v1',
+      token_estimator: 'meshy-dcc-byte4-v1',
       original_bytes: 320,
       returned_bytes: 144,
       original_tokens: 80,
@@ -656,7 +656,7 @@ const TRACES = [
     input_tokens: 1840,
     output_tokens: 620,
     total_tokens: 2460,
-    payload_token_estimator: 'dcc-mcp-byte4-v1',
+    payload_token_estimator: 'meshy-dcc-byte4-v1',
     slowest_span_name: 'backend.dispatch',
     slowest_span_ms: 36,
     token_accounting: CALLS[0].token_accounting,
@@ -754,7 +754,7 @@ const TRACE_DETAIL = {
   input_tokens: 3,
   output_tokens: 8,
   total_tokens: 11,
-  payload_token_estimator: 'dcc-mcp-byte4-v1',
+  payload_token_estimator: 'meshy-dcc-byte4-v1',
   token_accounting: CALLS[0].token_accounting,
 };
 
@@ -769,7 +769,7 @@ const STATS_PAYLOAD = {
   total_output_tokens: 16,
   total_tokens: 40,
   avg_tokens_per_call: 20,
-  payload_token_estimator: 'dcc-mcp-byte4-v1',
+  payload_token_estimator: 'meshy-dcc-byte4-v1',
   top_app_types: [{ name: 'maya', count: 1 }, { name: 'houdini', count: 1 }],
   top_tools: [{ name: 'maya-dev__create_sphere', count: 1 }],
   top_instances: [{ name: 'maya-1234567890', count: 1 }],
@@ -877,7 +877,7 @@ const WORKFLOWS_PAYLOAD = {
 };
 
 const TRAFFIC_PAYLOAD = {
-  schema_version: 'dcc-mcp.admin.traffic.v1',
+  schema_version: 'meshy-dcc.admin.traffic.v1',
   total: 1,
   capture_status: {
     state: 'captured',
@@ -1031,10 +1031,10 @@ const MARKETPLACE_CATALOG = [
     tags: ['modeling', 'mesh', 'retopo'],
     version: '2.1.0',
     min_core_version: '0.17.0',
-    maintainer: 'dcc-mcp',
+    maintainer: 'meshy-dcc',
     source_name: 'official',
-    url: 'https://github.com/dcc-mcp/marketplace/tree/main/maya-modeling',
-    install: { type: 'git', url: 'https://github.com/dcc-mcp/marketplace.git' },
+    url: 'https://github.com/meshy-dev/marketplace/tree/main/maya-modeling',
+    install: { type: 'git', url: 'https://github.com/meshy-dev/marketplace.git' },
   },
   {
     name: 'blender-lookdev',
@@ -1043,10 +1043,10 @@ const MARKETPLACE_CATALOG = [
     tags: ['lookdev', 'materials', 'render'],
     version: '0.8.0',
     min_core_version: '0.17.0',
-    maintainer: 'dcc-mcp',
+    maintainer: 'meshy-dcc',
     source_name: 'official',
-    url: 'https://github.com/dcc-mcp/marketplace/tree/main/blender-lookdev',
-    install: { type: 'git', url: 'https://github.com/dcc-mcp/marketplace.git' },
+    url: 'https://github.com/meshy-dev/marketplace/tree/main/blender-lookdev',
+    install: { type: 'git', url: 'https://github.com/meshy-dev/marketplace.git' },
   },
   {
     name: 'cross-dcc-utils',
@@ -1055,10 +1055,10 @@ const MARKETPLACE_CATALOG = [
     tags: ['diagnostics', 'inspection', 'utilities'],
     version: '1.3.0',
     min_core_version: '0.17.0',
-    maintainer: 'dcc-mcp',
+    maintainer: 'meshy-dcc',
     source_name: 'official',
-    url: 'https://github.com/dcc-mcp/marketplace/tree/main/cross-dcc-utils',
-    install: { type: 'git', url: 'https://github.com/dcc-mcp/marketplace.git' },
+    url: 'https://github.com/meshy-dev/marketplace/tree/main/cross-dcc-utils',
+    install: { type: 'git', url: 'https://github.com/meshy-dev/marketplace.git' },
   },
 ];
 
@@ -1068,17 +1068,17 @@ let marketplaceInstalled = [
     dcc: 'maya',
     version: '1.2.0',
     install_type: 'git',
-    path: 'C:/Users/demo/.dcc-mcp/maya/skills/cross-dcc-utils',
+    path: 'C:/Users/demo/.meshy-dcc/maya/skills/cross-dcc-utils',
     source_name: 'official',
-    source_url: 'https://github.com/dcc-mcp/marketplace',
-    install_url: 'https://github.com/dcc-mcp/marketplace.git',
+    source_url: 'https://github.com/meshy-dev/marketplace',
+    install_url: 'https://github.com/meshy-dev/marketplace.git',
     install_ref: null,
     installed_at_ms: Date.now() - 86_400_000,
   },
 ];
 
 let marketplaceSources = [
-  { name: 'official', url: 'https://github.com/dcc-mcp/marketplace', origin: 'builtin' },
+  { name: 'official', url: 'https://github.com/meshy-dev/marketplace', origin: 'builtin' },
 ];
 
 let marketplaceOutdated = [
@@ -1088,11 +1088,11 @@ let marketplaceOutdated = [
     installed_version: '1.2.0',
     latest_version: '1.3.0',
     source_name: 'official',
-    source_url: 'https://github.com/dcc-mcp/marketplace',
+    source_url: 'https://github.com/meshy-dev/marketplace',
     install_type: 'git',
-    install_url: 'https://github.com/dcc-mcp/marketplace.git',
+    install_url: 'https://github.com/meshy-dev/marketplace.git',
     install_ref: null,
-    path: 'C:/Users/demo/.dcc-mcp/maya/skills/cross-dcc-utils',
+    path: 'C:/Users/demo/.meshy-dcc/maya/skills/cross-dcc-utils',
   },
 ];
 
@@ -1201,7 +1201,7 @@ async function sendWecomTestMessage(webhookUrl: string) {
       body: JSON.stringify({
         msgtype: 'text',
         text: {
-          content: `DCC-MCP Admin WeCom test\nGateway: dev-mock\nSent at: ${Date.now()}`,
+          content: `Meshy DCC Admin WeCom test\nGateway: dev-mock\nSent at: ${Date.now()}`,
         },
       }),
     });
@@ -1240,10 +1240,10 @@ function marketplacePackage(name: string, dcc: string) {
     dcc,
     version: catalogEntry?.version ?? '1.0.0',
     install_type: 'git',
-    path: `C:/Users/demo/.dcc-mcp/${dcc}/skills/${name}`,
+    path: `C:/Users/demo/.meshy-dcc/${dcc}/skills/${name}`,
     source_name: catalogEntry?.source_name ?? 'official',
-    source_url: 'https://github.com/dcc-mcp/marketplace',
-    install_url: catalogEntry?.install.url ?? 'https://github.com/dcc-mcp/marketplace.git',
+    source_url: 'https://github.com/meshy-dev/marketplace',
+    install_url: catalogEntry?.install.url ?? 'https://github.com/meshy-dev/marketplace.git',
     install_ref: null,
     installed_at_ms: Date.now(),
   };
@@ -1279,7 +1279,7 @@ function mockDebugBundle(requestId: string) {
 
 function mockIssueReport(requestId: string) {
   return {
-    schema_version: 'dcc-mcp.admin.issue-report.v1',
+    schema_version: 'meshy-dcc.admin.issue-report.v1',
     request_id: requestId,
     generated_at: NOW,
     summary: 'Mock issue report for local admin UI development.',
@@ -1299,7 +1299,7 @@ function mockIssueReport(requestId: string) {
 
 function mockAgentTracePacket(lookupId: string) {
   return {
-    schema_version: 'dcc-mcp.admin.agent-trace-packet.v1',
+    schema_version: 'meshy-dcc.admin.agent-trace-packet.v1',
     lookup_id: lookupId,
     trace_id: `trace-${lookupId || 'req-123'}`,
     request_id: lookupId || 'req-123',
@@ -1311,7 +1311,7 @@ function mockAgentTracePacket(lookupId: string) {
     total_ms: 48,
     span_count: 3,
     payload_tokens: {
-      token_estimator: 'dcc-mcp-byte4-v1',
+      token_estimator: 'meshy-dcc-byte4-v1',
       input_tokens: 3,
       output_tokens: 8,
       total_tokens: 11,
@@ -1338,28 +1338,28 @@ function mockAgentTracePacket(lookupId: string) {
 const OPENAPI_PAYLOAD = {
   openapi: '3.1.0',
   info: {
-    title: 'DCC-MCP Gateway REST API',
+    title: 'Meshy DCC Gateway REST API',
     version: HEALTH.version,
   },
   paths: {
     '/v1/search': {
       post: {
         operationId: 'searchTools',
-        summary: 'Search indexed DCC-MCP tools.',
+        summary: 'Search indexed Meshy DCC tools.',
         responses: { '200': { description: 'Search results' } },
       },
     },
     '/v1/describe': {
       post: {
         operationId: 'describeTool',
-        summary: 'Describe one DCC-MCP tool schema.',
+        summary: 'Describe one Meshy DCC tool schema.',
         responses: { '200': { description: 'Tool description' } },
       },
     },
     '/v1/call': {
       post: {
         operationId: 'callTool',
-        summary: 'Call a validated DCC-MCP tool.',
+        summary: 'Call a validated Meshy DCC tool.',
         responses: { '200': { description: 'Tool result' } },
       },
     },
@@ -1375,7 +1375,7 @@ const OPENAPI_PAYLOAD = {
 
 export function adminApiMockPlugin(): Plugin {
   return {
-    name: 'dcc-mcp-admin-api-mock',
+    name: 'meshy-dcc-admin-api-mock',
     configureServer(server) {
       const handleAdminApiMock = async (req: IncomingMessage, res: ServerResponse, next: () => void) => {
         const url = req.url ?? '';
@@ -1456,14 +1456,14 @@ export function adminApiMockPlugin(): Plugin {
           const instanceId = decodeURIComponent(pathname.slice('/instances/'.length, -'/update'.length));
           return send(res, 200, {
             instance_id: instanceId,
-            binary: 'dcc-mcp-server',
+            binary: 'meshy-dcc-server',
             current_version: instanceId.startsWith('maya') ? '0.17.38-dev' : null,
             latest_version: '0.18.0',
             status: instanceId.startsWith('maya') ? 'available' : 'binary_not_found',
             message: instanceId.startsWith('maya')
-              ? 'An update is available. Run dcc-mcp-server update apply in the target installation.'
-              : 'dcc-mcp-server binary was not found for this mocked instance.',
-            download_url: 'https://github.com/dcc-mcp/dcc-mcp-core/releases/latest',
+              ? 'An update is available. Run meshy-dcc-server update apply in the target installation.'
+              : 'meshy-dcc-server binary was not found for this mocked instance.',
+            download_url: 'https://github.com/meshy-dev/meshy-dcc-core/releases/latest',
             staged_path: null,
           });
         }
@@ -1580,7 +1580,7 @@ export function adminApiMockPlugin(): Plugin {
           if (req.method === 'POST') {
             const payload = await readJsonBody(req);
             const rawSource = String(payload.source ?? '').trim();
-            const source = rawSource || 'dcc-mcp/marketplace';
+            const source = rawSource || 'meshy-dev/marketplace';
             const entry = {
               name: source.split('/').pop() || source,
               url: source.startsWith('http') ? source : `https://github.com/${source}`,
@@ -1615,7 +1615,7 @@ export function adminApiMockPlugin(): Plugin {
             dcc,
             version: marketplacePackage(name, dcc).version,
             path: marketplacePackage(name, dcc).path,
-            skill_search_path: `C:/Users/demo/.dcc-mcp/${dcc}/skills`,
+            skill_search_path: `C:/Users/demo/.meshy-dcc/${dcc}/skills`,
             install_type: 'git',
             reload_required: true,
           });
@@ -1630,7 +1630,7 @@ export function adminApiMockPlugin(): Plugin {
             uninstalled: true,
             name,
             dcc,
-            path: `C:/Users/demo/.dcc-mcp/${dcc}/skills/${name}`,
+            path: `C:/Users/demo/.meshy-dcc/${dcc}/skills/${name}`,
             removed_state: true,
             removed_files: true,
             reload_required: true,
@@ -1657,7 +1657,7 @@ export function adminApiMockPlugin(): Plugin {
               path: marketplacePackage(name, dcc).path,
               install_type: 'git',
               source_name: 'official',
-              source_url: 'https://github.com/dcc-mcp/marketplace',
+              source_url: 'https://github.com/meshy-dev/marketplace',
               reload_required: true,
             }],
           });

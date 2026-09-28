@@ -60,7 +60,7 @@ generator: the generator *does* render them, so this gate under-reports those
 two types on purpose. What buys that tolerance is the false-positive budget -
 the only thing that keeps a release gate switched on. The full history holds
 exactly one such commit, ``16d5c287`` ``test(skills)!: align fixtures with
-nested metadata.dcc-mcp.* contract``, and it is a contributor-facing fixture
+nested metadata.meshy-dcc.* contract``, and it is a contributor-facing fixture
 migration, so it is the case the table exists to absorb rather than the case
 the table should chase.
 

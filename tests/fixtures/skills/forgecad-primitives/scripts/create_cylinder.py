@@ -1,7 +1,7 @@
 """ForgeCAD-style skill script — create a CAD cylinder.
 
 Parameter resolution order:
-1. stdin JSON: {"radius": ..., "height": ..., "marker": "..."} — dcc-mcp-core execute_script
+1. stdin JSON: {"radius": ..., "height": ..., "marker": "..."} — meshy-dcc-core execute_script
 2. Defaults: radius=1.0, height=2.0, marker=""
 """
 

@@ -1,7 +1,7 @@
-"""Query the dcc-mcp-core sandbox audit log.
+"""Query the meshy-dcc-core sandbox audit log.
 
 Data source priority:
-1. IPC callback — if DCC_MCP_IPC_ADDRESS is set, connect to the running DCC
+1. IPC callback — if MESHY_DCC_IPC_ADDRESS is set, connect to the running DCC
    server and call the 'get_audit_log' action to get live data.
 2. Local SandboxContext — creates a fresh (empty) context as a fallback,
    useful for testing without a running DCC server.
@@ -18,8 +18,8 @@ import sys
 def _fetch_via_ipc(ipc_address: str, filter_: str, action_name: str | None, limit: int) -> dict | None:
     """Connect to the DCC server via IPC and call 'get_audit_log'."""
     try:
-        from dcc_mcp_core import TransportAddress
-        from dcc_mcp_core import connect_ipc
+        from meshy_dcc_core import TransportAddress
+        from meshy_dcc_core import connect_ipc
     except ImportError:
         return None
 
@@ -54,11 +54,11 @@ def _fetch_via_ipc(ipc_address: str, filter_: str, action_name: str | None, limi
 def _fetch_local(filter_: str, action_name: str | None, limit: int) -> dict:
     """Read from a local SandboxContext (fallback; typically empty in subprocess)."""
     try:
-        from dcc_mcp_core import AuditLog
-        from dcc_mcp_core import SandboxContext
-        from dcc_mcp_core import SandboxPolicy
+        from meshy_dcc_core import AuditLog
+        from meshy_dcc_core import SandboxContext
+        from meshy_dcc_core import SandboxPolicy
     except ImportError:
-        return {"success": False, "message": "dcc_mcp_core not available. Install the package first."}
+        return {"success": False, "message": "meshy_dcc_core not available. Install the package first."}
 
     try:
         policy = SandboxPolicy()
@@ -109,7 +109,7 @@ def main() -> None:
     parser.add_argument("--limit", type=int, default=50)
     args = parser.parse_args()
 
-    ipc_address = os.environ.get("DCC_MCP_IPC_ADDRESS")
+    ipc_address = os.environ.get("MESHY_DCC_IPC_ADDRESS")
 
     data = _fetch_via_ipc(ipc_address, args.filter, args.action_name, args.limit) if ipc_address else None
 
@@ -130,7 +130,7 @@ def main() -> None:
     if total == 0 and source == "local":
         empty_note = (
             " Log is empty — no sandbox context is active in this subprocess. "
-            "Set DCC_MCP_IPC_ADDRESS env var to query the live DCC server."
+            "Set MESHY_DCC_IPC_ADDRESS env var to query the live DCC server."
         )
 
     print(

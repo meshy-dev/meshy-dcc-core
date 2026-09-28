@@ -10,13 +10,13 @@ import json
 
 import pytest
 
-from dcc_mcp_core import BooleanWrapper
-from dcc_mcp_core import FloatWrapper
-from dcc_mcp_core import InputValidator
-from dcc_mcp_core import IntWrapper
-from dcc_mcp_core import StringWrapper
-from dcc_mcp_core import unwrap_value
-from dcc_mcp_core import wrap_value
+from meshy_dcc_core import BooleanWrapper
+from meshy_dcc_core import FloatWrapper
+from meshy_dcc_core import InputValidator
+from meshy_dcc_core import IntWrapper
+from meshy_dcc_core import StringWrapper
+from meshy_dcc_core import unwrap_value
+from meshy_dcc_core import wrap_value
 
 
 class TestBooleanWrapper:

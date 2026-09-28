@@ -8,8 +8,8 @@ dcc:
   primary: blender
   companions: [cinema4d]
 rez_packages:
-  - dcc_mcp_core
-  - dcc_mcp_blender
+  - meshy_dcc_core
+  - meshy_dcc_blender
   - commercial_3d_product_render
 skill_paths:
   shared: ["${REZ_COMMERCIAL_3D_PRODUCT_RENDER_ROOT}/skills"]
@@ -25,13 +25,13 @@ visual_feedback:
   capture_after_mutation: true
   include_viewport_preview: true
 env:
-  DCC_MCP_CONTEXT_BUNDLE: product.launch-pack.hero-render.lookdev
-  DCC_MCP_PRODUCTION_DOMAIN: advertising
-  DCC_MCP_CONTEXT_KIND: product
-  DCC_MCP_PROJECT: launch-pack
-  DCC_MCP_ASSET: hero-product
-  DCC_MCP_TASK: product-render
-  DCC_MCP_TOOLSET_PROFILE: commercial-3d-product-render
-  DCC_MCP_BLENDER_SKILL_PATHS: "${REZ_COMMERCIAL_3D_PRODUCT_RENDER_ROOT}/skills"
-  DCC_MCP_PACKAGE_PROVENANCE: commercial_3d_product_render-1.0.0
+  MESHY_DCC_CONTEXT_BUNDLE: product.launch-pack.hero-render.lookdev
+  MESHY_DCC_PRODUCTION_DOMAIN: advertising
+  MESHY_DCC_CONTEXT_KIND: product
+  MESHY_DCC_PROJECT: launch-pack
+  MESHY_DCC_ASSET: hero-product
+  MESHY_DCC_TASK: product-render
+  MESHY_DCC_TOOLSET_PROFILE: commercial-3d-product-render
+  MESHY_DCC_BLENDER_SKILL_PATHS: "${REZ_COMMERCIAL_3D_PRODUCT_RENDER_ROOT}/skills"
+  MESHY_DCC_PACKAGE_PROVENANCE: commercial_3d_product_render-1.0.0
 docs: ../../docs/guide/rez-skill-packages.md

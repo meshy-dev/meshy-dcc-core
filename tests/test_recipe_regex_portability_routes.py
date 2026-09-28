@@ -12,10 +12,10 @@ import urllib.request
 import pytest
 
 from conftest import McpClient
-from dcc_mcp_core import McpHttpConfig
-from dcc_mcp_core import McpHttpServer
-from dcc_mcp_core import ToolRegistry
-from dcc_mcp_core.recipes import register_recipes_tools
+from meshy_dcc_core import McpHttpConfig
+from meshy_dcc_core import McpHttpServer
+from meshy_dcc_core import ToolRegistry
+from meshy_dcc_core.recipes import register_recipes_tools
 
 
 def _post_json(url: str, body: dict[str, Any]) -> tuple[int, dict[str, Any]]:
@@ -55,7 +55,7 @@ def _recipe_metadata(skill_dir: Path, recipe_path: Path) -> MagicMock:
     metadata = MagicMock()
     metadata.name = "regex-portability-route-skill"
     metadata.skill_path = str(skill_dir)
-    metadata.metadata = {"dcc-mcp": {"recipes": str(recipe_path)}}
+    metadata.metadata = {"meshy-dcc": {"recipes": str(recipe_path)}}
     return metadata
 
 

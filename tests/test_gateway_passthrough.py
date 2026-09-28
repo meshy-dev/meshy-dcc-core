@@ -11,7 +11,7 @@ The gateway must
    ``tools/call`` response until a terminal ``$/dcc.jobUpdated`` is
    observed. The full end-to-end dance requires a real backend SSE
    stream — covered by
-   ``crates/dcc-mcp-http/tests/gateway_passthrough.rs``. Here we
+   ``crates/meshy-dcc-http/tests/gateway_passthrough.rs``. Here we
    verify the Python API surface and that gateway startup does NOT
    regress when the defaults are bumped to the #321 values.
 """
@@ -28,9 +28,9 @@ import pytest
 from conftest import allocate_gateway_port
 
 # Import local modules
-from dcc_mcp_core import McpHttpConfig
-from dcc_mcp_core import McpHttpServer
-from dcc_mcp_core import ToolRegistry
+from meshy_dcc_core import McpHttpConfig
+from meshy_dcc_core import McpHttpServer
+from meshy_dcc_core import ToolRegistry
 
 # ── Config surface ────────────────────────────────────────────────────────
 

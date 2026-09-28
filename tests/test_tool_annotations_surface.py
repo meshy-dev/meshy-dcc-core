@@ -11,7 +11,7 @@ pattern).  Two forms are accepted:
 When both forms appear for the same tool, the nested map wins entirely
 (whole-map replacement, not per-field merge).
 
-``deferred_hint`` is a dcc-mcp-core extension (not in MCP 2025-03-26),
+``deferred_hint`` is a meshy-dcc-core extension (not in MCP 2025-03-26),
 so it rides in the ``_meta["dcc.deferred_hint"]`` slot of the tool
 declaration rather than inside the spec-standard ``annotations`` map.
 """
@@ -24,7 +24,7 @@ import tempfile
 
 import pytest
 
-import dcc_mcp_core as core
+import meshy_dcc_core as core
 
 # ── Helpers ────────────────────────────────────────────────────────────
 
@@ -39,7 +39,7 @@ _SKILL_MD_TEMPLATE = """---
 name: {name}
 description: test skill
 metadata:
-  dcc-mcp:
+  meshy-dcc:
     dcc: python
     tools: tools.yaml
 ---
@@ -142,7 +142,7 @@ def test_no_annotations_returns_empty_dict() -> None:
 
 def test_deferred_hint_parsed_and_routed_for_meta() -> None:
     """Issue #344 — ``deferred_hint`` is parseable from tools.yaml but is
-    a dcc-mcp-core extension. On the MCP tool declaration it lands in
+    a meshy-dcc-core extension. On the MCP tool declaration it lands in
     ``_meta["dcc.deferred_hint"]`` (populated by the Rust HTTP handler),
     NEVER inside the spec-standard ``annotations`` map.
 

@@ -12,9 +12,9 @@ import textwrap
 
 import pytest
 
-from dcc_mcp_core.daemon_launch import Daemon
-from dcc_mcp_core.daemon_launch import detached_popen_kwargs
-from dcc_mcp_core.daemon_launch import launch_detached
+from meshy_dcc_core.daemon_launch import Daemon
+from meshy_dcc_core.daemon_launch import detached_popen_kwargs
+from meshy_dcc_core.daemon_launch import launch_detached
 
 
 class TestDetachedPopenKwargs:
@@ -127,7 +127,7 @@ class TestDaemonApi:
             import traceback
 
             sys.path.insert(0, {str(package_root)!r})
-            from dcc_mcp_core.daemon_launch import Daemon
+            from meshy_dcc_core.daemon_launch import Daemon
 
             pidfile = Path({str(pidfile)!r})
             marker = Path({str(marker)!r})
@@ -189,13 +189,13 @@ class TestDaemonApi:
             from pathlib import Path
             import sys
             sys.path.insert(0, {str(Path(__file__).resolve().parent.parent / "python")!r})
-            from dcc_mcp_core.daemon_launch import Daemon
+            from meshy_dcc_core.daemon_launch import Daemon
 
             d = Daemon(pidfile={str(pidfile)!r})
             d.daemonize()
             # Only the respawned child reaches here
             import os
-            os.environ.pop("DCC_MCP__DAEMONIZED", None)
+            os.environ.pop("MESHY_DCC__DAEMONIZED", None)
             Path({str(marker)!r}).write_text(f"daemonized pid={{os.getpid()}}")
             import time
             time.sleep(10)  # Keep pidfile alive for test to read it
@@ -227,16 +227,16 @@ class TestDaemonImports:
     """Verify all public symbols are importable from the top-level package."""
 
     def test_daemon_importable(self):
-        from dcc_mcp_core import Daemon
+        from meshy_dcc_core import Daemon
 
         assert Daemon is not None
 
     def test_detached_popen_kwargs_importable(self):
-        from dcc_mcp_core import detached_popen_kwargs
+        from meshy_dcc_core import detached_popen_kwargs
 
         assert detached_popen_kwargs is not None
 
     def test_launch_detached_importable(self):
-        from dcc_mcp_core import launch_detached
+        from meshy_dcc_core import launch_detached
 
         assert launch_detached is not None

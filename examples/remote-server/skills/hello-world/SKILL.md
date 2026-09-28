@@ -5,7 +5,7 @@ description: >-
   internal service connectivity and Skill discovery. Not for production use.
 license: MIT
 metadata:
-  dcc-mcp:
+  meshy-dcc:
     layer: example
     search-hint: "greeting, hello, test, connectivity check"
     tags: "example, demo"

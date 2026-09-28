@@ -1,12 +1,12 @@
 """Semantic tests for the universal Qt dispatcher Python source.
 
-The Rust :mod:`dcc_mcp_host_rpc::qtserver` module embeds the canonical
+The Rust :mod:`meshy_dcc_host_rpc::qtserver` module embeds the canonical
 dispatcher source directly via ``include_str!``:
 
-* ``python/dcc_mcp_core/host/qt_dispatcher.py``
+* ``python/meshy_dcc_core/host/qt_dispatcher.py``
   — the single canonical source of the ``QtCommandServer`` +
     ``_DispatchRegistry`` implementation. Embedded by Rust at build time.
-* ``crates/dcc-mcp-host-rpc/python/dcc_qt_dispatcher_bootstrap.py``
+* ``crates/meshy-dcc-host-rpc/python/dcc_qt_dispatcher_bootstrap.py``
   — the installer that wraps the dispatcher source into
     ``sys.modules['_dcc_qt_dispatcher']`` at runtime.
 
@@ -20,7 +20,7 @@ methods and what callers send over the wire, etc.
 This test exercises the canonical dispatcher source and the bootstrap
 in a stock Python interpreter (no Qt required for the pure-Python parts;
 PySide2/PySide6 optional for the server smoke test) so any regression
-fails the dcc-mcp-core CI suite.
+fails the meshy-dcc-core CI suite.
 """
 
 # Import future modules
@@ -37,9 +37,9 @@ from typing import Iterator
 # Import third-party modules
 import pytest
 
-DISPATCHER_PATH = Path(__file__).parent.parent / "python" / "dcc_mcp_core" / "host" / "qt_dispatcher.py"
+DISPATCHER_PATH = Path(__file__).parent.parent / "python" / "meshy_dcc_core" / "host" / "qt_dispatcher.py"
 BOOTSTRAP_PATH = (
-    Path(__file__).parent.parent / "crates" / "dcc-mcp-host-rpc" / "python" / "dcc_qt_dispatcher_bootstrap.py"
+    Path(__file__).parent.parent / "crates" / "meshy-dcc-host-rpc" / "python" / "dcc_qt_dispatcher_bootstrap.py"
 )
 
 
@@ -51,19 +51,19 @@ def _read(path: Path) -> str:
 def test_canonical_dispatcher_source_exists() -> None:
     """The canonical dispatcher source must exist so the Rust crate's
     ``include_str!`` resolves at build time.  Any rename or deletion of
-    ``python/dcc_mcp_core/host/qt_dispatcher.py`` would break the qtserver
+    ``python/meshy_dcc_core/host/qt_dispatcher.py`` would break the qtserver
     wire path and must fail this test.
     """
     assert DISPATCHER_PATH.is_file(), (
         f"Canonical dispatcher source missing at {DISPATCHER_PATH}. "
-        "The Rust crate `dcc-mcp-host-rpc` embeds this file via "
+        "The Rust crate `meshy-dcc-host-rpc` embeds this file via "
         "`include_str!` in `qtserver.rs:DISPATCHER_PY`."
     )
 
 
 @pytest.fixture
 def dispatcher_module() -> Iterator[types.ModuleType]:
-    """Exec ``dcc_mcp_core.host.qt_dispatcher`` into a fresh module-style namespace
+    """Exec ``meshy_dcc_core.host.qt_dispatcher`` into a fresh module-style namespace
     and yield it. The module mimics what the bootstrap installs under
     ``sys.modules['_dcc_qt_dispatcher']`` inside a real DCC.
     """
@@ -94,8 +94,8 @@ def test_dispatcher_exports_public_api(dispatcher_module: types.ModuleType) -> N
 
 
 def test_public_package_import_paths_expose_qt_dispatcher() -> None:
-    from dcc_mcp_core.qt_dispatcher import ServerHandle
-    from dcc_mcp_core.qt_dispatcher import start_qt_server
+    from meshy_dcc_core.qt_dispatcher import ServerHandle
+    from meshy_dcc_core.qt_dispatcher import start_qt_server
 
     assert ServerHandle.__name__ == "ServerHandle"
     assert callable(start_qt_server)
@@ -461,7 +461,7 @@ def test_source_parses_under_python_3_7_feature_version(path: Path) -> None:
 
 
 def test_dispatcher_source_compiles_without_qt() -> None:
-    """``dcc_mcp_core.qt_dispatcher`` must be importable up to the point of
+    """``meshy_dcc_core.qt_dispatcher`` must be importable up to the point of
     ``_import_qt`` being called. Calling :func:`start_qt_server` is
     what triggers the Qt import — module-load itself must work
     headless so CI without PySide passes.

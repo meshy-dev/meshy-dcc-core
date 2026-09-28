@@ -2,16 +2,16 @@
 
 name = "game_level_layout"
 version = "1.0.0"
-requires = ["dcc_mcp_core", "dcc_mcp_unreal"]
+requires = ["meshy_dcc_core", "meshy_dcc_unreal"]
 
 
 def commands():
-    env.DCC_MCP_CONTEXT_BUNDLE = "game-demo.level.city-block.layout"
-    env.DCC_MCP_PRODUCTION_DOMAIN = "game"
-    env.DCC_MCP_CONTEXT_KIND = "level"
-    env.DCC_MCP_PROJECT = "game-demo"
-    env.DCC_MCP_ASSET = "city-block"
-    env.DCC_MCP_TASK = "level-layout"
-    env.DCC_MCP_TOOLSET_PROFILE = "game-level-layout"
-    env.DCC_MCP_PACKAGE_PROVENANCE.append("game_level_layout-1.0.0")
-    env.DCC_MCP_UNREAL_SKILL_PATHS.append("{root}/skills")
+    env.MESHY_DCC_CONTEXT_BUNDLE = "game-demo.level.city-block.layout"
+    env.MESHY_DCC_PRODUCTION_DOMAIN = "game"
+    env.MESHY_DCC_CONTEXT_KIND = "level"
+    env.MESHY_DCC_PROJECT = "game-demo"
+    env.MESHY_DCC_ASSET = "city-block"
+    env.MESHY_DCC_TASK = "level-layout"
+    env.MESHY_DCC_TOOLSET_PROFILE = "game-level-layout"
+    env.MESHY_DCC_PACKAGE_PROVENANCE.append("game_level_layout-1.0.0")
+    env.MESHY_DCC_UNREAL_SKILL_PATHS.append("{root}/skills")

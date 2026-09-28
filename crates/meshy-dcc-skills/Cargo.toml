@@ -1,0 +1,51 @@
+[package]
+name = "meshy-dcc-skills"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Skills system for the Meshy DCC ecosystem (SKILL.md scanning and loading)"
+
+[dependencies]
+pyo3 = { workspace = true, optional = true }
+
+# Type-stub generation (opt-in via `stub-gen` feature).
+pyo3-stub-gen = { workspace = true, optional = true }
+pyo3-stub-gen-derive = { workspace = true, optional = true }
+
+meshy-dcc-models = { workspace = true }
+meshy-dcc-actions = { workspace = true }
+meshy-dcc-naming = { workspace = true }
+meshy-dcc-paths = { workspace = true }
+meshy-dcc-gateway-search = { workspace = true }
+meshy-dcc-pybridge = { workspace = true, optional = true }
+dirs = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+serde_yaml_ng = { workspace = true }
+dashmap = { workspace = true }
+tracing = { workspace = true }
+notify = { workspace = true }
+parking_lot = { workspace = true }
+sha2 = { workspace = true }
+thiserror = { workspace = true }
+uuid = { workspace = true }
+workspace-hack = { version = "0.1", path = "../workspace-hack" }
+
+[dev-dependencies]
+tempfile.workspace = true
+criterion = { workspace = true }
+rand.workspace = true
+meshy-dcc-models = { workspace = true, features = ["testing"] }
+meshy-dcc-test-utils = { workspace = true }
+
+[[bench]]
+name = "scoring_bench"
+harness = false
+
+[features]
+default = []
+python-bindings = ["pyo3", "meshy-dcc-models/python-bindings", "meshy-dcc-actions/python-bindings", "meshy-dcc-paths/python-bindings", "dep:meshy-dcc-pybridge", "meshy-dcc-pybridge/python-bindings"]
+# Enable `pyo3-stub-gen` annotations on this crate's PyO3 types.
+stub-gen = ["python-bindings", "dep:pyo3-stub-gen", "dep:pyo3-stub-gen-derive"]

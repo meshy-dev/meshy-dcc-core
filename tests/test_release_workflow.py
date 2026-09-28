@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from conftest import REPO_ROOT
-from dcc_mcp_core import yaml_loads
+from meshy_dcc_core import yaml_loads
 
 RELEASE_WORKFLOW = REPO_ROOT / ".github" / "workflows" / "release.yml"
 PYPI_ACTION = "pypa/gh-action-pypi-publish"
@@ -131,30 +131,30 @@ def test_release_workflow_publishes_each_pypi_project_in_its_own_job() -> None:
     expected = {
         "publish-core-pypi": {
             "needs": ["release-please", "validate-release-version", "build-wheels"],
-            "url": "https://pypi.org/p/dcc-mcp-core",
+            "url": "https://pypi.org/p/meshy-dcc-core",
             "artifact_pattern": "wheels-*",
             "artifact_path": "dist",
             "packages_dir": "dist",
         },
         "publish-server-pypi": {
             "needs": ["release-please", "validate-release-version", "build-binaries"],
-            "url": "https://pypi.org/p/dcc-mcp-server",
+            "url": "https://pypi.org/p/meshy-dcc-server",
             "artifact_pattern": "server-wheel-*",
             "artifact_path": "dist-server",
             "packages_dir": "dist-server",
         },
         "publish-semantic-pypi": {
             "needs": ["release-please", "validate-release-version", "build-semantic-wheels"],
-            "url": "https://pypi.org/p/dcc-mcp-core-semantic",
+            "url": "https://pypi.org/p/meshy-dcc-core-semantic",
             "artifact_pattern": "semantic-wheel-*",
             "artifact_path": "dist-semantic",
             "packages_dir": "dist-semantic",
         },
-        # The dcc-mcp-cli wrapper wheels are built once for all platforms and
+        # The meshy-dcc-cli wrapper wheels are built once for all platforms and
         # published from a single artefact, hence the non-glob pattern.
         "publish-cli-pypi": {
             "needs": ["release-please", "validate-release-version", "build-cli-wheels"],
-            "url": "https://pypi.org/p/dcc-mcp-cli",
+            "url": "https://pypi.org/p/meshy-dcc-cli",
             "artifact_pattern": "cli-wheel-all",
             "artifact_path": "dist-cli",
             "packages_dir": "dist-cli",
@@ -229,9 +229,9 @@ def test_release_workflow_keeps_github_release_safety_net_after_pypi_jobs() -> N
     assert download_patterns["server-binary-*"] == "dist-binaries"
     attestation_steps = {step["id"]: step for step in safety["steps"] if step.get("uses") == "actions/attest@v4"}
     assert {step["with"]["subject-path"] for step in attestation_steps.values()} == {
-        "dist-binaries/dcc-mcp-update-manifest-linux-x86_64.json",
-        "dist-binaries/dcc-mcp-update-manifest-windows-x86_64.json",
-        "dist-binaries/dcc-mcp-update-manifest-macos-universal2.json",
+        "dist-binaries/meshy-dcc-update-manifest-linux-x86_64.json",
+        "dist-binaries/meshy-dcc-update-manifest-windows-x86_64.json",
+        "dist-binaries/meshy-dcc-update-manifest-macos-universal2.json",
     }
     publish_bundles = next(
         step for step in safety["steps"] if step.get("name") == "Publish detached update-manifest bundles"
@@ -292,7 +292,7 @@ def test_release_workflow_builds_cli_wrapper_wheels_from_the_release_archives() 
 def test_release_workflow_gives_every_platform_its_own_wheel_output_directory() -> None:
     """Each platform must build into a directory no other platform writes to.
 
-    hatchling names every build ``dcc_mcp_cli-<version>-py3-none-any.whl``
+    hatchling names every build ``meshy_dcc_cli-<version>-py3-none-any.whl``
     because the wrapper carries no compiled extension. Looping the three
     platforms over one output directory therefore overwrites the first wheel
     with the second, and the build script finds no *new* file and exits 1 with
@@ -337,7 +337,7 @@ def test_release_workflow_builds_deployable_zips_per_platform() -> None:
     assert "scripts/release/build_standalone_bundle.py" in cli_run
     assert '--version "${{ needs.release-please.outputs.version }}"' in cli_run
     assert '--platform "${{ matrix.platform }}"' in cli_run
-    assert "--binary-name dcc-mcp-cli" in cli_run
+    assert "--binary-name meshy-dcc-cli" in cli_run
     assert '--binary-path "${{ matrix.cli_artifact_name }}"' in cli_run
 
     raw_upload = next(
@@ -353,5 +353,5 @@ def test_release_workflow_builds_deployable_zips_per_platform() -> None:
     assert "${{ steps.cli-bundle.outputs.bundle_path }}" in release_upload["with"]["files"]
 
     notify = next(step for step in jobs["publish"]["steps"] if step["name"] == "Notify Multica release-ready autopilot")
-    assert r"^dcc-mcp-server-[0-9A-Za-z.+-]+-(linux-x86_64|windows-x86_64|macos-universal2)\.zip$" in notify["run"]
-    assert r"^dcc-mcp-cli-[0-9A-Za-z.+-]+-(linux-x86_64|windows-x86_64|macos-universal2)\.zip$" in notify["run"]
+    assert r"^meshy-dcc-server-[0-9A-Za-z.+-]+-(linux-x86_64|windows-x86_64|macos-universal2)\.zip$" in notify["run"]
+    assert r"^meshy-dcc-cli-[0-9A-Za-z.+-]+-(linux-x86_64|windows-x86_64|macos-universal2)\.zip$" in notify["run"]

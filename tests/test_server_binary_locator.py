@@ -5,12 +5,12 @@ from pathlib import Path
 import sys
 
 _LOCATOR_SOURCE = (
-    Path(__file__).resolve().parents[1] / "pkg" / "dcc-mcp-server-bin" / "python" / "dcc_mcp_server" / "__init__.py"
+    Path(__file__).resolve().parents[1] / "pkg" / "meshy-dcc-server-bin" / "python" / "meshy_dcc_server" / "__init__.py"
 )
 
 
 def _load_locator_module():
-    spec = importlib.util.spec_from_file_location("_dcc_mcp_server_locator_under_test", _LOCATOR_SOURCE)
+    spec = importlib.util.spec_from_file_location("_meshy_dcc_server_locator_under_test", _LOCATOR_SOURCE)
     assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
@@ -29,7 +29,7 @@ def test_binary_path_prefers_current_interpreter_environment_over_path(monkeypat
     stale_path_binary.parent.mkdir(parents=True)
     stale_path_binary.write_bytes(b"stale")
 
-    monkeypatch.delenv("DCC_MCP_SERVER_BIN", raising=False)
+    monkeypatch.delenv("MESHY_DCC_SERVER_BIN", raising=False)
     monkeypatch.setattr(locator.sys, "prefix", str(interpreter_prefix))
     monkeypatch.setattr(locator.shutil, "which", lambda _name: str(stale_path_binary))
 
@@ -40,7 +40,7 @@ def test_binary_path_keeps_explicit_operator_override_first(monkeypatch, tmp_pat
     locator = _load_locator_module()
     override = tmp_path / locator._BINARY_NAME
     override.write_bytes(b"operator")
-    monkeypatch.setenv("DCC_MCP_SERVER_BIN", str(override))
+    monkeypatch.setenv("MESHY_DCC_SERVER_BIN", str(override))
     monkeypatch.setattr(locator.shutil, "which", lambda _name: sys.executable)
 
     assert locator.binary_path() == override

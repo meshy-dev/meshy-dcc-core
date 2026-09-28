@@ -15,11 +15,11 @@ import types
 
 import pytest
 
-import dcc_mcp_core._install_lifecycle_readiness as readiness_lifecycle
-import dcc_mcp_core._install_lifecycle_runtime as runtime_lifecycle
-import dcc_mcp_core._install_lifecycle_sidecar as sidecar_lifecycle
-import dcc_mcp_core.install_lifecycle as lifecycle
-import dcc_mcp_core.install_lifecycle_cli as lifecycle_cli
+import meshy_dcc_core._install_lifecycle_readiness as readiness_lifecycle
+import meshy_dcc_core._install_lifecycle_runtime as runtime_lifecycle
+import meshy_dcc_core._install_lifecycle_sidecar as sidecar_lifecycle
+import meshy_dcc_core.install_lifecycle as lifecycle
+import meshy_dcc_core.install_lifecycle_cli as lifecycle_cli
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
@@ -65,7 +65,7 @@ def _write_ready_sidecar_registry(tmp_path: Path) -> Path:
                     "port": 18812,
                     "pid": os.getpid(),
                     "metadata": {
-                        "dcc_mcp_role": "per-dcc-sidecar",
+                        "meshy_dcc_role": "per-dcc-sidecar",
                         "sidecar_pid": str(os.getpid()),
                         "mcp_url": "http://127.0.0.1:18812/mcp",
                         "host_rpc_uri": "commandport://127.0.0.1:6000",
@@ -84,11 +84,11 @@ def test_package_import_does_not_load_core_in_fresh_process() -> None:
 import json
 import sys
 
-import dcc_mcp_core
-print(json.dumps({"after_package": "dcc_mcp_core._core" in sys.modules}))
+import meshy_dcc_core
+print(json.dumps({"after_package": "meshy_dcc_core._core" in sys.modules}))
 
-import dcc_mcp_core.install_lifecycle
-print(json.dumps({"after_lifecycle": "dcc_mcp_core._core" in sys.modules}))
+import meshy_dcc_core.install_lifecycle
+print(json.dumps({"after_lifecycle": "meshy_dcc_core._core" in sys.modules}))
 """
     env = os.environ.copy()
     env["PYTHONPATH"] = str(REPO_ROOT / "python")
@@ -114,11 +114,11 @@ def test_top_level_lifecycle_export_does_not_load_core_in_fresh_process() -> Non
 import json
 import sys
 
-from dcc_mcp_core import inspect_install_root
-from dcc_mcp_core import sidecar_host_rpc_dispatch_contract
+from meshy_dcc_core import inspect_install_root
+from meshy_dcc_core import sidecar_host_rpc_dispatch_contract
 
 print(json.dumps({
-    "core_loaded": "dcc_mcp_core._core" in sys.modules,
+    "core_loaded": "meshy_dcc_core._core" in sys.modules,
     "module": inspect_install_root.__module__,
     "sidecar_contract_module": sidecar_host_rpc_dispatch_contract.__module__,
     "sidecar_contract_status": sidecar_host_rpc_dispatch_contract("stub://localhost:0")["status"],
@@ -137,8 +137,8 @@ print(json.dumps({
 
     assert json.loads(result.stdout) == {
         "core_loaded": False,
-        "module": "dcc_mcp_core.install_lifecycle",
-        "sidecar_contract_module": "dcc_mcp_core._install_lifecycle_sidecar",
+        "module": "meshy_dcc_core.install_lifecycle",
+        "sidecar_contract_module": "meshy_dcc_core._install_lifecycle_sidecar",
         "sidecar_contract_status": "test_only",
     }
 
@@ -152,17 +152,17 @@ import runpy
 import sys
 
 sys.argv = [
-    "dcc_mcp_core.install_lifecycle",
+    "meshy_dcc_core.install_lifecycle",
     "inspect",
     sys.argv[1],
 ]
 try:
-    runpy.run_module("dcc_mcp_core.install_lifecycle", run_name="__main__")
+    runpy.run_module("meshy_dcc_core.install_lifecycle", run_name="__main__")
 except SystemExit as exc:
     code = exc.code
 else:
     code = 0
-print(json.dumps({"core_loaded": "dcc_mcp_core._core" in sys.modules, "exit_code": code}))
+print(json.dumps({"core_loaded": "meshy_dcc_core._core" in sys.modules, "exit_code": code}))
 """
     env = os.environ.copy()
     env["PYTHONPATH"] = str(REPO_ROOT / "python")
@@ -186,19 +186,19 @@ def test_inspect_install_root_reports_loaded_native_artifact(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    native = tmp_path / "dcc_mcp_core" / "_core.pyd"
+    native = tmp_path / "meshy_dcc_core" / "_core.pyd"
     native.parent.mkdir()
     native.write_bytes(b"placeholder")
-    fake_core = types.ModuleType("dcc_mcp_core._core")
+    fake_core = types.ModuleType("meshy_dcc_core._core")
     fake_core.__file__ = str(native)
-    monkeypatch.setitem(sys.modules, "dcc_mcp_core._core", fake_core)
+    monkeypatch.setitem(sys.modules, "meshy_dcc_core._core", fake_core)
 
     result = lifecycle.inspect_install_root(tmp_path)
 
     assert result["status"] == "requires_restart"
     assert result["requires_restart"] is True
     assert result["locked_path"] == str(native.resolve())
-    assert result["loaded_native_artifacts"] == [{"module": "dcc_mcp_core._core", "path": str(native.resolve())}]
+    assert result["loaded_native_artifacts"] == [{"module": "meshy_dcc_core._core", "path": str(native.resolve())}]
 
 
 def test_safe_remove_tree_classifies_windows_permission_error(
@@ -206,7 +206,7 @@ def test_safe_remove_tree_classifies_windows_permission_error(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     install_root = tmp_path / "adapter"
-    locked = install_root / "dcc_mcp_core" / "_core.pyd"
+    locked = install_root / "meshy_dcc_core" / "_core.pyd"
     locked.parent.mkdir(parents=True)
     locked.write_bytes(b"placeholder")
 
@@ -273,7 +273,7 @@ def test_query_runtime_state_reads_sidecar_pid(tmp_path: Path) -> None:
                     "pid": os.getpid(),
                     "status": "available",
                     "metadata": {
-                        "dcc_mcp_role": "per-dcc-sidecar",
+                        "meshy_dcc_role": "per-dcc-sidecar",
                         "sidecar_pid": str(os.getpid()),
                         "mcp_url": "http://127.0.0.1:18812/mcp",
                         "host_rpc_uri": "commandport://127.0.0.1:6000",
@@ -375,7 +375,7 @@ def test_query_runtime_state_surfaces_unavailable_sidecar_dispatch(tmp_path: Pat
                     "pid": 1234,
                     "status": "booting",
                     "metadata": {
-                        "dcc_mcp_role": "per-dcc-sidecar",
+                        "meshy_dcc_role": "per-dcc-sidecar",
                         "sidecar_pid": "2345",
                         "host_rpc_uri": "commandport://127.0.0.1:6000",
                         "host_rpc_scheme": "commandport",
@@ -422,7 +422,7 @@ def test_sidecar_readiness_status_reports_ready_entry(tmp_path: Path) -> None:
                     "port": 18812,
                     "pid": os.getpid(),
                     "metadata": {
-                        "dcc_mcp_role": "per-dcc-sidecar",
+                        "meshy_dcc_role": "per-dcc-sidecar",
                         "sidecar_pid": str(os.getpid()),
                         "mcp_url": "http://127.0.0.1:18812/mcp",
                         "host_rpc_uri": "commandport://127.0.0.1:6000",
@@ -461,7 +461,7 @@ def test_sidecar_readiness_status_reports_ambiguous_host_rpc_selector(tmp_path: 
                     "port": 18812,
                     "pid": os.getpid(),
                     "metadata": {
-                        "dcc_mcp_role": "per-dcc-sidecar",
+                        "meshy_dcc_role": "per-dcc-sidecar",
                         "sidecar_pid": str(os.getpid()),
                         "mcp_url": "http://127.0.0.1:18812/mcp",
                         "host_rpc_uri": host_rpc,
@@ -475,7 +475,7 @@ def test_sidecar_readiness_status_reports_ambiguous_host_rpc_selector(tmp_path: 
                     "port": 18813,
                     "pid": os.getpid(),
                     "metadata": {
-                        "dcc_mcp_role": "per-dcc-sidecar",
+                        "meshy_dcc_role": "per-dcc-sidecar",
                         "sidecar_pid": str(os.getpid()),
                         "mcp_url": "http://127.0.0.1:18813/mcp",
                         "host_rpc_uri": host_rpc,
@@ -514,7 +514,7 @@ def test_sidecar_readiness_status_reports_ambiguous_instance_prefix(tmp_path: Pa
                     "port": 18812,
                     "pid": os.getpid(),
                     "metadata": {
-                        "dcc_mcp_role": "per-dcc-sidecar",
+                        "meshy_dcc_role": "per-dcc-sidecar",
                         "sidecar_pid": str(os.getpid()),
                         "mcp_url": "http://127.0.0.1:18812/mcp",
                         "host_rpc_uri": "qtserver://127.0.0.1:7001",
@@ -528,7 +528,7 @@ def test_sidecar_readiness_status_reports_ambiguous_instance_prefix(tmp_path: Pa
                     "port": 18813,
                     "pid": os.getpid(),
                     "metadata": {
-                        "dcc_mcp_role": "per-dcc-sidecar",
+                        "meshy_dcc_role": "per-dcc-sidecar",
                         "sidecar_pid": str(os.getpid()),
                         "mcp_url": "http://127.0.0.1:18813/mcp",
                         "host_rpc_uri": "qtserver://127.0.0.1:7002",
@@ -678,7 +678,7 @@ def test_sidecar_readiness_status_reports_unavailable_failure(tmp_path: Path) ->
                     "port": 0,
                     "pid": os.getpid(),
                     "metadata": {
-                        "dcc_mcp_role": "per-dcc-sidecar",
+                        "meshy_dcc_role": "per-dcc-sidecar",
                         "sidecar_pid": str(os.getpid()),
                         "host_rpc_uri": "commandport://127.0.0.1:6000",
                         "dispatch_status": "unavailable",
@@ -845,7 +845,7 @@ def test_stop_runtime_entries_does_not_kill_host_by_default(
                     "host": "127.0.0.1",
                     "port": 18814,
                     "pid": 999999,
-                    "metadata": {"dcc_mcp_role": "per-dcc-sidecar"},
+                    "metadata": {"meshy_dcc_role": "per-dcc-sidecar"},
                 }
             ]
         ),
@@ -882,7 +882,7 @@ def test_stop_runtime_entries_respects_dead_sentinel_before_pid(
                     "pid": 999999,
                     "sentinel_path": str(sentinel),
                     "metadata": {
-                        "dcc_mcp_role": "per-dcc-sidecar",
+                        "meshy_dcc_role": "per-dcc-sidecar",
                         "sidecar_pid": "888888",
                     },
                 }
@@ -904,20 +904,20 @@ def test_stop_runtime_entries_respects_dead_sentinel_before_pid(
 
 
 def test_resolve_deployment_layout_uses_rez_env_roots(tmp_path: Path) -> None:
-    core_root = tmp_path / "dcc_mcp_core"
-    server_root = tmp_path / "dcc_mcp_server"
-    maya_root = tmp_path / "dcc_mcp_maya"
+    core_root = tmp_path / "meshy_dcc_core"
+    server_root = tmp_path / "meshy_dcc_server"
+    maya_root = tmp_path / "meshy_dcc_maya"
     (core_root / "python").mkdir(parents=True)
     (server_root / "bin").mkdir(parents=True)
     (maya_root / "python").mkdir(parents=True)
     env = {
-        "REZ_USED_RESOLVE": "dcc_mcp_core dcc_mcp_server dcc_mcp_maya",
-        "REZ_DCC_MCP_CORE_ROOT": str(core_root),
-        "REZ_DCC_MCP_SERVER_ROOT": str(server_root),
-        "REZ_DCC_MCP_MAYA_ROOT": str(maya_root),
+        "REZ_USED_RESOLVE": "meshy_dcc_core meshy_dcc_server meshy_dcc_maya",
+        "REZ_MESHY_DCC_CORE_ROOT": str(core_root),
+        "REZ_MESHY_DCC_SERVER_ROOT": str(server_root),
+        "REZ_MESHY_DCC_MAYA_ROOT": str(maya_root),
     }
 
-    result = lifecycle.resolve_deployment_layout(adapter_package="dcc_mcp_maya", env=env)
+    result = lifecycle.resolve_deployment_layout(adapter_package="meshy_dcc_maya", env=env)
 
     assert result["mode"] == "rez"
     assert result["missing_packages"] == []
@@ -932,15 +932,15 @@ def test_resolve_deployment_layout_uses_rez_env_roots(tmp_path: Path) -> None:
 
 
 def test_resolve_deployment_layout_can_opt_out_of_user_site_isolation(tmp_path: Path) -> None:
-    core_root = tmp_path / "dcc_mcp_core"
+    core_root = tmp_path / "meshy_dcc_core"
     (core_root / "python").mkdir(parents=True)
     env = {
-        "REZ_USED_RESOLVE": "dcc_mcp_core",
-        "REZ_DCC_MCP_CORE_ROOT": str(core_root),
-        "DCC_MCP_ALLOW_USER_SITE": "1",
+        "REZ_USED_RESOLVE": "meshy_dcc_core",
+        "REZ_MESHY_DCC_CORE_ROOT": str(core_root),
+        "MESHY_DCC_ALLOW_USER_SITE": "1",
     }
 
-    result = lifecycle.resolve_deployment_layout(adapter_package="dcc_mcp_maya", env=env)
+    result = lifecycle.resolve_deployment_layout(adapter_package="meshy_dcc_maya", env=env)
 
     assert "PYTHONNOUSERSITE" not in result["environment"]["set"]
 
@@ -1008,13 +1008,13 @@ def test_resolve_deployment_layout_closes_the_user_site_in_a_real_host(tmp_path:
     if not _user_site_on_child_sys_path(base_env):
         pytest.skip("the user site directory is not on sys.path here")
 
-    layout = lifecycle.resolve_deployment_layout(adapter_package="dcc_mcp_maya", env=base_env)
+    layout = lifecycle.resolve_deployment_layout(adapter_package="meshy_dcc_maya", env=base_env)
 
     assert _user_site_on_child_sys_path(_apply_layout_environment(base_env, layout)) is False
 
 
 def test_resolve_deployment_layout_opt_out_reopens_the_user_site_in_a_real_host(tmp_path: Path) -> None:
-    """``DCC_MCP_ALLOW_USER_SITE`` must keep the user site reachable in a host."""
+    """``MESHY_DCC_ALLOW_USER_SITE`` must keep the user site reachable in a host."""
     base_env = {
         **_pinned_user_site_env(tmp_path),
         lifecycle.ENV_ALLOW_USER_SITE: "1",
@@ -1022,25 +1022,25 @@ def test_resolve_deployment_layout_opt_out_reopens_the_user_site_in_a_real_host(
     if not _user_site_on_child_sys_path(base_env):
         pytest.skip("the user site directory is not on sys.path here")
 
-    layout = lifecycle.resolve_deployment_layout(adapter_package="dcc_mcp_maya", env=base_env)
+    layout = lifecycle.resolve_deployment_layout(adapter_package="meshy_dcc_maya", env=base_env)
 
     assert _user_site_on_child_sys_path(_apply_layout_environment(base_env, layout)) is True
 
 
 def test_resolve_deployment_layout_uses_cache_root_before_packages_exist(tmp_path: Path) -> None:
     cache_root = tmp_path / "ext"
-    (cache_root / "dcc_mcp_core" / "python").mkdir(parents=True)
-    (cache_root / "dcc_mcp_server").mkdir(parents=True)
+    (cache_root / "meshy_dcc_core" / "python").mkdir(parents=True)
+    (cache_root / "meshy_dcc_server").mkdir(parents=True)
 
     result = lifecycle.resolve_deployment_layout(
         cache_root,
-        adapter_package="dcc_mcp_3dsmax",
+        adapter_package="meshy_dcc_3dsmax",
     )
 
     assert result["mode"] == "filesystem"
-    assert result["missing_packages"] == ["dcc_mcp_3dsmax"]
+    assert result["missing_packages"] == ["meshy_dcc_3dsmax"]
     assert result["packages"][0]["source"] == "cache-root"
-    assert result["packages"][0]["root"] == str((cache_root / "dcc_mcp_core").resolve())
+    assert result["packages"][0]["root"] == str((cache_root / "meshy_dcc_core").resolve())
 
 
 def test_build_sidecar_command_uses_sidecar_cli_contract(tmp_path: Path) -> None:
@@ -1056,7 +1056,7 @@ def test_build_sidecar_command_uses_sidecar_cli_contract(tmp_path: Path) -> None
         discovery_mcp_url="http://127.0.0.1:8765/mcp",
         gateway_port=19765,
         gateway_host="127.0.0.1",
-        server_bin="dcc-mcp-server-test",
+        server_bin="meshy-dcc-server-test",
     )
 
     assert result["success"] is True
@@ -1064,12 +1064,12 @@ def test_build_sidecar_command_uses_sidecar_cli_contract(tmp_path: Path) -> None
     assert result["registry_dir"] == str(registry.resolve())
     assert result["discovery_mcp_url"] == "http://127.0.0.1:8765/mcp"
     assert result["environment"]["set"] == {
-        "DCC_MCP_REGISTRY_DIR": str(registry.resolve()),
-        "DCC_MCP_GATEWAY_PORT": "19765",
-        "DCC_MCP_GATEWAY_HOST": "127.0.0.1",
+        "MESHY_DCC_REGISTRY_DIR": str(registry.resolve()),
+        "MESHY_DCC_GATEWAY_PORT": "19765",
+        "MESHY_DCC_GATEWAY_HOST": "127.0.0.1",
     }
     assert result["command"] == [
-        "dcc-mcp-server-test",
+        "meshy-dcc-server-test",
         "sidecar",
         "--dcc",
         "maya",
@@ -1107,7 +1107,7 @@ def test_build_sidecar_command_uses_sidecar_cli_contract(tmp_path: Path) -> None
     assert result["readiness_command"] == [
         sys.executable,
         "-m",
-        "dcc_mcp_core.install_lifecycle",
+        "meshy_dcc_core.install_lifecycle",
         *result["readiness_argv"],
     ]
     assert result["dispatch_contract"] == {
@@ -1143,7 +1143,7 @@ def test_build_sidecar_command_accepts_valid_instance_id(tmp_path: Path) -> None
         host_rpc="qtserver://127.0.0.1:7001",
         watch_pid=12345,
         registry_dir=tmp_path / "registry",
-        server_bin="dcc-mcp-server-test",
+        server_bin="meshy-dcc-server-test",
         instance_id="AAAAAAAA-BBBB-4CCC-8DDD-EEEEEEEEEEEE",
     )
 
@@ -1161,7 +1161,7 @@ def test_build_sidecar_command_omits_missing_instance_id(tmp_path: Path) -> None
         host_rpc="qtserver://127.0.0.1:7001",
         watch_pid=12345,
         registry_dir=tmp_path / "registry",
-        server_bin="dcc-mcp-server-test",
+        server_bin="meshy-dcc-server-test",
     )
 
     assert result["success"] is True
@@ -1176,13 +1176,13 @@ def test_build_sidecar_command_rejects_invalid_instance_id(tmp_path: Path) -> No
         host_rpc="qtserver://127.0.0.1:7001",
         watch_pid=12345,
         registry_dir=tmp_path / "registry",
-        server_bin="dcc-mcp-server-test",
+        server_bin="meshy-dcc-server-test",
         instance_id="unknown",
     )
 
     assert result["success"] is False
     assert result["reason"] == "invalid_instance_id"
-    assert result["message"] == "instance_id must be a UUID accepted by dcc-mcp-server sidecar."
+    assert result["message"] == "instance_id must be a UUID accepted by meshy-dcc-server sidecar."
     assert "command" not in result
 
 
@@ -1196,7 +1196,7 @@ def test_build_sidecar_command_defaults_watch_pid_to_current_process(
         dcc_type="blender",
         host_rpc="ws://127.0.0.1:9100",
         registry_dir=tmp_path / "registry",
-        server_bin="dcc-mcp-server-test",
+        server_bin="meshy-dcc-server-test",
         env={"PATH": ""},
     )
 
@@ -1214,14 +1214,14 @@ def test_build_sidecar_command_reports_server_binary_diagnostics(
 
     def fake_which(command, path=None):
         calls.append({"command": command, "path": path})
-        return r"C:\tools\dcc-mcp-server-test.exe"
+        return r"C:\tools\meshy-dcc-server-test.exe"
 
     def fake_run(args, **kwargs):
         calls.append({"args": args, "kwargs": kwargs})
         return subprocess.CompletedProcess(
             args,
             0,
-            stdout="dcc-mcp-server 0.18.20\n",
+            stdout="meshy-dcc-server 0.18.20\n",
             stderr="",
         )
 
@@ -1233,21 +1233,21 @@ def test_build_sidecar_command_reports_server_binary_diagnostics(
         host_rpc="commandport://127.0.0.1:6000",
         watch_pid=12345,
         registry_dir=tmp_path / "registry",
-        server_bin="dcc-mcp-server-test",
+        server_bin="meshy-dcc-server-test",
         env={"PATH": r"C:\tools"},
     )
 
     assert result["success"] is True
     assert result["server_binary"] == {
-        "command": "dcc-mcp-server-test",
+        "command": "meshy-dcc-server-test",
         "source": "explicit",
-        "configured": "dcc-mcp-server-test",
-        "path": r"C:\tools\dcc-mcp-server-test.exe",
-        "version": "dcc-mcp-server 0.18.20",
+        "configured": "meshy-dcc-server-test",
+        "path": r"C:\tools\meshy-dcc-server-test.exe",
+        "version": "meshy-dcc-server 0.18.20",
         "version_error": None,
     }
-    assert calls[0] == {"command": "dcc-mcp-server-test", "path": r"C:\tools"}
-    assert calls[1]["args"] == ["dcc-mcp-server-test", "--version"]
+    assert calls[0] == {"command": "meshy-dcc-server-test", "path": r"C:\tools"}
+    assert calls[1]["args"] == ["meshy-dcc-server-test", "--version"]
     assert calls[1]["kwargs"]["timeout"] == sidecar_lifecycle.SERVER_BINARY_VERSION_TIMEOUT_SECS
 
     calls.clear()
@@ -1258,14 +1258,14 @@ def test_build_sidecar_command_reports_server_binary_diagnostics(
         watch_pid=12345,
         registry_dir=tmp_path / "registry",
         server_bin="",
-        env={"DCC_MCP_SERVER_BIN": "dcc-mcp-server-env"},
+        env={"MESHY_DCC_SERVER_BIN": "meshy-dcc-server-env"},
     )
 
     assert env_result["success"] is True
-    assert env_result["command"][0] == "dcc-mcp-server-env"
+    assert env_result["command"][0] == "meshy-dcc-server-env"
     assert env_result["server_binary"]["source"] == "env"
-    assert env_result["server_binary"]["configured"] == "dcc-mcp-server-env"
-    assert calls[0] == {"command": "dcc-mcp-server-env", "path": r"C:\from-os"}
+    assert env_result["server_binary"]["configured"] == "meshy-dcc-server-env"
+    assert calls[0] == {"command": "meshy-dcc-server-env", "path": r"C:\from-os"}
 
 
 def test_build_sidecar_command_readiness_command_honors_python_env(tmp_path: Path) -> None:
@@ -1274,15 +1274,15 @@ def test_build_sidecar_command_readiness_command_honors_python_env(tmp_path: Pat
         host_rpc="qtserver://127.0.0.1:7001",
         watch_pid=12345,
         registry_dir=tmp_path / "registry",
-        server_bin="dcc-mcp-server-test",
-        env={"DCC_MCP_PYTHON_EXECUTABLE": r"C:\Houdini\bin\hython.exe"},
+        server_bin="meshy-dcc-server-test",
+        env={"MESHY_DCC_PYTHON_EXECUTABLE": r"C:\Houdini\bin\hython.exe"},
     )
 
     assert result["success"] is True
     assert result["readiness_command"][:3] == [
         r"C:\Houdini\bin\hython.exe",
         "-m",
-        "dcc_mcp_core.install_lifecycle",
+        "meshy_dcc_core.install_lifecycle",
     ]
 
 
@@ -1292,7 +1292,7 @@ def test_build_sidecar_command_forwards_extra_sidecar_args(tmp_path: Path) -> No
         host_rpc="stub://localhost:0",
         watch_pid=12345,
         registry_dir=tmp_path / "registry",
-        server_bin="dcc-mcp-server-test",
+        server_bin="meshy-dcc-server-test",
         extra_args=["--allow-stub-dispatch-ready", "--ppid-poll-ms", 25],
     )
 
@@ -1311,7 +1311,7 @@ def test_build_sidecar_command_can_require_well_formed_dispatch_uri(tmp_path: Pa
         host_rpc="commandport://127.0.0.1",
         watch_pid=12345,
         registry_dir=tmp_path / "registry",
-        server_bin="dcc-mcp-server-test",
+        server_bin="meshy-dcc-server-test",
         require_dispatch_capable=True,
     )
 
@@ -1329,7 +1329,7 @@ def test_build_sidecar_command_can_require_dispatch_capable(tmp_path: Path) -> N
         host_rpc="stub://localhost:0",
         watch_pid=12345,
         registry_dir=tmp_path / "registry",
-        server_bin="dcc-mcp-server-test",
+        server_bin="meshy-dcc-server-test",
         require_dispatch_capable=True,
     )
 
@@ -1393,14 +1393,14 @@ def test_launch_sidecar_uses_detached_popen_contract(
             captured["kwargs"] = kwargs
 
     monkeypatch.setattr(sidecar_lifecycle.subprocess, "Popen", FakePopen)
-    monkeypatch.delenv("DCC_MCP_GATEWAY_PORT", raising=False)
+    monkeypatch.delenv("MESHY_DCC_GATEWAY_PORT", raising=False)
 
     result = lifecycle.launch_sidecar(
         dcc_type="houdini",
         host_rpc="qtserver://127.0.0.1:7001",
         watch_pid=2468,
         registry_dir=tmp_path / "registry",
-        server_bin="dcc-mcp-server-test",
+        server_bin="meshy-dcc-server-test",
         detached=True,
         extra_args=["--ppid-poll-ms", 50],
         env={"PATH": ""},
@@ -1424,8 +1424,8 @@ def test_launch_sidecar_uses_detached_popen_contract(
     assert captured["kwargs"]["stdin"] == sidecar_lifecycle.subprocess.DEVNULL
     assert Path(captured["kwargs"]["stdout"].name) == Path(result["stdio"]["stdout_path"])
     assert Path(captured["kwargs"]["stderr"].name) == Path(result["stdio"]["stderr_path"])
-    assert captured["kwargs"]["env"]["DCC_MCP_REGISTRY_DIR"] == str((tmp_path / "registry").resolve())
-    assert captured["kwargs"]["env"]["DCC_MCP_GATEWAY_PORT"] == "9765"
+    assert captured["kwargs"]["env"]["MESHY_DCC_REGISTRY_DIR"] == str((tmp_path / "registry").resolve())
+    assert captured["kwargs"]["env"]["MESHY_DCC_GATEWAY_PORT"] == "19765"
 
 
 def test_launch_sidecar_can_return_process_for_supervisors(
@@ -1446,7 +1446,7 @@ def test_launch_sidecar_can_return_process_for_supervisors(
         host_rpc="qtserver://127.0.0.1:7001",
         watch_pid=2468,
         registry_dir=tmp_path / "registry",
-        server_bin="dcc-mcp-server-test",
+        server_bin="meshy-dcc-server-test",
         detached=False,
         return_process=True,
         env={"PATH": ""},
@@ -1485,7 +1485,7 @@ def test_launch_sidecar_can_return_bounded_readiness_verdict(
         watch_pid=2468,
         registry_dir=tmp_path / "registry",
         instance_id="aaaaaaaa-1111-2222-3333-bbbbbbbbbbbb",
-        server_bin="dcc-mcp-server-test",
+        server_bin="meshy-dcc-server-test",
         wait_ready_timeout_secs=5.0,
         poll_interval_secs=0.1,
         probe_tool="maya_diagnostics__ping",
@@ -1537,7 +1537,7 @@ def test_launch_sidecar_reports_early_process_exit(
         host_rpc="commandport://127.0.0.1:6000",
         watch_pid=2468,
         registry_dir=tmp_path / "registry",
-        server_bin="dcc-mcp-server-test",
+        server_bin="meshy-dcc-server-test",
         liveness_check_secs=0.1,
         env={"PATH": ""},
     )
@@ -1560,7 +1560,7 @@ def test_launch_sidecar_reports_early_process_exit(
     assert result["early_exit"]["stderr_tail"] == "error: invalid value 'unknown' for '--instance-id <UUID>'"
     assert result["early_exit"]["stdout_path"] == result["stdio"]["stdout_path"]
     assert result["early_exit"]["stderr_path"] == result["stdio"]["stderr_path"]
-    assert result["early_exit"]["argv_metadata"]["program"] == "dcc-mcp-server-test"
+    assert result["early_exit"]["argv_metadata"]["program"] == "meshy-dcc-server-test"
     assert result["early_exit"]["argv_metadata"]["subcommand"] == "sidecar"
     assert "--host-rpc" in result["early_exit"]["argv_metadata"]["flags"]
     assert result["readiness_checked"] is False
@@ -1597,7 +1597,7 @@ def test_launch_sidecar_early_exit_tail_ignores_previous_log_bytes(
         host_rpc="commandport://127.0.0.1:6000",
         watch_pid=2468,
         registry_dir=tmp_path / "registry",
-        server_bin="dcc-mcp-server-test",
+        server_bin="meshy-dcc-server-test",
         liveness_check_secs=0.1,
         env={"PATH": ""},
     )
@@ -1617,7 +1617,7 @@ import runpy
 import sys
 
 sys.argv = [
-    "dcc_mcp_core.install_lifecycle",
+    "meshy_dcc_core.install_lifecycle",
     "sidecar-command",
     "--dcc",
     "photoshop",
@@ -1628,15 +1628,15 @@ sys.argv = [
     "--registry-dir",
     sys.argv[1],
     "--server-bin",
-    "dcc-mcp-server-test",
+    "meshy-dcc-server-test",
 ]
 try:
-    runpy.run_module("dcc_mcp_core.install_lifecycle", run_name="__main__")
+    runpy.run_module("meshy_dcc_core.install_lifecycle", run_name="__main__")
 except SystemExit as exc:
     code = exc.code
 else:
     code = 0
-print(json.dumps({"core_loaded": "dcc_mcp_core._core" in sys.modules, "exit_code": code}))
+print(json.dumps({"core_loaded": "meshy_dcc_core._core" in sys.modules, "exit_code": code}))
 """
     env = os.environ.copy()
     env["PYTHONPATH"] = str(REPO_ROOT / "python")
@@ -1652,7 +1652,7 @@ print(json.dumps({"core_loaded": "dcc_mcp_core._core" in sys.modules, "exit_code
     trailer = json.loads(result.stdout[end:].strip())
 
     assert payload["success"] is True
-    assert payload["command"][:2] == ["dcc-mcp-server-test", "sidecar"]
+    assert payload["command"][:2] == ["meshy-dcc-server-test", "sidecar"]
     assert payload["dcc_type"] == "photoshop"
     assert trailer == {"core_loaded": False, "exit_code": 0}
 
@@ -1670,7 +1670,7 @@ def test_module_cli_sidecar_ready_returns_json_without_loading_core(tmp_path: Pa
                     "port": 18812,
                     "pid": os.getpid(),
                     "metadata": {
-                        "dcc_mcp_role": "per-dcc-sidecar",
+                        "meshy_dcc_role": "per-dcc-sidecar",
                         "sidecar_pid": str(os.getpid()),
                         "mcp_url": "http://127.0.0.1:18812/mcp",
                         "dispatch_status": "ready",
@@ -1686,7 +1686,7 @@ import runpy
 import sys
 
 sys.argv = [
-    "dcc_mcp_core.install_lifecycle",
+    "meshy_dcc_core.install_lifecycle",
     "sidecar-ready",
     "--dcc",
     "maya",
@@ -1694,12 +1694,12 @@ sys.argv = [
     sys.argv[1],
 ]
 try:
-    runpy.run_module("dcc_mcp_core.install_lifecycle", run_name="__main__")
+    runpy.run_module("meshy_dcc_core.install_lifecycle", run_name="__main__")
 except SystemExit as exc:
     code = exc.code
 else:
     code = 0
-print(json.dumps({"core_loaded": "dcc_mcp_core._core" in sys.modules, "exit_code": code}))
+print(json.dumps({"core_loaded": "meshy_dcc_core._core" in sys.modules, "exit_code": code}))
 """
     env = os.environ.copy()
     env["PYTHONPATH"] = str(REPO_ROOT / "python")
@@ -1741,7 +1741,7 @@ def test_cli_launch_sidecar_passes_readiness_and_extra_args(
             "--watch-pid",
             "2468",
             "--server-bin",
-            "dcc-mcp-server-test",
+            "meshy-dcc-server-test",
             "--extra-sidecar-arg=--ppid-poll-ms",
             "--extra-sidecar-arg",
             "25",
@@ -1798,7 +1798,7 @@ def test_cli_launch_sidecar_defaults_to_liveness_check(
             "--watch-pid",
             "2468",
             "--server-bin",
-            "dcc-mcp-server-test",
+            "meshy-dcc-server-test",
         ]
     )
 
@@ -1817,7 +1817,7 @@ def test_cli_launch_sidecar_requires_explicit_watch_pid(capsys: pytest.CaptureFi
                 "--host-rpc",
                 "commandport://127.0.0.1:6000",
                 "--server-bin",
-                "dcc-mcp-server-test",
+                "meshy-dcc-server-test",
             ]
         )
 
@@ -1858,7 +1858,7 @@ def test_cli_sidecar_command_forwards_discovery_mcp_url(
             "--watch-pid",
             "2468",
             "--server-bin",
-            "dcc-mcp-server-test",
+            "meshy-dcc-server-test",
             "--discovery-mcp-url",
             "http://127.0.0.1:8765/mcp",
         ]
@@ -1940,9 +1940,9 @@ def test_plan_runtime_updates_marks_old_sidecar_restartable(tmp_path: Path) -> N
                     "version": "2026",
                     "adapter_version": "1.0.0",
                     "metadata": {
-                        "dcc_mcp_role": "per-dcc-sidecar",
-                        "dcc_mcp_core_version": "0.17.20",
-                        "dcc_mcp_server_version": "0.17.20",
+                        "meshy_dcc_role": "per-dcc-sidecar",
+                        "meshy_dcc_core_version": "0.17.20",
+                        "meshy_dcc_server_version": "0.17.20",
                         "sidecar_pid": "5555",
                     },
                 },
@@ -1955,9 +1955,9 @@ def test_plan_runtime_updates_marks_old_sidecar_restartable(tmp_path: Path) -> N
                     "version": "2025",
                     "adapter_version": "1.2.0",
                     "metadata": {
-                        "dcc_mcp_role": "per-dcc-sidecar",
-                        "dcc_mcp_core_version": "0.17.21",
-                        "dcc_mcp_server_version": "0.17.21",
+                        "meshy_dcc_role": "per-dcc-sidecar",
+                        "meshy_dcc_core_version": "0.17.21",
+                        "meshy_dcc_server_version": "0.17.21",
                         "sidecar_pid": "6666",
                     },
                 },

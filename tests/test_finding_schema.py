@@ -6,8 +6,8 @@ import pytest
 
 
 def test_shared_finding_v1_schema_has_the_required_contract() -> None:
-    from dcc_mcp_core.schemas.finding import FINDING_V1_SCHEMA_VERSION
-    from dcc_mcp_core.schemas.finding import finding_v1_json_schema
+    from meshy_dcc_core.schemas.finding import FINDING_V1_SCHEMA_VERSION
+    from meshy_dcc_core.schemas.finding import finding_v1_json_schema
 
     schema = finding_v1_json_schema()
     assert FINDING_V1_SCHEMA_VERSION == 1
@@ -39,17 +39,17 @@ def test_shared_finding_v1_schema_has_the_required_contract() -> None:
 
 
 def test_finding_fingerprint_normalizes_owner_tool_and_host_major() -> None:
-    from dcc_mcp_core.schemas.finding import finding_fingerprint
+    from meshy_dcc_core.schemas.finding import finding_fingerprint
 
     first = finding_fingerprint(
-        owning_repo="https://github.com/dcc-mcp/dcc-mcp-photoshop.git",
+        owning_repo="https://github.com/meshy-dev/meshy-dcc-photoshop.git",
         phase="skill",
         tool_slug="photoshop_layers__merge",
         error_kind=None,
         host_version="26.4.1",
     )
     equivalent = finding_fingerprint(
-        owning_repo="dcc-mcp/dcc-mcp-photoshop/",
+        owning_repo="meshy-dev/meshy-dcc-photoshop/",
         phase="skill",
         tool_slug="PHOTOSHOP_LAYERS__MERGE",
         error_kind=None,
@@ -62,8 +62,8 @@ def test_finding_fingerprint_normalizes_owner_tool_and_host_major() -> None:
 
 
 def test_build_finding_v1_autofills_runtime_identity_and_keeps_custom_dcc() -> None:
-    from dcc_mcp_core.schemas.finding import FindingRuntimeContext
-    from dcc_mcp_core.schemas.finding import build_finding_v1
+    from meshy_dcc_core.schemas.finding import FindingRuntimeContext
+    from meshy_dcc_core.schemas.finding import build_finding_v1
 
     finding = build_finding_v1(
         {
@@ -101,7 +101,7 @@ def test_build_finding_v1_autofills_runtime_identity_and_keeps_custom_dcc() -> N
 @pytest.mark.parametrize(
     "update",
     [
-        {"repro": {"argv": ["dcc-mcp-cli"], "steps": ["Call the tool"]}},
+        {"repro": {"argv": ["meshy-dcc-cli"], "steps": ["Call the tool"]}},
         {"repro": {"steps": []}},
         {"tool_slug": None, "evidence": {}},
         {"severity": "critical"},
@@ -109,9 +109,9 @@ def test_build_finding_v1_autofills_runtime_identity_and_keeps_custom_dcc() -> N
     ],
 )
 def test_build_finding_v1_rejects_unbounded_or_ambiguous_input(update) -> None:
-    from dcc_mcp_core.schemas.finding import FindingRuntimeContext
-    from dcc_mcp_core.schemas.finding import FindingValidationError
-    from dcc_mcp_core.schemas.finding import build_finding_v1
+    from meshy_dcc_core.schemas.finding import FindingRuntimeContext
+    from meshy_dcc_core.schemas.finding import FindingValidationError
+    from meshy_dcc_core.schemas.finding import build_finding_v1
 
     args = {
         "phase": "dispatch",

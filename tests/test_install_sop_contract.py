@@ -17,11 +17,11 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 # The schema artifact the package validates against. Published `-vN` artifacts
 # are immutable, so `-v1` stays frozen at its released bytes and `-v2` carries
 # the additive `catalog` object.
-INSTALL_SOP_SCHEMA_PATH = Path("python/dcc_mcp_core/schemas/adapter-install-sop-v2.schema.json")
-FROZEN_V1_SCHEMA_PATH = Path("python/dcc_mcp_core/schemas/adapter-install-sop-v1.schema.json")
-FROZEN_V1_SCHEMA_SHA256 = "2b3a8a101384a5163c7569c4a2b0de6586c672c5ee291735f94334a33b7d37a0"
-FROZEN_V1_SCHEMA_ID = "https://dcc-mcp.github.io/schemas/adapter-install-sop-v1.schema.json"
-INSTALL_SOP_SCHEMA_ID = "https://dcc-mcp.github.io/schemas/adapter-install-sop-v2.schema.json"
+INSTALL_SOP_SCHEMA_PATH = Path("python/meshy_dcc_core/schemas/adapter-install-sop-v2.schema.json")
+FROZEN_V1_SCHEMA_PATH = Path("python/meshy_dcc_core/schemas/adapter-install-sop-v1.schema.json")
+FROZEN_V1_SCHEMA_SHA256 = "78271120374b0e23e47097de168d99a025671d913454884d28cf650bbc10a10f"
+FROZEN_V1_SCHEMA_ID = "https://www.meshy.ai/meshy-dcc/schemas/adapter-install-sop-v1.schema.json"
+INSTALL_SOP_SCHEMA_ID = "https://www.meshy.ai/meshy-dcc/schemas/adapter-install-sop-v2.schema.json"
 
 
 def _install_result_with_next_step(next_step: dict) -> dict:
@@ -47,7 +47,7 @@ def _command_next_step() -> dict:
         "id": "execute",
         "description": "Execute the validated install plan.",
         "why": "Planning does not mutate the host.",
-        "command": ["dcc-mcp-example", "install", "--json", "--yes"],
+        "command": ["meshy-dcc-example", "install", "--json", "--yes"],
     }
 
 
@@ -64,15 +64,15 @@ def _file_edit_next_step(action: str, *, include_content: bool) -> dict:
 
 
 def test_install_sop_schema_is_public_and_versioned() -> None:
-    import dcc_mcp_core
-    from dcc_mcp_core import deployment
+    import meshy_dcc_core
+    from meshy_dcc_core import deployment
 
-    assert dcc_mcp_core.INSTALL_SOP_SCHEMA_VERSION == 2
+    assert meshy_dcc_core.INSTALL_SOP_SCHEMA_VERSION == 2
     assert deployment.INSTALL_SOP_SCHEMA_VERSION == 2
-    assert dcc_mcp_core.load_install_sop_schema is deployment.load_install_sop_schema
-    assert dcc_mcp_core.validate_install_sop_report is deployment.validate_install_sop_report
-    assert "load_install_sop_schema" in dcc_mcp_core.__all__
-    assert "validate_install_sop_report" in dcc_mcp_core.__all__
+    assert meshy_dcc_core.load_install_sop_schema is deployment.load_install_sop_schema
+    assert meshy_dcc_core.validate_install_sop_report is deployment.validate_install_sop_report
+    assert "load_install_sop_schema" in meshy_dcc_core.__all__
+    assert "validate_install_sop_report" in meshy_dcc_core.__all__
     assert "load_install_sop_schema" in deployment.__all__
     assert "validate_install_sop_report" in deployment.__all__
 
@@ -95,7 +95,7 @@ def _git_blob(path: Path) -> bytes:
 
 
 def _wheel_resource(contract: dict, member: str) -> dict:
-    resources = contract["distributions"]["dcc-mcp-core"]["wheel_resources"]
+    resources = contract["distributions"]["meshy-dcc-core"]["wheel_resources"]
     matches = [resource for resource in resources if resource["member"] == member]
     assert len(matches) == 1, f"expected exactly one wheel resource for {member}"
     return matches[0]
@@ -110,7 +110,7 @@ def _wheel_resource(contract: dict, member: str) -> dict:
 )
 def test_install_sop_schema_checkout_forces_the_canonical_git_blob_bytes(schema_path, canonical_url) -> None:
     contract = load_contract(REPO_ROOT)
-    member = "dcc_mcp_core/schemas/" + schema_path.name
+    member = "meshy_dcc_core/schemas/" + schema_path.name
     resource = _wheel_resource(contract, member)
     git_blob = _git_blob(schema_path)
     attributes = subprocess.run(
@@ -129,10 +129,10 @@ def test_install_sop_schema_checkout_forces_the_canonical_git_blob_bytes(schema_
 
 
 def test_install_sop_schema_live_pin_follows_the_current_artifact() -> None:
-    from dcc_mcp_core.deployment import install_sop
+    from meshy_dcc_core.deployment import install_sop
 
     contract = load_contract(REPO_ROOT)
-    resource = _wheel_resource(contract, "dcc_mcp_core/schemas/" + INSTALL_SOP_SCHEMA_PATH.name)
+    resource = _wheel_resource(contract, "meshy_dcc_core/schemas/" + INSTALL_SOP_SCHEMA_PATH.name)
 
     assert resource["sha256"] == install_sop._INSTALL_SOP_SCHEMA_SHA256
     assert install_sop._INSTALL_SOP_SCHEMA_ID == INSTALL_SOP_SCHEMA_ID
@@ -153,7 +153,7 @@ def test_install_sop_v1_artifact_is_frozen_at_its_released_bytes() -> None:
     assert hashlib.sha256(_git_blob(FROZEN_V1_SCHEMA_PATH)).hexdigest() == FROZEN_V1_SCHEMA_SHA256
 
     contract = load_contract(REPO_ROOT)
-    resource = _wheel_resource(contract, "dcc_mcp_core/schemas/adapter-install-sop-v1.schema.json")
+    resource = _wheel_resource(contract, "meshy_dcc_core/schemas/adapter-install-sop-v1.schema.json")
     assert resource["sha256"] == FROZEN_V1_SCHEMA_SHA256
     assert resource["canonical_url"] == FROZEN_V1_SCHEMA_ID
 
@@ -192,7 +192,7 @@ def test_install_sop_v2_is_a_compatible_revision_of_v1() -> None:
 
 
 def test_install_sop_schema_requires_agent_executable_results() -> None:
-    from dcc_mcp_core import load_install_sop_schema
+    from meshy_dcc_core import load_install_sop_schema
 
     schema = load_install_sop_schema()
 
@@ -216,7 +216,7 @@ def test_install_sop_schema_requires_agent_executable_results() -> None:
 
 
 def test_install_sop_schema_requires_nonblank_command_arguments() -> None:
-    from dcc_mcp_core import load_install_sop_schema
+    from meshy_dcc_core import load_install_sop_schema
 
     validator = Draft202012Validator(load_install_sop_schema())
     valid = _install_result_with_next_step(_command_next_step())
@@ -230,7 +230,7 @@ def test_install_sop_schema_requires_nonblank_command_arguments() -> None:
 
 
 def test_install_sop_schema_requires_content_for_create_and_update_edits() -> None:
-    from dcc_mcp_core import load_install_sop_schema
+    from meshy_dcc_core import load_install_sop_schema
 
     validator = Draft202012Validator(load_install_sop_schema())
 
@@ -246,7 +246,7 @@ def test_install_sop_schema_requires_content_for_create_and_update_edits() -> No
 
 
 def test_install_sop_schema_requires_nonblank_file_edit_paths() -> None:
-    from dcc_mcp_core import load_install_sop_schema
+    from meshy_dcc_core import load_install_sop_schema
 
     validator = Draft202012Validator(load_install_sop_schema())
     valid = _install_result_with_next_step(_file_edit_next_step("update", include_content=True))
@@ -260,7 +260,7 @@ def test_install_sop_schema_requires_nonblank_file_edit_paths() -> None:
 
 
 def test_install_sop_schema_forbids_content_for_remove_edits() -> None:
-    from dcc_mcp_core import load_install_sop_schema
+    from meshy_dcc_core import load_install_sop_schema
 
     validator = Draft202012Validator(load_install_sop_schema())
     valid = _install_result_with_next_step(_file_edit_next_step("remove", include_content=False))
@@ -271,7 +271,7 @@ def test_install_sop_schema_forbids_content_for_remove_edits() -> None:
 
 
 def test_install_sop_schema_requires_exactly_one_executable_form() -> None:
-    from dcc_mcp_core import load_install_sop_schema
+    from meshy_dcc_core import load_install_sop_schema
 
     validator = Draft202012Validator(load_install_sop_schema())
     valid = _install_result_with_next_step(_command_next_step())
@@ -286,7 +286,7 @@ def test_install_sop_schema_requires_exactly_one_executable_form() -> None:
 
 
 def test_install_sop_validator_enforces_full_draft_without_python_jsonschema(monkeypatch) -> None:
-    from dcc_mcp_core import validate_install_sop_report
+    from meshy_dcc_core import validate_install_sop_report
 
     valid = _install_result_with_next_step(_command_next_step())
     real_import = __import__
@@ -343,15 +343,15 @@ def test_install_sop_validator_enforces_full_draft_without_python_jsonschema(mon
             "schema_identity_mismatch",
         ),
         (
-            b'{"$id":"https://dcc-mcp.github.io/schemas/adapter-install-sop-v2.schema.json","$schema":"https://attacker.invalid/draft"}',
+            b'{"$id":"https://www.meshy.ai/meshy-dcc/schemas/adapter-install-sop-v2.schema.json","$schema":"https://attacker.invalid/draft"}',
             "schema_dialect_mismatch",
         ),
         (
-            b'{"$id":"https://dcc-mcp.github.io/schemas/adapter-install-sop-v2.schema.json","$schema":"https://json-schema.org/draft/2020-12/schema","$ref":"file:///private/schema.json"}',
+            b'{"$id":"https://www.meshy.ai/meshy-dcc/schemas/adapter-install-sop-v2.schema.json","$schema":"https://json-schema.org/draft/2020-12/schema","$ref":"file:///private/schema.json"}',
             "schema_external_ref",
         ),
         (
-            b'{"$id":"https://dcc-mcp.github.io/schemas/adapter-install-sop-v2.schema.json","$schema":"https://json-schema.org/draft/2020-12/schema","type":"object"}',
+            b'{"$id":"https://www.meshy.ai/meshy-dcc/schemas/adapter-install-sop-v2.schema.json","$schema":"https://json-schema.org/draft/2020-12/schema","type":"object"}',
             "schema_digest_mismatch",
         ),
         (b"\xff", "schema_invalid_utf8"),
@@ -361,7 +361,7 @@ def test_install_sop_validator_enforces_full_draft_without_python_jsonschema(mon
 def test_install_sop_schema_loader_rejects_untrusted_bytes(
     monkeypatch, tmp_path: Path, schema_bytes: bytes, error_code: str
 ) -> None:
-    from dcc_mcp_core.deployment import install_sop
+    from meshy_dcc_core.deployment import install_sop
 
     schema_path = tmp_path / "untrusted.schema.json"
     schema_path.write_bytes(schema_bytes)
@@ -374,7 +374,7 @@ def test_install_sop_schema_loader_rejects_untrusted_bytes(
 
 
 def test_install_sop_schema_loader_redacts_missing_path(monkeypatch, tmp_path: Path) -> None:
-    from dcc_mcp_core.deployment import install_sop
+    from meshy_dcc_core.deployment import install_sop
 
     schema_path = tmp_path / "missing-private.schema.json"
     monkeypatch.setattr(install_sop, "_SCHEMA_PATH", schema_path)
@@ -386,8 +386,8 @@ def test_install_sop_schema_loader_redacts_missing_path(monkeypatch, tmp_path: P
 
 
 def test_install_sop_validator_separates_schema_report_and_native_failures(monkeypatch, tmp_path: Path) -> None:
-    import dcc_mcp_core
-    from dcc_mcp_core.deployment import install_sop
+    import meshy_dcc_core
+    from meshy_dcc_core.deployment import install_sop
 
     report = _install_result_with_next_step(_command_next_step())
     malformed_schema = tmp_path / "malformed-private.schema.json"
@@ -407,7 +407,7 @@ def test_install_sop_validator_separates_schema_report_and_native_failures(monke
         raise ValueError("PRIVATE-NATIVE-DETAIL")
 
     monkeypatch.setattr(
-        dcc_mcp_core,
+        meshy_dcc_core,
         "_core",
         SimpleNamespace(_validate_install_sop_report_json=fail_native),
     )
@@ -417,7 +417,7 @@ def test_install_sop_validator_separates_schema_report_and_native_failures(monke
 
 
 def test_install_sop_native_validator_rejects_untrusted_schema_and_duplicate_report_keys() -> None:
-    from dcc_mcp_core import _core
+    from meshy_dcc_core import _core
 
     assert not hasattr(_core, "_validate_json_schema_draft_2020_12")
     validator = _core._validate_install_sop_report_json
@@ -429,7 +429,7 @@ def test_install_sop_native_validator_rejects_untrusted_schema_and_duplicate_rep
         validator('{"$id":"x","$id":"y"}', "{}")
     with pytest.raises(ValueError, match=r"^install_sop_schema_external_ref$"):
         validator(
-            '{"$id":"https://dcc-mcp.github.io/schemas/adapter-install-sop-v2.schema.json",'
+            '{"$id":"https://www.meshy.ai/meshy-dcc/schemas/adapter-install-sop-v2.schema.json",'
             '"$schema":"https://json-schema.org/draft/2020-12/schema",'
             '"$ref":"https://attacker.invalid/schema"}',
             "{}",
@@ -448,7 +448,7 @@ def test_install_sop_native_validator_rejects_untrusted_schema_and_duplicate_rep
     ],
 )
 def test_install_sop_validator_rejects_duplicate_ids_and_executable_controls(mutate) -> None:
-    from dcc_mcp_core import validate_install_sop_report
+    from meshy_dcc_core import validate_install_sop_report
 
     report = _install_result_with_next_step(_command_next_step())
     mutate(report)
@@ -458,9 +458,9 @@ def test_install_sop_validator_rejects_duplicate_ids_and_executable_controls(mut
 
 
 def test_install_sop_validator_uses_one_stable_document_for_schema_and_semantics(monkeypatch) -> None:
-    import dcc_mcp_core
-    from dcc_mcp_core import _core
-    from dcc_mcp_core import validate_install_sop_report
+    import meshy_dcc_core
+    from meshy_dcc_core import _core
+    from meshy_dcc_core import validate_install_sop_report
 
     report = _install_result_with_next_step(_command_next_step())
     report["next_steps"].append(deepcopy(report["next_steps"][0]))
@@ -472,7 +472,7 @@ def test_install_sop_validator_uses_one_stable_document_for_schema_and_semantics
         return errors
 
     monkeypatch.setattr(
-        dcc_mcp_core,
+        meshy_dcc_core,
         "_core",
         SimpleNamespace(_validate_install_sop_report_json=validate_then_change_caller_mapping),
     )
@@ -514,7 +514,7 @@ def test_install_sop_validator_uses_one_stable_document_for_schema_and_semantics
     ],
 )
 def test_install_sop_validator_rejects_c1_control_characters(build_report, mutate, expected_path) -> None:
-    from dcc_mcp_core import validate_install_sop_report
+    from meshy_dcc_core import validate_install_sop_report
 
     report = build_report()
     mutate(report)
@@ -526,7 +526,7 @@ def test_install_sop_validator_rejects_c1_control_characters(build_report, mutat
 
 
 def test_install_sop_validator_allows_normal_unicode_text() -> None:
-    from dcc_mcp_core import validate_install_sop_report
+    from meshy_dcc_core import validate_install_sop_report
 
     report = _install_result_with_next_step(_command_next_step())
     report["steps"][0]["id"] = "preflight-检查"
@@ -538,7 +538,7 @@ def test_install_sop_validator_allows_normal_unicode_text() -> None:
 
 
 def test_install_sop_validator_rejects_control_characters_in_file_edit_paths() -> None:
-    from dcc_mcp_core import validate_install_sop_report
+    from meshy_dcc_core import validate_install_sop_report
 
     report = _install_result_with_next_step(_file_edit_next_step("update", include_content=True))
     report["next_steps"][0]["file_edit"]["path"] = "install.md\routside"
@@ -548,7 +548,7 @@ def test_install_sop_validator_rejects_control_characters_in_file_edit_paths() -
 
 
 def test_install_sop_validator_emits_bounded_value_free_diagnostics() -> None:
-    from dcc_mcp_core import validate_install_sop_report
+    from meshy_dcc_core import validate_install_sop_report
 
     report = _install_result_with_next_step(_command_next_step())
     private_value = "PRIVATE-VALUE-" + ("x" * 4096)
@@ -558,7 +558,7 @@ def test_install_sop_validator_emits_bounded_value_free_diagnostics() -> None:
             "id": f"execute-{index}",
             "description": "Execute the validated install plan.",
             "why": "Planning does not mutate the host.",
-            "command": ["dcc-mcp-example", " " * 4096],
+            "command": ["meshy-dcc-example", " " * 4096],
         }
         for index in range(48)
     ]
@@ -588,22 +588,22 @@ def test_install_sop_validator_emits_bounded_value_free_diagnostics() -> None:
     ],
 )
 def test_install_sop_validator_rejects_native_result_shape(monkeypatch, native_result: object, error_code: str) -> None:
-    import dcc_mcp_core
-    from dcc_mcp_core import validate_install_sop_report
+    import meshy_dcc_core
+    from meshy_dcc_core import validate_install_sop_report
 
     fake_core = SimpleNamespace(_validate_install_sop_report_json=lambda *_: native_result)
-    monkeypatch.setattr(dcc_mcp_core, "_core", fake_core)
+    monkeypatch.setattr(meshy_dcc_core, "_core", fake_core)
 
     with pytest.raises(RuntimeError, match=rf"^Install SOP validator runtime error: {error_code}$"):
         validate_install_sop_report(_install_result_with_next_step(_command_next_step()))
 
 
 def test_install_sop_validator_requires_callable_native_symbol(monkeypatch) -> None:
-    import dcc_mcp_core
-    from dcc_mcp_core import validate_install_sop_report
+    import meshy_dcc_core
+    from meshy_dcc_core import validate_install_sop_report
 
     monkeypatch.setattr(
-        dcc_mcp_core,
+        meshy_dcc_core,
         "_core",
         SimpleNamespace(_validate_install_sop_report_json="not-callable"),
     )
@@ -613,7 +613,7 @@ def test_install_sop_validator_requires_callable_native_symbol(monkeypatch) -> N
 
 
 def test_install_sop_validation_is_not_path_or_argv_authorization() -> None:
-    from dcc_mcp_core import validate_install_sop_report
+    from meshy_dcc_core import validate_install_sop_report
 
     traversal = _install_result_with_next_step(_file_edit_next_step("update", include_content=True))
     traversal["next_steps"][0]["file_edit"]["path"] = "../../outside/install.md"
@@ -629,7 +629,7 @@ def test_install_sop_validation_is_not_path_or_argv_authorization() -> None:
 
 
 def test_install_sop_schema_allows_additive_adapter_fields() -> None:
-    from dcc_mcp_core import load_install_sop_schema
+    from meshy_dcc_core import load_install_sop_schema
 
     validator = Draft202012Validator(load_install_sop_schema())
     result = _install_result_with_next_step(_file_edit_next_step("update", include_content=True))
@@ -642,8 +642,8 @@ def test_install_sop_schema_allows_additive_adapter_fields() -> None:
 
 
 def test_install_sop_exit_codes_are_stable_public_exports() -> None:
-    import dcc_mcp_core
-    from dcc_mcp_core import deployment
+    import meshy_dcc_core
+    from meshy_dcc_core import deployment
 
     expected = {
         "ok": 0,
@@ -654,14 +654,14 @@ def test_install_sop_exit_codes_are_stable_public_exports() -> None:
         "requires_restart": 50,
     }
 
-    assert expected == dcc_mcp_core.INSTALL_EXIT_CODES
+    assert expected == meshy_dcc_core.INSTALL_EXIT_CODES
     assert expected == deployment.INSTALL_EXIT_CODES
-    assert dcc_mcp_core.INSTALL_EXIT_OK == 0
-    assert dcc_mcp_core.INSTALL_EXIT_PREFLIGHT == 10
-    assert dcc_mcp_core.INSTALL_EXIT_ACQUIRE == 20
-    assert dcc_mcp_core.INSTALL_EXIT_INSTALL == 30
-    assert dcc_mcp_core.INSTALL_EXIT_VERIFY == 40
-    assert dcc_mcp_core.INSTALL_EXIT_REQUIRES_RESTART == 50
+    assert meshy_dcc_core.INSTALL_EXIT_OK == 0
+    assert meshy_dcc_core.INSTALL_EXIT_PREFLIGHT == 10
+    assert meshy_dcc_core.INSTALL_EXIT_ACQUIRE == 20
+    assert meshy_dcc_core.INSTALL_EXIT_INSTALL == 30
+    assert meshy_dcc_core.INSTALL_EXIT_VERIFY == 40
+    assert meshy_dcc_core.INSTALL_EXIT_REQUIRES_RESTART == 50
 
 
 def test_install_sop_guide_ships_a_reusable_install_template() -> None:
@@ -698,7 +698,7 @@ def test_install_sop_guide_ships_a_reusable_install_template() -> None:
 
 
 def test_reusable_install_template_usable_result_is_schema_valid() -> None:
-    from dcc_mcp_core import load_install_sop_schema
+    from meshy_dcc_core import load_install_sop_schema
 
     template = REPO_ROOT / "docs" / "guide" / "templates" / "adapter-install.md"
     template_text = template.read_text(encoding="utf-8")
@@ -709,7 +709,7 @@ def test_reusable_install_template_usable_result_is_schema_valid() -> None:
 
 
 def test_rust_cli_failed_execution_report_fixture_is_schema_valid() -> None:
-    from dcc_mcp_core import load_install_sop_schema
+    from meshy_dcc_core import load_install_sop_schema
 
     fixture = REPO_ROOT / "tests" / "fixtures" / "install-execution-report-v1-failed.json"
     report = json.loads(fixture.read_text(encoding="utf-8"))
@@ -723,7 +723,7 @@ def test_rust_cli_failed_execution_report_fixture_is_schema_valid() -> None:
 
 
 def test_rust_cli_success_execution_report_fixture_is_schema_valid() -> None:
-    from dcc_mcp_core import load_install_sop_schema
+    from meshy_dcc_core import load_install_sop_schema
 
     fixture = REPO_ROOT / "tests" / "fixtures" / "install-execution-report-v1-success.json"
     report = json.loads(fixture.read_text(encoding="utf-8"))
@@ -740,7 +740,7 @@ def test_rust_cli_success_execution_report_fixture_is_schema_valid() -> None:
 
 
 def test_rust_cli_deferred_registration_report_fixture_is_schema_valid() -> None:
-    from dcc_mcp_core import load_install_sop_schema
+    from meshy_dcc_core import load_install_sop_schema
 
     fixture = REPO_ROOT / "tests" / "fixtures" / "install-execution-report-v1-deferred.json"
     report = json.loads(fixture.read_text(encoding="utf-8"))
@@ -753,7 +753,7 @@ def test_rust_cli_deferred_registration_report_fixture_is_schema_valid() -> None
 
 
 def test_rust_cli_rollback_failure_report_fixture_is_schema_valid() -> None:
-    from dcc_mcp_core import load_install_sop_schema
+    from meshy_dcc_core import load_install_sop_schema
 
     fixture = REPO_ROOT / "tests" / "fixtures" / "install-execution-report-v1-rollback-failed.json"
     report = json.loads(fixture.read_text(encoding="utf-8"))

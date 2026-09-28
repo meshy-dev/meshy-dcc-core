@@ -1,7 +1,7 @@
 """Inspect per-tool performance metrics.
 
 Data source priority:
-1. IPC callback — if DCC_MCP_IPC_ADDRESS is set, connect to the running DCC
+1. IPC callback — if MESHY_DCC_IPC_ADDRESS is set, connect to the running DCC
    server and call 'get_tool_metrics' to get live recorder data.
 2. Local ToolRecorder — creates a fresh (empty) recorder as a fallback,
    useful for testing without a running DCC server.
@@ -26,8 +26,8 @@ _SORT_KEYS = {
 def _fetch_via_ipc(ipc_address: str, action_name: str | None) -> dict | None:
     """Connect to the DCC server via IPC and call 'get_tool_metrics'."""
     try:
-        from dcc_mcp_core import TransportAddress
-        from dcc_mcp_core import connect_ipc
+        from meshy_dcc_core import TransportAddress
+        from meshy_dcc_core import connect_ipc
     except ImportError:
         return None
 
@@ -57,9 +57,9 @@ def _fetch_via_ipc(ipc_address: str, action_name: str | None) -> dict | None:
 def _fetch_local(action_name: str | None) -> dict:
     """Read from a local ToolRecorder (fallback; typically empty in subprocess)."""
     try:
-        from dcc_mcp_core import ToolRecorder
+        from meshy_dcc_core import ToolRecorder
     except ImportError:
-        return {"success": False, "message": "dcc_mcp_core not available. Install the package first."}
+        return {"success": False, "message": "meshy_dcc_core not available. Install the package first."}
 
     try:
         recorder = ToolRecorder("dcc-diagnostics")
@@ -93,7 +93,7 @@ def main() -> None:
     parser.add_argument("--limit", type=int, default=20)
     args = parser.parse_args()
 
-    ipc_address = os.environ.get("DCC_MCP_IPC_ADDRESS")
+    ipc_address = os.environ.get("MESHY_DCC_IPC_ADDRESS")
 
     data = _fetch_via_ipc(ipc_address, args.action_name) if ipc_address else None
 
@@ -115,7 +115,7 @@ def main() -> None:
 
     empty_note = ""
     if total == 0 and source == "local":
-        empty_note = " No metrics recorded — set DCC_MCP_IPC_ADDRESS env var to query the live DCC server recorder."
+        empty_note = " No metrics recorded — set MESHY_DCC_IPC_ADDRESS env var to query the live DCC server recorder."
 
     summary = (
         f"{total} action(s) tracked (source={source})"

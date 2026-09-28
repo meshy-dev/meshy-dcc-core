@@ -1,6 +1,6 @@
-"""OpenSCAD integration tests for dcc-mcp-core.
+"""OpenSCAD integration tests for meshy-dcc-core.
 
-Tests the dcc-mcp-core skill/action pipeline against OpenSCAD (CLI renderer).
+Tests the meshy-dcc-core skill/action pipeline against OpenSCAD (CLI renderer).
 All tests are conditionally skipped if the respective binary is not installed.
 
 Run:  pytest -m dcc -k "OpenSCAD"
@@ -21,7 +21,7 @@ import textwrap
 import pytest
 
 # Import local modules
-import dcc_mcp_core
+import meshy_dcc_core
 
 # ── Binary detection ──
 
@@ -136,10 +136,10 @@ class TestOpenSCADIntegration:
 
 @openscad_available
 class TestOpenSCADSkillPipeline:
-    """dcc-mcp-core skill pipeline with OpenSCAD as target DCC."""
+    """meshy-dcc-core skill pipeline with OpenSCAD as target DCC."""
 
     def test_register_openscad_actions(self) -> None:
-        reg = dcc_mcp_core.ToolRegistry()
+        reg = meshy_dcc_core.ToolRegistry()
         reg.register(name="render_geometry", description="Render .scad to STL", dcc="openscad")
         reg.register(name="generate_scad", description="Generate .scad from parameters", dcc="openscad")
         reg.register(name="export_png", description="Render preview PNG", dcc="openscad")
@@ -154,7 +154,7 @@ class TestOpenSCADSkillPipeline:
         assert OPENSCAD_BIN is not None
         stl_file = tmp_path / "generated.stl"
         r = _run_subprocess([OPENSCAD_BIN, "-o", str(stl_file), str(scad_file)])
-        result = dcc_mcp_core.success_result(
+        result = meshy_dcc_core.success_result(
             "Geometry rendered",
             scad_file=str(scad_file),
             stl_file=str(stl_file),
@@ -173,14 +173,14 @@ class TestOpenSCADSkillPipeline:
             frontmatter=(
                 "name: openscad-primitives\n"
                 "metadata:\n"
-                "  dcc-mcp:\n"
+                "  meshy-dcc:\n"
                 "    dcc: openscad\n"
                 "    tags:\n"
                 "      - geometry\n"
                 "      - cad"
             ),
         )
-        meta = dcc_mcp_core.parse_skill_md(str(tmp_path / "openscad-primitives"))
+        meta = meshy_dcc_core.parse_skill_md(str(tmp_path / "openscad-primitives"))
         assert meta is not None
         assert meta.dcc == "openscad"
         assert "geometry" in meta.tags

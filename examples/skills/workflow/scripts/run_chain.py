@@ -1,7 +1,7 @@
-"""Execute a sequence of dcc-mcp-core actions in order (action chain).
+"""Execute a sequence of meshy-dcc-core actions in order (action chain).
 
 Dispatch strategy:
-1. IPC dispatch — if ``DCC_MCP_IPC_ADDRESS`` is set, each step is sent to the
+1. IPC dispatch — if ``MESHY_DCC_IPC_ADDRESS`` is set, each step is sent to the
    running DCC server via the DccLink ``IpcChannelAdapter``. This is the
    production path (Maya, Blender, Unreal, etc.). Support was rewired in
    v0.14 (issue #251) together with the removal of ``FramedChannel``.
@@ -44,12 +44,12 @@ def _build_ipc_dispatcher(ipc_address: str):
     """Return a callable that dispatches actions via DccLink IPC.
 
     The channel name is derived from ``ipc_address`` (expected to be a
-    DccLink channel name, e.g. ``dcc-mcp-maya-12345``). Each call sends a
+    DccLink channel name, e.g. ``meshy-dcc-maya-12345``). Each call sends a
     single ``Call`` frame with a JSON body and waits for a correlated
     ``Reply`` or ``Err`` frame.
     """
-    from dcc_mcp_core import DccLinkFrame
-    from dcc_mcp_core import IpcChannelAdapter
+    from meshy_dcc_core import DccLinkFrame
+    from meshy_dcc_core import IpcChannelAdapter
 
     def dispatch(action_name: str, params: dict) -> dict:
         channel = IpcChannelAdapter.connect(ipc_address)
@@ -73,8 +73,8 @@ def _build_ipc_dispatcher(ipc_address: str):
 
 def _build_local_dispatcher():
     """Return a callable that dispatches via a local ToolDispatcher."""
-    from dcc_mcp_core import ToolDispatcher
-    from dcc_mcp_core import ToolRegistry
+    from meshy_dcc_core import ToolDispatcher
+    from meshy_dcc_core import ToolRegistry
 
     registry = ToolRegistry()
     dispatcher = ToolDispatcher(registry)
@@ -124,13 +124,13 @@ def main() -> None:
         sys.exit(1)
 
     try:
-        from dcc_mcp_core import ToolDispatcher  # noqa: F401 — just check import
+        from meshy_dcc_core import ToolDispatcher  # noqa: F401 — just check import
     except ImportError:
-        print(json.dumps({"success": False, "message": "dcc_mcp_core not available. Install the package first."}))
+        print(json.dumps({"success": False, "message": "meshy_dcc_core not available. Install the package first."}))
         sys.exit(1)
 
     # Choose dispatch strategy
-    ipc_address = os.environ.get("DCC_MCP_IPC_ADDRESS")
+    ipc_address = os.environ.get("MESHY_DCC_IPC_ADDRESS")
     source = "ipc"
     try:
         if ipc_address:

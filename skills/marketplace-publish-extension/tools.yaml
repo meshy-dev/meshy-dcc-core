@@ -17,10 +17,10 @@ tools:
           type: string
           description: >-
             Absolute or relative path to the extension directory. Must contain
-            a valid SKILL.md with dcc-mcp frontmatter metadata.
+            a valid SKILL.md with meshy-dcc frontmatter metadata.
         marketplace_source:
           type: string
-          default: "dcc-mcp/marketplace"
+          default: "meshy-dev/marketplace"
           description: >-
             Marketplace catalog source. Can be a local path to an existing
             marketplace.json or the directory that contains it, a GitHub slug
@@ -86,7 +86,7 @@ tools:
         min_core_version:
           type: string
           description: >-
-            Minimum dcc-mcp-core version required by this extension. Written
+            Minimum meshy-dcc-core version required by this extension. Written
             into the CatalogEntry `min_core_version` field and serialized as
             `minCoreVersion` for v1 marketplace catalogs.
         extension_url:

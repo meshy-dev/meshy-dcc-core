@@ -7,11 +7,11 @@ it down; no installed wheel or live DCC is substituted.
 
 ```sh
 npm ci --prefix tests/interop/mcp-2026 --ignore-scripts
-DCC_MCP_SDK_SMOKE=1 cargo test -p dcc-mcp-http --no-default-features \
+MESHY_DCC_SDK_SMOKE=1 cargo test -p meshy-dcc-http --no-default-features \
   --features mcp-2026-07-28 --test stateless_response_contract -- --nocapture
 ```
 
-On PowerShell, set `$env:DCC_MCP_SDK_SMOKE = "1"` before the Cargo command.
+On PowerShell, set `$env:MESHY_DCC_SDK_SMOKE = "1"` before the Cargo command.
 The Node subprocess is opt-in locally and has a 30-second deadline. Required
 Linux CI enables it explicitly for response, request, and parameter tests.
 The ordinary Rust tests still check raw HTTP without Node dependencies.
@@ -29,7 +29,7 @@ The authoritative specification schema is pinned to
 Run `node tests/interop/mcp-2026/request-oracle.mjs` for the public server SDK
 **2.0.0** fixture oracle. The same cases drive native HTTP and Python-binding
 tests; `--test stateless_request_boundary` also exercises configured body
-limits and, with `DCC_MCP_SDK_SMOKE=1`, both official client modes above.
+limits and, with `MESHY_DCC_SDK_SMOKE=1`, both official client modes above.
 
 Of 29 cases, 28 match the published SDK. One explicitly asserted release
 difference remains: 2.0.0 accepts a modern body missing the version header,
@@ -41,7 +41,7 @@ modern-only rejection is not the dual-era forwarding contract under test.
 
 `--test stateless_param_headers` covers source-schema projection and a real
 handler invocation counter, including rejected mirrors, alias/core resolution,
-and unchanged legacy behavior. With `DCC_MCP_SDK_SMOKE=1`, `param-client.mjs`
+and unchanged legacy behavior. With `MESHY_DCC_SDK_SMOKE=1`, `param-client.mjs`
 checks the public client's cached and explicit tool-definition mirroring in
 both auto and pinned modern modes, without any private SDK imports.
 

@@ -1,7 +1,7 @@
 """Regression tests for issue #303 — gateway/server listener reachability.
 
 These tests exercise the same invariant as
-``crates/dcc-mcp-http/tests/gateway_reachability.rs`` but from Python,
+``crates/meshy-dcc-http/tests/gateway_reachability.rs`` but from Python,
 where the server is created via :class:`McpHttpServer` — the same path
 that fails under PyO3-embedded Maya on Windows.
 
@@ -29,9 +29,9 @@ import pytest
 from conftest import McpClient
 from conftest import allocate_gateway_port
 from conftest import wait_tcp_reachable
-from dcc_mcp_core import McpHttpConfig
-from dcc_mcp_core import McpHttpServer
-from dcc_mcp_core import ToolRegistry
+from meshy_dcc_core import McpHttpConfig
+from meshy_dcc_core import McpHttpServer
+from meshy_dcc_core import ToolRegistry
 
 
 def _tcp_reachable(host: str, port: int, timeout: float = 0.5) -> bool:
@@ -64,9 +64,9 @@ class TestAdminDefaults:
     """Admin/gateway defaults must match the documented Python API contract."""
 
     def test_python_config_defaults_gateway_and_admin_on(self, monkeypatch):
-        monkeypatch.delenv("DCC_MCP_GATEWAY_PORT", raising=False)
+        monkeypatch.delenv("MESHY_DCC_GATEWAY_PORT", raising=False)
         config = McpHttpConfig(port=0, server_name="admin-defaults")
-        assert config.gateway_port == 9765
+        assert config.gateway_port == 19765
         assert config.admin_enabled is True
         assert config.admin_path == "/admin"
 
@@ -119,7 +119,7 @@ class TestInstanceListenerReachable:
 
     def test_pytest_gateway_opt_out_reaches_native_config_and_start(self, monkeypatch):
         """The public native config must honor the pytest gateway opt-out."""
-        monkeypatch.setenv("DCC_MCP_GATEWAY_PORT", "0")
+        monkeypatch.setenv("MESHY_DCC_GATEWAY_PORT", "0")
         config = McpHttpConfig(port=0, server_name="reach-py-no-gateway")
         assert config.gateway_port == 0
 

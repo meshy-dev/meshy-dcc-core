@@ -15,8 +15,8 @@ from pathlib import Path
 
 import pytest
 
-from dcc_mcp_core import SkillCatalog
-from dcc_mcp_core import ToolRegistry
+from meshy_dcc_core import SkillCatalog
+from meshy_dcc_core import ToolRegistry
 
 # ---------------------------------------------------------------------------
 # Fixture builder
@@ -35,15 +35,15 @@ def _write_skill(
 ) -> None:
     """Create a SKILL.md directory (with optional sibling tools.yaml).
 
-    All dcc-mcp-core extension keys (dcc, version, tags, search-hint, tools)
-    live under ``metadata.dcc-mcp.*`` per the agentskills.io 1.0 contract.
+    All meshy-dcc-core extension keys (dcc, version, tags, search-hint, tools)
+    live under ``metadata.meshy-dcc.*`` per the agentskills.io 1.0 contract.
     """
     skill_dir = root / name
     skill_dir.mkdir(parents=True, exist_ok=True)
 
     meta_lines = [
         "metadata:",
-        "  dcc-mcp:",
+        "  meshy-dcc:",
         f"    dcc: {dcc}",
         "    version: 1.0.0",
     ]

@@ -7,8 +7,8 @@ dcc:
   primary: photoshop
   companions: [aftereffects]
 rez_packages:
-  - dcc_mcp_core
-  - dcc_mcp_photoshop
+  - meshy_dcc_core
+  - meshy_dcc_photoshop
   - commercial_2d_layers
 skill_paths:
   shared: ["${REZ_COMMERCIAL_2D_LAYERS_ROOT}/skills"]
@@ -24,12 +24,12 @@ visual_feedback:
   capture_after_mutation: true
   include_active_document_thumbnail: true
 env:
-  DCC_MCP_CONTEXT_BUNDLE: ad-spot.deliverable.social-16x9.motion
-  DCC_MCP_PRODUCTION_DOMAIN: advertising
-  DCC_MCP_CONTEXT_KIND: deliverable
-  DCC_MCP_PROJECT: ad-spot
-  DCC_MCP_TASK: motion-2d
-  DCC_MCP_TOOLSET_PROFILE: commercial-2d-motion
-  DCC_MCP_PHOTOSHOP_SKILL_PATHS: "${REZ_COMMERCIAL_2D_LAYERS_ROOT}/skills"
-  DCC_MCP_PACKAGE_PROVENANCE: commercial_2d_layers-1.0.0
+  MESHY_DCC_CONTEXT_BUNDLE: ad-spot.deliverable.social-16x9.motion
+  MESHY_DCC_PRODUCTION_DOMAIN: advertising
+  MESHY_DCC_CONTEXT_KIND: deliverable
+  MESHY_DCC_PROJECT: ad-spot
+  MESHY_DCC_TASK: motion-2d
+  MESHY_DCC_TOOLSET_PROFILE: commercial-2d-motion
+  MESHY_DCC_PHOTOSHOP_SKILL_PATHS: "${REZ_COMMERCIAL_2D_LAYERS_ROOT}/skills"
+  MESHY_DCC_PACKAGE_PROVENANCE: commercial_2d_layers-1.0.0
 docs: ../../docs/guide/rez-skill-packages.md

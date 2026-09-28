@@ -1,6 +1,6 @@
 """End-to-end skill-execution tests against the production bindings.
 
-Complements ``crates/dcc-mcp-skills/src/catalog/tests/test_execute_script_real.rs``
+Complements ``crates/meshy-dcc-skills/src/catalog/tests/test_execute_script_real.rs``
 (which covers the subprocess code path) by exercising the **in-process**
 executor pipeline that DCC adapters (Maya, Blender, Houdini) actually use:
 
@@ -12,7 +12,7 @@ executor pipeline that DCC adapters (Maya, Blender, Houdini) actually use:
 4. Invoke the executor with the loaded script path and verify the script
    actually processed an on-disk file (not just that ``is_loaded`` flipped).
 
-Historical context: dcc-mcp-maya issues #137/#138 surfaced because the
+Historical context: meshy-dcc-maya issues #137/#138 surfaced because the
 script-execution chain was only ever exercised via smoke tests in CI.
 These tests close that gap by asserting on real file artefacts after
 execution.
@@ -28,8 +28,8 @@ from typing import Any
 from typing import Callable
 
 # Import local modules
-import dcc_mcp_core
-from dcc_mcp_core._server.inprocess_executor import build_inprocess_executor
+import meshy_dcc_core
+from meshy_dcc_core._server.inprocess_executor import build_inprocess_executor
 
 # ── helpers ────────────────────────────────────────────────────────────────
 
@@ -43,7 +43,7 @@ def _write_skill(
 ) -> Path:
     """Materialise a SKILL.md package with one or more scripts.
 
-    The frontmatter uses the modern ``metadata.dcc-mcp.dcc`` form so the
+    The frontmatter uses the modern ``metadata.meshy-dcc.dcc`` form so the
     ``DCC_NAMES_REQUIRING_HOST_PYTHON`` ambient-python guard does not fire
     even though we never reach the subprocess path.
     """
@@ -52,9 +52,9 @@ def _write_skill(
     front = (
         "---\n"
         f"name: {skill_name}\n"
-        "description: Real execution test skill for dcc-mcp-core\n"
+        "description: Real execution test skill for meshy-dcc-core\n"
         "metadata:\n"
-        "  dcc-mcp:\n"
+        "  meshy-dcc:\n"
         f"    dcc: {dcc}\n"
         "    version: 1.0.0\n"
         "    layer: example\n"
@@ -105,8 +105,8 @@ class TestInProcessSkillProcessesFile:
         )
 
         # Discover + load via the production catalog so registry wiring runs.
-        registry = dcc_mcp_core.ToolRegistry()
-        catalog = dcc_mcp_core.SkillCatalog(registry)
+        registry = meshy_dcc_core.ToolRegistry()
+        catalog = meshy_dcc_core.SkillCatalog(registry)
         dispatcher = _RecordingDispatcher()
         catalog.set_in_process_executor(build_inprocess_executor(dispatcher))
         catalog.discover(extra_paths=[str(tmp_path)])
@@ -163,8 +163,8 @@ class TestInProcessSkillProcessesFile:
             },
         )
 
-        registry = dcc_mcp_core.ToolRegistry()
-        catalog = dcc_mcp_core.SkillCatalog(registry)
+        registry = meshy_dcc_core.ToolRegistry()
+        catalog = meshy_dcc_core.SkillCatalog(registry)
         dispatcher = _RecordingDispatcher()
         catalog.set_in_process_executor(build_inprocess_executor(dispatcher))
         catalog.discover(extra_paths=[str(tmp_path)])
@@ -217,8 +217,8 @@ class TestMultiScriptSkill:
             },
         )
 
-        registry = dcc_mcp_core.ToolRegistry()
-        catalog = dcc_mcp_core.SkillCatalog(registry)
+        registry = meshy_dcc_core.ToolRegistry()
+        catalog = meshy_dcc_core.SkillCatalog(registry)
         catalog.set_in_process_executor(build_inprocess_executor(None))
         catalog.discover(extra_paths=[str(tmp_path)])
         catalog.load_skill("two-tools-skill")
@@ -331,8 +331,8 @@ class TestExecutorWiringSurvivesCatalogLifecycle:
             },
         )
 
-        registry = dcc_mcp_core.ToolRegistry()
-        catalog = dcc_mcp_core.SkillCatalog(registry)
+        registry = meshy_dcc_core.ToolRegistry()
+        catalog = meshy_dcc_core.SkillCatalog(registry)
         catalog.set_in_process_executor(build_inprocess_executor(None))
         catalog.discover(extra_paths=[str(tmp_path)])
         catalog.load_skill("reset-skill")

@@ -3,19 +3,21 @@
 ## Scope and current stage
 
 `meshy-dcc-core` is a private, independent Meshy product repository, developed
-as a submodule of `meshy-dev/meshy-integrations`. Its Rust source was imported
-from `dcc-mcp/dcc-mcp-core` (MIT) `v0.20.36` without upstream git history; see
-`UPSTREAM.md`. Product version 0.1.0; crates keep 0.20.36 as the internal
-wire/compat version (gateway election and adapter checks compare it).
+as a submodule of `meshy-dev/meshy-integrations`. Version 0.2.0: one version
+line for crates, the Python wheel and the product.
+
+The code began as a fork of an MIT-licensed project and has fully diverged
+from it. There is no upstream to track: no patches, no shared names, no
+compatibility with other runtimes. Keep `LICENSE` and `NOTICE` intact; they are
+the only required attribution.
 
 Read `docs/plan.md` before proposing changes; it lists the confirmed direction,
-DCC scope and phases. Inherited upstream docs (`docs/`, `AI_AGENT_GUIDE.md`,
-`README_zh.md`) describe the imported code, not the Meshy product.
+DCC scope and phases.
 
 Start new work by inspecting context and stating the intended change and checks.
 A planning request authorizes a plan; implement when the user requests it.
 
-The agent-facing entry is the `meshy-dcc` CLI (built from `crates/dcc-mcp-cli`)
+The agent-facing entry is the `meshy-dcc` CLI (built from `crates/meshy-dcc-cli`)
 plus `skills/meshy-dcc/SKILL.md`. No MCP connector is exposed to the agent.
 Meshy API calls, authentication, billing, polling and downloads belong to the
 published `meshy-cli`; core only consumes its machine-output contract.
@@ -25,27 +27,20 @@ The Node.js prototype 0.3.30 lives on the local branch
 code. Some of its constraints came from test-environment problems, so re-check
 each one on a real host before porting it as a Rust test.
 
-## Fork rules
+## Naming and scope
 
-- Rename only the product surface: binary name, Meshy-owned state and config,
-  Skill, docs. Keep internal crate names, the `dcc_mcp_core` Python module,
-  `DCC_MCP_*` host protocol variables and the registry layout, so upstream
-  adapters keep working and upstream patches still apply.
-- Put Meshy-specific behavior in new modules or Meshy skill packs rather than
-  scattering edits through upstream files. Keep upstream `LICENSE` and notices.
-- Take upstream fixes as reviewed patches from a separate upstream clone (see
-  `UPSTREAM.md`); never add an upstream remote or merge upstream history.
-- Meshy-owned adapters cover the nine DCCs with a Meshy Send To bridge
-  (Blender, Godot, Unity, Unreal, Maya, 3ds Max, Roblox, Omniverse, ZBrush).
-  The bundled catalog (`meshy-dcc-catalog.yml`) also takes the upstream
-  entries named under its `upstream` key, at upstream versions. A Meshy DCC
-  uses its upstream adapter until the Meshy build is published. Other
-  upstream adapters are meant for the Meshy marketplace as opt-in packages;
-  add hosts to the bundled catalog only when the user decides.
-- Host adapters are Meshy-owned: imported from upstream `dcc-mcp-<host>`
-  source (new for Roblox and Omniverse), each bundling this repo's core wheel.
-  The existing Send To plugins stay separate; take only their import rules
-  (PBR channels, color space, host pitfalls), not their code.
+- Everything is Meshy-named: crates `meshy-dcc-*`, Python package
+  `meshy_dcc_core`, environment variables `MESHY_DCC_*`, registry and state
+  under `meshy-dcc`, gateway port 19765.
+- Host adapters are Meshy-owned, one repository per host, each built against
+  this repo's `meshy_dcc_core` wheel. The bundled catalog
+  (`meshy-dcc-catalog.yml`) lists only Meshy adapters; an entry stays
+  `not_available` until its build is published.
+- Other hosts reach users as opt-in Meshy marketplace packages, built the same
+  way when someone needs them; add hosts to the bundled catalog only when the
+  user decides.
+- The Meshy Send To plugins stay separate; take only their import rules and
+  host-side processing logic (as Meshy skill packs), not their transport code.
 
 ## Design constraints
 
@@ -66,8 +61,8 @@ each one on a real host before porting it as a Rust test.
 Toolchain: Rust `1.95.0` (edition 2024). Focused checks:
 
 ```sh
-cargo build -p dcc-mcp-cli
-cargo test -p dcc-mcp-cli
+cargo build -p meshy-dcc-cli
+cargo test -p meshy-dcc-cli
 ```
 
 Real-host checks start only test-owned projects and processes and never touch an

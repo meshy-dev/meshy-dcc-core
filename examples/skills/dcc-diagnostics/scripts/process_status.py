@@ -1,4 +1,4 @@
-"""Check DCC process health via dcc_mcp_core.PyProcessMonitor.
+"""Check DCC process health via meshy_dcc_core.PyProcessMonitor.
 
 Reports which PIDs are being tracked, whether they are alive,
 and whether the background monitor loop is running.
@@ -34,9 +34,9 @@ def main() -> None:
     args = parser.parse_args()
 
     try:
-        from dcc_mcp_core import PyProcessMonitor
+        from meshy_dcc_core import PyProcessMonitor
     except ImportError:
-        print(json.dumps({"success": False, "message": "dcc_mcp_core not available. Install the package first."}))
+        print(json.dumps({"success": False, "message": "meshy_dcc_core not available. Install the package first."}))
         sys.exit(1)
 
     try:

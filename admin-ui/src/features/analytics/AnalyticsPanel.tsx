@@ -342,7 +342,7 @@ export function AnalyticsPanel({
     () => buildTokenActivitySummary(tokenCalendar, timeseries, locale),
     [locale, timeseries, tokenCalendar],
   );
-  const topToolName = overview?.top_tools[0]?.name ?? 'dcc-mcp';
+  const topToolName = overview?.top_tools[0]?.name ?? 'meshy-dcc';
   const profileTitle = t('analytics.profile.title');
   const profileSubtitle = t('analytics.profile.subtitle', {
     agents: overview?.kpi.unique_agents ?? 0,

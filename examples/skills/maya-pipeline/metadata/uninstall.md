@@ -2,10 +2,10 @@
 
 ## Cleanup Steps
 
-1. Remove the skill directory from `DCC_MCP_SKILL_PATHS`
+1. Remove the skill directory from `MESHY_DCC_SKILL_PATHS`
 2. Clear the SkillScanner cache:
    ```python
-   scanner = dcc_mcp_core.SkillScanner()
+   scanner = meshy_dcc_core.SkillScanner()
    scanner.clear_cache()
    ```
 3. Optionally remove dependent skills if no longer needed:

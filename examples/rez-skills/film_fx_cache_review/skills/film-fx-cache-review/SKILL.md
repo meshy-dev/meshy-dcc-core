@@ -4,7 +4,7 @@ description: "Houdini FX cache and simulation review helpers for film shots."
 license: MIT
 allowed-tools: Bash Read Write
 metadata:
-  dcc-mcp:
+  meshy-dcc:
     dcc: houdini
     version: "1.0.0"
     layer: domain

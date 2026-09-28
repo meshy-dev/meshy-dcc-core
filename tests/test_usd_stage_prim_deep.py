@@ -22,10 +22,10 @@ import json
 
 import pytest
 
-import dcc_mcp_core
-from dcc_mcp_core import UsdPrim
-from dcc_mcp_core import UsdStage
-from dcc_mcp_core import VtValue
+import meshy_dcc_core
+from meshy_dcc_core import UsdPrim
+from meshy_dcc_core import UsdStage
+from meshy_dcc_core import VtValue
 
 # ---------------------------------------------------------------------------
 # UsdStage.fps deep

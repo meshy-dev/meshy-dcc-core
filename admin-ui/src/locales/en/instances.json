@@ -32,7 +32,7 @@
   "update.aria": "Check server update for {name}",
   "update.checking": "Checking",
   "update.current": "Current version: {version}",
-  "update.help": "Checks the server manifest. Stage an available update from that server installation with dcc-mcp-server update apply.",
+  "update.help": "Checks the server manifest. Stage an available update from that server installation with meshy-dcc-server update apply.",
   "update.label": "Update",
   "update.restartRequired": "Restart this DCC backend to use the staged server.",
   "update.status.available": "Available {version}",
@@ -45,7 +45,7 @@
   "update.status.notConfigured": "Update manifest is not configured.",
   "update.status.stageFailed": "Could not stage the update: {message}",
   "update.status.staged": "Staged {version}; restart to apply.",
-  "update.status.targetEnvironment": "Run dcc-mcp-server update apply in the target server installation.",
+  "update.status.targetEnvironment": "Run meshy-dcc-server update apply in the target server installation.",
   "update.status.upToDate": "Up to date {version}",
   "update.unknownCurrent": "version unknown"
 }

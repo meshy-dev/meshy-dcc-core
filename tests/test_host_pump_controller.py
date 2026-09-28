@@ -5,16 +5,16 @@ from __future__ import annotations
 import threading
 from typing import Any
 
-import dcc_mcp_core
-from dcc_mcp_core._server.callable_dispatcher import AdaptivePumpPolicy
-from dcc_mcp_core._server.callable_dispatcher import DrainStats
-from dcc_mcp_core._server.host_pump import HostPumpController
-from dcc_mcp_core._server.host_pump import HostPumpSnapshot
-from dcc_mcp_core._server.host_pump import HostPumpTimerAdapter
-from dcc_mcp_core._server.host_pump import ManualHostTimerAdapter
-from dcc_mcp_core._server.host_pump import QtHostTimerAdapter
-from dcc_mcp_core._server.host_pump import ThreadedHostTimerAdapter
-from dcc_mcp_core._server.host_ui_dispatcher import HostUiDispatcherBase
+import meshy_dcc_core
+from meshy_dcc_core._server.callable_dispatcher import AdaptivePumpPolicy
+from meshy_dcc_core._server.callable_dispatcher import DrainStats
+from meshy_dcc_core._server.host_pump import HostPumpController
+from meshy_dcc_core._server.host_pump import HostPumpSnapshot
+from meshy_dcc_core._server.host_pump import HostPumpTimerAdapter
+from meshy_dcc_core._server.host_pump import ManualHostTimerAdapter
+from meshy_dcc_core._server.host_pump import QtHostTimerAdapter
+from meshy_dcc_core._server.host_pump import ThreadedHostTimerAdapter
+from meshy_dcc_core._server.host_ui_dispatcher import HostUiDispatcherBase
 
 
 class _Clock:
@@ -38,13 +38,13 @@ class _ManualUiDispatcher(HostUiDispatcherBase):
 
 
 def test_host_pump_controller_exported() -> None:
-    assert dcc_mcp_core.HostPumpController is HostPumpController
-    assert dcc_mcp_core.HostPumpSnapshot is HostPumpSnapshot
-    assert dcc_mcp_core.ManualHostTimerAdapter is ManualHostTimerAdapter
-    assert dcc_mcp_core.QtHostTimerAdapter is QtHostTimerAdapter
-    assert dcc_mcp_core.ThreadedHostTimerAdapter is ThreadedHostTimerAdapter
-    assert "HostPumpController" in dcc_mcp_core.__all__
-    assert "ManualHostTimerAdapter" in dcc_mcp_core.__all__
+    assert meshy_dcc_core.HostPumpController is HostPumpController
+    assert meshy_dcc_core.HostPumpSnapshot is HostPumpSnapshot
+    assert meshy_dcc_core.ManualHostTimerAdapter is ManualHostTimerAdapter
+    assert meshy_dcc_core.QtHostTimerAdapter is QtHostTimerAdapter
+    assert meshy_dcc_core.ThreadedHostTimerAdapter is ThreadedHostTimerAdapter
+    assert "HostPumpController" in meshy_dcc_core.__all__
+    assert "ManualHostTimerAdapter" in meshy_dcc_core.__all__
 
 
 def test_timer_protocol_is_runtime_checkable() -> None:

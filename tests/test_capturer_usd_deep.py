@@ -16,9 +16,9 @@ import json
 
 import pytest
 
-from dcc_mcp_core import Capturer
-from dcc_mcp_core import UsdStage
-from dcc_mcp_core import VtValue
+from meshy_dcc_core import Capturer
+from meshy_dcc_core import UsdStage
+from meshy_dcc_core import VtValue
 
 # ---------------------------------------------------------------------------
 # Capturer

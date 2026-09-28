@@ -16,17 +16,17 @@ import pytest
 
 from conftest import McpClient
 from conftest import allocate_gateway_port
-import dcc_mcp_core
-from dcc_mcp_core import McpHttpConfig
-from dcc_mcp_core import McpHttpServer
-from dcc_mcp_core import ToolRegistry
-from dcc_mcp_core import scan_and_load_lenient
+import meshy_dcc_core
+from meshy_dcc_core import McpHttpConfig
+from meshy_dcc_core import McpHttpServer
+from meshy_dcc_core import ToolRegistry
+from meshy_dcc_core import scan_and_load_lenient
 
 REZ_CONTEXT_CASES = [
     {
         "package": "film_animation_blocking",
         "dcc": "maya",
-        "skill_env": "DCC_MCP_MAYA_SKILL_PATHS",
+        "skill_env": "MESHY_DCC_MAYA_SKILL_PATHS",
         "skill": "film-animation-blocking",
         "tool": "summarize_blocking",
         "task": "animation",
@@ -35,7 +35,7 @@ REZ_CONTEXT_CASES = [
     {
         "package": "film_fx_cache_review",
         "dcc": "houdini",
-        "skill_env": "DCC_MCP_HOUDINI_SKILL_PATHS",
+        "skill_env": "MESHY_DCC_HOUDINI_SKILL_PATHS",
         "skill": "film-fx-cache-review",
         "tool": "review_cache_manifest",
         "task": "fx",
@@ -44,7 +44,7 @@ REZ_CONTEXT_CASES = [
     {
         "package": "commercial_2d_layers",
         "dcc": "photoshop",
-        "skill_env": "DCC_MCP_PHOTOSHOP_SKILL_PATHS",
+        "skill_env": "MESHY_DCC_PHOTOSHOP_SKILL_PATHS",
         "skill": "commercial-2d-layers",
         "tool": "summarize_layers",
         "task": "motion-2d",
@@ -53,7 +53,7 @@ REZ_CONTEXT_CASES = [
     {
         "package": "game_level_layout",
         "dcc": "unreal",
-        "skill_env": "DCC_MCP_UNREAL_SKILL_PATHS",
+        "skill_env": "MESHY_DCC_UNREAL_SKILL_PATHS",
         "skill": "game-level-layout",
         "tool": "summarize_level_layout",
         "task": "level-layout",
@@ -62,7 +62,7 @@ REZ_CONTEXT_CASES = [
     {
         "package": "asset_material_authoring",
         "dcc": "python",
-        "skill_env": "DCC_MCP_SKILL_PATHS",
+        "skill_env": "MESHY_DCC_SKILL_PATHS",
         "skill": "asset-material-authoring",
         "tool": "validate_material_export",
         "task": "material-authoring",
@@ -149,12 +149,12 @@ def _tool_call_json(mcp_url: str, tool_name: str, arguments: dict) -> tuple[bool
 
 def _write_rez_stub_packages(root: Path) -> None:
     for name in [
-        "dcc_mcp_core",
-        "dcc_mcp_maya",
-        "dcc_mcp_houdini",
-        "dcc_mcp_photoshop",
-        "dcc_mcp_blender",
-        "dcc_mcp_unreal",
+        "meshy_dcc_core",
+        "meshy_dcc_maya",
+        "meshy_dcc_houdini",
+        "meshy_dcc_photoshop",
+        "meshy_dcc_blender",
+        "meshy_dcc_unreal",
     ]:
         package_dir = root / name
         package_dir.mkdir(parents=True, exist_ok=True)
@@ -173,10 +173,10 @@ from pathlib import Path
 import subprocess
 import sys
 
-from dcc_mcp_core import SkillCatalog
-from dcc_mcp_core import ToolRegistry
+from meshy_dcc_core import SkillCatalog
+from meshy_dcc_core import ToolRegistry
 
-expected = json.loads(os.environ["DCC_MCP_E2E_EXPECTED"])
+expected = json.loads(os.environ["MESHY_DCC_E2E_EXPECTED"])
 skill_paths = [
     Path(item)
     for item in os.environ[expected["skill_env"]].split(os.pathsep)
@@ -332,7 +332,7 @@ def test_rez_example_skills_are_searchable_by_context_metadata() -> None:
     assert "commercial-2d-layers" in names
     assert "game-level-layout" in names
 
-    by_profile = {skill.metadata["dcc-mcp.toolset-profile"]: skill.name for skill in skills}
+    by_profile = {skill.metadata["meshy-dcc.toolset-profile"]: skill.name for skill in skills}
     assert by_profile["film-shot-animation"] == "film-animation-blocking"
     assert by_profile["film-shot-fx"] == "film-fx-cache-review"
 
@@ -417,9 +417,9 @@ def test_rez_env_composes_loads_executes_and_unloads_single_context(tmp_path: Pa
     env = os.environ.copy()
     existing_packages = env.get("REZ_PACKAGES_PATH", "")
     env["REZ_PACKAGES_PATH"] = os.pathsep.join(item for item in [str(examples), str(stubs), existing_packages] if item)
-    env["DCC_MCP_E2E_EXPECTED"] = json.dumps(case)
-    env["DCC_MCP_DISABLE_DEFAULT_SKILL_PATHS"] = "1"
-    package_root = Path(dcc_mcp_core.__file__).resolve().parent.parent
+    env["MESHY_DCC_E2E_EXPECTED"] = json.dumps(case)
+    env["MESHY_DCC_DISABLE_DEFAULT_SKILL_PATHS"] = "1"
+    package_root = Path(meshy_dcc_core.__file__).resolve().parent.parent
     python_path = str(package_root)
     if env.get("PYTHONPATH"):
         python_path = os.pathsep.join([python_path, env["PYTHONPATH"]])

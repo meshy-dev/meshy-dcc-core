@@ -1,0 +1,134 @@
+[package]
+name = "meshy-dcc-server"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Standalone meshy-dcc-server binary for bridge-mode DCCs (Photoshop, ZBrush, Unreal, Unity, Figma)"
+
+[[bin]]
+name = "meshy-dcc-server"
+path = "src/main.rs"
+
+[dependencies]
+# `meshy-dcc-http` default features include `auto-gateway` which pulls in
+# the full gateway runtime. We forward that explicitly through our own
+# `gateway-auto` feature so this binary can also build slim variants
+# (issue #1359). Keep direct path deps for HTTP and sidecar because Cargo's
+# workspace inheritance cannot override the inherited `default-features` setting.
+meshy-dcc-http = { path = "../meshy-dcc-http", default-features = false }
+meshy-dcc-actions.workspace = true
+meshy-dcc-skills.workspace = true
+meshy-dcc-protocols.workspace = true
+meshy-dcc-logging.workspace = true
+meshy-dcc-transport.workspace = true
+meshy-dcc-telemetry = { workspace = true, optional = true }
+meshy-dcc-catalog.workspace = true
+meshy-dcc-capture.workspace = true
+meshy-dcc-jsonrpc = { workspace = true }
+meshy-dcc-updater.workspace = true
+meshy-dcc-sidecar = { path = "../meshy-dcc-sidecar", default-features = false, optional = true }
+serde.workspace = true
+serde_json.workspace = true
+serde_yaml_ng.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+uuid.workspace = true
+anyhow.workspace = true
+tokio-tungstenite.workspace = true
+tokio-stream = { version = "0.1", features = ["sync"] }
+futures-util.workspace = true
+reqwest.workspace = true
+rusqlite.workspace = true
+# MCP Streamable HTTP uses HTTP/1.1 SSE only; http2 feature removed to avoid h2 crate.
+axum = { workspace = true, features = ["http1", "tokio"] }
+tower-http = { workspace = true, features = ["cors", "trace"] }
+clap = { version = "4", features = ["derive", "env"] }
+sysinfo.workspace = true
+workspace-hack = { version = "0.1", path = "../workspace-hack" }
+# Optional — only linked when either `gateway-auto` (embedded election +
+# admin) or `gateway-daemon` (standalone daemon subcommand) is enabled.
+meshy-dcc-gateway = { workspace = true, optional = true }
+
+# Sentry error monitoring (backend). Controlled by MESHY_DCC_SENTRY_DSN
+# env var at startup; no-op when absent. Feature-gated so slim builds
+# (gateway-only) can skip the dependency entirely.
+sentry = { version = "0.39", default-features = false, features = [
+    "backtrace",
+    "contexts",
+    "panic",
+    "rustls",
+    "ureq",
+], optional = true }
+
+[features]
+# Default matches today's binary: per-Meshy DCC server with embedded
+# first-wins gateway election, the local Admin UI, and Sentry
+# error monitoring (auto-disabled when MESHY_DCC_SENTRY_DSN is absent).
+default = ["server", "gateway-auto", "gateway-daemon", "admin", "sentry"]
+
+# Per-Meshy DCC HTTP server (mandatory for the default `meshy-dcc-server`
+# entry point). Currently a marker feature; opting it out leaves only
+# the gateway daemon subcommand available, which is useful for the
+# slim `meshy-dcc-server gateway` deployment topology.
+server = []
+
+# Embedded auto-gateway: first-wins election on the well-known gateway
+# port, admin UI on the elected gateway, sidecar gateway failover,
+# translate-mode gateway registration. Pulls `meshy-dcc-gateway` and
+# turns on the matching `auto-gateway` feature on `meshy-dcc-http`.
+gateway-auto = [
+    "dep:meshy-dcc-gateway",
+    "dep:meshy-dcc-sidecar",
+    "meshy-dcc-sidecar/gateway-auto",
+    "meshy-dcc-http/auto-gateway",
+]
+
+# Standalone gateway daemon (`meshy-dcc-server gateway` subcommand). Can
+# be enabled together with or independently of `gateway-auto`.
+gateway-daemon = [
+    "dep:meshy-dcc-gateway",
+    "dep:meshy-dcc-sidecar",
+    "meshy-dcc-sidecar/gateway-daemon",
+]
+
+# Local Admin UI on the elected gateway. Forwarded to whichever of
+# `gateway-auto` / `gateway-daemon` happens to be enabled.
+admin = [
+    "meshy-dcc-gateway?/admin",
+    "meshy-dcc-gateway?/admin-persist-sqlite",
+    "meshy-dcc-sidecar?/admin",
+]
+
+# Optional LAN-local mDNS/DNS-SD advertisement and gateway browsing.
+mdns = [
+    "meshy-dcc-http/mdns",
+    "meshy-dcc-transport/mdns",
+    "meshy-dcc-gateway?/mdns",
+    "meshy-dcc-sidecar?/mdns",
+]
+
+# Prometheus `/metrics` endpoint on the MCP server (and admin UI).
+prometheus = [
+    "meshy-dcc-http/prometheus",
+    "meshy-dcc-gateway?/prometheus",
+    "meshy-dcc-sidecar?/prometheus",
+]
+
+otlp-exporter = ["meshy-dcc-telemetry/otlp-exporter", "dep:meshy-dcc-telemetry"]
+telemetry = ["dep:meshy-dcc-telemetry"]
+
+# Opt-in local Tracy profiling through meshy-dcc-logging's existing subscriber.
+tracy = ["meshy-dcc-logging/tracy"]
+
+# Sentry error monitoring (Rust backend). Controlled by MESHY_DCC_SENTRY_DSN
+# env var at startup. Does nothing when the env var is absent.
+sentry = ["dep:sentry"]
+
+[dev-dependencies]
+tempfile.workspace = true
+reqwest = { version = "0.13", default-features = false, features = ["json", "rustls"] }
+meshy-dcc-test-utils = { workspace = true }

@@ -1,12 +1,12 @@
-# HA topology for dcc-mcp-server gateway.
+# HA topology for meshy-dcc-server gateway.
 #
-#   client ──▶ (host 127.0.0.1:9765) ──▶ gateway-a
+#   client ──▶ (host 127.0.0.1:19765) ──▶ gateway-a
 #                                    \─▶ gateway-b (election runner-up)
 #
-# Both gateways share a single /var/lib/dcc-mcp volume so every replica sees
+# Both gateways share a single /var/lib/meshy-dcc volume so every replica sees
 # the same FileRegistry. Two mock DCC servers register themselves on startup.
 #
-# In real deployments the host port 9765 is replaced by an external LB
+# In real deployments the host port 19765 is replaced by an external LB
 # (nginx, ALB, …). See docs/guide/production-deployment.md §4-§5.
 
 services:
@@ -14,64 +14,64 @@ services:
     build:
       context: ../../..
       dockerfile: examples/compose/gateway-ha/Dockerfile
-    image: dcc-mcp-server:latest
-    container_name: dcc-mcp-gateway-a
+    image: meshy-dcc-server:latest
+    container_name: meshy-dcc-gateway-a
     environment:
-      DCC_MCP_SERVER_NAME: gateway-a
-      DCC_MCP_DCC: generic
-      DCC_MCP_GATEWAY_PORT: "9765"
-      DCC_MCP_HEARTBEAT_INTERVAL: "2"
-      DCC_MCP_STALE_TIMEOUT: "10"
+      MESHY_DCC_SERVER_NAME: gateway-a
+      MESHY_DCC_DCC: generic
+      MESHY_DCC_GATEWAY_PORT: "19765"
+      MESHY_DCC_HEARTBEAT_INTERVAL: "2"
+      MESHY_DCC_STALE_TIMEOUT: "10"
     volumes:
-      - registry:/var/lib/dcc-mcp
+      - registry:/var/lib/meshy-dcc
     ports:
-      - "9765:9765"
+      - "19765:19765"
     restart: unless-stopped
 
   gateway-b:
-    image: dcc-mcp-server:latest
-    container_name: dcc-mcp-gateway-b
+    image: meshy-dcc-server:latest
+    container_name: meshy-dcc-gateway-b
     depends_on:
       - gateway-a
     environment:
-      DCC_MCP_SERVER_NAME: gateway-b
-      DCC_MCP_DCC: generic
-      DCC_MCP_GATEWAY_PORT: "9765"
-      DCC_MCP_HEARTBEAT_INTERVAL: "2"
-      DCC_MCP_STALE_TIMEOUT: "10"
+      MESHY_DCC_SERVER_NAME: gateway-b
+      MESHY_DCC_DCC: generic
+      MESHY_DCC_GATEWAY_PORT: "19765"
+      MESHY_DCC_HEARTBEAT_INTERVAL: "2"
+      MESHY_DCC_STALE_TIMEOUT: "10"
     volumes:
-      - registry:/var/lib/dcc-mcp
+      - registry:/var/lib/meshy-dcc
     restart: unless-stopped
 
   dcc-maya-1:
-    image: dcc-mcp-server:latest
-    container_name: dcc-mcp-maya-1
+    image: meshy-dcc-server:latest
+    container_name: meshy-dcc-maya-1
     depends_on:
       - gateway-a
     environment:
-      DCC_MCP_SERVER_NAME: maya-1
-      DCC_MCP_DCC: maya
-      DCC_MCP_DCC_VERSION: "2025"
-      DCC_MCP_SCENE: shot_001.ma
+      MESHY_DCC_SERVER_NAME: maya-1
+      MESHY_DCC_DCC: maya
+      MESHY_DCC_DCC_VERSION: "2025"
+      MESHY_DCC_SCENE: shot_001.ma
       # Plain instance — do not compete for the gateway port.
-      DCC_MCP_GATEWAY_PORT: "0"
+      MESHY_DCC_GATEWAY_PORT: "0"
     volumes:
-      - registry:/var/lib/dcc-mcp
+      - registry:/var/lib/meshy-dcc
     restart: unless-stopped
 
   dcc-blender-1:
-    image: dcc-mcp-server:latest
-    container_name: dcc-mcp-blender-1
+    image: meshy-dcc-server:latest
+    container_name: meshy-dcc-blender-1
     depends_on:
       - gateway-a
     environment:
-      DCC_MCP_SERVER_NAME: blender-1
-      DCC_MCP_DCC: blender
-      DCC_MCP_DCC_VERSION: "4.2"
-      DCC_MCP_SCENE: rig.blend
-      DCC_MCP_GATEWAY_PORT: "0"
+      MESHY_DCC_SERVER_NAME: blender-1
+      MESHY_DCC_DCC: blender
+      MESHY_DCC_DCC_VERSION: "4.2"
+      MESHY_DCC_SCENE: rig.blend
+      MESHY_DCC_GATEWAY_PORT: "0"
     volumes:
-      - registry:/var/lib/dcc-mcp
+      - registry:/var/lib/meshy-dcc
     restart: unless-stopped
 
 volumes:

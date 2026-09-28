@@ -6,13 +6,13 @@ import json
 
 import pytest
 
-from dcc_mcp_core import McpHttpConfig
-from dcc_mcp_core import McpHttpServer
-from dcc_mcp_core import SkillMetadata
-from dcc_mcp_core import ToolDeclaration
-from dcc_mcp_core import ToolRegistry
-from dcc_mcp_core import WorkspaceRoots
-from dcc_mcp_core import scan_and_load
+from meshy_dcc_core import McpHttpConfig
+from meshy_dcc_core import McpHttpServer
+from meshy_dcc_core import SkillMetadata
+from meshy_dcc_core import ToolDeclaration
+from meshy_dcc_core import ToolRegistry
+from meshy_dcc_core import WorkspaceRoots
+from meshy_dcc_core import scan_and_load
 
 # ── WorkspaceRoots ─────────────────────────────────────────────────────────
 
@@ -86,7 +86,7 @@ def test_sibling_tools_yaml_parses_required_capabilities(tmp_path):
     skill_dir = tmp_path / "cap-skill"
     skill_dir.mkdir()
     (skill_dir / "SKILL.md").write_text(
-        "---\nname: cap-skill\ndescription: test\nmetadata:\n  dcc-mcp:\n    tools: tools.yaml\n---\n",
+        "---\nname: cap-skill\ndescription: test\nmetadata:\n  meshy-dcc:\n    tools: tools.yaml\n---\n",
         encoding="utf-8",
     )
     (skill_dir / "tools.yaml").write_text(

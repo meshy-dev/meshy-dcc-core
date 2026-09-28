@@ -24,7 +24,7 @@ from scripts.ci.check_pypi_project_size import render_warning
 
 def _report(pypi_files, artifacts, limit_bytes=10 * GIB, warn_headroom_bytes=GIB):
     return build_report(
-        package="dcc-mcp-core",
+        package="meshy-dcc-core",
         pypi_files=pypi_files,
         artifacts=artifacts,
         limit_bytes=limit_bytes,
@@ -107,13 +107,13 @@ def test_v0206_incident_shape_is_over_budget() -> None:
     pypi_files = {"incumbent.whl": 10_714_226_066}
     missing = [
         Artifact(
-            "dcc_mcp_core-0.20.6-cp38-abi3-macosx_10_12_x86_64.macosx_11_0_arm64.macosx_10_12_universal2.whl",
+            "meshy_dcc_core-0.20.6-cp38-abi3-macosx_10_12_x86_64.macosx_11_0_arm64.macosx_10_12_universal2.whl",
             36 * GIB // 1000,
         ),
-        Artifact("dcc_mcp_core-0.20.6-cp38-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", 19 * GIB // 1000),
-        Artifact("dcc_mcp_core-0.20.6-cp38-abi3-win_amd64.whl", 19 * GIB // 1000),
-        Artifact("dcc_mcp_core-0.20.6-py3-none-any.whl", GIB // 2000),
-        Artifact("dcc_mcp_core-0.20.6.tar.gz", 8 * GIB // 1000),
+        Artifact("meshy_dcc_core-0.20.6-cp38-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", 19 * GIB // 1000),
+        Artifact("meshy_dcc_core-0.20.6-cp38-abi3-win_amd64.whl", 19 * GIB // 1000),
+        Artifact("meshy_dcc_core-0.20.6-py3-none-any.whl", GIB // 2000),
+        Artifact("meshy_dcc_core-0.20.6.tar.gz", 8 * GIB // 1000),
     ]
 
     report = _report(pypi_files, missing)
@@ -131,9 +131,9 @@ def test_render_failure_points_at_remediation_paths() -> None:
     message = render_failure(report)
 
     assert message.startswith("::error::")
-    assert "dcc-mcp-core" in message
+    assert "meshy-dcc-core" in message
     assert STORAGE_LIMITS_DOC in message
-    assert MANAGE_RELEASES_URL.format(package="dcc-mcp-core") in message
+    assert MANAGE_RELEASES_URL.format(package="meshy-dcc-core") in message
     assert "skip-existing" in message
 
 
@@ -147,7 +147,7 @@ def test_render_warning_reports_headroom() -> None:
     message = render_warning(report)
 
     assert message.startswith("::warning::")
-    assert "dcc-mcp-core" in message
+    assert "meshy-dcc-core" in message
     assert STORAGE_LIMITS_DOC in message
 
 
@@ -190,7 +190,7 @@ def test_fetch_pypi_files_reads_every_release(monkeypatch) -> None:
 
     monkeypatch.setattr("urllib.request.urlopen", lambda url, timeout=None: io.BytesIO(payload))
 
-    assert fetch_pypi_files("dcc-mcp-core", "https://pypi.org/pypi/{package}/json") == {
+    assert fetch_pypi_files("meshy-dcc-core", "https://pypi.org/pypi/{package}/json") == {
         "a.whl": 10,
         "b.whl": 20,
     }
@@ -205,7 +205,7 @@ def test_fetch_pypi_files_treats_404_as_unpublished(monkeypatch, capsys) -> None
     """
     monkeypatch.setattr("urllib.request.urlopen", lambda url, timeout=None: (_ for _ in ()).throw(_http_error(404)))
 
-    assert fetch_pypi_files("dcc-mcp-cli", "https://pypi.org/pypi/{package}/json") == {}
+    assert fetch_pypi_files("meshy-dcc-cli", "https://pypi.org/pypi/{package}/json") == {}
     assert "404" in capsys.readouterr().err
 
 
@@ -213,8 +213,8 @@ def test_fetch_pypi_files_still_fails_on_other_statuses(monkeypatch) -> None:
     """Any status other than 404 is a real failure, not an empty project."""
     monkeypatch.setattr("urllib.request.urlopen", lambda url, timeout=None: (_ for _ in ()).throw(_http_error(503)))
 
-    with pytest.raises(RuntimeError, match="dcc-mcp-cli"):
-        fetch_pypi_files("dcc-mcp-cli", "https://pypi.org/pypi/{package}/json")
+    with pytest.raises(RuntimeError, match="meshy-dcc-cli"):
+        fetch_pypi_files("meshy-dcc-cli", "https://pypi.org/pypi/{package}/json")
 
 
 def test_fetch_pypi_files_still_fails_on_transport_errors(monkeypatch) -> None:
@@ -224,16 +224,16 @@ def test_fetch_pypi_files_still_fails_on_transport_errors(monkeypatch) -> None:
     )
 
     with pytest.raises(RuntimeError, match="no route to host"):
-        fetch_pypi_files("dcc-mcp-cli", "https://pypi.org/pypi/{package}/json")
+        fetch_pypi_files("meshy-dcc-cli", "https://pypi.org/pypi/{package}/json")
 
 
 def test_unpublished_project_fits_the_budget(tmp_path: Path) -> None:
     """The gate a first release has to pass: 0 current bytes, all files new."""
-    wheel = tmp_path / "dcc_mcp_cli-0.1.0-py3-none-manylinux_2_17_x86_64.whl"
+    wheel = tmp_path / "meshy_dcc_cli-0.1.0-py3-none-manylinux_2_17_x86_64.whl"
     wheel.write_bytes(b"x" * 100)
 
     report = build_report(
-        package="dcc-mcp-cli",
+        package="meshy-dcc-cli",
         pypi_files={},
         artifacts=collect_dist_artifacts(tmp_path),
         limit_bytes=10 * GIB,

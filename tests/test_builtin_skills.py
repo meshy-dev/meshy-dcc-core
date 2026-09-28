@@ -1,4 +1,4 @@
-"""Regression tests for :mod:`dcc_mcp_core.skills.builtin`.
+"""Regression tests for :mod:`meshy_dcc_core.skills.builtin`.
 
 Guards the bug where ``register_all_builtin_skills`` called
 ``register_recipes_tools`` without the now-required keyword-only ``skills``
@@ -11,9 +11,9 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock
 
-from dcc_mcp_core._server.diagnostic_state import DiagnosticRuntimeState
-from dcc_mcp_core.feedback import FeedbackStore
-from dcc_mcp_core.skills import builtin
+from meshy_dcc_core._server.diagnostic_state import DiagnosticRuntimeState
+from meshy_dcc_core.feedback import FeedbackStore
+from meshy_dcc_core.skills import builtin
 
 
 def _make_server() -> MagicMock:

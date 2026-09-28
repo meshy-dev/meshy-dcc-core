@@ -1,6 +1,6 @@
 """Scaffold a new marketplace extension package.
 
-Creates a directory with the standard dcc-mcp skill layout:
+Creates a directory with the standard meshy-dcc skill layout:
   <name>/
   ├── SKILL.md       # MIT-0 licensed frontmatter + body
   ├── tools.yaml     # Tool declarations with schemas and annotations
@@ -9,7 +9,7 @@ Creates a directory with the standard dcc-mcp skill layout:
   └── scripts/
       └── <action_name>.py
 
-Follows the same patterns as dcc-mcp-skills-creator.
+Follows the same patterns as meshy-dcc-skills-creator.
 """
 
 from __future__ import annotations
@@ -112,8 +112,8 @@ def _make_openai_yaml(name: str) -> str:
     title = name.replace("-", " ").title()
     return f'''interface:
   display_name: "{title}"
-  short_description: "Run a DCC-MCP marketplace extension"
-  default_prompt: "Use ${name} to complete this DCC-MCP marketplace workflow."
+  short_description: "Run a Meshy DCC marketplace extension"
+  default_prompt: "Use ${name} to complete this Meshy DCC marketplace workflow."
 '''
 
 
@@ -138,10 +138,10 @@ name: {name}
 description: >-
   {desc}
 license: MIT-0
-compatibility: "Python 3.7+, dcc-mcp-core 0.17+"
+compatibility: "Python 3.7+, meshy-dcc-core 0.17+"
 allowed-tools: Bash Read Write Edit
 metadata:
-  dcc-mcp:
+  meshy-dcc:
     dcc: {primary_dcc}
     version: "{version}"
     layer: {layer}
@@ -158,11 +158,11 @@ Keep instructions focused on when an agent should use this extension, what
 each tool returns, and what to inspect after success or failure.
 
 Tool names must stay client-safe. Use local snake_case tool names in
-`tools.yaml`; dcc-mcp-core publishes them as `{name}__tool_name` after the
+`tools.yaml`; meshy-dcc-core publishes them as `{name}__tool_name` after the
 extension is loaded.
 
 Runtime scripts should import dependency-light helpers from
-`dcc_mcp_core.skills_helper` first. It provides JSON/YAML, bounded HTTP,
+`meshy_dcc_core.skills_helper` first. It provides JSON/YAML, bounded HTTP,
 safe file/path helpers, validation, cancellation checks, and result helpers.
 
 ## License
@@ -225,7 +225,7 @@ MIT-0 — see <https://github.com/aws/mit-0> for details.
 """
 from __future__ import annotations
 
-from dcc_mcp_core.skills_helper import run_main, skill_entry, skill_success
+from meshy_dcc_core.skills_helper import run_main, skill_entry, skill_success
 
 
 @skill_entry

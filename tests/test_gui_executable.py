@@ -1,4 +1,4 @@
-"""Tests for ``dcc_mcp_core.is_gui_executable`` / ``correct_python_executable`` (issue #524)."""
+"""Tests for ``meshy_dcc_core.is_gui_executable`` / ``correct_python_executable`` (issue #524)."""
 
 # Import built-in modules
 from __future__ import annotations
@@ -9,17 +9,17 @@ from pathlib import Path
 import pytest
 
 # Import local modules
-import dcc_mcp_core
-from dcc_mcp_core import GuiExecutableHint
-from dcc_mcp_core import correct_python_executable
-from dcc_mcp_core import is_gui_executable
+import meshy_dcc_core
+from meshy_dcc_core import GuiExecutableHint
+from meshy_dcc_core import correct_python_executable
+from meshy_dcc_core import is_gui_executable
 
 
 def test_exports_available() -> None:
     """All three new symbols must be importable from the top-level package."""
     for name in ("GuiExecutableHint", "is_gui_executable", "correct_python_executable"):
-        assert hasattr(dcc_mcp_core, name)
-        assert name in dcc_mcp_core.__all__
+        assert hasattr(meshy_dcc_core, name)
+        assert name in meshy_dcc_core.__all__
 
 
 @pytest.mark.parametrize(

@@ -12,20 +12,20 @@ import tempfile
 # Import third-party modules
 import pytest
 
-from dcc_mcp_core import AuditMiddleware
-from dcc_mcp_core import RateLimitMiddleware
-from dcc_mcp_core import SemVer
-from dcc_mcp_core import SkillCatalog
-from dcc_mcp_core import SkillMetadata
-from dcc_mcp_core import SkillScanner
-from dcc_mcp_core import TimingMiddleware
+from meshy_dcc_core import AuditMiddleware
+from meshy_dcc_core import RateLimitMiddleware
+from meshy_dcc_core import SemVer
+from meshy_dcc_core import SkillCatalog
+from meshy_dcc_core import SkillMetadata
+from meshy_dcc_core import SkillScanner
+from meshy_dcc_core import TimingMiddleware
 
 # Import local modules
-from dcc_mcp_core import ToolDispatcher
-from dcc_mcp_core import ToolPipeline
-from dcc_mcp_core import ToolRegistry
-from dcc_mcp_core import VersionConstraint
-from dcc_mcp_core import VersionedRegistry
+from meshy_dcc_core import ToolDispatcher
+from meshy_dcc_core import ToolPipeline
+from meshy_dcc_core import ToolRegistry
+from meshy_dcc_core import VersionConstraint
+from meshy_dcc_core import VersionedRegistry
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Helpers

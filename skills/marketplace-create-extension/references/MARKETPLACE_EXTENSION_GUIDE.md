@@ -1,7 +1,7 @@
 # Marketplace Extension Authoring Guide
 
 This guide walks through creating a publishable marketplace extension package
-that follows the dcc-mcp skill contract.
+that follows the meshy-dcc skill contract.
 
 ## Directory Layout
 
@@ -23,14 +23,14 @@ Every extension must declare:
 | `name` | yes | kebab-case, <=64 chars, matches directory name |
 | `description` | yes | Routing metadata: "Layer skill - scope. Use when..." |
 | `license` | yes | Must be `MIT-0` for ClawHub compatibility |
-| `compatibility` | yes | e.g. "dcc-mcp-core 0.17+, Python 3.7+" |
+| `compatibility` | yes | e.g. "meshy-dcc-core 0.17+, Python 3.7+" |
 | `allowed-tools` | yes | Space-separated list (e.g. "Bash Read Write") |
-| `metadata.dcc-mcp.dcc` | yes | Target DCC or "python" for infrastructure |
-| `metadata.dcc-mcp.version` | yes | Semantic version string |
-| `metadata.dcc-mcp.layer` | yes | infrastructure / domain / thin-harness / example |
-| `metadata.dcc-mcp.tools` | yes | Path to tools.yaml (usually "tools.yaml") |
-| `metadata.dcc-mcp.tags` | no | Comma-separated tags for gateway search |
-| `metadata.dcc-mcp.search-hint` | no | Keywords for agent discovery |
+| `metadata.meshy-dcc.dcc` | yes | Target DCC or "python" for infrastructure |
+| `metadata.meshy-dcc.version` | yes | Semantic version string |
+| `metadata.meshy-dcc.layer` | yes | infrastructure / domain / thin-harness / example |
+| `metadata.meshy-dcc.tools` | yes | Path to tools.yaml (usually "tools.yaml") |
+| `metadata.meshy-dcc.tags` | no | Comma-separated tags for gateway search |
+| `metadata.meshy-dcc.search-hint` | no | Keywords for agent discovery |
 | `metadata.openclaw.homepage` | no | GitHub URL for ClawHub publishing |
 
 ## tools.yaml Contract
@@ -49,10 +49,10 @@ Each tool declaration should include:
 
 ## Script Implementation
 
-Scripts should prefer `dcc_mcp_core.skills_helper` for dependency-light helpers:
+Scripts should prefer `meshy_dcc_core.skills_helper` for dependency-light helpers:
 
 ```python
-from dcc_mcp_core.skills_helper import run_main, skill_entry, skill_success
+from meshy_dcc_core.skills_helper import run_main, skill_entry, skill_success
 
 @skill_entry
 def main(param: str = "default", **params):
@@ -70,8 +70,8 @@ Keep them inside tool functions so metadata parsing works without the host.
 To publish your extension to a marketplace catalog, prefer the CLI:
 
 ```bash
-dcc-mcp-cli marketplace pack ./my-extension --out dist/
-dcc-mcp-cli marketplace publish ./my-extension \
+meshy-dcc-cli marketplace pack ./my-extension --out dist/
+meshy-dcc-cli marketplace publish ./my-extension \
   --catalog ./marketplace.json \
   --install-url https://github.com/user/my-extension/releases/download/v0.1.0/my-extension.zip \
   --sha256 sha256:<digest>

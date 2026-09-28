@@ -1,7 +1,7 @@
 """Tests for the bundled ``dcc-diagnostics/scripts/screenshot.py`` script.
 
 Covers:
-- When ``DCC_MCP_IPC_ADDRESS`` is unset, the script falls back to the local
+- When ``MESHY_DCC_IPC_ADDRESS`` is unset, the script falls back to the local
   ``Capturer`` path and prints success JSON with ``source`` field absent.
 - ``--full-screen`` flag is accepted.
 - Output JSON parses and contains ``image_base64``.
@@ -22,7 +22,7 @@ import pytest
 SCRIPT_PATH = (
     Path(__file__).resolve().parent.parent
     / "python"
-    / "dcc_mcp_core"
+    / "meshy_dcc_core"
     / "skills"
     / "dcc-diagnostics"
     / "scripts"
@@ -56,7 +56,7 @@ def _run_script(*extra_args: str, env: dict[str, str] | None = None) -> dict:
     return json.loads(lines[-1])
 
 
-# ── Fallback path (no DCC_MCP_IPC_ADDRESS) ───────────────────────────────────
+# ── Fallback path (no MESHY_DCC_IPC_ADDRESS) ───────────────────────────────────
 
 
 class TestScreenshotFallbackPath:
@@ -65,15 +65,15 @@ class TestScreenshotFallbackPath:
 
     def test_fallback_returns_success(self, monkeypatch) -> None:
         env = {k: v for k, v in __import__("os").environ.items()}
-        env.pop("DCC_MCP_IPC_ADDRESS", None)
-        env.pop("DCC_MCP_OWNER_IPC", None)
+        env.pop("MESHY_DCC_IPC_ADDRESS", None)
+        env.pop("MESHY_DCC_OWNER_IPC", None)
         payload = _run_script("--format", "png", env=env)
         assert payload["success"] is True
 
     def test_fallback_returns_image_base64(self) -> None:
         env = {k: v for k, v in __import__("os").environ.items()}
-        env.pop("DCC_MCP_IPC_ADDRESS", None)
-        env.pop("DCC_MCP_OWNER_IPC", None)
+        env.pop("MESHY_DCC_IPC_ADDRESS", None)
+        env.pop("MESHY_DCC_OWNER_IPC", None)
         payload = _run_script("--format", "png", env=env)
         assert "context" in payload
         assert isinstance(payload["context"].get("image_base64"), str)
@@ -82,16 +82,16 @@ class TestScreenshotFallbackPath:
 
     def test_full_screen_flag_accepted(self) -> None:
         env = {k: v for k, v in __import__("os").environ.items()}
-        env.pop("DCC_MCP_IPC_ADDRESS", None)
-        env.pop("DCC_MCP_OWNER_IPC", None)
+        env.pop("MESHY_DCC_IPC_ADDRESS", None)
+        env.pop("MESHY_DCC_OWNER_IPC", None)
         payload = _run_script("--full-screen", env=env)
         assert payload["success"] is True
 
     def test_unreachable_ipc_falls_back(self) -> None:
-        """A bogus DCC_MCP_IPC_ADDRESS must not break the script."""
+        """A bogus MESHY_DCC_IPC_ADDRESS must not break the script."""
         env = {k: v for k, v in __import__("os").environ.items()}
         # Use a pipe/socket path that cannot exist.
-        env["DCC_MCP_IPC_ADDRESS"] = "pipe:///\\.\\pipe\\nonexistent_dcc_mcp_pipe_xyz"
+        env["MESHY_DCC_IPC_ADDRESS"] = "pipe:///\\.\\pipe\\nonexistent_meshy_dcc_pipe_xyz"
         payload = _run_script("--format", "png", env=env)
         # Fallback to the direct Capturer path should succeed.
         assert payload["success"] is True

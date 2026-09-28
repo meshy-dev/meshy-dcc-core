@@ -1,6 +1,6 @@
 """Python-side integration tests for the gateway's prompts aggregation (#731).
 
-The Rust unit tests in ``crates/dcc-mcp-gateway/src/gateway/aggregator/tests.rs``
+The Rust unit tests in ``crates/meshy-dcc-gateway/src/gateway/aggregator/tests.rs``
 exercise the handler logic against mock backends. These tests instead drive the
 full stack from a Python client's perspective:
 
@@ -37,10 +37,10 @@ import pytest
 
 from conftest import McpClient
 from conftest import allocate_gateway_port
-from dcc_mcp_core import McpHttpConfig
-from dcc_mcp_core import McpHttpServer
-from dcc_mcp_core import ToolRegistry
-from dcc_mcp_core import create_skill_server
+from meshy_dcc_core import McpHttpConfig
+from meshy_dcc_core import McpHttpServer
+from meshy_dcc_core import ToolRegistry
+from meshy_dcc_core import create_skill_server
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 FIXTURE_SKILLS_DIR = REPO_ROOT / "tests" / "fixtures" / "prompts_skills"
@@ -140,7 +140,7 @@ def _start_backend(dcc: str, skill_parent: Path, registry_dir: Path, gw_port: in
     cfg.heartbeat_secs = 1
     cfg.stale_timeout_secs = 10
     # Disable accumulated user/team skills so the test stays hermetic:
-    # a stray `~/.dcc-mcp/skills` must not introduce additional prompts
+    # a stray `~/.meshy-dcc/skills` must not introduce additional prompts
     # that confuse the aggregated set assertions.
     server = create_skill_server(
         dcc,

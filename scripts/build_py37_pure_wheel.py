@@ -11,7 +11,7 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 PYTHON_ROOT = ROOT / "python"
-PACKAGE_DIR = PYTHON_ROOT / "dcc_mcp_core"
+PACKAGE_DIR = PYTHON_ROOT / "meshy_dcc_core"
 DIST = ROOT / "dist"
 _NATIVE_SUFFIXES = frozenset({".dll", ".dylib", ".pdb", ".pyd", ".so"})
 
@@ -61,12 +61,12 @@ def _is_lite_payload_file(path: Path) -> bool:
 
 
 def main() -> int:
-    """Assemble a pure-Python wheel from ``python/dcc_mcp_core``."""
+    """Assemble a pure-Python wheel from ``python/meshy_dcc_core``."""
     _ensure_wheel()
     from wheel.wheelfile import WheelFile
 
     version = _read_version()
-    dist_name = "dcc_mcp_core"
+    dist_name = "meshy_dcc_core"
     dist_info = f"{dist_name}-{version}.dist-info"
     wheel_name = f"{dist_name}-{version}-py3-none-any.whl"
     DIST.mkdir(parents=True, exist_ok=True)
@@ -74,7 +74,7 @@ def main() -> int:
 
     metadata = EmailMessage()
     metadata["Metadata-Version"] = "2.1"
-    metadata["Name"] = "dcc-mcp-core"
+    metadata["Name"] = "meshy-dcc-core"
     metadata["Version"] = version
     metadata["Requires-Python"] = _read_minimum_python_spec()
     metadata["License"] = "MIT"

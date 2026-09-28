@@ -7,21 +7,21 @@ import sys
 
 import pytest
 
-import dcc_mcp_core
-from dcc_mcp_core.dcc_api_executor import DccApiExecutor
-from dcc_mcp_core.script_execution import FileBackedScriptExecutionParams
-from dcc_mcp_core.script_execution import ScriptExecutionCapture
-from dcc_mcp_core.script_execution import ScriptExecutionContext
-from dcc_mcp_core.script_execution import ScriptExecutionParams
-from dcc_mcp_core.script_execution import ScriptExecutionResult
-from dcc_mcp_core.script_execution import allow_script_materialization_root
-from dcc_mcp_core.script_execution import execute_with_context
-from dcc_mcp_core.script_execution import get_script_namespace
-from dcc_mcp_core.script_execution import normalize_file_backed_script_execution_params
-from dcc_mcp_core.script_execution import normalize_script_execution_params
-from dcc_mcp_core.script_execution import register_dcc_namespace
-from dcc_mcp_core.script_execution import reset_default_script_execution_context_for_tests
-from dcc_mcp_core.script_execution import validate_script_file_path
+import meshy_dcc_core
+from meshy_dcc_core.dcc_api_executor import DccApiExecutor
+from meshy_dcc_core.script_execution import FileBackedScriptExecutionParams
+from meshy_dcc_core.script_execution import ScriptExecutionCapture
+from meshy_dcc_core.script_execution import ScriptExecutionContext
+from meshy_dcc_core.script_execution import ScriptExecutionParams
+from meshy_dcc_core.script_execution import ScriptExecutionResult
+from meshy_dcc_core.script_execution import allow_script_materialization_root
+from meshy_dcc_core.script_execution import execute_with_context
+from meshy_dcc_core.script_execution import get_script_namespace
+from meshy_dcc_core.script_execution import normalize_file_backed_script_execution_params
+from meshy_dcc_core.script_execution import normalize_script_execution_params
+from meshy_dcc_core.script_execution import register_dcc_namespace
+from meshy_dcc_core.script_execution import reset_default_script_execution_context_for_tests
+from meshy_dcc_core.script_execution import validate_script_file_path
 
 
 @pytest.mark.parametrize("module", ["typing", "typing_extensions"])
@@ -94,25 +94,25 @@ def test_materialized_annotated_script_keeps_sandbox_restrictions(
 
 
 def test_script_execution_helpers_are_exported() -> None:
-    assert dcc_mcp_core.ScriptExecutionCapture is ScriptExecutionCapture
-    assert dcc_mcp_core.FileBackedScriptExecutionParams is FileBackedScriptExecutionParams
-    assert dcc_mcp_core.ScriptExecutionParams is ScriptExecutionParams
-    assert dcc_mcp_core.ScriptExecutionResult is ScriptExecutionResult
-    assert dcc_mcp_core.allow_script_materialization_root is allow_script_materialization_root
-    assert dcc_mcp_core.normalize_file_backed_script_execution_params is normalize_file_backed_script_execution_params
-    assert dcc_mcp_core.normalize_script_execution_params is normalize_script_execution_params
-    assert dcc_mcp_core.validate_script_file_path is validate_script_file_path
-    assert "ScriptExecutionCapture" in dcc_mcp_core.__all__
-    assert "FileBackedScriptExecutionParams" in dcc_mcp_core.__all__
-    assert "ScriptExecutionParams" in dcc_mcp_core.__all__
-    assert "ScriptExecutionResult" in dcc_mcp_core.__all__
-    assert dcc_mcp_core.ScriptExecutionContext is ScriptExecutionContext
-    assert callable(dcc_mcp_core.get_default_script_execution_context)
-    assert callable(dcc_mcp_core.reset_default_script_execution_context_for_tests)
-    assert "allow_script_materialization_root" in dcc_mcp_core.__all__
-    assert "normalize_file_backed_script_execution_params" in dcc_mcp_core.__all__
-    assert "normalize_script_execution_params" in dcc_mcp_core.__all__
-    assert "validate_script_file_path" in dcc_mcp_core.__all__
+    assert meshy_dcc_core.ScriptExecutionCapture is ScriptExecutionCapture
+    assert meshy_dcc_core.FileBackedScriptExecutionParams is FileBackedScriptExecutionParams
+    assert meshy_dcc_core.ScriptExecutionParams is ScriptExecutionParams
+    assert meshy_dcc_core.ScriptExecutionResult is ScriptExecutionResult
+    assert meshy_dcc_core.allow_script_materialization_root is allow_script_materialization_root
+    assert meshy_dcc_core.normalize_file_backed_script_execution_params is normalize_file_backed_script_execution_params
+    assert meshy_dcc_core.normalize_script_execution_params is normalize_script_execution_params
+    assert meshy_dcc_core.validate_script_file_path is validate_script_file_path
+    assert "ScriptExecutionCapture" in meshy_dcc_core.__all__
+    assert "FileBackedScriptExecutionParams" in meshy_dcc_core.__all__
+    assert "ScriptExecutionParams" in meshy_dcc_core.__all__
+    assert "ScriptExecutionResult" in meshy_dcc_core.__all__
+    assert meshy_dcc_core.ScriptExecutionContext is ScriptExecutionContext
+    assert callable(meshy_dcc_core.get_default_script_execution_context)
+    assert callable(meshy_dcc_core.reset_default_script_execution_context_for_tests)
+    assert "allow_script_materialization_root" in meshy_dcc_core.__all__
+    assert "normalize_file_backed_script_execution_params" in meshy_dcc_core.__all__
+    assert "normalize_script_execution_params" in meshy_dcc_core.__all__
+    assert "validate_script_file_path" in meshy_dcc_core.__all__
 
 
 def test_script_execution_contexts_are_isolated() -> None:
@@ -222,7 +222,7 @@ def test_file_backed_normalizer_accepts_trusted_file_path(tmp_path: Path) -> Non
 
 
 def test_file_backed_normalizer_preserves_structured_params_and_materialized_provenance(tmp_path: Path) -> None:
-    descriptor = dcc_mcp_core.materialize_script(
+    descriptor = meshy_dcc_core.materialize_script(
         "def main(scale: float) -> float:\n    return scale * 2\n",
         dcc_type="maya",
         instance_id="maya-1",
@@ -278,14 +278,14 @@ def test_file_backed_normalizer_rejects_untrusted_file_path(tmp_path: Path) -> N
 
 
 def test_allow_script_materialization_root_extends_sandbox_allowlist(tmp_path: Path) -> None:
-    policy = dcc_mcp_core.SandboxPolicy()
+    policy = meshy_dcc_core.SandboxPolicy()
     trusted = tmp_path / "trusted"
     trusted.mkdir()
     root = tmp_path / "materialized"
     policy.allow_paths([str(trusted)])
 
     allowed_root = allow_script_materialization_root(policy, root=root)
-    ctx = dcc_mcp_core.SandboxContext(policy)
+    ctx = meshy_dcc_core.SandboxContext(policy)
 
     assert allowed_root == root.resolve()
     assert ctx.is_path_allowed(str(root / "custom" / "script.py")) is True
@@ -293,11 +293,11 @@ def test_allow_script_materialization_root_extends_sandbox_allowlist(tmp_path: P
 
 
 def test_allow_script_materialization_root_preserves_unrestricted_sandbox(tmp_path: Path) -> None:
-    policy = dcc_mcp_core.SandboxPolicy()
+    policy = meshy_dcc_core.SandboxPolicy()
     root = tmp_path / "materialized"
 
     allowed_root = allow_script_materialization_root(policy, root=root)
-    ctx = dcc_mcp_core.SandboxContext(policy)
+    ctx = meshy_dcc_core.SandboxContext(policy)
 
     assert allowed_root == root.resolve()
     assert ctx.is_path_allowed(str(root / "custom" / "script.py")) is True

@@ -14,7 +14,7 @@ These tests cover the Python-observable surface of issue #332:
    fires before the pump reaches it).
 
 The "executes on DCC main thread" half of AC 1/2 is covered by the Rust
-unit tests in ``crates/dcc-mcp-http/src/executor.rs`` — the Python surface
+unit tests in ``crates/meshy-dcc-http/src/executor.rs`` — the Python surface
 has no ``DeferredExecutor`` binding today so thread-identity assertions
 live alongside the ``submit_deferred`` implementation.
 """
@@ -30,9 +30,9 @@ import urllib.request
 import pytest
 
 from conftest import McpClient
-from dcc_mcp_core import McpHttpConfig
-from dcc_mcp_core import McpHttpServer
-from dcc_mcp_core import ToolRegistry
+from meshy_dcc_core import McpHttpConfig
+from meshy_dcc_core import McpHttpServer
+from meshy_dcc_core import ToolRegistry
 
 # ── helpers ───────────────────────────────────────────────────────────────
 

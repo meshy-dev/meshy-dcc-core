@@ -16,10 +16,10 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from dcc_mcp_core.project import PROJECT_DIR_NAME
-from dcc_mcp_core.project import PROJECT_STATE_FILE
-from dcc_mcp_core.project import DccProject
-from dcc_mcp_core.project import register_project_tools
+from meshy_dcc_core.project import PROJECT_DIR_NAME
+from meshy_dcc_core.project import PROJECT_STATE_FILE
+from meshy_dcc_core.project import DccProject
+from meshy_dcc_core.project import register_project_tools
 
 
 def _make_server() -> tuple[MagicMock, dict]:
@@ -68,7 +68,7 @@ class TestRegisterProjectTools:
         server, handlers = _make_server()
         register_project_tools(server)
 
-        # No .dcc-mcp/ has been created under tmp_path.
+        # No .meshy-dcc/ has been created under tmp_path.
         result = handlers["project_load"]({"scene_path": str(tmp_path / "never_saved.ma")})
 
         assert result["success"] is False
@@ -186,6 +186,6 @@ class TestRegisterProjectTools:
 
         with pytest.MonkeyPatch.context() as mp:
             mock_warn = MagicMock()
-            mp.setattr(logging.getLogger("dcc_mcp_core.project"), "warning", mock_warn)
+            mp.setattr(logging.getLogger("meshy_dcc_core.project"), "warning", mock_warn)
             register_project_tools(_BadServer())  # must not raise
             mock_warn.assert_called_once()

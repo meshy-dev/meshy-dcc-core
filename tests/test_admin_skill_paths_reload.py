@@ -6,7 +6,7 @@ Reproduces the workflow:
     gateway_admin.sqlite → adapter (Maya / Blender / …) must rediscover
     its catalog so the new path's skills become visible.
 
-Pre-#1400 only the standalone ``dcc-mcp-server`` binary picked these up via
+Pre-#1400 only the standalone ``meshy-dcc-server`` binary picked these up via
 its ``catalog_discover_hook``; per-DCC adapter processes did not. This
 suite covers the new ``DccServerBase.reload_skill_paths()`` path and the
 ``collect_skill_search_paths(include_admin_custom=True)`` default.
@@ -25,11 +25,11 @@ from typing import Sequence
 
 import pytest
 
-from dcc_mcp_core import admin_sqlite_lane
-from dcc_mcp_core.admin_sqlite_lane import GATEWAY_ADMIN_SQLITE_FILENAME
-from dcc_mcp_core.admin_sqlite_lane import filter_new_paths
-from dcc_mcp_core.admin_sqlite_lane import read_custom_skill_paths
-from dcc_mcp_core.admin_sqlite_lane import resolve_admin_db_path
+from meshy_dcc_core import admin_sqlite_lane
+from meshy_dcc_core.admin_sqlite_lane import GATEWAY_ADMIN_SQLITE_FILENAME
+from meshy_dcc_core.admin_sqlite_lane import filter_new_paths
+from meshy_dcc_core.admin_sqlite_lane import read_custom_skill_paths
+from meshy_dcc_core.admin_sqlite_lane import resolve_admin_db_path
 
 _SKILL_PATHS_DDL = """
 CREATE TABLE IF NOT EXISTS skill_paths_custom (
@@ -43,7 +43,7 @@ CREATE TABLE IF NOT EXISTS skill_paths_custom (
 def _write_admin_skill_path(db_path: Path, value: str) -> None:
     """Mimic ``POST /admin/api/skill-paths`` against the gateway SQLite lane.
 
-    Uses the same DDL as ``crates/dcc-mcp-db/src/infra/gateway_admin_schema.rs``.
+    Uses the same DDL as ``crates/meshy-dcc-db/src/infra/gateway_admin_schema.rs``.
     """
     db_path.parent.mkdir(parents=True, exist_ok=True)
     with sqlite3.connect(db_path, timeout=2.0) as conn:
@@ -66,7 +66,7 @@ def _write_skill(skill_root: Path, name: str) -> None:
                 f"name: {name}",
                 f"description: e2e fixture {name}",
                 "metadata:",
-                "  dcc-mcp:",
+                "  meshy-dcc:",
                 "    dcc: maya",
                 "---",
                 f"# {name}",
@@ -88,7 +88,7 @@ def _write_tool_skill(skill_root: Path, name: str, tool_name: str) -> None:
                 f"name: {name}",
                 f"description: reload fixture {name}",
                 "metadata:",
-                "  dcc-mcp:",
+                "  meshy-dcc:",
                 "    dcc: maya",
                 "    tools: tools.yaml",
                 "---",
@@ -122,7 +122,7 @@ def _write_tool_skill(skill_root: Path, name: str, tool_name: str) -> None:
 @pytest.fixture
 def registry_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     """Isolate the admin SQLite file under tmp_path via the env var."""
-    monkeypatch.setenv("DCC_MCP_REGISTRY_DIR", str(tmp_path))
+    monkeypatch.setenv("MESHY_DCC_REGISTRY_DIR", str(tmp_path))
     return tmp_path
 
 
@@ -174,14 +174,14 @@ def test_server_base_reload_picks_up_admin_path(
     """The key #1400 regression: a path added to admin SQLite after the
     adapter has started must become visible after ``reload_skill_paths``.
     """
-    monkeypatch.delenv("DCC_MCP_DISABLE_DEFAULT_SKILL_PATHS", raising=False)
+    monkeypatch.delenv("MESHY_DCC_DISABLE_DEFAULT_SKILL_PATHS", raising=False)
     skill_root = tmp_path_factory.mktemp("studio-skills")
     _write_skill(skill_root, "ext-rigging")
 
     # Simulate a running adapter: build a DccServerBase but don't start
     # the HTTP listener (we only need its catalog wiring for this test).
-    from dcc_mcp_core import DccServerBase
-    from dcc_mcp_core._server.options import DccServerOptions
+    from meshy_dcc_core import DccServerBase
+    from meshy_dcc_core._server.options import DccServerOptions
 
     builtin = tmp_path_factory.mktemp("builtin-skills")
     opts = DccServerOptions.from_env(
@@ -226,12 +226,12 @@ def test_server_base_reload_refreshes_existing_skill_metadata(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """A marketplace update must replace an existing skill definition on disk."""
-    monkeypatch.setenv("DCC_MCP_DISABLE_DEFAULT_SKILL_PATHS", "1")
+    monkeypatch.setenv("MESHY_DCC_DISABLE_DEFAULT_SKILL_PATHS", "1")
     skill_root = tmp_path_factory.mktemp("marketplace-skills")
     _write_tool_skill(skill_root, "lookdev-turntable", "old_preset")
 
-    from dcc_mcp_core import DccServerBase
-    from dcc_mcp_core._server.options import DccServerOptions
+    from meshy_dcc_core import DccServerBase
+    from meshy_dcc_core._server.options import DccServerOptions
 
     opts = DccServerOptions.from_env(
         dcc_name="maya",
@@ -259,7 +259,7 @@ def test_server_base_reload_refreshes_existing_skill_metadata(
 
 def test_module_re_exports() -> None:
     """The public symbols are reachable from the top-level package."""
-    import dcc_mcp_core
+    import meshy_dcc_core
 
-    assert dcc_mcp_core.resolve_admin_db_path is admin_sqlite_lane.resolve_admin_db_path
-    assert dcc_mcp_core.read_custom_skill_paths is admin_sqlite_lane.read_custom_skill_paths
+    assert meshy_dcc_core.resolve_admin_db_path is admin_sqlite_lane.resolve_admin_db_path
+    assert meshy_dcc_core.read_custom_skill_paths is admin_sqlite_lane.read_custom_skill_paths

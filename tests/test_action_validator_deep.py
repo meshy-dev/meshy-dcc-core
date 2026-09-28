@@ -10,8 +10,8 @@ import json
 
 import pytest
 
-from dcc_mcp_core import ToolRegistry
-from dcc_mcp_core import ToolValidator
+from meshy_dcc_core import ToolRegistry
+from meshy_dcc_core import ToolValidator
 
 
 def _schema(**properties) -> str:

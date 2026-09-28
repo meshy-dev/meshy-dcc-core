@@ -17,12 +17,12 @@ import pytest
 from conftest import McpClient
 from conftest import allocate_gateway_port
 from conftest import wait_tcp_reachable
-from dcc_mcp_core import McpHttpConfig
-from dcc_mcp_core import create_skill_server
-from dcc_mcp_core._server.inprocess_executor import build_inprocess_executor
+from meshy_dcc_core import McpHttpConfig
+from meshy_dcc_core import create_skill_server
+from meshy_dcc_core._server.inprocess_executor import build_inprocess_executor
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-BUNDLED_SKILLS_DIR = REPO_ROOT / "python" / "dcc_mcp_core" / "skills"
+BUNDLED_SKILLS_DIR = REPO_ROOT / "python" / "meshy_dcc_core" / "skills"
 
 
 def _post_mcp(url: str, method: str, params: dict | None = None, rpc_id: int = 1) -> dict:
@@ -57,10 +57,10 @@ def ui_control_gateway(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     registry_dir = tmp_path / "registry"
     registry_dir.mkdir()
     state_dir = tmp_path / "ui-control-state"
-    monkeypatch.setenv("DCC_MCP_UI_CONTROL_BACKEND", "mock")
-    monkeypatch.setenv("DCC_MCP_UI_CONTROL_MOCK_STATE_DIR", str(state_dir))
-    monkeypatch.setenv("DCC_MCP_PYTHON_EXECUTABLE", sys.executable)
-    monkeypatch.setenv("DCC_MCP_PYTHON_SKILL_PATHS", str(BUNDLED_SKILLS_DIR))
+    monkeypatch.setenv("MESHY_DCC_UI_CONTROL_BACKEND", "mock")
+    monkeypatch.setenv("MESHY_DCC_UI_CONTROL_MOCK_STATE_DIR", str(state_dir))
+    monkeypatch.setenv("MESHY_DCC_PYTHON_EXECUTABLE", sys.executable)
+    monkeypatch.setenv("MESHY_DCC_PYTHON_SKILL_PATHS", str(BUNDLED_SKILLS_DIR))
 
     gateway_port = allocate_gateway_port()
     cfg = McpHttpConfig(port=0, server_name="ui-control-backend")

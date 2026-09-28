@@ -15,9 +15,9 @@ from __future__ import annotations
 import pytest
 
 # Import local modules
-from dcc_mcp_core import SkillGroup
-from dcc_mcp_core import ToolDispatcher
-from dcc_mcp_core import ToolRegistry
+from meshy_dcc_core import SkillGroup
+from meshy_dcc_core import ToolDispatcher
+from meshy_dcc_core import ToolRegistry
 
 # ── SkillGroup ───────────────────────────────────────────────────────────────
 

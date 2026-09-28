@@ -21,7 +21,7 @@ metadata:
         bins: [ffmpeg, ffprobe]
     emoji: "🎬"
     homepage: https://ffmpeg.org
-  dcc-mcp:
+  meshy-dcc:
     dcc: python
     version: "1.0.0"
     layer: infrastructure

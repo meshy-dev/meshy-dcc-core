@@ -11,7 +11,7 @@ import json
 
 import pytest
 
-import dcc_mcp_core
+import meshy_dcc_core
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -20,14 +20,14 @@ import dcc_mcp_core
 
 def _make_ctx(
     allow: list[str] | None = None, deny: list[str] | None = None, actor: str = "agent"
-) -> dcc_mcp_core.SandboxContext:
+) -> meshy_dcc_core.SandboxContext:
     """Build a SandboxContext with optional allow/deny lists and an actor."""
-    policy = dcc_mcp_core.SandboxPolicy()
+    policy = meshy_dcc_core.SandboxPolicy()
     if allow is not None:
         policy.allow_actions(allow)
     if deny is not None:
         policy.deny_actions(deny)
-    ctx = dcc_mcp_core.SandboxContext(policy)
+    ctx = meshy_dcc_core.SandboxContext(policy)
     ctx.set_actor(actor)
     return ctx
 
@@ -49,8 +49,8 @@ class TestAuditEntryFields:
 
     def test_actor_default_when_not_set(self) -> None:
         """Without set_actor(), actor may be None or an empty string."""
-        policy = dcc_mcp_core.SandboxPolicy()
-        ctx = dcc_mcp_core.SandboxContext(policy)
+        policy = meshy_dcc_core.SandboxPolicy()
+        ctx = meshy_dcc_core.SandboxContext(policy)
         ctx.execute_json("list_objects", "{}")
         entry = ctx.audit_log.entries()[0]
         # actor is None when no actor has been set
@@ -189,8 +189,8 @@ class TestAuditLogToJson:
 
     def test_to_json_empty_log_returns_empty_array(self) -> None:
         """to_json() on an empty log returns an empty JSON array."""
-        policy = dcc_mcp_core.SandboxPolicy()
-        ctx = dcc_mcp_core.SandboxContext(policy)
+        policy = meshy_dcc_core.SandboxPolicy()
+        ctx = meshy_dcc_core.SandboxContext(policy)
         records = json.loads(ctx.audit_log.to_json())
         assert records == []
 
@@ -211,7 +211,7 @@ class TestAuditLogToJson:
 class TestDccCapabilities:
     def test_default_all_false(self) -> None:
         """Default DccCapabilities has all boolean fields False."""
-        dc = dcc_mcp_core.DccCapabilities()
+        dc = meshy_dcc_core.DccCapabilities()
         assert dc.file_operations is False
         assert dc.progress_reporting is False
         assert dc.scene_info is False
@@ -221,57 +221,57 @@ class TestDccCapabilities:
 
     def test_default_script_languages_empty(self) -> None:
         """Default script_languages is an empty list."""
-        dc = dcc_mcp_core.DccCapabilities()
+        dc = meshy_dcc_core.DccCapabilities()
         assert dc.script_languages == []
 
     def test_default_extensions_empty_dict(self) -> None:
         """Default extensions is an empty dict."""
-        dc = dcc_mcp_core.DccCapabilities()
+        dc = meshy_dcc_core.DccCapabilities()
         assert dc.extensions == {}
 
     def test_set_file_operations(self) -> None:
-        dc = dcc_mcp_core.DccCapabilities()
+        dc = meshy_dcc_core.DccCapabilities()
         dc.file_operations = True
         assert dc.file_operations is True
 
     def test_set_snapshot(self) -> None:
-        dc = dcc_mcp_core.DccCapabilities()
+        dc = meshy_dcc_core.DccCapabilities()
         dc.snapshot = True
         assert dc.snapshot is True
 
     def test_set_scene_info(self) -> None:
-        dc = dcc_mcp_core.DccCapabilities()
+        dc = meshy_dcc_core.DccCapabilities()
         dc.scene_info = True
         assert dc.scene_info is True
 
     def test_set_undo_redo(self) -> None:
-        dc = dcc_mcp_core.DccCapabilities()
+        dc = meshy_dcc_core.DccCapabilities()
         dc.undo_redo = True
         assert dc.undo_redo is True
 
     def test_set_selection(self) -> None:
-        dc = dcc_mcp_core.DccCapabilities()
+        dc = meshy_dcc_core.DccCapabilities()
         dc.selection = True
         assert dc.selection is True
 
     def test_set_progress_reporting(self) -> None:
-        dc = dcc_mcp_core.DccCapabilities()
+        dc = meshy_dcc_core.DccCapabilities()
         dc.progress_reporting = True
         assert dc.progress_reporting is True
 
     def test_repr_contains_class_name(self) -> None:
-        dc = dcc_mcp_core.DccCapabilities()
+        dc = meshy_dcc_core.DccCapabilities()
         assert "DccCapabilities" in repr(dc)
 
     def test_repr_after_enabling_snapshot(self) -> None:
         """repr() should reflect snapshot=true after enabling it."""
-        dc = dcc_mcp_core.DccCapabilities()
+        dc = meshy_dcc_core.DccCapabilities()
         dc.snapshot = True
         assert "true" in repr(dc).lower() or "snapshot" in repr(dc).lower()
 
     def test_set_multiple_fields_independent(self) -> None:
         """Setting one field does not affect others."""
-        dc = dcc_mcp_core.DccCapabilities()
+        dc = meshy_dcc_core.DccCapabilities()
         dc.snapshot = True
         dc.file_operations = True
         assert dc.scene_info is False
@@ -285,24 +285,24 @@ class TestDccCapabilities:
 
 class TestScriptLanguage:
     def test_python_variant_exists(self) -> None:
-        sl = dcc_mcp_core.ScriptLanguage.PYTHON
+        sl = meshy_dcc_core.ScriptLanguage.PYTHON
         assert sl is not None
 
     def test_mel_variant_exists(self) -> None:
-        sl = dcc_mcp_core.ScriptLanguage.MEL
+        sl = meshy_dcc_core.ScriptLanguage.MEL
         assert sl is not None
 
     def test_values_are_distinct(self) -> None:
-        assert dcc_mcp_core.ScriptLanguage.PYTHON != dcc_mcp_core.ScriptLanguage.MEL
+        assert meshy_dcc_core.ScriptLanguage.PYTHON != meshy_dcc_core.ScriptLanguage.MEL
 
     def test_dcc_capabilities_accepts_script_language(self) -> None:
         """DccCapabilities.script_languages can be set using ScriptLanguage enum values."""
-        dc = dcc_mcp_core.DccCapabilities()
-        dc.script_languages = [dcc_mcp_core.ScriptLanguage.PYTHON]
+        dc = meshy_dcc_core.DccCapabilities()
+        dc.script_languages = [meshy_dcc_core.ScriptLanguage.PYTHON]
         assert len(dc.script_languages) == 1
 
     def test_repr_is_string(self) -> None:
-        sl = dcc_mcp_core.ScriptLanguage.PYTHON
+        sl = meshy_dcc_core.ScriptLanguage.PYTHON
         assert isinstance(repr(sl), str)
 
 
@@ -314,17 +314,17 @@ class TestScriptLanguage:
 class TestSandboxPolicyPaths:
     def test_allow_single_path(self, tmp_path) -> None:
         """A file inside an allowed directory should be permitted."""
-        policy = dcc_mcp_core.SandboxPolicy()
+        policy = meshy_dcc_core.SandboxPolicy()
         policy.allow_paths([str(tmp_path)])
-        ctx = dcc_mcp_core.SandboxContext(policy)
+        ctx = meshy_dcc_core.SandboxContext(policy)
         child = str(tmp_path / "scene.mb")
         assert ctx.is_path_allowed(child) is True
 
     def test_disallow_path_outside_allowlist(self, tmp_path) -> None:
         """A path outside all allowed directories must be denied."""
-        policy = dcc_mcp_core.SandboxPolicy()
+        policy = meshy_dcc_core.SandboxPolicy()
         policy.allow_paths([str(tmp_path)])
-        ctx = dcc_mcp_core.SandboxContext(policy)
+        ctx = meshy_dcc_core.SandboxContext(policy)
         assert ctx.is_path_allowed("/etc/shadow") is False
 
     def test_allow_multiple_paths(self, tmp_path) -> None:
@@ -333,24 +333,24 @@ class TestSandboxPolicyPaths:
         dir_b = tmp_path / "b"
         dir_a.mkdir()
         dir_b.mkdir()
-        policy = dcc_mcp_core.SandboxPolicy()
+        policy = meshy_dcc_core.SandboxPolicy()
         policy.allow_paths([str(dir_a), str(dir_b)])
-        ctx = dcc_mcp_core.SandboxContext(policy)
+        ctx = meshy_dcc_core.SandboxContext(policy)
         assert ctx.is_path_allowed(str(dir_a / "scene.mb")) is True
         assert ctx.is_path_allowed(str(dir_b / "assets.fbx")) is True
         assert ctx.is_path_allowed("/root/secret") is False
 
     def test_no_path_restriction_allows_all(self) -> None:
         """Without path restrictions, any path should be allowed."""
-        policy = dcc_mcp_core.SandboxPolicy()
-        ctx = dcc_mcp_core.SandboxContext(policy)
+        policy = meshy_dcc_core.SandboxPolicy()
+        ctx = meshy_dcc_core.SandboxContext(policy)
         assert ctx.is_path_allowed("/etc/passwd") is True
         assert ctx.is_path_allowed("/root") is True
 
     def test_empty_path_allowed_string(self, tmp_path) -> None:
         """is_path_allowed('') should return a bool without crashing."""
-        policy = dcc_mcp_core.SandboxPolicy()
+        policy = meshy_dcc_core.SandboxPolicy()
         policy.allow_paths([str(tmp_path)])
-        ctx = dcc_mcp_core.SandboxContext(policy)
+        ctx = meshy_dcc_core.SandboxContext(policy)
         result = ctx.is_path_allowed("")
         assert isinstance(result, bool)

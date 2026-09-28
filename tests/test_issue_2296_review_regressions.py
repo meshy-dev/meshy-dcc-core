@@ -8,22 +8,22 @@ from typing import Dict
 import pytest
 
 from conftest import McpClient
-from dcc_mcp_core import CancelToken
-from dcc_mcp_core import McpHttpConfig
-from dcc_mcp_core import McpHttpServer
-from dcc_mcp_core import ToolDispatcher
-from dcc_mcp_core import ToolPipeline
-from dcc_mcp_core import ToolRegistry
-from dcc_mcp_core import register_script_materialization_tools
-from dcc_mcp_core import reset_cancel_token
-from dcc_mcp_core import set_cancel_token
-from dcc_mcp_core.batch import EvalContext
-from dcc_mcp_core.dcc_api_executor import DccApiExecutor
-from dcc_mcp_core.dcc_api_executor import register_dcc_api_executor
-from dcc_mcp_core.schema import derive_schema
-from dcc_mcp_core.schema import derive_script_parameters_schema
-from dcc_mcp_core.script_materialization import materialize_script
-from dcc_mcp_core.skills_helper import ToolValidator
+from meshy_dcc_core import CancelToken
+from meshy_dcc_core import McpHttpConfig
+from meshy_dcc_core import McpHttpServer
+from meshy_dcc_core import ToolDispatcher
+from meshy_dcc_core import ToolPipeline
+from meshy_dcc_core import ToolRegistry
+from meshy_dcc_core import register_script_materialization_tools
+from meshy_dcc_core import reset_cancel_token
+from meshy_dcc_core import set_cancel_token
+from meshy_dcc_core.batch import EvalContext
+from meshy_dcc_core.dcc_api_executor import DccApiExecutor
+from meshy_dcc_core.dcc_api_executor import register_dcc_api_executor
+from meshy_dcc_core.schema import derive_schema
+from meshy_dcc_core.schema import derive_script_parameters_schema
+from meshy_dcc_core.script_materialization import materialize_script
+from meshy_dcc_core.skills_helper import ToolValidator
 
 
 def _real_dispatch_pipeline(
@@ -52,7 +52,7 @@ def _real_dispatch_pipeline(
         if delay_seconds:
             time.sleep(delay_seconds)
         if observe_cancel:
-            from dcc_mcp_core import check_cancelled
+            from meshy_dcc_core import check_cancelled
 
             check_cancelled()
         return {"success": True, "result": params["value"] * 2}

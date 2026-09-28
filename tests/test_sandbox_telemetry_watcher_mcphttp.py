@@ -19,12 +19,12 @@ import tempfile
 
 import pytest
 
-from dcc_mcp_core import McpHttpConfig
-from dcc_mcp_core import SandboxContext
-from dcc_mcp_core import SandboxPolicy
-from dcc_mcp_core import SkillWatcher
-from dcc_mcp_core import TelemetryConfig
-from dcc_mcp_core import ToolRecorder
+from meshy_dcc_core import McpHttpConfig
+from meshy_dcc_core import SandboxContext
+from meshy_dcc_core import SandboxPolicy
+from meshy_dcc_core import SkillWatcher
+from meshy_dcc_core import TelemetryConfig
+from meshy_dcc_core import ToolRecorder
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -37,7 +37,7 @@ def _make_skill_dir(root: str, name: str = "test_skill") -> str:
     skill_dir.mkdir(parents=True, exist_ok=True)
     (skill_dir / "SKILL.md").write_text(
         f"---\nname: {name}\ndescription: A test skill\n"
-        f"metadata:\n  dcc-mcp:\n    version: 1.0.0\n    tags: [test]\n  author: test\n"
+        f"metadata:\n  meshy-dcc:\n    version: 1.0.0\n    tags: [test]\n  author: test\n"
         f"---\n\n# {name}\n"
     )
     return root
@@ -573,8 +573,8 @@ class TestTelemetryConfigBuilder:
         assert t.service_name == ""
 
     def test_service_name_with_special_chars(self):
-        t = TelemetryConfig("dcc-mcp-core/maya")
-        assert "dcc-mcp-core/maya" in t.service_name
+        t = TelemetryConfig("meshy-dcc-core/maya")
+        assert "meshy-dcc-core/maya" in t.service_name
 
     def test_init_method_exists(self):
         t = TelemetryConfig("svc")
@@ -921,7 +921,7 @@ class TestMcpHttpConfigAttributes:
 
     def test_server_name_default_value(self):
         c = McpHttpConfig(8765)
-        assert c.server_name == "dcc-mcp"
+        assert c.server_name == "meshy-dcc"
 
     def test_server_version_contains_dot(self):
         c = McpHttpConfig(8765)

@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import pytest
 
-from dcc_mcp_core import CapabilityEdge
-from dcc_mcp_core import CapabilityGraph
-from dcc_mcp_core import EdgeKind
+from meshy_dcc_core import CapabilityEdge
+from meshy_dcc_core import CapabilityGraph
+from meshy_dcc_core import EdgeKind
 
 
 class TestEdgeKind:

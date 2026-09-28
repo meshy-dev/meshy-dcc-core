@@ -17,7 +17,7 @@ metadata:
         - usdchecker
     emoji: "🎬"
     homepage: https://openusd.org
-  dcc-mcp:
+  meshy-dcc:
     dcc: python
     version: "1.0.0"
     layer: infrastructure

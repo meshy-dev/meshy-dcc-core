@@ -19,15 +19,15 @@ from __future__ import annotations
 
 import pytest
 
-from dcc_mcp_core import CaptureResult
-from dcc_mcp_core import DccErrorCode
-from dcc_mcp_core import PromptArgument
-from dcc_mcp_core import PromptDefinition
-from dcc_mcp_core import PySceneDataKind
-from dcc_mcp_core import ResourceAnnotations
-from dcc_mcp_core import ResourceDefinition
-from dcc_mcp_core import ResourceTemplateDefinition
-from dcc_mcp_core import ScriptLanguage
+from meshy_dcc_core import CaptureResult
+from meshy_dcc_core import DccErrorCode
+from meshy_dcc_core import PromptArgument
+from meshy_dcc_core import PromptDefinition
+from meshy_dcc_core import PySceneDataKind
+from meshy_dcc_core import ResourceAnnotations
+from meshy_dcc_core import ResourceDefinition
+from meshy_dcc_core import ResourceTemplateDefinition
+from meshy_dcc_core import ScriptLanguage
 
 # ---------------------------------------------------------------------------
 # ResourceAnnotations

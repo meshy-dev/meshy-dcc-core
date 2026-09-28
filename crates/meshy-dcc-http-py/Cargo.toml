@@ -1,0 +1,61 @@
+[package]
+name = "meshy-dcc-http-py"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "PyO3 bindings for the Meshy DCC HTTP server."
+keywords = ["mcp", "http", "python", "pyo3"]
+categories = ["api-bindings"]
+
+[lib]
+doctest = false
+
+[lints]
+workspace = true
+
+[dependencies]
+meshy-dcc-http = { workspace = true }
+meshy-dcc-http-types = { workspace = true }
+meshy-dcc-actions = { workspace = true }
+meshy-dcc-artefact = { workspace = true }
+meshy-dcc-host = { workspace = true }
+meshy-dcc-jsonrpc = { workspace = true }
+meshy-dcc-models = { workspace = true }
+meshy-dcc-pybridge = { workspace = true }
+meshy-dcc-skill-rest = { workspace = true }
+meshy-dcc-skills = { workspace = true }
+parking_lot = { workspace = true }
+pyo3 = { workspace = true, optional = true }
+pyo3-stub-gen = { workspace = true, optional = true }
+pyo3-stub-gen-derive = { workspace = true, optional = true }
+serde_json = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+workspace-hack = { version = "0.1", path = "../workspace-hack" }
+
+[dev-dependencies]
+pyo3 = { workspace = true, features = ["auto-initialize"] }
+
+[features]
+default = []
+python-bindings = [
+    "dep:pyo3",
+    "meshy-dcc-actions/python-bindings",
+    "meshy-dcc-artefact/python-bindings",
+    "meshy-dcc-host/python-bindings",
+    "meshy-dcc-pybridge/python-bindings",
+    "meshy-dcc-skills/python-bindings",
+]
+stub-gen = [
+    "python-bindings",
+    "dep:pyo3-stub-gen",
+    "dep:pyo3-stub-gen-derive",
+    "meshy-dcc-http/stub-gen",
+]
+prometheus = ["meshy-dcc-http/prometheus"]
+job-persist-sqlite = ["meshy-dcc-http/job-persist-sqlite"]
+# Forward the opt-in MCP 2026 stateless HTTP path into the PyO3 wheel.
+mcp-2026-07-28 = ["meshy-dcc-http/mcp-2026-07-28"]

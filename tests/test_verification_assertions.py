@@ -7,22 +7,22 @@ from pathlib import Path
 
 import pytest
 
-from dcc_mcp_core.verification import SCHEMA_ANIM_CURVES
-from dcc_mcp_core.verification import AssertionFailure
-from dcc_mcp_core.verification import BehaviorReport
-from dcc_mcp_core.verification import BehaviorVerifier
-from dcc_mcp_core.verification import Check
-from dcc_mcp_core.verification import assert_exact
-from dcc_mcp_core.verification import assert_exists
-from dcc_mcp_core.verification import assert_in_band
-from dcc_mcp_core.verification import assert_resolution
-from dcc_mcp_core.verification import assert_state_schema
-from dcc_mcp_core.verification import assert_within
+from meshy_dcc_core.verification import SCHEMA_ANIM_CURVES
+from meshy_dcc_core.verification import AssertionFailure
+from meshy_dcc_core.verification import BehaviorReport
+from meshy_dcc_core.verification import BehaviorVerifier
+from meshy_dcc_core.verification import Check
+from meshy_dcc_core.verification import assert_exact
+from meshy_dcc_core.verification import assert_exists
+from meshy_dcc_core.verification import assert_in_band
+from meshy_dcc_core.verification import assert_resolution
+from meshy_dcc_core.verification import assert_state_schema
+from meshy_dcc_core.verification import assert_within
 
 
 def _anim_curves_payload(key_count=3):
     return {
-        "schema_name": "dcc-mcp/anim-curves",
+        "schema_name": "meshy-dcc/anim-curves",
         "schema_version": 1,
         "curves": [
             {

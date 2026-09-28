@@ -1,6 +1,6 @@
 """Live-upstream ForgeCAD + in-repo ClawHub skill ecosystem E2E coverage.
 
-Addresses GitHub issue #703: prove that ``dcc-mcp-core`` can consume real
+Addresses GitHub issue #703: prove that ``meshy-dcc-core`` can consume real
 third-party skill ecosystems **without modification** — automatically
 inferring the metadata it needs (dcc, layer, tools, tags) and exposing
 them as MCP services over both MCP and REST.
@@ -11,15 +11,15 @@ Two ecosystems are covered:
    Real upstream skills live under ``skills/`` in that repository. Their
    ``SKILL.md`` files use the agentskills.io-minimal shape: just ``name``,
    ``description``, and ``forgecad-public: true``. No ``dcc``, no
-   ``tools.yaml``, no ``metadata.dcc-mcp.*`` — exactly the case that
+   ``tools.yaml``, no ``metadata.meshy-dcc.*`` — exactly the case that
    exercises our auto-inference.
 
    Because this half clones from the public internet, every test in this
    file that touches upstream content is gated behind
-   ``DCC_MCP_E2E_LIVE_FORGECAD=1``. Default CI never hits the network.
+   ``MESHY_DCC_E2E_LIVE_FORGECAD=1``. Default CI never hits the network.
 
-2. **ClawHub / OpenClaw** — the canonical DCC-MCP Agent Skill repository is
-   https://github.com/dcc-mcp/dcc-mcp-agent-plugins. The in-repo fixture at
+2. **ClawHub / OpenClaw** — the canonical Meshy DCC Agent Skill repository is
+   https://github.com/meshy-dev/meshy-dcc-agent-plugins. The in-repo fixture at
    ``examples/skills/clawhub-compat/`` already carries the full
    ``metadata.openclaw.*`` surface (``requires``, ``primaryEnv``,
    ``emoji``, ``homepage``, ``install``). Reusing that fixture is the
@@ -29,9 +29,9 @@ CI impact
 ---------
 Default CI runs exactly one test from this file: the ungated ClawHub
 fixture test. All upstream-clone tests ``pytest.skip`` when
-``DCC_MCP_E2E_LIVE_FORGECAD`` is unset. Local reviewers can opt-in with::
+``MESHY_DCC_E2E_LIVE_FORGECAD`` is unset. Local reviewers can opt-in with::
 
-    DCC_MCP_E2E_LIVE_FORGECAD=1 pytest tests/test_e2e_live_upstream_skills.py -v
+    MESHY_DCC_E2E_LIVE_FORGECAD=1 pytest tests/test_e2e_live_upstream_skills.py -v
 
 Risks and fallbacks (see the issue #703 design doc for details):
 - ``git`` binary missing → test skips with a diagnostic.
@@ -65,12 +65,12 @@ from conftest import McpClient
 from conftest import wait_tcp_reachable
 
 # Import local modules
-import dcc_mcp_core
-from dcc_mcp_core import McpHttpConfig
-from dcc_mcp_core import McpHttpServer
-from dcc_mcp_core import ToolRegistry
-from dcc_mcp_core import create_skill_server
-from dcc_mcp_core import scan_and_load
+import meshy_dcc_core
+from meshy_dcc_core import McpHttpConfig
+from meshy_dcc_core import McpHttpServer
+from meshy_dcc_core import ToolRegistry
+from meshy_dcc_core import create_skill_server
+from meshy_dcc_core import scan_and_load
 
 # ── Constants ──────────────────────────────────────────────────────────────
 
@@ -84,10 +84,10 @@ UPSTREAM_SENTINEL = UPSTREAM_SKILLS_DIR / "forgecad" / "SKILL.md"
 CLONE_TIMEOUT_S = 60.0
 CLAWHUB_SKILL_DIR = str(REPO_ROOT / "examples" / "skills" / "clawhub-compat")
 
-LIVE_FORGECAD = os.environ.get("DCC_MCP_E2E_LIVE_FORGECAD") == "1"
+LIVE_FORGECAD = os.environ.get("MESHY_DCC_E2E_LIVE_FORGECAD") == "1"
 
 SKIP_LIVE_REASON = (
-    f"Live upstream test requires DCC_MCP_E2E_LIVE_FORGECAD=1 (clones {UPSTREAM_REPO_URL} into tests/_cache/)"
+    f"Live upstream test requires MESHY_DCC_E2E_LIVE_FORGECAD=1 (clones {UPSTREAM_REPO_URL} into tests/_cache/)"
 )
 
 
@@ -432,7 +432,7 @@ def test_clawhub_local_fixture_auto_infers_and_registers(tmp_path: Path) -> None
     ``homepage``, ``install``) so scanning it exercises exactly the same
     auto-inference path a live ClawHub clone would.
 
-    The public DCC-MCP Agent Skill repository is tested in its own CI; Core
+    The public Meshy DCC Agent Skill repository is tested in its own CI; Core
     keeps this parser test network-free.
     """
     skills, skipped = scan_and_load(extra_paths=[CLAWHUB_SKILL_DIR])

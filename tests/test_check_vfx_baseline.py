@@ -40,7 +40,7 @@ def declare(year, host="core", requires_python=">=3.7", dependencies=()):
             "requires-python": requires_python,
             "dependencies": list(dependencies),
         },
-        "tool": {"dcc-mcp": {"vfx-platform": {"year": year, "host": host}}},
+        "tool": {"meshy-dcc": {"vfx-platform": {"year": year, "host": host}}},
     }
 
 
@@ -100,7 +100,7 @@ def test_unknown_tier_is_an_error(baseline):
 
 def test_missing_host_is_an_error(baseline):
     doc = declare("CY2026")
-    doc["tool"]["dcc-mcp"]["vfx-platform"].pop("host")
+    doc["tool"]["meshy-dcc"]["vfx-platform"].pop("host")
     errors, _ = evaluate(doc, baseline)
     assert any("host is required" in e for e in errors)
 
@@ -108,7 +108,7 @@ def test_missing_host_is_an_error(baseline):
 def test_core_repository_declares_both_tiers():
     """The real pyproject in this repo must declare its alignment."""
     pyproject = load_pyproject(REPO_ROOT / "pyproject.toml")
-    decl = pyproject["tool"]["dcc-mcp"]["vfx-platform"]
+    decl = pyproject["tool"]["meshy-dcc"]["vfx-platform"]
     assert set(decl["year"]) == {"CY2026", "py37"}
     assert decl["host"] == "core"
 
@@ -241,7 +241,7 @@ def test_open_upper_bound_warns_without_failing(baseline):
 def test_open_upper_bound_can_be_made_strict(baseline):
     name, body = first_pypi_component(baseline, "CY2026", with_floor=True)
     doc = declare("CY2026", dependencies=[f"{body['pypi']}>={body['floor']}"])
-    doc["tool"]["dcc-mcp"]["vfx-platform"]["strict_upper_bound"] = True
+    doc["tool"]["meshy-dcc"]["vfx-platform"]["strict_upper_bound"] = True
     errors, _ = evaluate(doc, baseline)
     assert any(f"CY2026/{name}" in e and "open above" in e for e in errors)
 

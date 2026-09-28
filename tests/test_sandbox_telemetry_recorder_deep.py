@@ -25,33 +25,33 @@ import pytest
 
 class TestSandboxPolicyCreate:
     def test_create_default(self):
-        from dcc_mcp_core import SandboxPolicy
+        from meshy_dcc_core import SandboxPolicy
 
         sp = SandboxPolicy()
         assert sp is not None
 
     def test_repr_contains_sandbox(self):
-        from dcc_mcp_core import SandboxPolicy
+        from meshy_dcc_core import SandboxPolicy
 
         sp = SandboxPolicy()
         r = repr(sp)
         assert "Sandbox" in r or "Policy" in r or "sandbox" in r or "policy" in r
 
     def test_is_read_only_default_false(self):
-        from dcc_mcp_core import SandboxPolicy
+        from meshy_dcc_core import SandboxPolicy
 
         sp = SandboxPolicy()
         assert sp.is_read_only is False
 
     def test_set_read_only_true(self):
-        from dcc_mcp_core import SandboxPolicy
+        from meshy_dcc_core import SandboxPolicy
 
         sp = SandboxPolicy()
         sp.set_read_only(True)
         assert sp.is_read_only is True
 
     def test_set_read_only_false(self):
-        from dcc_mcp_core import SandboxPolicy
+        from meshy_dcc_core import SandboxPolicy
 
         sp = SandboxPolicy()
         sp.set_read_only(True)
@@ -59,56 +59,56 @@ class TestSandboxPolicyCreate:
         assert sp.is_read_only is False
 
     def test_allow_actions_list(self):
-        from dcc_mcp_core import SandboxPolicy
+        from meshy_dcc_core import SandboxPolicy
 
         sp = SandboxPolicy()
         sp.allow_actions(["create_sphere", "delete_mesh"])
         # Just ensure no exception
 
     def test_deny_actions_list(self):
-        from dcc_mcp_core import SandboxPolicy
+        from meshy_dcc_core import SandboxPolicy
 
         sp = SandboxPolicy()
         sp.deny_actions(["rm_all", "wipe_scene"])
 
     def test_allow_paths_list(self):
-        from dcc_mcp_core import SandboxPolicy
+        from meshy_dcc_core import SandboxPolicy
 
         sp = SandboxPolicy()
         sp.allow_paths(["/tmp/project", "C:/work"])
 
     def test_set_max_actions(self):
-        from dcc_mcp_core import SandboxPolicy
+        from meshy_dcc_core import SandboxPolicy
 
         sp = SandboxPolicy()
         sp.set_max_actions(100)
 
     def test_set_max_actions_zero(self):
-        from dcc_mcp_core import SandboxPolicy
+        from meshy_dcc_core import SandboxPolicy
 
         sp = SandboxPolicy()
         sp.set_max_actions(0)
 
     def test_set_timeout_ms(self):
-        from dcc_mcp_core import SandboxPolicy
+        from meshy_dcc_core import SandboxPolicy
 
         sp = SandboxPolicy()
         sp.set_timeout_ms(5000)
 
     def test_set_timeout_ms_large(self):
-        from dcc_mcp_core import SandboxPolicy
+        from meshy_dcc_core import SandboxPolicy
 
         sp = SandboxPolicy()
         sp.set_timeout_ms(60000)
 
     def test_allow_empty_list(self):
-        from dcc_mcp_core import SandboxPolicy
+        from meshy_dcc_core import SandboxPolicy
 
         sp = SandboxPolicy()
         sp.allow_actions([])
 
     def test_deny_empty_list(self):
-        from dcc_mcp_core import SandboxPolicy
+        from meshy_dcc_core import SandboxPolicy
 
         sp = SandboxPolicy()
         sp.deny_actions([])
@@ -121,16 +121,16 @@ class TestSandboxPolicyCreate:
 
 class TestSandboxContextIsAllowed:
     def test_no_whitelist_any_allowed(self):
-        from dcc_mcp_core import SandboxContext
-        from dcc_mcp_core import SandboxPolicy
+        from meshy_dcc_core import SandboxContext
+        from meshy_dcc_core import SandboxPolicy
 
         sp = SandboxPolicy()
         sc = SandboxContext(sp)
         assert sc.is_allowed("any_action") is True
 
     def test_whitelist_set_allowed(self):
-        from dcc_mcp_core import SandboxContext
-        from dcc_mcp_core import SandboxPolicy
+        from meshy_dcc_core import SandboxContext
+        from meshy_dcc_core import SandboxPolicy
 
         sp = SandboxPolicy()
         sp.allow_actions(["create_sphere", "delete_mesh"])
@@ -138,8 +138,8 @@ class TestSandboxContextIsAllowed:
         assert sc.is_allowed("create_sphere") is True
 
     def test_whitelist_set_blocked(self):
-        from dcc_mcp_core import SandboxContext
-        from dcc_mcp_core import SandboxPolicy
+        from meshy_dcc_core import SandboxContext
+        from meshy_dcc_core import SandboxPolicy
 
         sp = SandboxPolicy()
         sp.allow_actions(["create_sphere"])
@@ -147,8 +147,8 @@ class TestSandboxContextIsAllowed:
         assert sc.is_allowed("delete_all") is False
 
     def test_deny_list_blocks(self):
-        from dcc_mcp_core import SandboxContext
-        from dcc_mcp_core import SandboxPolicy
+        from meshy_dcc_core import SandboxContext
+        from meshy_dcc_core import SandboxPolicy
 
         sp = SandboxPolicy()
         sp.deny_actions(["rm_all", "wipe"])
@@ -156,8 +156,8 @@ class TestSandboxContextIsAllowed:
         assert sc.is_allowed("rm_all") is False
 
     def test_deny_list_allows_others(self):
-        from dcc_mcp_core import SandboxContext
-        from dcc_mcp_core import SandboxPolicy
+        from meshy_dcc_core import SandboxContext
+        from meshy_dcc_core import SandboxPolicy
 
         sp = SandboxPolicy()
         sp.deny_actions(["rm_all"])
@@ -165,8 +165,8 @@ class TestSandboxContextIsAllowed:
         assert sc.is_allowed("create_sphere") is True
 
     def test_multiple_allowed(self):
-        from dcc_mcp_core import SandboxContext
-        from dcc_mcp_core import SandboxPolicy
+        from meshy_dcc_core import SandboxContext
+        from meshy_dcc_core import SandboxPolicy
 
         sp = SandboxPolicy()
         sp.allow_actions(["a", "b", "c"])
@@ -175,8 +175,8 @@ class TestSandboxContextIsAllowed:
             assert sc.is_allowed(action) is True
 
     def test_multiple_blocked(self):
-        from dcc_mcp_core import SandboxContext
-        from dcc_mcp_core import SandboxPolicy
+        from meshy_dcc_core import SandboxContext
+        from meshy_dcc_core import SandboxPolicy
 
         sp = SandboxPolicy()
         sp.allow_actions(["a"])
@@ -192,8 +192,8 @@ class TestSandboxContextIsAllowed:
 
 class TestSandboxContextIsPathAllowed:
     def test_no_paths_configured_allows_all(self):
-        from dcc_mcp_core import SandboxContext
-        from dcc_mcp_core import SandboxPolicy
+        from meshy_dcc_core import SandboxContext
+        from meshy_dcc_core import SandboxPolicy
 
         sp = SandboxPolicy()
         sc = SandboxContext(sp)
@@ -201,8 +201,8 @@ class TestSandboxContextIsPathAllowed:
 
     def test_exact_path_match_not_allowed(self):
         """allow_paths uses prefix/exact match; '/tmp/project' does not match '/tmp/project/file.py'."""
-        from dcc_mcp_core import SandboxContext
-        from dcc_mcp_core import SandboxPolicy
+        from meshy_dcc_core import SandboxContext
+        from meshy_dcc_core import SandboxPolicy
 
         sp = SandboxPolicy()
         sp.allow_paths(["/tmp/project"])
@@ -217,14 +217,14 @@ class TestSandboxContextIsPathAllowed:
         from pathlib import Path
         import tempfile
 
-        from dcc_mcp_core import SandboxContext
-        from dcc_mcp_core import SandboxPolicy
+        from meshy_dcc_core import SandboxContext
+        from meshy_dcc_core import SandboxPolicy
 
         # Use an *existing* directory as the allowed path so that
         # canonicalize() succeeds on all platforms (Windows, macOS, Linux).
         # A file inside that directory must then be allowed.
         tmp_dir = Path(tempfile.gettempdir()).resolve()
-        target = str(tmp_dir / "dcc_mcp_test_file.py")
+        target = str(tmp_dir / "meshy_dcc_test_file.py")
         sp = SandboxPolicy()
         sp.allow_paths([str(tmp_dir)])  # allow the parent directory
         sc = SandboxContext(sp)
@@ -232,8 +232,8 @@ class TestSandboxContextIsPathAllowed:
         assert sc.is_path_allowed(target) is True
 
     def test_unrelated_path_blocked(self):
-        from dcc_mcp_core import SandboxContext
-        from dcc_mcp_core import SandboxPolicy
+        from meshy_dcc_core import SandboxContext
+        from meshy_dcc_core import SandboxPolicy
 
         sp = SandboxPolicy()
         sp.allow_paths(["/tmp/project"])
@@ -241,8 +241,8 @@ class TestSandboxContextIsPathAllowed:
         assert sc.is_path_allowed("/home/user/secrets") is False
 
     def test_multiple_paths_all_blocked(self):
-        from dcc_mcp_core import SandboxContext
-        from dcc_mcp_core import SandboxPolicy
+        from meshy_dcc_core import SandboxContext
+        from meshy_dcc_core import SandboxPolicy
 
         sp = SandboxPolicy()
         sp.allow_paths(["/tmp/a", "/tmp/b"])
@@ -258,8 +258,8 @@ class TestSandboxContextIsPathAllowed:
 
 class TestSandboxContextExecuteJson:
     def test_allowed_action_executes(self):
-        from dcc_mcp_core import SandboxContext
-        from dcc_mcp_core import SandboxPolicy
+        from meshy_dcc_core import SandboxContext
+        from meshy_dcc_core import SandboxPolicy
 
         sp = SandboxPolicy()
         sp.allow_actions(["create_sphere"])
@@ -268,8 +268,8 @@ class TestSandboxContextExecuteJson:
         assert result is not None  # returns JSON string
 
     def test_allowed_action_increments_count(self):
-        from dcc_mcp_core import SandboxContext
-        from dcc_mcp_core import SandboxPolicy
+        from meshy_dcc_core import SandboxContext
+        from meshy_dcc_core import SandboxPolicy
 
         sp = SandboxPolicy()
         sp.allow_actions(["create_sphere"])
@@ -279,8 +279,8 @@ class TestSandboxContextExecuteJson:
         assert sc.action_count == 1
 
     def test_denied_action_raises_runtime_error(self):
-        from dcc_mcp_core import SandboxContext
-        from dcc_mcp_core import SandboxPolicy
+        from meshy_dcc_core import SandboxContext
+        from meshy_dcc_core import SandboxPolicy
 
         sp = SandboxPolicy()
         sp.allow_actions(["create_sphere"])
@@ -289,8 +289,8 @@ class TestSandboxContextExecuteJson:
             sc.execute_json("delete_all", "{}")
 
     def test_denied_action_does_not_increment_count(self):
-        from dcc_mcp_core import SandboxContext
-        from dcc_mcp_core import SandboxPolicy
+        from meshy_dcc_core import SandboxContext
+        from meshy_dcc_core import SandboxPolicy
 
         sp = SandboxPolicy()
         sp.allow_actions(["create_sphere"])
@@ -300,8 +300,8 @@ class TestSandboxContextExecuteJson:
         assert sc.action_count == 0
 
     def test_multiple_executions_count(self):
-        from dcc_mcp_core import SandboxContext
-        from dcc_mcp_core import SandboxPolicy
+        from meshy_dcc_core import SandboxContext
+        from meshy_dcc_core import SandboxPolicy
 
         sp = SandboxPolicy()
         sp.allow_actions(["act"])
@@ -311,8 +311,8 @@ class TestSandboxContextExecuteJson:
         assert sc.action_count == 5
 
     def test_result_is_string(self):
-        from dcc_mcp_core import SandboxContext
-        from dcc_mcp_core import SandboxPolicy
+        from meshy_dcc_core import SandboxContext
+        from meshy_dcc_core import SandboxPolicy
 
         sp = SandboxPolicy()
         sp.allow_actions(["create_sphere"])
@@ -321,8 +321,8 @@ class TestSandboxContextExecuteJson:
         assert isinstance(result, str)
 
     def test_set_actor(self):
-        from dcc_mcp_core import SandboxContext
-        from dcc_mcp_core import SandboxPolicy
+        from meshy_dcc_core import SandboxContext
+        from meshy_dcc_core import SandboxPolicy
 
         sp = SandboxPolicy()
         sc = SandboxContext(sp)
@@ -330,8 +330,8 @@ class TestSandboxContextExecuteJson:
         # No exception expected
 
     def test_action_count_is_property(self):
-        from dcc_mcp_core import SandboxContext
-        from dcc_mcp_core import SandboxPolicy
+        from meshy_dcc_core import SandboxContext
+        from meshy_dcc_core import SandboxPolicy
 
         sp = SandboxPolicy()
         sc = SandboxContext(sp)
@@ -347,44 +347,44 @@ class TestSandboxContextExecuteJson:
 
 class TestAuditLog:
     def test_audit_log_is_property(self):
-        from dcc_mcp_core import SandboxContext
-        from dcc_mcp_core import SandboxPolicy
+        from meshy_dcc_core import SandboxContext
+        from meshy_dcc_core import SandboxPolicy
 
         sc = SandboxContext(SandboxPolicy())
         al = sc.audit_log
         assert al is not None
 
     def test_audit_log_repr_len_zero(self):
-        from dcc_mcp_core import SandboxContext
-        from dcc_mcp_core import SandboxPolicy
+        from meshy_dcc_core import SandboxContext
+        from meshy_dcc_core import SandboxPolicy
 
         sc = SandboxContext(SandboxPolicy())
         assert "0" in repr(sc.audit_log)
 
     def test_entries_empty_initially(self):
-        from dcc_mcp_core import SandboxContext
-        from dcc_mcp_core import SandboxPolicy
+        from meshy_dcc_core import SandboxContext
+        from meshy_dcc_core import SandboxPolicy
 
         sc = SandboxContext(SandboxPolicy())
         assert sc.audit_log.entries() == []
 
     def test_denials_empty_initially(self):
-        from dcc_mcp_core import SandboxContext
-        from dcc_mcp_core import SandboxPolicy
+        from meshy_dcc_core import SandboxContext
+        from meshy_dcc_core import SandboxPolicy
 
         sc = SandboxContext(SandboxPolicy())
         assert sc.audit_log.denials() == []
 
     def test_successes_empty_initially(self):
-        from dcc_mcp_core import SandboxContext
-        from dcc_mcp_core import SandboxPolicy
+        from meshy_dcc_core import SandboxContext
+        from meshy_dcc_core import SandboxPolicy
 
         sc = SandboxContext(SandboxPolicy())
         assert sc.audit_log.successes() == []
 
     def test_to_json_empty_list(self):
-        from dcc_mcp_core import SandboxContext
-        from dcc_mcp_core import SandboxPolicy
+        from meshy_dcc_core import SandboxContext
+        from meshy_dcc_core import SandboxPolicy
 
         sc = SandboxContext(SandboxPolicy())
         j = sc.audit_log.to_json()
@@ -392,8 +392,8 @@ class TestAuditLog:
         assert data == []
 
     def test_entries_after_success(self):
-        from dcc_mcp_core import SandboxContext
-        from dcc_mcp_core import SandboxPolicy
+        from meshy_dcc_core import SandboxContext
+        from meshy_dcc_core import SandboxPolicy
 
         sp = SandboxPolicy()
         sp.allow_actions(["create_sphere"])
@@ -403,8 +403,8 @@ class TestAuditLog:
         assert len(entries) == 1
 
     def test_entry_action_name(self):
-        from dcc_mcp_core import SandboxContext
-        from dcc_mcp_core import SandboxPolicy
+        from meshy_dcc_core import SandboxContext
+        from meshy_dcc_core import SandboxPolicy
 
         sp = SandboxPolicy()
         sp.allow_actions(["create_sphere"])
@@ -414,8 +414,8 @@ class TestAuditLog:
         assert entry.action == "create_sphere"
 
     def test_entry_outcome_success(self):
-        from dcc_mcp_core import SandboxContext
-        from dcc_mcp_core import SandboxPolicy
+        from meshy_dcc_core import SandboxContext
+        from meshy_dcc_core import SandboxPolicy
 
         sp = SandboxPolicy()
         sp.allow_actions(["create_sphere"])
@@ -425,8 +425,8 @@ class TestAuditLog:
         assert "success" in str(entry.outcome).lower()
 
     def test_entry_duration_ms_nonneg(self):
-        from dcc_mcp_core import SandboxContext
-        from dcc_mcp_core import SandboxPolicy
+        from meshy_dcc_core import SandboxContext
+        from meshy_dcc_core import SandboxPolicy
 
         sp = SandboxPolicy()
         sp.allow_actions(["create_sphere"])
@@ -436,8 +436,8 @@ class TestAuditLog:
         assert entry.duration_ms >= 0
 
     def test_entry_timestamp_ms_positive(self):
-        from dcc_mcp_core import SandboxContext
-        from dcc_mcp_core import SandboxPolicy
+        from meshy_dcc_core import SandboxContext
+        from meshy_dcc_core import SandboxPolicy
 
         sp = SandboxPolicy()
         sp.allow_actions(["create_sphere"])
@@ -447,8 +447,8 @@ class TestAuditLog:
         assert entry.timestamp_ms > 0
 
     def test_entry_params_json(self):
-        from dcc_mcp_core import SandboxContext
-        from dcc_mcp_core import SandboxPolicy
+        from meshy_dcc_core import SandboxContext
+        from meshy_dcc_core import SandboxPolicy
 
         sp = SandboxPolicy()
         sp.allow_actions(["create_sphere"])
@@ -458,8 +458,8 @@ class TestAuditLog:
         assert entry.params_json is not None
 
     def test_entries_for_action_filtered(self):
-        from dcc_mcp_core import SandboxContext
-        from dcc_mcp_core import SandboxPolicy
+        from meshy_dcc_core import SandboxContext
+        from meshy_dcc_core import SandboxPolicy
 
         sp = SandboxPolicy()
         sp.allow_actions(["a", "b"])
@@ -473,15 +473,15 @@ class TestAuditLog:
             assert e.action == "a"
 
     def test_entries_for_action_empty(self):
-        from dcc_mcp_core import SandboxContext
-        from dcc_mcp_core import SandboxPolicy
+        from meshy_dcc_core import SandboxContext
+        from meshy_dcc_core import SandboxPolicy
 
         sc = SandboxContext(SandboxPolicy())
         assert sc.audit_log.entries_for_action("nonexistent") == []
 
     def test_denials_after_denied_action(self):
-        from dcc_mcp_core import SandboxContext
-        from dcc_mcp_core import SandboxPolicy
+        from meshy_dcc_core import SandboxContext
+        from meshy_dcc_core import SandboxPolicy
 
         sp = SandboxPolicy()
         sp.allow_actions(["ok_action"])
@@ -493,8 +493,8 @@ class TestAuditLog:
         assert denials[0].action == "delete_all"
 
     def test_successes_list(self):
-        from dcc_mcp_core import SandboxContext
-        from dcc_mcp_core import SandboxPolicy
+        from meshy_dcc_core import SandboxContext
+        from meshy_dcc_core import SandboxPolicy
 
         sp = SandboxPolicy()
         sp.allow_actions(["ok"])
@@ -504,8 +504,8 @@ class TestAuditLog:
         assert len(successes) == 1
 
     def test_to_json_valid_json(self):
-        from dcc_mcp_core import SandboxContext
-        from dcc_mcp_core import SandboxPolicy
+        from meshy_dcc_core import SandboxContext
+        from meshy_dcc_core import SandboxPolicy
 
         sp = SandboxPolicy()
         sp.allow_actions(["ok"])
@@ -517,8 +517,8 @@ class TestAuditLog:
         assert len(data) == 1
 
     def test_to_json_contains_action_name(self):
-        from dcc_mcp_core import SandboxContext
-        from dcc_mcp_core import SandboxPolicy
+        from meshy_dcc_core import SandboxContext
+        from meshy_dcc_core import SandboxPolicy
 
         sp = SandboxPolicy()
         sp.allow_actions(["my_action"])
@@ -528,8 +528,8 @@ class TestAuditLog:
         assert "my_action" in j
 
     def test_actor_set_in_entry(self):
-        from dcc_mcp_core import SandboxContext
-        from dcc_mcp_core import SandboxPolicy
+        from meshy_dcc_core import SandboxContext
+        from meshy_dcc_core import SandboxPolicy
 
         sp = SandboxPolicy()
         sp.allow_actions(["ok"])
@@ -540,8 +540,8 @@ class TestAuditLog:
         assert entry.actor == "my_agent"
 
     def test_denial_entry_outcome(self):
-        from dcc_mcp_core import SandboxContext
-        from dcc_mcp_core import SandboxPolicy
+        from meshy_dcc_core import SandboxContext
+        from meshy_dcc_core import SandboxPolicy
 
         sp = SandboxPolicy()
         sp.allow_actions(["safe"])
@@ -552,8 +552,8 @@ class TestAuditLog:
         assert "denied" in str(entry.outcome).lower()
 
     def test_mixed_entries_total(self):
-        from dcc_mcp_core import SandboxContext
-        from dcc_mcp_core import SandboxPolicy
+        from meshy_dcc_core import SandboxContext
+        from meshy_dcc_core import SandboxPolicy
 
         sp = SandboxPolicy()
         sp.allow_actions(["safe"])
@@ -572,13 +572,13 @@ class TestAuditLog:
 
 class TestInputValidatorCreate:
     def test_create(self):
-        from dcc_mcp_core import InputValidator
+        from meshy_dcc_core import InputValidator
 
         iv = InputValidator()
         assert iv is not None
 
     def test_repr(self):
-        from dcc_mcp_core import InputValidator
+        from meshy_dcc_core import InputValidator
 
         iv = InputValidator()
         r = repr(iv)
@@ -587,7 +587,7 @@ class TestInputValidatorCreate:
 
 class TestInputValidatorRequireString:
     def test_valid_string(self):
-        from dcc_mcp_core import InputValidator
+        from meshy_dcc_core import InputValidator
 
         iv = InputValidator()
         iv.require_string("name", 100, 1)
@@ -597,7 +597,7 @@ class TestInputValidatorRequireString:
 
     def test_missing_field_still_ok(self):
         """require_string adds a rule but missing keys may not be caught at validate time."""
-        from dcc_mcp_core import InputValidator
+        from meshy_dcc_core import InputValidator
 
         iv = InputValidator()
         iv.require_string("name", 100, 1)
@@ -606,7 +606,7 @@ class TestInputValidatorRequireString:
         assert isinstance(ok, bool)
 
     def test_forbid_substrings_blocks(self):
-        from dcc_mcp_core import InputValidator
+        from meshy_dcc_core import InputValidator
 
         iv = InputValidator()
         iv.forbid_substrings("name", ["--", "drop"])
@@ -616,7 +616,7 @@ class TestInputValidatorRequireString:
         assert "--" in err
 
     def test_forbid_substrings_allows_clean(self):
-        from dcc_mcp_core import InputValidator
+        from meshy_dcc_core import InputValidator
 
         iv = InputValidator()
         iv.forbid_substrings("name", ["--", "drop"])
@@ -625,7 +625,7 @@ class TestInputValidatorRequireString:
         assert err is None
 
     def test_forbid_multiple_substrings(self):
-        from dcc_mcp_core import InputValidator
+        from meshy_dcc_core import InputValidator
 
         iv = InputValidator()
         iv.forbid_substrings("cmd", ["rm", "del", "drop"])
@@ -636,7 +636,7 @@ class TestInputValidatorRequireString:
 
     def test_forbid_substring_different_field(self):
         """Forbidden substrings only apply to the specified field."""
-        from dcc_mcp_core import InputValidator
+        from meshy_dcc_core import InputValidator
 
         iv = InputValidator()
         iv.forbid_substrings("name", ["--"])
@@ -646,7 +646,7 @@ class TestInputValidatorRequireString:
 
 class TestInputValidatorRequireNumber:
     def test_valid_number_in_range(self):
-        from dcc_mcp_core import InputValidator
+        from meshy_dcc_core import InputValidator
 
         iv = InputValidator()
         iv.require_number("radius", 0.0, 1000.0)
@@ -654,7 +654,7 @@ class TestInputValidatorRequireNumber:
         assert ok is True
 
     def test_number_exceeds_max(self):
-        from dcc_mcp_core import InputValidator
+        from meshy_dcc_core import InputValidator
 
         iv = InputValidator()
         iv.require_number("radius", 0.0, 100.0)
@@ -663,7 +663,7 @@ class TestInputValidatorRequireNumber:
         assert err is not None
 
     def test_number_below_min(self):
-        from dcc_mcp_core import InputValidator
+        from meshy_dcc_core import InputValidator
 
         iv = InputValidator()
         iv.require_number("radius", 1.0, 100.0)
@@ -672,7 +672,7 @@ class TestInputValidatorRequireNumber:
         assert err is not None
 
     def test_number_at_max_boundary(self):
-        from dcc_mcp_core import InputValidator
+        from meshy_dcc_core import InputValidator
 
         iv = InputValidator()
         iv.require_number("val", 0.0, 100.0)
@@ -680,7 +680,7 @@ class TestInputValidatorRequireNumber:
         assert ok is True
 
     def test_combined_string_and_number(self):
-        from dcc_mcp_core import InputValidator
+        from meshy_dcc_core import InputValidator
 
         iv = InputValidator()
         iv.require_string("name", 50, 1)
@@ -689,7 +689,7 @@ class TestInputValidatorRequireNumber:
         assert ok is True
 
     def test_combined_fails_on_number(self):
-        from dcc_mcp_core import InputValidator
+        from meshy_dcc_core import InputValidator
 
         iv = InputValidator()
         iv.require_string("name", 50, 1)
@@ -699,7 +699,7 @@ class TestInputValidatorRequireNumber:
         assert err is not None
 
     def test_validate_returns_tuple(self):
-        from dcc_mcp_core import InputValidator
+        from meshy_dcc_core import InputValidator
 
         iv = InputValidator()
         result = iv.validate(json.dumps({}))
@@ -707,7 +707,7 @@ class TestInputValidatorRequireNumber:
         assert len(result) == 2
 
     def test_validate_good_returns_none_error(self):
-        from dcc_mcp_core import InputValidator
+        from meshy_dcc_core import InputValidator
 
         iv = InputValidator()
         ok, err = iv.validate(json.dumps({"x": 1}))
@@ -722,33 +722,33 @@ class TestInputValidatorRequireNumber:
 
 class TestToolRecorderCreate:
     def test_create_with_scope(self):
-        from dcc_mcp_core import ToolRecorder
+        from meshy_dcc_core import ToolRecorder
 
         r = ToolRecorder("my_scope")
         assert r is not None
 
     def test_different_scopes(self):
-        from dcc_mcp_core import ToolRecorder
+        from meshy_dcc_core import ToolRecorder
 
         r1 = ToolRecorder("scope_a")
         r2 = ToolRecorder("scope_b")
         assert r1 is not r2
 
     def test_all_metrics_empty_initially(self):
-        from dcc_mcp_core import ToolRecorder
+        from meshy_dcc_core import ToolRecorder
 
         r = ToolRecorder("scope")
         assert r.all_metrics() == []
 
     def test_metrics_none_before_recording(self):
-        from dcc_mcp_core import ToolRecorder
+        from meshy_dcc_core import ToolRecorder
 
         r = ToolRecorder("scope")
         m = r.metrics("nonexistent_action")
         assert m is None
 
     def test_reset_on_empty(self):
-        from dcc_mcp_core import ToolRecorder
+        from meshy_dcc_core import ToolRecorder
 
         r = ToolRecorder("scope")
         r.reset()
@@ -757,14 +757,14 @@ class TestToolRecorderCreate:
 
 class TestRecordingGuard:
     def test_start_returns_guard(self):
-        from dcc_mcp_core import ToolRecorder
+        from meshy_dcc_core import ToolRecorder
 
         r = ToolRecorder("scope")
         guard = r.start("create_sphere", "maya")
         assert guard is not None
 
     def test_guard_repr_active(self):
-        from dcc_mcp_core import ToolRecorder
+        from meshy_dcc_core import ToolRecorder
 
         r = ToolRecorder("scope")
         guard = r.start("create_sphere", "maya")
@@ -774,7 +774,7 @@ class TestRecordingGuard:
         assert "active=true" in rep.lower() or "active" in rep.lower()
 
     def test_guard_repr_after_finish(self):
-        from dcc_mcp_core import ToolRecorder
+        from meshy_dcc_core import ToolRecorder
 
         r = ToolRecorder("scope")
         guard = r.start("create_sphere", "maya")
@@ -783,7 +783,7 @@ class TestRecordingGuard:
         assert "active=false" in rep.lower() or "false" in rep.lower()
 
     def test_guard_finish_success(self):
-        from dcc_mcp_core import ToolRecorder
+        from meshy_dcc_core import ToolRecorder
 
         r = ToolRecorder("scope")
         guard = r.start("action_x", "dcc")
@@ -794,7 +794,7 @@ class TestRecordingGuard:
         assert m.failure_count == 0
 
     def test_guard_finish_failure(self):
-        from dcc_mcp_core import ToolRecorder
+        from meshy_dcc_core import ToolRecorder
 
         r = ToolRecorder("scope")
         guard = r.start("action_x", "dcc")
@@ -805,14 +805,14 @@ class TestRecordingGuard:
         assert m.success_count == 0
 
     def test_guard_action_name_in_repr(self):
-        from dcc_mcp_core import ToolRecorder
+        from meshy_dcc_core import ToolRecorder
 
         r = ToolRecorder("scope")
         guard = r.start("my_custom_action", "blender")
         assert "my_custom_action" in repr(guard)
 
     def test_guard_dcc_name_in_repr(self):
-        from dcc_mcp_core import ToolRecorder
+        from meshy_dcc_core import ToolRecorder
 
         r = ToolRecorder("scope")
         guard = r.start("act", "houdini")
@@ -821,7 +821,7 @@ class TestRecordingGuard:
 
 class TestToolRecorderMetrics:
     def test_metrics_after_recording(self):
-        from dcc_mcp_core import ToolRecorder
+        from meshy_dcc_core import ToolRecorder
 
         r = ToolRecorder("scope")
         g = r.start("action_a", "maya")
@@ -830,7 +830,7 @@ class TestToolRecorderMetrics:
         assert m is not None
 
     def test_metrics_invocation_count(self):
-        from dcc_mcp_core import ToolRecorder
+        from meshy_dcc_core import ToolRecorder
 
         r = ToolRecorder("scope")
         for _ in range(3):
@@ -840,7 +840,7 @@ class TestToolRecorderMetrics:
         assert m.invocation_count == 3
 
     def test_metrics_success_count(self):
-        from dcc_mcp_core import ToolRecorder
+        from meshy_dcc_core import ToolRecorder
 
         r = ToolRecorder("scope")
         for _ in range(2):
@@ -852,7 +852,7 @@ class TestToolRecorderMetrics:
         assert m.success_count == 2
 
     def test_metrics_failure_count(self):
-        from dcc_mcp_core import ToolRecorder
+        from meshy_dcc_core import ToolRecorder
 
         r = ToolRecorder("scope")
         g = r.start("action_a", "maya")
@@ -865,7 +865,7 @@ class TestToolRecorderMetrics:
 
     def test_metrics_success_rate_is_method(self):
         """success_rate is a bound method, not a property."""
-        from dcc_mcp_core import ToolRecorder
+        from meshy_dcc_core import ToolRecorder
 
         r = ToolRecorder("scope")
         g = r.start("act", "dcc")
@@ -877,7 +877,7 @@ class TestToolRecorderMetrics:
         assert callable(m.success_rate)
 
     def test_metrics_success_rate_all_success(self):
-        from dcc_mcp_core import ToolRecorder
+        from meshy_dcc_core import ToolRecorder
 
         r = ToolRecorder("scope")
         for _ in range(4):
@@ -888,7 +888,7 @@ class TestToolRecorderMetrics:
         assert abs(rate - 1.0) < 1e-6
 
     def test_metrics_success_rate_all_failure(self):
-        from dcc_mcp_core import ToolRecorder
+        from meshy_dcc_core import ToolRecorder
 
         r = ToolRecorder("scope")
         for _ in range(3):
@@ -899,7 +899,7 @@ class TestToolRecorderMetrics:
         assert abs(rate - 0.0) < 1e-6
 
     def test_metrics_success_rate_mixed(self):
-        from dcc_mcp_core import ToolRecorder
+        from meshy_dcc_core import ToolRecorder
 
         r = ToolRecorder("scope")
         g = r.start("act", "dcc")
@@ -911,7 +911,7 @@ class TestToolRecorderMetrics:
         assert abs(rate - 0.5) < 1e-6
 
     def test_metrics_action_name(self):
-        from dcc_mcp_core import ToolRecorder
+        from meshy_dcc_core import ToolRecorder
 
         r = ToolRecorder("scope")
         g = r.start("my_named_action", "dcc")
@@ -920,7 +920,7 @@ class TestToolRecorderMetrics:
         assert m.action_name == "my_named_action"
 
     def test_metrics_avg_duration_ms_nonneg(self):
-        from dcc_mcp_core import ToolRecorder
+        from meshy_dcc_core import ToolRecorder
 
         r = ToolRecorder("scope")
         g = r.start("act", "dcc")
@@ -929,7 +929,7 @@ class TestToolRecorderMetrics:
         assert m.avg_duration_ms >= 0.0
 
     def test_metrics_p95_nonneg(self):
-        from dcc_mcp_core import ToolRecorder
+        from meshy_dcc_core import ToolRecorder
 
         r = ToolRecorder("scope")
         g = r.start("act", "dcc")
@@ -938,7 +938,7 @@ class TestToolRecorderMetrics:
         assert m.p95_duration_ms >= 0.0
 
     def test_metrics_p99_nonneg(self):
-        from dcc_mcp_core import ToolRecorder
+        from meshy_dcc_core import ToolRecorder
 
         r = ToolRecorder("scope")
         g = r.start("act", "dcc")
@@ -947,7 +947,7 @@ class TestToolRecorderMetrics:
         assert m.p99_duration_ms >= 0.0
 
     def test_metrics_repr(self):
-        from dcc_mcp_core import ToolRecorder
+        from meshy_dcc_core import ToolRecorder
 
         r = ToolRecorder("scope")
         g = r.start("act", "dcc")
@@ -958,7 +958,7 @@ class TestToolRecorderMetrics:
         assert "invocations" in rep or "1" in rep
 
     def test_all_metrics_multiple_actions(self):
-        from dcc_mcp_core import ToolRecorder
+        from meshy_dcc_core import ToolRecorder
 
         r = ToolRecorder("scope")
         for name in ["alpha", "beta", "gamma"]:
@@ -968,13 +968,13 @@ class TestToolRecorderMetrics:
         assert len(all_m) == 3
 
     def test_all_metrics_returns_list(self):
-        from dcc_mcp_core import ToolRecorder
+        from meshy_dcc_core import ToolRecorder
 
         r = ToolRecorder("scope")
         assert isinstance(r.all_metrics(), list)
 
     def test_reset_clears_metrics(self):
-        from dcc_mcp_core import ToolRecorder
+        from meshy_dcc_core import ToolRecorder
 
         r = ToolRecorder("scope")
         g = r.start("act", "dcc")
@@ -984,7 +984,7 @@ class TestToolRecorderMetrics:
         assert r.metrics("act") is None
 
     def test_reset_then_record_again(self):
-        from dcc_mcp_core import ToolRecorder
+        from meshy_dcc_core import ToolRecorder
 
         r = ToolRecorder("scope")
         g = r.start("act", "dcc")
@@ -997,7 +997,7 @@ class TestToolRecorderMetrics:
         assert m.failure_count == 1
 
     def test_multiple_dccs_same_action(self):
-        from dcc_mcp_core import ToolRecorder
+        from meshy_dcc_core import ToolRecorder
 
         r = ToolRecorder("scope")
         g1 = r.start("create_sphere", "maya")
@@ -1008,7 +1008,7 @@ class TestToolRecorderMetrics:
         assert m.invocation_count >= 1
 
     def test_p95_lte_p99(self):
-        from dcc_mcp_core import ToolRecorder
+        from meshy_dcc_core import ToolRecorder
 
         r = ToolRecorder("scope")
         for _ in range(10):
@@ -1025,52 +1025,52 @@ class TestToolRecorderMetrics:
 
 class TestTelemetryConfigCreate:
     def test_create_with_service_name(self):
-        from dcc_mcp_core import TelemetryConfig
+        from meshy_dcc_core import TelemetryConfig
 
         tc = TelemetryConfig("my_service")
         assert tc is not None
 
     def test_service_name_property(self):
-        from dcc_mcp_core import TelemetryConfig
+        from meshy_dcc_core import TelemetryConfig
 
         tc = TelemetryConfig("dcc_maya")
         assert tc.service_name == "dcc_maya"
 
     def test_repr_contains_service(self):
-        from dcc_mcp_core import TelemetryConfig
+        from meshy_dcc_core import TelemetryConfig
 
         tc = TelemetryConfig("svc")
         rep = repr(tc)
         assert "svc" in rep
 
     def test_enable_tracing_default_true(self):
-        from dcc_mcp_core import TelemetryConfig
+        from meshy_dcc_core import TelemetryConfig
 
         tc = TelemetryConfig("svc")
         assert tc.enable_tracing is True
 
     def test_enable_metrics_default_true(self):
-        from dcc_mcp_core import TelemetryConfig
+        from meshy_dcc_core import TelemetryConfig
 
         tc = TelemetryConfig("svc")
         assert tc.enable_metrics is True
 
     def test_set_enable_tracing_false(self):
-        from dcc_mcp_core import TelemetryConfig
+        from meshy_dcc_core import TelemetryConfig
 
         tc = TelemetryConfig("svc")
         tc.set_enable_tracing(False)
         assert tc.enable_tracing is False
 
     def test_set_enable_metrics_false(self):
-        from dcc_mcp_core import TelemetryConfig
+        from meshy_dcc_core import TelemetryConfig
 
         tc = TelemetryConfig("svc")
         tc.set_enable_metrics(False)
         assert tc.enable_metrics is False
 
     def test_set_enable_tracing_back_to_true(self):
-        from dcc_mcp_core import TelemetryConfig
+        from meshy_dcc_core import TelemetryConfig
 
         tc = TelemetryConfig("svc")
         tc.set_enable_tracing(False)
@@ -1078,7 +1078,7 @@ class TestTelemetryConfigCreate:
         assert tc.enable_tracing is True
 
     def test_set_enable_metrics_back_to_true(self):
-        from dcc_mcp_core import TelemetryConfig
+        from meshy_dcc_core import TelemetryConfig
 
         tc = TelemetryConfig("svc")
         tc.set_enable_metrics(False)
@@ -1088,56 +1088,56 @@ class TestTelemetryConfigCreate:
 
 class TestTelemetryConfigBuilderMethods:
     def test_with_service_version_returns_config(self):
-        from dcc_mcp_core import TelemetryConfig
+        from meshy_dcc_core import TelemetryConfig
 
         tc = TelemetryConfig("svc")
         tc2 = tc.with_service_version("1.0.0")
         assert tc2 is not None
 
     def test_with_attribute_returns_config(self):
-        from dcc_mcp_core import TelemetryConfig
+        from meshy_dcc_core import TelemetryConfig
 
         tc = TelemetryConfig("svc")
         tc2 = tc.with_attribute("env", "production")
         assert tc2 is not None
 
     def test_with_noop_exporter(self):
-        from dcc_mcp_core import TelemetryConfig
+        from meshy_dcc_core import TelemetryConfig
 
         tc = TelemetryConfig("svc")
         tc2 = tc.with_noop_exporter()
         assert "noop" in repr(tc2).lower() or "Noop" in repr(tc2)
 
     def test_with_stdout_exporter(self):
-        from dcc_mcp_core import TelemetryConfig
+        from meshy_dcc_core import TelemetryConfig
 
         tc = TelemetryConfig("svc")
         tc2 = tc.with_stdout_exporter()
         assert "stdout" in repr(tc2).lower() or "Stdout" in repr(tc2)
 
     def test_with_json_logs_returns_config(self):
-        from dcc_mcp_core import TelemetryConfig
+        from meshy_dcc_core import TelemetryConfig
 
         tc = TelemetryConfig("svc")
         tc2 = tc.with_json_logs()
         assert tc2 is not None
 
     def test_with_text_logs_returns_config(self):
-        from dcc_mcp_core import TelemetryConfig
+        from meshy_dcc_core import TelemetryConfig
 
         tc = TelemetryConfig("svc")
         tc2 = tc.with_text_logs()
         assert tc2 is not None
 
     def test_default_exporter_is_stdout(self):
-        from dcc_mcp_core import TelemetryConfig
+        from meshy_dcc_core import TelemetryConfig
 
         tc = TelemetryConfig("svc")
         rep = repr(tc)
         assert "Stdout" in rep or "stdout" in rep.lower()
 
     def test_noop_exporter_repr(self):
-        from dcc_mcp_core import TelemetryConfig
+        from meshy_dcc_core import TelemetryConfig
 
         tc = TelemetryConfig("svc").with_noop_exporter()
         rep = repr(tc)
@@ -1146,7 +1146,7 @@ class TestTelemetryConfigBuilderMethods:
     def test_init_method_callable(self):
         import contextlib
 
-        from dcc_mcp_core import TelemetryConfig
+        from meshy_dcc_core import TelemetryConfig
 
         tc = TelemetryConfig("svc").with_noop_exporter()
         # init() may raise if a global tracer is already installed (e.g., in a test suite);
@@ -1155,7 +1155,7 @@ class TestTelemetryConfigBuilderMethods:
             tc.init()
 
     def test_multiple_attributes(self):
-        from dcc_mcp_core import TelemetryConfig
+        from meshy_dcc_core import TelemetryConfig
 
         tc = TelemetryConfig("svc")
         tc2 = tc.with_attribute("env", "prod")
@@ -1163,7 +1163,7 @@ class TestTelemetryConfigBuilderMethods:
         assert tc3 is not None
 
     def test_chain_all_builders(self):
-        from dcc_mcp_core import TelemetryConfig
+        from meshy_dcc_core import TelemetryConfig
 
         tc = TelemetryConfig("svc").with_service_version("2.0.0").with_attribute("env", "test").with_noop_exporter()
         assert tc is not None
@@ -1177,9 +1177,9 @@ class TestTelemetryConfigBuilderMethods:
 
 class TestSandboxAndRecorderIntegration:
     def test_record_sandbox_action(self):
-        from dcc_mcp_core import SandboxContext
-        from dcc_mcp_core import SandboxPolicy
-        from dcc_mcp_core import ToolRecorder
+        from meshy_dcc_core import SandboxContext
+        from meshy_dcc_core import SandboxPolicy
+        from meshy_dcc_core import ToolRecorder
 
         sp = SandboxPolicy()
         sp.allow_actions(["create_sphere"])
@@ -1195,9 +1195,9 @@ class TestSandboxAndRecorderIntegration:
         assert sc.action_count == 1
 
     def test_record_denied_as_failure(self):
-        from dcc_mcp_core import SandboxContext
-        from dcc_mcp_core import SandboxPolicy
-        from dcc_mcp_core import ToolRecorder
+        from meshy_dcc_core import SandboxContext
+        from meshy_dcc_core import SandboxPolicy
+        from meshy_dcc_core import ToolRecorder
 
         sp = SandboxPolicy()
         sp.allow_actions(["safe"])
@@ -1219,9 +1219,9 @@ class TestSandboxAndRecorderIntegration:
         assert len(denials) == 1
 
     def test_multiple_actions_tracking(self):
-        from dcc_mcp_core import SandboxContext
-        from dcc_mcp_core import SandboxPolicy
-        from dcc_mcp_core import ToolRecorder
+        from meshy_dcc_core import SandboxContext
+        from meshy_dcc_core import SandboxPolicy
+        from meshy_dcc_core import ToolRecorder
 
         sp = SandboxPolicy()
         sp.allow_actions(["a", "b"])

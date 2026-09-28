@@ -5,7 +5,7 @@ Complement to ``test_e2e_gateway_skill_load_sse.py`` which guards the
 prompts-primitive counterpart introduced by PR #740: the gateway's
 prompts fingerprint watcher must emit ``notifications/prompts/list_changed``
 over SSE whenever a backend's set of MCP prompts changes — which happens
-when a skill that carries a ``metadata.dcc-mcp.prompts`` sibling file is
+when a skill that carries a ``metadata.meshy-dcc.prompts`` sibling file is
 loaded or unloaded.
 
 The flow covered end-to-end:
@@ -51,8 +51,8 @@ import pytest
 from conftest import McpClient
 from conftest import allocate_gateway_port
 from conftest import wait_tcp_reachable
-from dcc_mcp_core import McpHttpConfig
-from dcc_mcp_core import create_skill_server
+from meshy_dcc_core import McpHttpConfig
+from meshy_dcc_core import create_skill_server
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 FIXTURE_SKILL_PARENT = str(REPO_ROOT / "tests" / "fixtures" / "prompts_skills" / "maya-only")

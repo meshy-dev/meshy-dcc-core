@@ -19,20 +19,20 @@ import tempfile
 
 import pytest
 
-from dcc_mcp_core import DccCapabilities
-from dcc_mcp_core import DccError
-from dcc_mcp_core import DccErrorCode
-from dcc_mcp_core import DccInfo
-from dcc_mcp_core import InputValidator
-from dcc_mcp_core import SceneInfo
-from dcc_mcp_core import SceneStatistics
-from dcc_mcp_core import ScriptLanguage
-from dcc_mcp_core import ScriptResult
-from dcc_mcp_core import SkillCatalog
-from dcc_mcp_core import SkillMetadata
-from dcc_mcp_core import ToolDispatcher
-from dcc_mcp_core import ToolRegistry
-from dcc_mcp_core import ToolValidator
+from meshy_dcc_core import DccCapabilities
+from meshy_dcc_core import DccError
+from meshy_dcc_core import DccErrorCode
+from meshy_dcc_core import DccInfo
+from meshy_dcc_core import InputValidator
+from meshy_dcc_core import SceneInfo
+from meshy_dcc_core import SceneStatistics
+from meshy_dcc_core import ScriptLanguage
+from meshy_dcc_core import ScriptResult
+from meshy_dcc_core import SkillCatalog
+from meshy_dcc_core import SkillMetadata
+from meshy_dcc_core import ToolDispatcher
+from meshy_dcc_core import ToolRegistry
+from meshy_dcc_core import ToolValidator
 
 # ---------------------------------------------------------------------------
 # ToolValidator: from_schema_json
@@ -533,7 +533,7 @@ SKILL_MD_CONTENT = """\
 name: test-skill-{idx}
 description: A test skill number {idx}.
 metadata:
-  dcc-mcp:
+  meshy-dcc:
     dcc: maya
     tags: [test, auto]
     version: "1.0.{idx}"

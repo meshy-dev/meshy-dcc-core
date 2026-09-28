@@ -1,7 +1,7 @@
 """Python-side coverage for the #348 workflow execution engine.
 
 The Rust `WorkflowExecutor` / `WorkflowHost` have exhaustive unit tests
-in ``crates/dcc-mcp-workflow/src/``. The Python surface currently
+in ``crates/meshy-dcc-workflow/src/``. The Python surface currently
 exposes the **spec + policy viewer** types (parse / validate /
 introspect); a native ``WorkflowHost`` Python class is tracked as a
 follow-up. These tests exercise every ``StepKind`` through the spec
@@ -15,10 +15,10 @@ import textwrap
 
 import pytest
 
-import dcc_mcp_core
+import meshy_dcc_core
 
 pytestmark = pytest.mark.skipif(
-    dcc_mcp_core.WorkflowSpec is None,
+    meshy_dcc_core.WorkflowSpec is None,
     reason="Built without the `workflow` Cargo feature",
 )
 
@@ -80,7 +80,7 @@ FULL_YAML = textwrap.dedent(
 
 @pytest.fixture(scope="module")
 def spec():
-    return dcc_mcp_core.WorkflowSpec.from_yaml_str(FULL_YAML)
+    return meshy_dcc_core.WorkflowSpec.from_yaml_str(FULL_YAML)
 
 
 def test_spec_parses_and_validates(spec):
@@ -101,13 +101,13 @@ def test_policy_round_trips_retry_and_timeout(spec):
     assert first.policy.timeout_secs == 30
     assert first.policy.retry is not None
     assert first.policy.retry.max_attempts == 3
-    assert first.policy.retry.backoff == dcc_mcp_core.BackoffKind.EXPONENTIAL
+    assert first.policy.retry.backoff == meshy_dcc_core.BackoffKind.EXPONENTIAL
     # attempt=1 is the initial run → zero base delay; attempt=2 first retry.
     assert first.policy.retry.next_delay_ms(2) == 250
 
 
 def test_terminal_statuses_mark_is_terminal():
-    WorkflowStatus = dcc_mcp_core.WorkflowStatus
+    WorkflowStatus = meshy_dcc_core.WorkflowStatus
     for value in ("completed", "failed", "cancelled", "interrupted"):
         assert WorkflowStatus(value).is_terminal is True
     for value in ("pending", "running"):
@@ -116,6 +116,6 @@ def test_terminal_statuses_mark_is_terminal():
 
 def test_to_yaml_round_trip_preserves_kinds(spec):
     yaml_out = spec.to_yaml()
-    spec2 = dcc_mcp_core.WorkflowSpec.from_yaml_str(yaml_out)
+    spec2 = meshy_dcc_core.WorkflowSpec.from_yaml_str(yaml_out)
     spec2.validate()
     assert {s.kind for s in spec2.steps} == {s.kind for s in spec.steps}

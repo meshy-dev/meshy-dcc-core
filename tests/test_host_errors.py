@@ -11,10 +11,10 @@ import threading
 
 import pytest
 
-from dcc_mcp_core.feedback import FeedbackStore
-from dcc_mcp_core.host_errors import _HostErrorCapture
-from dcc_mcp_core.host_errors import capture_bootstrap_errors
-from dcc_mcp_core.schemas.finding import FindingRuntimeContext
+from meshy_dcc_core.feedback import FeedbackStore
+from meshy_dcc_core.host_errors import _HostErrorCapture
+from meshy_dcc_core.host_errors import capture_bootstrap_errors
+from meshy_dcc_core.schemas.finding import FindingRuntimeContext
 
 
 def _payload(path: Path) -> dict:
@@ -32,7 +32,7 @@ def test_bootstrap_error_is_persisted_and_reraised(tmp_path: Path) -> None:
         ):
             raise ImportError("cannot import name 'UiControlAuditRecord'")
 
-    path = next(tmp_path.glob("dcc-mcp-3ds_Max.*.host-errors.log"))
+    path = next(tmp_path.glob("meshy-dcc-3ds_Max.*.host-errors.log"))
     event = _payload(path)
     assert event["event"] == "dcc_host_error"
     assert event["dcc_type"] == "3ds Max"
@@ -51,9 +51,9 @@ def test_bootstrap_helpers_do_not_load_native_core() -> None:
             "-c",
             (
                 "import sys; "
-                "from dcc_mcp_core import capture_bootstrap_errors, record_bootstrap_error; "
+                "from meshy_dcc_core import capture_bootstrap_errors, record_bootstrap_error; "
                 "assert capture_bootstrap_errors; assert record_bootstrap_error; "
-                "assert 'dcc_mcp_core._core' not in sys.modules"
+                "assert 'meshy_dcc_core._core' not in sys.modules"
             ),
         ],
         check=False,
@@ -137,12 +137,12 @@ def test_startup_error_persists_needs_review_finding_without_request_id(tmp_path
         log_dir=str(tmp_path),
         finding_context=FindingRuntimeContext(
             dcc_type="photoshop",
-            adapter="dcc-mcp-photoshop",
+            adapter="meshy-dcc-photoshop",
             adapter_version="0.4.0",
             core_version="0.20.15",
             host_version="26.4.1",
             os="win32",
-            owning_repo="dcc-mcp/dcc-mcp-photoshop",
+            owning_repo="meshy-dev/meshy-dcc-photoshop",
         ),
         feedback_store=store,
     )
@@ -163,7 +163,7 @@ def test_startup_error_persists_needs_review_finding_without_request_id(tmp_path
     assert finding["phase"] == "startup"
     assert finding["severity"] == "blocker"
     assert finding["dcc_type"] == "photoshop"
-    assert finding["adapter"] == "dcc-mcp-photoshop"
+    assert finding["adapter"] == "meshy-dcc-photoshop"
     assert finding["observed"] == "builtins.RuntimeError: adapter listener bind failed"
     assert finding["evidence"] == {
         "error_kind": "builtins.RuntimeError",
@@ -185,12 +185,12 @@ def test_runtime_error_does_not_create_startup_finding(tmp_path: Path) -> None:
         log_dir=str(tmp_path),
         finding_context=FindingRuntimeContext(
             dcc_type="photoshop",
-            adapter="dcc-mcp-photoshop",
+            adapter="meshy-dcc-photoshop",
             adapter_version="0.4.0",
             core_version="0.20.15",
             host_version="26.4.1",
             os="win32",
-            owning_repo="dcc-mcp/dcc-mcp-photoshop",
+            owning_repo="meshy-dev/meshy-dcc-photoshop",
         ),
         feedback_store=store,
     )
@@ -215,17 +215,17 @@ def test_startup_finding_failure_does_not_mask_host_error(tmp_path: Path, caplog
         log_dir=str(tmp_path),
         finding_context=FindingRuntimeContext(
             dcc_type="photoshop",
-            adapter="dcc-mcp-photoshop",
+            adapter="meshy-dcc-photoshop",
             adapter_version="0.4.0",
             core_version="0.20.15",
             host_version="26.4.1",
             os="win32",
-            owning_repo="dcc-mcp/dcc-mcp-photoshop",
+            owning_repo="meshy-dev/meshy-dcc-photoshop",
         ),
         feedback_store=_FailingStore(),
     )
 
-    with caplog.at_level(logging.WARNING, logger="dcc_mcp_core.host_errors"):
+    with caplog.at_level(logging.WARNING, logger="meshy_dcc_core.host_errors"):
         event = capture.report(
             "listener bind failed",
             source="dcc_server.start",
@@ -241,12 +241,12 @@ def test_startup_finding_failure_does_not_mask_host_error(tmp_path: Path, caplog
 def test_startup_finding_uses_bounded_collision_resistant_error_identity(tmp_path: Path) -> None:
     context = FindingRuntimeContext(
         dcc_type="photoshop",
-        adapter="dcc-mcp-photoshop",
+        adapter="meshy-dcc-photoshop",
         adapter_version="0.4.0",
         core_version="0.20.15",
         host_version="26.4.1",
         os="win32",
-        owning_repo="dcc-mcp/dcc-mcp-photoshop",
+        owning_repo="meshy-dev/meshy-dcc-photoshop",
     )
     shared_prefix = "AdapterStartupError" + "x" * 300
     first_type = type(shared_prefix + "A", (RuntimeError,), {"__module__": "dcc_adapter.bootstrap"})

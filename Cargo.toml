@@ -1,118 +1,118 @@
-# dcc-mcp-core Workspace
-# Rust-powered core for the DCC MCP ecosystem
+# meshy-dcc-core Workspace
+# Rust-powered core for the Meshy DCC ecosystem
 
 [workspace]
 members = [
-    "crates/dcc-mcp-naming",
-    "crates/dcc-mcp-models",
-    "crates/dcc-mcp-actions",
-    "crates/dcc-mcp-skills",
-    "crates/dcc-mcp-skills-bench",
-    "crates/dcc-mcp-protocols",
-    "crates/dcc-mcp-jsonrpc",
-    "crates/dcc-mcp-wire",
-    "crates/dcc-mcp-job",
-    "crates/dcc-mcp-skill-rest",
-    "crates/dcc-mcp-gateway",
-    "crates/dcc-mcp-gateway-admin",
-    "crates/dcc-mcp-gateway-core",
-    "crates/dcc-mcp-gateway-ensure",
-    "crates/dcc-mcp-gateway-search",
-    "crates/dcc-mcp-logging",
-    "crates/dcc-mcp-pybridge",
-    "crates/dcc-mcp-pybridge-derive",
-    "crates/dcc-mcp-paths",
-    "crates/dcc-mcp-transport",
-    "crates/dcc-mcp-process",
-    "crates/dcc-mcp-telemetry",
-    "crates/dcc-mcp-sandbox",
-    "crates/dcc-mcp-shm",
-    "crates/dcc-mcp-capture",
-    "crates/dcc-mcp-usd",
-    "crates/dcc-mcp-http",
-    "crates/dcc-mcp-http-types",
-    "crates/dcc-mcp-http-server",
-    "crates/dcc-mcp-http-py",
-    "crates/dcc-mcp-cli",
-    "crates/dcc-mcp-server",
-    "crates/dcc-mcp-sidecar",
-    "crates/dcc-mcp-workflow",
-    "crates/dcc-mcp-scheduler",
-    "crates/dcc-mcp-artefact",
-    "crates/dcc-mcp-host",
-    "crates/dcc-mcp-host-rpc",
-    "crates/dcc-mcp-tunnel-protocol",
-    "crates/dcc-mcp-tunnel-relay",
-    "crates/dcc-mcp-tunnel-agent",
-    "crates/dcc-mcp-marketplace",
-    "crates/dcc-mcp-catalog",
-    "crates/dcc-mcp-db",
-    "crates/dcc-mcp-semantic",
-    "crates/dcc-mcp-updater",
-    "crates/dcc-mcp-attestation",
-    "crates/dcc-mcp-test-utils",
+    "crates/meshy-dcc-naming",
+    "crates/meshy-dcc-models",
+    "crates/meshy-dcc-actions",
+    "crates/meshy-dcc-skills",
+    "crates/meshy-dcc-skills-bench",
+    "crates/meshy-dcc-protocols",
+    "crates/meshy-dcc-jsonrpc",
+    "crates/meshy-dcc-wire",
+    "crates/meshy-dcc-job",
+    "crates/meshy-dcc-skill-rest",
+    "crates/meshy-dcc-gateway",
+    "crates/meshy-dcc-gateway-admin",
+    "crates/meshy-dcc-gateway-core",
+    "crates/meshy-dcc-gateway-ensure",
+    "crates/meshy-dcc-gateway-search",
+    "crates/meshy-dcc-logging",
+    "crates/meshy-dcc-pybridge",
+    "crates/meshy-dcc-pybridge-derive",
+    "crates/meshy-dcc-paths",
+    "crates/meshy-dcc-transport",
+    "crates/meshy-dcc-process",
+    "crates/meshy-dcc-telemetry",
+    "crates/meshy-dcc-sandbox",
+    "crates/meshy-dcc-shm",
+    "crates/meshy-dcc-capture",
+    "crates/meshy-dcc-usd",
+    "crates/meshy-dcc-http",
+    "crates/meshy-dcc-http-types",
+    "crates/meshy-dcc-http-server",
+    "crates/meshy-dcc-http-py",
+    "crates/meshy-dcc-cli",
+    "crates/meshy-dcc-server",
+    "crates/meshy-dcc-sidecar",
+    "crates/meshy-dcc-workflow",
+    "crates/meshy-dcc-scheduler",
+    "crates/meshy-dcc-artefact",
+    "crates/meshy-dcc-host",
+    "crates/meshy-dcc-host-rpc",
+    "crates/meshy-dcc-tunnel-protocol",
+    "crates/meshy-dcc-tunnel-relay",
+    "crates/meshy-dcc-tunnel-agent",
+    "crates/meshy-dcc-marketplace",
+    "crates/meshy-dcc-catalog",
+    "crates/meshy-dcc-db",
+    "crates/meshy-dcc-semantic",
+    "crates/meshy-dcc-updater",
+    "crates/meshy-dcc-attestation",
+    "crates/meshy-dcc-test-utils",
     "crates/workspace-hack",
 ]
 resolver = "2"
 
 [workspace.package]
-version = "0.20.36" # x-release-please-version
+version = "0.2.0"
 edition = "2024"
 rust-version = "1.95"
-authors = ["Hal Long <hal.long@outlook.com>"]
+authors = ["Meshy <support@meshy.ai>"]
 license = "MIT"
-repository = "https://github.com/dcc-mcp/dcc-mcp-core"
+repository = "https://github.com/meshy-dev/meshy-dcc-core"
 
 [workspace.dependencies]
 # Internal crates
-dcc-mcp-naming = { path = "crates/dcc-mcp-naming" }
-dcc-mcp-models = { path = "crates/dcc-mcp-models" }
-dcc-mcp-actions = { path = "crates/dcc-mcp-actions" }
-dcc-mcp-skills = { path = "crates/dcc-mcp-skills" }
-dcc-mcp-skills-bench = { path = "crates/dcc-mcp-skills-bench" }
-dcc-mcp-protocols = { path = "crates/dcc-mcp-protocols" }
-dcc-mcp-jsonrpc = { path = "crates/dcc-mcp-jsonrpc" }
-dcc-mcp-wire = { path = "crates/dcc-mcp-wire" }
-dcc-mcp-job = { path = "crates/dcc-mcp-job" }
-dcc-mcp-skill-rest = { path = "crates/dcc-mcp-skill-rest" }
-dcc-mcp-logging = { path = "crates/dcc-mcp-logging" }
-dcc-mcp-pybridge = { path = "crates/dcc-mcp-pybridge" }
-dcc-mcp-pybridge-derive = { path = "crates/dcc-mcp-pybridge-derive" }
-dcc-mcp-paths = { path = "crates/dcc-mcp-paths" }
-dcc-mcp-transport = { path = "crates/dcc-mcp-transport" }
-dcc-mcp-process = { path = "crates/dcc-mcp-process" }
-dcc-mcp-telemetry = { path = "crates/dcc-mcp-telemetry" }
-dcc-mcp-sandbox = { path = "crates/dcc-mcp-sandbox" }
-dcc-mcp-shm = { path = "crates/dcc-mcp-shm" }
-dcc-mcp-capture = { path = "crates/dcc-mcp-capture" }
-dcc-mcp-usd = { path = "crates/dcc-mcp-usd" }
-dcc-mcp-http = { path = "crates/dcc-mcp-http" }
-dcc-mcp-http-types = { path = "crates/dcc-mcp-http-types" }
-dcc-mcp-http-server = { path = "crates/dcc-mcp-http-server" }
-dcc-mcp-http-py = { path = "crates/dcc-mcp-http-py" }
-dcc-mcp-cli = { path = "crates/dcc-mcp-cli" }
-dcc-mcp-server = { path = "crates/dcc-mcp-server" }
-dcc-mcp-sidecar = { path = "crates/dcc-mcp-sidecar" }
-dcc-mcp-workflow = { path = "crates/dcc-mcp-workflow" }
-dcc-mcp-scheduler = { path = "crates/dcc-mcp-scheduler" }
-dcc-mcp-artefact = { path = "crates/dcc-mcp-artefact" }
-dcc-mcp-host = { path = "crates/dcc-mcp-host" }
-dcc-mcp-host-rpc = { path = "crates/dcc-mcp-host-rpc" }
-dcc-mcp-tunnel-protocol = { path = "crates/dcc-mcp-tunnel-protocol" }
-dcc-mcp-tunnel-relay = { path = "crates/dcc-mcp-tunnel-relay" }
-dcc-mcp-tunnel-agent = { path = "crates/dcc-mcp-tunnel-agent" }
-dcc-mcp-marketplace = { path = "crates/dcc-mcp-marketplace" }
-dcc-mcp-catalog = { path = "crates/dcc-mcp-catalog" }
-dcc-mcp-db = { path = "crates/dcc-mcp-db" }
-dcc-mcp-gateway = { path = "crates/dcc-mcp-gateway" }
-dcc-mcp-gateway-admin = { path = "crates/dcc-mcp-gateway-admin" }
-dcc-mcp-gateway-core = { path = "crates/dcc-mcp-gateway-core" }
-dcc-mcp-updater = { path = "crates/dcc-mcp-updater" }
-dcc-mcp-attestation = { path = "crates/dcc-mcp-attestation" }
-dcc-mcp-gateway-ensure = { path = "crates/dcc-mcp-gateway-ensure" }
-dcc-mcp-gateway-search = { path = "crates/dcc-mcp-gateway-search" }
-dcc-mcp-semantic = { path = "crates/dcc-mcp-semantic" }
-dcc-mcp-test-utils = { path = "crates/dcc-mcp-test-utils" }
+meshy-dcc-naming = { path = "crates/meshy-dcc-naming" }
+meshy-dcc-models = { path = "crates/meshy-dcc-models" }
+meshy-dcc-actions = { path = "crates/meshy-dcc-actions" }
+meshy-dcc-skills = { path = "crates/meshy-dcc-skills" }
+meshy-dcc-skills-bench = { path = "crates/meshy-dcc-skills-bench" }
+meshy-dcc-protocols = { path = "crates/meshy-dcc-protocols" }
+meshy-dcc-jsonrpc = { path = "crates/meshy-dcc-jsonrpc" }
+meshy-dcc-wire = { path = "crates/meshy-dcc-wire" }
+meshy-dcc-job = { path = "crates/meshy-dcc-job" }
+meshy-dcc-skill-rest = { path = "crates/meshy-dcc-skill-rest" }
+meshy-dcc-logging = { path = "crates/meshy-dcc-logging" }
+meshy-dcc-pybridge = { path = "crates/meshy-dcc-pybridge" }
+meshy-dcc-pybridge-derive = { path = "crates/meshy-dcc-pybridge-derive" }
+meshy-dcc-paths = { path = "crates/meshy-dcc-paths" }
+meshy-dcc-transport = { path = "crates/meshy-dcc-transport" }
+meshy-dcc-process = { path = "crates/meshy-dcc-process" }
+meshy-dcc-telemetry = { path = "crates/meshy-dcc-telemetry" }
+meshy-dcc-sandbox = { path = "crates/meshy-dcc-sandbox" }
+meshy-dcc-shm = { path = "crates/meshy-dcc-shm" }
+meshy-dcc-capture = { path = "crates/meshy-dcc-capture" }
+meshy-dcc-usd = { path = "crates/meshy-dcc-usd" }
+meshy-dcc-http = { path = "crates/meshy-dcc-http" }
+meshy-dcc-http-types = { path = "crates/meshy-dcc-http-types" }
+meshy-dcc-http-server = { path = "crates/meshy-dcc-http-server" }
+meshy-dcc-http-py = { path = "crates/meshy-dcc-http-py" }
+meshy-dcc-cli = { path = "crates/meshy-dcc-cli" }
+meshy-dcc-server = { path = "crates/meshy-dcc-server" }
+meshy-dcc-sidecar = { path = "crates/meshy-dcc-sidecar" }
+meshy-dcc-workflow = { path = "crates/meshy-dcc-workflow" }
+meshy-dcc-scheduler = { path = "crates/meshy-dcc-scheduler" }
+meshy-dcc-artefact = { path = "crates/meshy-dcc-artefact" }
+meshy-dcc-host = { path = "crates/meshy-dcc-host" }
+meshy-dcc-host-rpc = { path = "crates/meshy-dcc-host-rpc" }
+meshy-dcc-tunnel-protocol = { path = "crates/meshy-dcc-tunnel-protocol" }
+meshy-dcc-tunnel-relay = { path = "crates/meshy-dcc-tunnel-relay" }
+meshy-dcc-tunnel-agent = { path = "crates/meshy-dcc-tunnel-agent" }
+meshy-dcc-marketplace = { path = "crates/meshy-dcc-marketplace" }
+meshy-dcc-catalog = { path = "crates/meshy-dcc-catalog" }
+meshy-dcc-db = { path = "crates/meshy-dcc-db" }
+meshy-dcc-gateway = { path = "crates/meshy-dcc-gateway" }
+meshy-dcc-gateway-admin = { path = "crates/meshy-dcc-gateway-admin" }
+meshy-dcc-gateway-core = { path = "crates/meshy-dcc-gateway-core" }
+meshy-dcc-updater = { path = "crates/meshy-dcc-updater" }
+meshy-dcc-attestation = { path = "crates/meshy-dcc-attestation" }
+meshy-dcc-gateway-ensure = { path = "crates/meshy-dcc-gateway-ensure" }
+meshy-dcc-gateway-search = { path = "crates/meshy-dcc-gateway-search" }
+meshy-dcc-semantic = { path = "crates/meshy-dcc-semantic" }
+meshy-dcc-test-utils = { path = "crates/meshy-dcc-test-utils" }
 
 # Shared dependencies (single version across workspace)
 pyo3 = { version = "0.28", features = ["multiple-pymethods"] }
@@ -149,7 +149,7 @@ criterion = { version = "0.8", features = ["html_reports"] }
 ipckit = { version = "0.1.7", features = ["async", "backend-interprocess"] }
 base64 = "0.22"
 # Optional SQLite backend for JobManager persistence (issue #328). Pulled in
-# only when the `job-persist-sqlite` feature is enabled on `dcc-mcp-http`;
+# only when the `job-persist-sqlite` feature is enabled on `meshy-dcc-http`;
 # otherwise zero SQLite code compiles into the wheel.
 rusqlite = { version = "0.39", features = ["bundled"] }
 axum = "0.8"
@@ -190,9 +190,9 @@ pyo3-stub-gen-derive = "0.23"
 must_use_candidate = "warn"
 
 # Root package — Python bindings entry point
-# Compiles to `_core.pyd` / `_core.so`, exposed as `dcc_mcp_core._core`
+# Compiles to `_core.pyd` / `_core.so`, exposed as `meshy_dcc_core._core`
 [package]
-name = "dcc-mcp-core"
+name = "meshy-dcc-core"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -208,35 +208,35 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 # Internal crates
-dcc-mcp-naming.workspace = true
-dcc-mcp-models.workspace = true
-dcc-mcp-actions.workspace = true
-dcc-mcp-skills.workspace = true
-dcc-mcp-protocols.workspace = true
-dcc-mcp-logging.workspace = true
-dcc-mcp-pybridge.workspace = true
-dcc-mcp-paths.workspace = true
-dcc-mcp-transport.workspace = true
-dcc-mcp-process.workspace = true
-dcc-mcp-telemetry.workspace = true
-dcc-mcp-sandbox.workspace = true
-dcc-mcp-shm.workspace = true
-dcc-mcp-capture.workspace = true
-dcc-mcp-usd.workspace = true
-dcc-mcp-http.workspace = true
-dcc-mcp-http-py.workspace = true
-dcc-mcp-artefact.workspace = true
-dcc-mcp-host.workspace = true
-dcc-mcp-wire.workspace = true
+meshy-dcc-naming.workspace = true
+meshy-dcc-models.workspace = true
+meshy-dcc-actions.workspace = true
+meshy-dcc-skills.workspace = true
+meshy-dcc-protocols.workspace = true
+meshy-dcc-logging.workspace = true
+meshy-dcc-pybridge.workspace = true
+meshy-dcc-paths.workspace = true
+meshy-dcc-transport.workspace = true
+meshy-dcc-process.workspace = true
+meshy-dcc-telemetry.workspace = true
+meshy-dcc-sandbox.workspace = true
+meshy-dcc-shm.workspace = true
+meshy-dcc-capture.workspace = true
+meshy-dcc-usd.workspace = true
+meshy-dcc-http.workspace = true
+meshy-dcc-http-py.workspace = true
+meshy-dcc-artefact.workspace = true
+meshy-dcc-host.workspace = true
+meshy-dcc-wire.workspace = true
 
 # Workflow crate — opt-in via the top-level `workflow` feature.
-dcc-mcp-workflow = { workspace = true, optional = true }
+meshy-dcc-workflow = { workspace = true, optional = true }
 
 # Scheduler crate — opt-in via the top-level `scheduler` feature (issue #352).
-dcc-mcp-scheduler = { workspace = true, optional = true }
+meshy-dcc-scheduler = { workspace = true, optional = true }
 
 # Gateway crate — opt-in via the top-level `admin` feature.
-dcc-mcp-gateway = { workspace = true, optional = true }
+meshy-dcc-gateway = { workspace = true, optional = true }
 
 # PyO3 (optional — only for wheel builds)
 pyo3 = { workspace = true, optional = true }
@@ -250,7 +250,7 @@ workspace-hack = { version = "0.1", path = "crates/workspace-hack" }
 [dev-dependencies]
 serde_json.workspace = true
 
-# PoC binary: generate python/dcc_mcp_core/_core.pyi from annotated Rust code.
+# PoC binary: generate python/meshy_dcc_core/_core.pyi from annotated Rust code.
 # Build with: cargo run --bin stub_gen --features stub-gen
 [[bin]]
 name = "stub_gen"
@@ -265,41 +265,41 @@ strip = true
 
 [features]
 default = []
-python-bindings = ["pyo3", "dep:reqwest", "dcc-mcp-naming/python-bindings", "dcc-mcp-models/python-bindings", "dcc-mcp-actions/python-bindings", "dcc-mcp-skills/python-bindings", "dcc-mcp-protocols/python-bindings", "dcc-mcp-logging/python-bindings", "dcc-mcp-pybridge/python-bindings", "dcc-mcp-paths/python-bindings", "dcc-mcp-transport/python-bindings", "dcc-mcp-process/python-bindings", "dcc-mcp-telemetry/python-bindings", "dcc-mcp-sandbox/python-bindings", "dcc-mcp-shm/python-bindings", "dcc-mcp-capture/python-bindings", "dcc-mcp-usd/python-bindings", "dcc-mcp-http-py/python-bindings", "dcc-mcp-artefact/python-bindings", "dcc-mcp-host/python-bindings", "dcc-mcp-wire/python-bindings", "dcc-mcp-workflow?/python-bindings", "dcc-mcp-scheduler?/python-bindings"]
+python-bindings = ["pyo3", "dep:reqwest", "meshy-dcc-naming/python-bindings", "meshy-dcc-models/python-bindings", "meshy-dcc-actions/python-bindings", "meshy-dcc-skills/python-bindings", "meshy-dcc-protocols/python-bindings", "meshy-dcc-logging/python-bindings", "meshy-dcc-pybridge/python-bindings", "meshy-dcc-paths/python-bindings", "meshy-dcc-transport/python-bindings", "meshy-dcc-process/python-bindings", "meshy-dcc-telemetry/python-bindings", "meshy-dcc-sandbox/python-bindings", "meshy-dcc-shm/python-bindings", "meshy-dcc-capture/python-bindings", "meshy-dcc-usd/python-bindings", "meshy-dcc-http-py/python-bindings", "meshy-dcc-artefact/python-bindings", "meshy-dcc-host/python-bindings", "meshy-dcc-wire/python-bindings", "meshy-dcc-workflow?/python-bindings", "meshy-dcc-scheduler?/python-bindings"]
 # Opt into the first-class Workflow primitive (issue #348). Off by default
 # for one release — enables WorkflowSpec/WorkflowStatus in Python and the
 # workflows.* built-in tools in Rust. Step execution is stubbed; see #348.
-workflow = ["dep:dcc-mcp-workflow"]
+workflow = ["dep:meshy-dcc-workflow"]
 # Opt into the scheduler subsystem (issue #352). Off by default — enables
 # the cron + webhook-triggered workflow scheduler and exposes
 # ScheduleSpec / TriggerSpec in Python. Requires the `workflow` feature.
-scheduler = ["dep:dcc-mcp-scheduler", "workflow"]
+scheduler = ["dep:meshy-dcc-scheduler", "workflow"]
 # Enable the Prometheus `/metrics` exporter (issue #331). Off by default.
-# Forwards to dcc-mcp-http/prometheus, which in turn enables the
-# prometheus feature on dcc-mcp-telemetry. When disabled, zero
+# Forwards to meshy-dcc-http/prometheus, which in turn enables the
+# prometheus feature on meshy-dcc-telemetry. When disabled, zero
 # Prometheus code is compiled into the wheel.
-prometheus = ["dcc-mcp-http/prometheus", "dcc-mcp-telemetry/prometheus"]
+prometheus = ["meshy-dcc-http/prometheus", "meshy-dcc-telemetry/prometheus"]
 # Persist JobManager state in SQLite so tracked jobs survive restarts
-# (issue #328). Forwards to `dcc-mcp-http/job-persist-sqlite`. Off by
+# (issue #328). Forwards to `meshy-dcc-http/job-persist-sqlite`. Off by
 # default — when disabled, zero SQLite code compiles into the wheel.
-job-persist-sqlite = ["dcc-mcp-http/job-persist-sqlite"]
+job-persist-sqlite = ["meshy-dcc-http/job-persist-sqlite"]
 # Enable the admin UI (Vite bundle in gateway). Forwards to both the
-# direct `dcc-mcp-gateway` dep and, crucially, the gateway pulled in via
-# `dcc-mcp-http`'s default `auto-gateway` feature (issue #2182). Off by
+# direct `meshy-dcc-gateway` dep and, crucially, the gateway pulled in via
+# `meshy-dcc-http`'s default `auto-gateway` feature (issue #2182). Off by
 # default — when disabled, zero admin UI code or front-end assets are
 # compiled into the wheel.
-admin = ["dcc-mcp-gateway/admin", "dcc-mcp-http/admin"]
+admin = ["meshy-dcc-gateway/admin", "meshy-dcc-http/admin"]
 # Route explicitly negotiated MCP 2026-07-28 requests through the stateless
 # HTTP service while retaining the legacy session path.
-mcp-2026-07-28 = ["dcc-mcp-http/mcp-2026-07-28"]
+mcp-2026-07-28 = ["meshy-dcc-http/mcp-2026-07-28"]
 # Persist gateway admin state in SQLite (bundled `rusqlite`). Off by default
 # so the admin-persist-sqlite path no longer compiles the bundled `rusqlite`
 # driver (issue #2182). Note: the gateway's traffic-capture sink still depends
 # on `rusqlite` unconditionally; a separate follow-up is needed to fully
 # eliminate bundled SQLite from the default wheel.
-admin-persist-sqlite = ["dcc-mcp-http/admin-persist-sqlite", "dcc-mcp-gateway/admin-persist-sqlite"]
+admin-persist-sqlite = ["meshy-dcc-http/admin-persist-sqlite", "meshy-dcc-gateway/admin-persist-sqlite"]
 # Opt-in local Tracy profiling through the existing logging subscriber.
-tracy = ["dcc-mcp-logging/tracy"]
+tracy = ["meshy-dcc-logging/tracy"]
 
 # py37-lite: pure-Python wheel profile for Maya 2022 / Python 3.7.
 # Intentionally empty: ``build-py37`` only packages ``python/`` sources and
@@ -309,29 +309,29 @@ py37-lite = []
 abi3-py38 = ["pyo3/abi3-py38"]
 # Python 3.7 wheel: non-abi3 build, no abi3-py38 feature
 ext-module = ["pyo3/extension-module"]
-# Generate `python/dcc_mcp_core/_core.pyi` from annotated Rust code.
-# PoC scope: currently only dcc-mcp-capture is annotated.
+# Generate `python/meshy_dcc_core/_core.pyi` from annotated Rust code.
+# PoC scope: currently only meshy-dcc-capture is annotated.
 stub-gen = [
     "python-bindings",
     "dep:pyo3-stub-gen",
-    "dcc-mcp-naming/stub-gen",
-    "dcc-mcp-models/stub-gen",
-    "dcc-mcp-actions/stub-gen",
-    "dcc-mcp-skills/stub-gen",
-    "dcc-mcp-protocols/stub-gen",
-    "dcc-mcp-logging/stub-gen",
-    "dcc-mcp-pybridge/stub-gen",
-    "dcc-mcp-paths/stub-gen",
-    "dcc-mcp-transport/stub-gen",
-    "dcc-mcp-process/stub-gen",
-    "dcc-mcp-telemetry/stub-gen",
-    "dcc-mcp-sandbox/stub-gen",
-    "dcc-mcp-shm/stub-gen",
-    "dcc-mcp-capture/stub-gen",
-    "dcc-mcp-usd/stub-gen",
-    "dcc-mcp-http-py/stub-gen",
-    "dcc-mcp-artefact/stub-gen",
-    "dcc-mcp-wire/stub-gen",
-    "dcc-mcp-workflow/stub-gen",
-    "dcc-mcp-scheduler/stub-gen",
+    "meshy-dcc-naming/stub-gen",
+    "meshy-dcc-models/stub-gen",
+    "meshy-dcc-actions/stub-gen",
+    "meshy-dcc-skills/stub-gen",
+    "meshy-dcc-protocols/stub-gen",
+    "meshy-dcc-logging/stub-gen",
+    "meshy-dcc-pybridge/stub-gen",
+    "meshy-dcc-paths/stub-gen",
+    "meshy-dcc-transport/stub-gen",
+    "meshy-dcc-process/stub-gen",
+    "meshy-dcc-telemetry/stub-gen",
+    "meshy-dcc-sandbox/stub-gen",
+    "meshy-dcc-shm/stub-gen",
+    "meshy-dcc-capture/stub-gen",
+    "meshy-dcc-usd/stub-gen",
+    "meshy-dcc-http-py/stub-gen",
+    "meshy-dcc-artefact/stub-gen",
+    "meshy-dcc-wire/stub-gen",
+    "meshy-dcc-workflow/stub-gen",
+    "meshy-dcc-scheduler/stub-gen",
 ]

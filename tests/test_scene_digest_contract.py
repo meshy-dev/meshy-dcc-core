@@ -8,22 +8,22 @@ import urllib.request
 import pytest
 
 from conftest import McpClient
-import dcc_mcp_core
-from dcc_mcp_core import McpHttpConfig
-from dcc_mcp_core import McpHttpServer
-from dcc_mcp_core import ToolRegistry
-import dcc_mcp_core._core as native_core
-import dcc_mcp_core.runtime.scene_digest as scene_digest_module
-from dcc_mcp_core.runtime.scene_digest import SceneDigestSnapshot
-from dcc_mcp_core.runtime.scene_digest import normalize_scene_digest
-import dcc_mcp_core.runtime.script_execution_context as script_execution_module
-from dcc_mcp_core.script_execution import SceneDigestError
-from dcc_mcp_core.script_execution import SceneDigestExecutionError
-from dcc_mcp_core.script_execution import ScriptExecutionContext
-from dcc_mcp_core.script_execution import ScriptExecutionResult
-from dcc_mcp_core.script_execution import capture_state_digest
-from dcc_mcp_core.script_execution import execute_with_state_digest
-from dcc_mcp_core.script_execution import register_state_digest_provider
+import meshy_dcc_core
+from meshy_dcc_core import McpHttpConfig
+from meshy_dcc_core import McpHttpServer
+from meshy_dcc_core import ToolRegistry
+import meshy_dcc_core._core as native_core
+import meshy_dcc_core.runtime.scene_digest as scene_digest_module
+from meshy_dcc_core.runtime.scene_digest import SceneDigestSnapshot
+from meshy_dcc_core.runtime.scene_digest import normalize_scene_digest
+import meshy_dcc_core.runtime.script_execution_context as script_execution_module
+from meshy_dcc_core.script_execution import SceneDigestError
+from meshy_dcc_core.script_execution import SceneDigestExecutionError
+from meshy_dcc_core.script_execution import ScriptExecutionContext
+from meshy_dcc_core.script_execution import ScriptExecutionResult
+from meshy_dcc_core.script_execution import capture_state_digest
+from meshy_dcc_core.script_execution import execute_with_state_digest
+from meshy_dcc_core.script_execution import register_state_digest_provider
 
 
 def _stats(object_count: int, *, extra=None):
@@ -36,10 +36,10 @@ def _stats(object_count: int, *, extra=None):
 
 
 def test_scene_digest_contract_is_top_level_exported() -> None:
-    assert dcc_mcp_core.SceneDigestError is SceneDigestError
-    assert dcc_mcp_core.capture_state_digest is capture_state_digest
-    assert dcc_mcp_core.execute_with_state_digest is execute_with_state_digest
-    assert dcc_mcp_core.register_state_digest_provider is register_state_digest_provider
+    assert meshy_dcc_core.SceneDigestError is SceneDigestError
+    assert meshy_dcc_core.capture_state_digest is capture_state_digest
+    assert meshy_dcc_core.execute_with_state_digest is execute_with_state_digest
+    assert meshy_dcc_core.register_state_digest_provider is register_state_digest_provider
 
 
 def test_state_digest_provider_is_capability_gated_and_context_owned() -> None:

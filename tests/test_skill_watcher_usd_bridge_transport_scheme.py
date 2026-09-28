@@ -12,12 +12,12 @@ import tempfile
 
 import pytest
 
-from dcc_mcp_core import SkillWatcher
-from dcc_mcp_core import TransportAddress
-from dcc_mcp_core import TransportScheme
-from dcc_mcp_core import UsdStage
-from dcc_mcp_core import scene_info_json_to_stage
-from dcc_mcp_core import stage_to_scene_info_json
+from meshy_dcc_core import SkillWatcher
+from meshy_dcc_core import TransportAddress
+from meshy_dcc_core import TransportScheme
+from meshy_dcc_core import UsdStage
+from meshy_dcc_core import scene_info_json_to_stage
+from meshy_dcc_core import stage_to_scene_info_json
 
 # ---------------------------------------------------------------------------
 # Helpers

@@ -1,9 +1,9 @@
 {
-  "$comment": "Snapshot of the tools and recipes the dcc-mcp adapters publish for the shared mesh-ops vocabulary. Used by tests/test_mesh_ops_recipes.py to assert that every routed dispatch target in skills/mesh-ops/RECIPES.yaml resolves to a tool an adapter really publishes. Refresh this file when an adapter ships or renames mesh-ops tools.",
+  "$comment": "Snapshot of the tools and recipes the meshy-dcc adapters publish for the shared mesh-ops vocabulary. Used by tests/test_mesh_ops_recipes.py to assert that every routed dispatch target in skills/mesh-ops/RECIPES.yaml resolves to a tool an adapter really publishes. Refresh this file when an adapter ships or renames mesh-ops tools.",
   "captured_at": "2026-09-18",
   "adapters": {
     "blender": {
-      "repository": "dcc-mcp/dcc-mcp-blender",
+      "repository": "meshy-dev/meshy-dcc-blender",
       "skills": {
         "blender-mesh-ops": [
           "get_poly_count",
@@ -39,7 +39,7 @@
       "recipes": []
     },
     "houdini": {
-      "repository": "dcc-mcp/dcc-mcp-houdini",
+      "repository": "meshy-dev/meshy-dcc-houdini",
       "skills": {
         "houdini-mesh-ops": [
           "array_instances",
@@ -83,7 +83,7 @@
       "recipes": []
     },
     "maya": {
-      "repository": "dcc-mcp/dcc-mcp-maya",
+      "repository": "meshy-dev/meshy-dcc-maya",
       "skills": {
         "maya-mesh-ops": [
           "apply_subdivision",
@@ -134,7 +134,7 @@
       ]
     },
     "3dsmax": {
-      "repository": "dcc-mcp/dcc-mcp-3dsmax",
+      "repository": "meshy-dev/meshy-dcc-3dsmax",
       "skills": {
         "3dsmax-mesh-ops": [
           "get_mesh_topology",

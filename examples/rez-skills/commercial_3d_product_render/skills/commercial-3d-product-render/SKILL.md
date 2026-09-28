@@ -4,7 +4,7 @@ description: "Product lookdev and render-review helpers for commercial 3D work."
 license: MIT
 allowed-tools: Bash Read Write
 metadata:
-  dcc-mcp:
+  meshy-dcc:
     dcc: blender
     version: "1.0.0"
     layer: domain

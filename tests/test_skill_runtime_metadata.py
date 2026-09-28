@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from dcc_mcp_core import SkillCatalog
-from dcc_mcp_core import SkillRuntimeSummary
-from dcc_mcp_core import ToolRegistry
+from meshy_dcc_core import SkillCatalog
+from meshy_dcc_core import SkillRuntimeSummary
+from meshy_dcc_core import ToolRegistry
 
 
 def test_skill_runtime_metadata_surfaces_before_loading(tmp_path: Path) -> None:
@@ -20,17 +20,17 @@ def test_skill_runtime_metadata_surfaces_before_loading(tmp_path: Path) -> None:
                 "name: openusd-runtime",
                 "description: OpenUSD runtime probe skill",
                 "metadata:",
-                "  dcc-mcp:",
+                "  meshy-dcc:",
                 "    dcc: python",
                 "    tags: [usd]",
                 "    runtimes:",
                 "      - name: usd-core",
                 "        type: python_package",
                 "        package: usd-core",
-                "        module: dcc_mcp_runtime_probe_missing_pxr_1210",
+                "        module: meshy_dcc_runtime_probe_missing_pxr_1210",
                 "        optional: true",
                 "        feature_level: full-usd",
-                "        install_hint: pip install dcc-mcp-openusd[usd-core]",
+                "        install_hint: pip install meshy-dcc-openusd[usd-core]",
                 "---",
                 "# OpenUSD Runtime",
             ]

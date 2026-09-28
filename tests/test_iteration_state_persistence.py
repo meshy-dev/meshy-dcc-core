@@ -19,19 +19,19 @@ from unittest.mock import MagicMock
 
 import pytest
 
-import dcc_mcp_core.checkpoint as checkpoint_module
-from dcc_mcp_core.checkpoint import CHECKPOINT_FILE_NAME
-from dcc_mcp_core.checkpoint import CheckpointStore
-from dcc_mcp_core.checkpoint import default_checkpoint_dir
-from dcc_mcp_core.checkpoint import default_checkpoint_path
-from dcc_mcp_core.checkpoint import register_checkpoint_tools
-from dcc_mcp_core.checkpoint import resolve_checkpoint_path
-from dcc_mcp_core.constants import ENV_CHECKPOINT_DIR
-from dcc_mcp_core.constants import ENV_CHECKPOINT_IN_MEMORY
-from dcc_mcp_core.constants import ENV_EMBEDDING_CACHE_DIR
-from dcc_mcp_core.skill_index import SkillDocument
-from dcc_mcp_core.skill_index import VectorSkillIndex
-from dcc_mcp_core.vector_embedder import default_embedding_cache_path
+import meshy_dcc_core.checkpoint as checkpoint_module
+from meshy_dcc_core.checkpoint import CHECKPOINT_FILE_NAME
+from meshy_dcc_core.checkpoint import CheckpointStore
+from meshy_dcc_core.checkpoint import default_checkpoint_dir
+from meshy_dcc_core.checkpoint import default_checkpoint_path
+from meshy_dcc_core.checkpoint import register_checkpoint_tools
+from meshy_dcc_core.checkpoint import resolve_checkpoint_path
+from meshy_dcc_core.constants import ENV_CHECKPOINT_DIR
+from meshy_dcc_core.constants import ENV_CHECKPOINT_IN_MEMORY
+from meshy_dcc_core.constants import ENV_EMBEDDING_CACHE_DIR
+from meshy_dcc_core.skill_index import SkillDocument
+from meshy_dcc_core.skill_index import VectorSkillIndex
+from meshy_dcc_core.vector_embedder import default_embedding_cache_path
 
 # ── 1. Durable checkpoint default ──────────────────────────────────────────
 
@@ -51,7 +51,7 @@ class TestDurableCheckpointPath:
 
     def test_default_dir_falls_back_to_user_profile(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.delenv(ENV_CHECKPOINT_DIR, raising=False)
-        assert default_checkpoint_dir() == Path("~").expanduser() / ".dcc-mcp"
+        assert default_checkpoint_dir() == Path("~").expanduser() / ".meshy-dcc"
 
     def test_dcc_name_is_sanitised(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
         monkeypatch.setenv(ENV_CHECKPOINT_DIR, str(tmp_path))
@@ -247,12 +247,12 @@ class TestServerCheckpointDefault:
 
     @staticmethod
     def _build(monkeypatch: pytest.MonkeyPatch, tmp_path: Path, dcc_name: str = "maya", **kwargs):
-        from dcc_mcp_core._server.options import DccServerOptions
-        from dcc_mcp_core.server_base import DccServerBase
+        from meshy_dcc_core._server.options import DccServerOptions
+        from meshy_dcc_core.server_base import DccServerBase
 
-        monkeypatch.setattr("dcc_mcp_core.server_base.create_adapter_server", MagicMock())
+        monkeypatch.setattr("meshy_dcc_core.server_base.create_adapter_server", MagicMock())
         monkeypatch.setattr(
-            "dcc_mcp_core._server.skill_discovery.register_all_builtin_skills",
+            "meshy_dcc_core._server.skill_discovery.register_all_builtin_skills",
             lambda *args, **kwargs: None,
         )
         skills_dir = tmp_path / "skills"
@@ -352,8 +352,8 @@ class TestDccExecutePersistentNamespace:
     @staticmethod
     def _executor(**kwargs):
         """Build a ``dcc_execute`` executor with its own namespace (no test crosstalk)."""
-        from dcc_mcp_core.dcc_api_executor import DccApiExecutor
-        from dcc_mcp_core.script_execution import ScriptExecutionContext
+        from meshy_dcc_core.dcc_api_executor import DccApiExecutor
+        from meshy_dcc_core.script_execution import ScriptExecutionContext
 
         kwargs.setdefault("script_execution_context", ScriptExecutionContext())
         return DccApiExecutor("maya", **kwargs)
@@ -390,8 +390,8 @@ class TestDccExecutePersistentNamespace:
         assert result["context"]["persistent_namespace"]["variables"] == ["items"]
 
     def test_clear_script_namespace_resets_state(self) -> None:
-        from dcc_mcp_core.script_execution import ScriptExecutionContext
-        from dcc_mcp_core.script_execution import clear_script_namespace
+        from meshy_dcc_core.script_execution import ScriptExecutionContext
+        from meshy_dcc_core.script_execution import clear_script_namespace
 
         context = ScriptExecutionContext()
         executor = self._executor(persistent_namespace=True, script_execution_context=context)
@@ -403,7 +403,7 @@ class TestDccExecutePersistentNamespace:
 
     def test_sandbox_restrictions_are_unchanged(self) -> None:
         executor = self._executor(persistent_namespace=True)
-        result = executor.execute_params({"code": "return open('C:/tmp/dcc-mcp-should-not-open.txt')"})
+        result = executor.execute_params({"code": "return open('C:/tmp/meshy-dcc-should-not-open.txt')"})
 
         assert result["success"] is False
         assert "open" in result["error"]
@@ -434,7 +434,7 @@ class TestDccExecutePersistentNamespace:
         """
         import threading
 
-        from dcc_mcp_core.script_execution import ScriptExecutionContext
+        from meshy_dcc_core.script_execution import ScriptExecutionContext
 
         context = ScriptExecutionContext()
         context.update_script_namespace({"counter": 0})
@@ -475,7 +475,7 @@ class TestDccExecutePersistentNamespace:
         """Eight concurrent read-modify-write calls must all land."""
         import threading
 
-        from dcc_mcp_core.script_execution import ScriptExecutionContext
+        from meshy_dcc_core.script_execution import ScriptExecutionContext
 
         context = ScriptExecutionContext()
         executor = self._executor(persistent_namespace=True, script_execution_context=context)
@@ -502,7 +502,7 @@ class TestDccExecutePersistentNamespace:
     def test_schema_and_description_advertise_the_flag(self) -> None:
         from unittest.mock import MagicMock
 
-        from dcc_mcp_core.dcc_api_executor import register_dcc_api_executor
+        from meshy_dcc_core.dcc_api_executor import register_dcc_api_executor
 
         server = MagicMock()
         register_dcc_api_executor(server, self._executor())
@@ -604,8 +604,8 @@ class TestEmbeddingWarmStart:
         assert index.flush_embedding_cache() is False
 
     def test_embedder_change_invalidates_the_cache(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-        from dcc_mcp_core.vector_embedder import HashedEmbedder
-        from dcc_mcp_core.vector_embedder import embedder_fingerprint
+        from meshy_dcc_core.vector_embedder import HashedEmbedder
+        from meshy_dcc_core.vector_embedder import embedder_fingerprint
 
         monkeypatch.setenv(ENV_EMBEDDING_CACHE_DIR, str(tmp_path))
         cache_path = default_embedding_cache_path("maya")
@@ -660,8 +660,8 @@ class TestEmbeddingWarmStart:
 
     def test_embed_does_not_persist_until_flushed(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
         """A miss fills the in-memory cache; only ``flush`` writes the file."""
-        from dcc_mcp_core.vector_embedder import CachedEmbedder
-        from dcc_mcp_core.vector_embedder import HashedEmbedder
+        from meshy_dcc_core.vector_embedder import CachedEmbedder
+        from meshy_dcc_core.vector_embedder import HashedEmbedder
 
         monkeypatch.setenv(ENV_EMBEDDING_CACHE_DIR, str(tmp_path))
         cache_path = default_embedding_cache_path("maya")

@@ -11,11 +11,11 @@ from typing import Tuple
 
 import pytest
 
-import dcc_mcp_core
-from dcc_mcp_core.metadata_registration import MetadataExtensionRegistration
-from dcc_mcp_core.metadata_registration import imported_metadata_extension
-from dcc_mcp_core.metadata_registration import metadata_extension
-from dcc_mcp_core.metadata_registration import register_metadata_driven_tools
+import meshy_dcc_core
+from meshy_dcc_core.metadata_registration import MetadataExtensionRegistration
+from meshy_dcc_core.metadata_registration import imported_metadata_extension
+from meshy_dcc_core.metadata_registration import metadata_extension
+from meshy_dcc_core.metadata_registration import register_metadata_driven_tools
 
 
 class _Registry:
@@ -105,7 +105,7 @@ def test_register_metadata_driven_tools_records_import_and_runtime_failures(capl
         skills=[],
         dcc_name="zbrush",
         registrations=[
-            imported_metadata_extension("missing", "dcc_mcp_core.nope", "register"),
+            imported_metadata_extension("missing", "meshy_dcc_core.nope", "register"),
             metadata_extension("explode", explode),
             metadata_extension("ok", ok),
         ],
@@ -123,8 +123,8 @@ def test_register_metadata_driven_tools_records_import_and_runtime_failures(capl
 
 
 def test_default_metadata_extensions_register_builtin_tools(monkeypatch: pytest.MonkeyPatch) -> None:
-    recipes = types.ModuleType("dcc_mcp_core.recipes")
-    refs = types.ModuleType("dcc_mcp_core.skill_reference_docs")
+    recipes = types.ModuleType("meshy_dcc_core.recipes")
+    refs = types.ModuleType("meshy_dcc_core.skill_reference_docs")
 
     def register_recipes_tools(target: _Server, *, skills: List[object], dcc_name: str) -> None:
         target.calls.append(("recipes", skills, dcc_name))
@@ -141,8 +141,8 @@ def test_default_metadata_extensions_register_builtin_tools(monkeypatch: pytest.
 
     recipes.register_recipes_tools = register_recipes_tools  # type: ignore[attr-defined]
     refs.register_skill_reference_docs_tools = register_skill_reference_docs_tools  # type: ignore[attr-defined]
-    monkeypatch.setitem(sys.modules, "dcc_mcp_core.recipes", recipes)
-    monkeypatch.setitem(sys.modules, "dcc_mcp_core.skill_reference_docs", refs)
+    monkeypatch.setitem(sys.modules, "meshy_dcc_core.recipes", recipes)
+    monkeypatch.setitem(sys.modules, "meshy_dcc_core.skill_reference_docs", refs)
 
     server = _Server()
 
@@ -164,9 +164,9 @@ def test_default_metadata_extensions_register_builtin_tools(monkeypatch: pytest.
 
 
 def test_metadata_registration_public_exports_are_lazy() -> None:
-    assert dcc_mcp_core.register_metadata_driven_tools is register_metadata_driven_tools
-    assert dcc_mcp_core.metadata_extension is metadata_extension
+    assert meshy_dcc_core.register_metadata_driven_tools is register_metadata_driven_tools
+    assert meshy_dcc_core.metadata_extension is metadata_extension
     assert isinstance(
-        imported_metadata_extension("x", "dcc_mcp_core.metadata_registration", "metadata_extension"),
+        imported_metadata_extension("x", "meshy_dcc_core.metadata_registration", "metadata_extension"),
         MetadataExtensionRegistration,
     )

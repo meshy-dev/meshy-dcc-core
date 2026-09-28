@@ -3,15 +3,15 @@ from __future__ import annotations
 import sys
 from types import SimpleNamespace
 
-import dcc_mcp_core
-from dcc_mcp_core._server.diagnostic_state import DiagnosticRuntimeState
-from dcc_mcp_core.server_base import DccServerBase
+import meshy_dcc_core
+from meshy_dcc_core._server.diagnostic_state import DiagnosticRuntimeState
+from meshy_dcc_core.server_base import DccServerBase
 
 
 def test_diagnostic_runtime_state_is_public() -> None:
-    assert dcc_mcp_core.DiagnosticRuntimeState is DiagnosticRuntimeState
-    assert "DiagnosticRuntimeState" in dcc_mcp_core.__all__
-    assert callable(dcc_mcp_core.reset_default_diagnostic_state_for_tests)
+    assert meshy_dcc_core.DiagnosticRuntimeState is DiagnosticRuntimeState
+    assert "DiagnosticRuntimeState" in meshy_dcc_core.__all__
+    assert callable(meshy_dcc_core.reset_default_diagnostic_state_for_tests)
 
 
 def test_action_recorders_are_namespaced_per_state_and_dcc(monkeypatch) -> None:
@@ -22,17 +22,17 @@ def test_action_recorders_are_namespaced_per_state_and_dcc(monkeypatch) -> None:
             self.name = name
             created.append(name)
 
-    monkeypatch.setitem(sys.modules, "dcc_mcp_core._core", SimpleNamespace(ToolRecorder=FakeRecorder))
+    monkeypatch.setitem(sys.modules, "meshy_dcc_core._core", SimpleNamespace(ToolRecorder=FakeRecorder))
     maya = DiagnosticRuntimeState("maya")
     blender = DiagnosticRuntimeState("blender")
 
     maya_recorder = maya.get_action_recorder()
     blender_recorder = blender.get_action_recorder()
 
-    assert maya_recorder.name == "dcc-mcp-maya"
-    assert blender_recorder.name == "dcc-mcp-blender"
+    assert maya_recorder.name == "meshy-dcc-maya"
+    assert blender_recorder.name == "meshy-dcc-blender"
     assert maya_recorder is not blender_recorder
-    assert created == ["dcc-mcp-maya", "dcc-mcp-blender"]
+    assert created == ["meshy-dcc-maya", "meshy-dcc-blender"]
 
 
 def test_recorder_is_recreated_when_compatibility_state_changes_dcc(monkeypatch) -> None:
@@ -40,14 +40,14 @@ def test_recorder_is_recreated_when_compatibility_state_changes_dcc(monkeypatch)
         def __init__(self, name: str) -> None:
             self.name = name
 
-    monkeypatch.setitem(sys.modules, "dcc_mcp_core._core", SimpleNamespace(ToolRecorder=FakeRecorder))
+    monkeypatch.setitem(sys.modules, "meshy_dcc_core._core", SimpleNamespace(ToolRecorder=FakeRecorder))
     state = DiagnosticRuntimeState("maya")
 
     first = state.get_action_recorder("maya")
     second = state.get_action_recorder("photoshop")
 
-    assert first.name == "dcc-mcp-maya"
-    assert second.name == "dcc-mcp-photoshop"
+    assert first.name == "meshy-dcc-maya"
+    assert second.name == "meshy-dcc-photoshop"
     assert first is not second
 
 

@@ -14,16 +14,16 @@ import json
 
 import pytest
 
-import dcc_mcp_core
+import meshy_dcc_core
 
 # ── Helpers ─────────────────────────────────────────────────────────────────
 
 
-def _allowed_ctx(*actions: str) -> dcc_mcp_core.SandboxContext:
+def _allowed_ctx(*actions: str) -> meshy_dcc_core.SandboxContext:
     """Return a SandboxContext with only *actions* allowed."""
-    policy = dcc_mcp_core.SandboxPolicy()
+    policy = meshy_dcc_core.SandboxPolicy()
     policy.allow_actions(list(actions))
-    return dcc_mcp_core.SandboxContext(policy)
+    return meshy_dcc_core.SandboxContext(policy)
 
 
 # ════════════════════════════════════════════════════════════════════════════
@@ -35,16 +35,16 @@ class TestSandboxPolicyReadOnly:
     """is_read_only flag toggle."""
 
     def test_default_is_false(self) -> None:
-        p = dcc_mcp_core.SandboxPolicy()
+        p = meshy_dcc_core.SandboxPolicy()
         assert p.is_read_only is False
 
     def test_set_read_only_true(self) -> None:
-        p = dcc_mcp_core.SandboxPolicy()
+        p = meshy_dcc_core.SandboxPolicy()
         p.set_read_only(True)
         assert p.is_read_only is True
 
     def test_set_read_only_false_again(self) -> None:
-        p = dcc_mcp_core.SandboxPolicy()
+        p = meshy_dcc_core.SandboxPolicy()
         p.set_read_only(True)
         p.set_read_only(False)
         assert p.is_read_only is False
@@ -54,29 +54,29 @@ class TestSandboxPolicyMaxActions:
     """set_max_actions enforcement — 3rd call should be denied."""
 
     def test_max_actions_allows_up_to_limit(self) -> None:
-        p = dcc_mcp_core.SandboxPolicy()
+        p = meshy_dcc_core.SandboxPolicy()
         p.allow_actions(["echo"])
         p.set_max_actions(2)
-        ctx = dcc_mcp_core.SandboxContext(p)
+        ctx = meshy_dcc_core.SandboxContext(p)
         ctx.execute_json("echo", "{}")
         ctx.execute_json("echo", "{}")
         assert ctx.action_count == 2
 
     def test_max_actions_denies_over_limit(self) -> None:
-        p = dcc_mcp_core.SandboxPolicy()
+        p = meshy_dcc_core.SandboxPolicy()
         p.allow_actions(["echo"])
         p.set_max_actions(2)
-        ctx = dcc_mcp_core.SandboxContext(p)
+        ctx = meshy_dcc_core.SandboxContext(p)
         ctx.execute_json("echo", "{}")
         ctx.execute_json("echo", "{}")
         with pytest.raises(RuntimeError):
             ctx.execute_json("echo", "{}")
 
     def test_max_actions_limit_1(self) -> None:
-        p = dcc_mcp_core.SandboxPolicy()
+        p = meshy_dcc_core.SandboxPolicy()
         p.allow_actions(["echo"])
         p.set_max_actions(1)
-        ctx = dcc_mcp_core.SandboxContext(p)
+        ctx = meshy_dcc_core.SandboxContext(p)
         ctx.execute_json("echo", "{}")
         with pytest.raises(RuntimeError):
             ctx.execute_json("echo", "{}")
@@ -86,10 +86,10 @@ class TestSandboxPolicyDenyActions:
     """deny_actions overrides allow_actions for the listed names."""
 
     def test_deny_overrides_allow(self) -> None:
-        p = dcc_mcp_core.SandboxPolicy()
+        p = meshy_dcc_core.SandboxPolicy()
         p.allow_actions(["echo", "delete"])
         p.deny_actions(["delete"])
-        ctx = dcc_mcp_core.SandboxContext(p)
+        ctx = meshy_dcc_core.SandboxContext(p)
         # echo is allowed
         ctx.execute_json("echo", "{}")
         assert ctx.action_count == 1
@@ -98,17 +98,17 @@ class TestSandboxPolicyDenyActions:
             ctx.execute_json("delete", "{}")
 
     def test_deny_without_allow_still_denies(self) -> None:
-        p = dcc_mcp_core.SandboxPolicy()
+        p = meshy_dcc_core.SandboxPolicy()
         p.allow_actions(["echo"])
         p.deny_actions(["echo"])
-        ctx = dcc_mcp_core.SandboxContext(p)
+        ctx = meshy_dcc_core.SandboxContext(p)
         with pytest.raises(RuntimeError):
             ctx.execute_json("echo", "{}")
 
     def test_deny_unlisted_action_is_already_denied(self) -> None:
-        p = dcc_mcp_core.SandboxPolicy()
+        p = meshy_dcc_core.SandboxPolicy()
         p.allow_actions(["echo"])
-        ctx = dcc_mcp_core.SandboxContext(p)
+        ctx = meshy_dcc_core.SandboxContext(p)
         with pytest.raises(RuntimeError):
             ctx.execute_json("not_in_whitelist", "{}")
 
@@ -146,10 +146,10 @@ class TestAuditLogBasic:
 class TestAuditLogSuccessesDenials:
     """AuditLog.successes() and .denials() filtering."""
 
-    def _make_mixed_ctx(self) -> dcc_mcp_core.SandboxContext:
-        p = dcc_mcp_core.SandboxPolicy()
+    def _make_mixed_ctx(self) -> meshy_dcc_core.SandboxContext:
+        p = meshy_dcc_core.SandboxPolicy()
         p.allow_actions(["echo", "get_info"])
-        ctx = dcc_mcp_core.SandboxContext(p)
+        ctx = meshy_dcc_core.SandboxContext(p)
         ctx.set_actor("agent-x")
         ctx.execute_json("echo", "{}")
         ctx.execute_json("get_info", "{}")
@@ -176,9 +176,9 @@ class TestAuditLogSuccessesDenials:
             assert entry.outcome == "denied"
 
     def test_no_successes_when_all_denied(self) -> None:
-        p = dcc_mcp_core.SandboxPolicy()
+        p = meshy_dcc_core.SandboxPolicy()
         p.allow_actions(["echo"])
-        ctx = dcc_mcp_core.SandboxContext(p)
+        ctx = meshy_dcc_core.SandboxContext(p)
         with contextlib.suppress(RuntimeError):
             ctx.execute_json("forbidden", "{}")
         assert len(ctx.audit_log.successes()) == 0
@@ -263,10 +263,10 @@ class TestAuditLogToJson:
 class TestAuditEntryProperties:
     """AuditEntry property accessors."""
 
-    def _make_entry(self) -> dcc_mcp_core.AuditEntry:
-        p = dcc_mcp_core.SandboxPolicy()
+    def _make_entry(self) -> meshy_dcc_core.AuditEntry:
+        p = meshy_dcc_core.SandboxPolicy()
         p.allow_actions(["echo"])
-        ctx = dcc_mcp_core.SandboxContext(p)
+        ctx = meshy_dcc_core.SandboxContext(p)
         ctx.set_actor("test-agent")
         ctx.execute_json("echo", '{"key": "val"}')
         return ctx.audit_log.entries()[0]
@@ -302,9 +302,9 @@ class TestAuditEntryProperties:
         assert "success" in r
 
     def test_denied_entry_outcome_detail_not_none(self) -> None:
-        p = dcc_mcp_core.SandboxPolicy()
+        p = meshy_dcc_core.SandboxPolicy()
         p.allow_actions(["echo"])
-        ctx = dcc_mcp_core.SandboxContext(p)
+        ctx = meshy_dcc_core.SandboxContext(p)
         with contextlib.suppress(RuntimeError):
             ctx.execute_json("forbidden_action", "{}")
         denied = ctx.audit_log.denials()
@@ -332,28 +332,28 @@ class TestToolRecorderBasic:
     """ToolRecorder creation and basic recording."""
 
     def test_no_metrics_before_recording(self) -> None:
-        rec = dcc_mcp_core.ToolRecorder("scope-1")
+        rec = meshy_dcc_core.ToolRecorder("scope-1")
         assert rec.metrics("create_sphere") is None
 
     def test_all_metrics_empty_initially(self) -> None:
-        rec = dcc_mcp_core.ToolRecorder("scope-2")
+        rec = meshy_dcc_core.ToolRecorder("scope-2")
         assert rec.all_metrics() == []
 
     def test_record_success_creates_metrics(self) -> None:
-        rec = dcc_mcp_core.ToolRecorder("scope-3")
+        rec = meshy_dcc_core.ToolRecorder("scope-3")
         guard = rec.start("create_sphere", "maya")
         guard.finish(success=True)
         m = rec.metrics("create_sphere")
         assert m is not None
 
     def test_invocation_count_increments(self) -> None:
-        rec = dcc_mcp_core.ToolRecorder("scope-4")
+        rec = meshy_dcc_core.ToolRecorder("scope-4")
         rec.start("ping", "maya").finish(success=True)
         rec.start("ping", "maya").finish(success=True)
         assert rec.metrics("ping").invocation_count == 2
 
     def test_success_count_correct(self) -> None:
-        rec = dcc_mcp_core.ToolRecorder("scope-5")
+        rec = meshy_dcc_core.ToolRecorder("scope-5")
         rec.start("ping", "maya").finish(success=True)
         rec.start("ping", "maya").finish(success=True)
         rec.start("ping", "maya").finish(success=False)
@@ -362,7 +362,7 @@ class TestToolRecorderBasic:
         assert m.failure_count == 1
 
     def test_failure_count_correct(self) -> None:
-        rec = dcc_mcp_core.ToolRecorder("scope-6")
+        rec = meshy_dcc_core.ToolRecorder("scope-6")
         rec.start("ping", "maya").finish(success=False)
         assert rec.metrics("ping").failure_count == 1
 
@@ -370,8 +370,8 @@ class TestToolRecorderBasic:
 class TestToolMetricsProperties:
     """All properties of ToolMetrics."""
 
-    def _make_metrics(self, successes: int = 2, failures: int = 1) -> dcc_mcp_core.ToolMetrics:
-        rec = dcc_mcp_core.ToolRecorder("test-metrics")
+    def _make_metrics(self, successes: int = 2, failures: int = 1) -> meshy_dcc_core.ToolMetrics:
+        rec = meshy_dcc_core.ToolRecorder("test-metrics")
         for _ in range(successes):
             rec.start("op", "maya").finish(success=True)
         for _ in range(failures):
@@ -425,28 +425,28 @@ class TestToolRecorderAllMetrics:
     """ToolRecorder.all_metrics() and .reset()."""
 
     def test_all_metrics_lists_all_actions(self) -> None:
-        rec = dcc_mcp_core.ToolRecorder("scope-all")
+        rec = meshy_dcc_core.ToolRecorder("scope-all")
         rec.start("create_sphere", "maya").finish(success=True)
         rec.start("delete_object", "maya").finish(success=False)
         names = sorted(m.action_name for m in rec.all_metrics())
         assert names == ["create_sphere", "delete_object"]
 
     def test_all_metrics_count(self) -> None:
-        rec = dcc_mcp_core.ToolRecorder("scope-cnt")
+        rec = meshy_dcc_core.ToolRecorder("scope-cnt")
         rec.start("a", "maya").finish(success=True)
         rec.start("b", "maya").finish(success=True)
         rec.start("c", "maya").finish(success=True)
         assert len(rec.all_metrics()) == 3
 
     def test_reset_clears_all_metrics(self) -> None:
-        rec = dcc_mcp_core.ToolRecorder("scope-reset")
+        rec = meshy_dcc_core.ToolRecorder("scope-reset")
         rec.start("op", "maya").finish(success=True)
         rec.reset()
         assert rec.all_metrics() == []
         assert rec.metrics("op") is None
 
     def test_reset_allows_fresh_recording(self) -> None:
-        rec = dcc_mcp_core.ToolRecorder("scope-fresh")
+        rec = meshy_dcc_core.ToolRecorder("scope-fresh")
         rec.start("op", "maya").finish(success=True)
         rec.reset()
         rec.start("op", "maya").finish(success=True)
@@ -459,7 +459,7 @@ class TestRecordingGuardContextManager:
     """RecordingGuard used as context manager."""
 
     def test_context_manager_no_exception_success(self) -> None:
-        rec = dcc_mcp_core.ToolRecorder("scope-cm")
+        rec = meshy_dcc_core.ToolRecorder("scope-cm")
         with rec.start("op", "maya"):
             pass
         m = rec.metrics("op")
@@ -467,7 +467,7 @@ class TestRecordingGuardContextManager:
         assert m.invocation_count == 1
 
     def test_context_manager_exception_records_failure(self) -> None:
-        rec = dcc_mcp_core.ToolRecorder("scope-ex")
+        rec = meshy_dcc_core.ToolRecorder("scope-ex")
         with pytest.raises(ValueError), rec.start("op", "maya"):
             raise ValueError("test error")
         m = rec.metrics("op")
@@ -475,19 +475,19 @@ class TestRecordingGuardContextManager:
         assert m.invocation_count == 1
 
     def test_context_manager_enter_returns_guard(self) -> None:
-        rec = dcc_mcp_core.ToolRecorder("scope-enter")
+        rec = meshy_dcc_core.ToolRecorder("scope-enter")
         with rec.start("op", "maya") as g:
             assert g is not None
 
     def test_multiple_context_manager_calls(self) -> None:
-        rec = dcc_mcp_core.ToolRecorder("scope-multi")
+        rec = meshy_dcc_core.ToolRecorder("scope-multi")
         for _ in range(3):
             with rec.start("op", "maya"):
                 pass
         assert rec.metrics("op").invocation_count == 3
 
     def test_repr_not_empty(self) -> None:
-        rec = dcc_mcp_core.ToolRecorder("scope-repr")
+        rec = meshy_dcc_core.ToolRecorder("scope-repr")
         guard = rec.start("op", "maya")
         assert repr(guard) != ""
         guard.finish(success=True)
@@ -501,8 +501,8 @@ class TestRecordingGuardContextManager:
 class TestUsdStageMetrics:
     """UsdStage.metrics() returns correct per-type counts."""
 
-    def _make_scene(self) -> dcc_mcp_core.UsdStage:
-        stage = dcc_mcp_core.UsdStage("metrics_scene")
+    def _make_scene(self) -> meshy_dcc_core.UsdStage:
+        stage = meshy_dcc_core.UsdStage("metrics_scene")
         stage.define_prim("/World", "Xform")
         stage.define_prim("/World/Cube", "Mesh")
         stage.define_prim("/World/Sphere", "Sphere")
@@ -543,7 +543,7 @@ class TestUsdStageMetrics:
         assert m["material_count"] == 0
 
     def test_empty_stage_prim_count_zero(self) -> None:
-        m = dcc_mcp_core.UsdStage("empty").metrics()
+        m = meshy_dcc_core.UsdStage("empty").metrics()
         assert m["prim_count"] == 0
 
 
@@ -551,26 +551,26 @@ class TestUsdStageExportUsda:
     """UsdStage.export_usda() produces valid USDA text."""
 
     def test_export_usda_returns_string(self) -> None:
-        stage = dcc_mcp_core.UsdStage("usda_stage")
+        stage = meshy_dcc_core.UsdStage("usda_stage")
         usda = stage.export_usda()
         assert isinstance(usda, str)
 
     def test_export_usda_has_header(self) -> None:
-        usda = dcc_mcp_core.UsdStage("hdr").export_usda()
+        usda = meshy_dcc_core.UsdStage("hdr").export_usda()
         assert usda.startswith("#usda")
 
     def test_export_usda_non_empty(self) -> None:
-        usda = dcc_mcp_core.UsdStage("nonempty").export_usda()
+        usda = meshy_dcc_core.UsdStage("nonempty").export_usda()
         assert len(usda) > 0
 
     def test_export_usda_contains_prim_type(self) -> None:
-        stage = dcc_mcp_core.UsdStage("prim_test")
+        stage = meshy_dcc_core.UsdStage("prim_test")
         stage.define_prim("/Sphere", "Sphere")
         usda = stage.export_usda()
         assert "Sphere" in usda
 
     def test_export_usda_contains_up_axis(self) -> None:
-        stage = dcc_mcp_core.UsdStage("axis_test")
+        stage = meshy_dcc_core.UsdStage("axis_test")
         stage.up_axis = "Z"
         usda = stage.export_usda()
         assert "Z" in usda
@@ -580,38 +580,38 @@ class TestUsdStageFromJsonRoundTrip:
     """UsdStage.to_json() / from_json() round-trip."""
 
     def test_roundtrip_name_preserved(self) -> None:
-        stage = dcc_mcp_core.UsdStage("rt_scene")
-        back = dcc_mcp_core.UsdStage.from_json(stage.to_json())
+        stage = meshy_dcc_core.UsdStage("rt_scene")
+        back = meshy_dcc_core.UsdStage.from_json(stage.to_json())
         assert back.name == "rt_scene"
 
     def test_roundtrip_prim_count_preserved(self) -> None:
-        stage = dcc_mcp_core.UsdStage("rt_prims")
+        stage = meshy_dcc_core.UsdStage("rt_prims")
         stage.define_prim("/A", "Xform")
         stage.define_prim("/A/B", "Mesh")
-        back = dcc_mcp_core.UsdStage.from_json(stage.to_json())
+        back = meshy_dcc_core.UsdStage.from_json(stage.to_json())
         assert len(back.traverse()) == 2
 
     def test_roundtrip_up_axis_preserved(self) -> None:
-        stage = dcc_mcp_core.UsdStage("rt_axis")
+        stage = meshy_dcc_core.UsdStage("rt_axis")
         stage.up_axis = "Z"
-        back = dcc_mcp_core.UsdStage.from_json(stage.to_json())
+        back = meshy_dcc_core.UsdStage.from_json(stage.to_json())
         assert back.up_axis == "Z"
 
     def test_roundtrip_fps_preserved(self) -> None:
-        stage = dcc_mcp_core.UsdStage("rt_fps")
+        stage = meshy_dcc_core.UsdStage("rt_fps")
         stage.fps = 30.0
-        back = dcc_mcp_core.UsdStage.from_json(stage.to_json())
+        back = meshy_dcc_core.UsdStage.from_json(stage.to_json())
         assert back.fps == pytest.approx(30.0)
 
     def test_to_json_is_valid_json(self) -> None:
-        stage = dcc_mcp_core.UsdStage("json_valid")
+        stage = meshy_dcc_core.UsdStage("json_valid")
         json.loads(stage.to_json())
 
     def test_roundtrip_with_attributes(self) -> None:
-        stage = dcc_mcp_core.UsdStage("rt_attr")
+        stage = meshy_dcc_core.UsdStage("rt_attr")
         stage.define_prim("/Cube", "Mesh")
-        stage.set_attribute("/Cube", "radius", dcc_mcp_core.VtValue.from_float(2.5))
-        back = dcc_mcp_core.UsdStage.from_json(stage.to_json())
+        stage.set_attribute("/Cube", "radius", meshy_dcc_core.VtValue.from_float(2.5))
+        back = meshy_dcc_core.UsdStage.from_json(stage.to_json())
         val = back.get_attribute("/Cube", "radius")
         assert val is not None
         assert val.to_python() == pytest.approx(2.5)
@@ -621,17 +621,17 @@ class TestUsdStageSetDefaultPrim:
     """UsdStage.set_default_prim() and default_prim read-back."""
 
     def test_default_prim_initially_none(self) -> None:
-        stage = dcc_mcp_core.UsdStage("dp_init")
+        stage = meshy_dcc_core.UsdStage("dp_init")
         assert stage.default_prim is None
 
     def test_set_default_prim_returns_correct_path(self) -> None:
-        stage = dcc_mcp_core.UsdStage("dp_set")
+        stage = meshy_dcc_core.UsdStage("dp_set")
         stage.define_prim("/World", "Xform")
         stage.set_default_prim("/World")
         assert stage.default_prim == "/World"
 
     def test_set_default_prim_changes_value(self) -> None:
-        stage = dcc_mcp_core.UsdStage("dp_change")
+        stage = meshy_dcc_core.UsdStage("dp_change")
         stage.define_prim("/A", "Xform")
         stage.define_prim("/B", "Xform")
         stage.set_default_prim("/A")
@@ -639,7 +639,7 @@ class TestUsdStageSetDefaultPrim:
         assert stage.default_prim == "/B"
 
     def test_clear_default_prim_with_empty_string(self) -> None:
-        stage = dcc_mcp_core.UsdStage("dp_clear")
+        stage = meshy_dcc_core.UsdStage("dp_clear")
         stage.define_prim("/World", "Xform")
         stage.set_default_prim("/World")
         stage.set_default_prim("")
@@ -656,33 +656,33 @@ class TestCapturerStatsIncrement:
     """Capturer.stats() increments correctly per capture."""
 
     def test_initial_stats_all_zero(self) -> None:
-        c = dcc_mcp_core.Capturer.new_mock(320, 240)
+        c = meshy_dcc_core.Capturer.new_mock(320, 240)
         cnt, total, err = c.stats()
         assert cnt == 0
         assert total == 0
         assert err == 0
 
     def test_one_capture_increments_count(self) -> None:
-        c = dcc_mcp_core.Capturer.new_mock(320, 240)
+        c = meshy_dcc_core.Capturer.new_mock(320, 240)
         c.capture(format="png")
         cnt, _, _ = c.stats()
         assert cnt == 1
 
     def test_two_captures_count_is_2(self) -> None:
-        c = dcc_mcp_core.Capturer.new_mock(320, 240)
+        c = meshy_dcc_core.Capturer.new_mock(320, 240)
         c.capture(format="png")
         c.capture(format="png")
         cnt, _, _ = c.stats()
         assert cnt == 2
 
     def test_bytes_nonzero_after_capture(self) -> None:
-        c = dcc_mcp_core.Capturer.new_mock(320, 240)
+        c = meshy_dcc_core.Capturer.new_mock(320, 240)
         c.capture(format="png")
         _, total_bytes, _ = c.stats()
         assert total_bytes > 0
 
     def test_bytes_accumulate_over_captures(self) -> None:
-        c = dcc_mcp_core.Capturer.new_mock(320, 240)
+        c = meshy_dcc_core.Capturer.new_mock(320, 240)
         c.capture(format="png")
         _, b1, _ = c.stats()
         c.capture(format="png")
@@ -690,26 +690,26 @@ class TestCapturerStatsIncrement:
         assert b2 >= b1
 
     def test_error_count_zero_on_success(self) -> None:
-        c = dcc_mcp_core.Capturer.new_mock(320, 240)
+        c = meshy_dcc_core.Capturer.new_mock(320, 240)
         c.capture(format="png")
         _, _, err = c.stats()
         assert err == 0
 
     def test_jpeg_capture_increments_count(self) -> None:
-        c = dcc_mcp_core.Capturer.new_mock(320, 240)
+        c = meshy_dcc_core.Capturer.new_mock(320, 240)
         c.capture(format="jpeg")
         cnt, _, _ = c.stats()
         assert cnt == 1
 
     def test_raw_bgra_capture_increments_count(self) -> None:
-        c = dcc_mcp_core.Capturer.new_mock(320, 240)
+        c = meshy_dcc_core.Capturer.new_mock(320, 240)
         c.capture(format="raw_bgra")
         cnt, _, _ = c.stats()
         assert cnt == 1
 
     def test_stats_independent_between_capturers(self) -> None:
-        c1 = dcc_mcp_core.Capturer.new_mock(320, 240)
-        c2 = dcc_mcp_core.Capturer.new_mock(320, 240)
+        c1 = meshy_dcc_core.Capturer.new_mock(320, 240)
+        c2 = meshy_dcc_core.Capturer.new_mock(320, 240)
         c1.capture(format="png")
         c1.capture(format="png")
         cnt1, _, _ = c1.stats()
@@ -727,35 +727,35 @@ class TestValidateActionResult:
     """validate_action_result normalises various input types."""
 
     def test_dict_success_true(self) -> None:
-        r = dcc_mcp_core.validate_action_result({"success": True, "message": "ok"})
+        r = meshy_dcc_core.validate_action_result({"success": True, "message": "ok"})
         assert r.success is True
         assert r.message == "ok"
 
     def test_dict_success_false(self) -> None:
-        r = dcc_mcp_core.validate_action_result({"success": False, "error": "fail"})
+        r = meshy_dcc_core.validate_action_result({"success": False, "error": "fail"})
         assert r.success is False
 
     def test_string_input_is_success(self) -> None:
-        r = dcc_mcp_core.validate_action_result("any string")
+        r = meshy_dcc_core.validate_action_result("any string")
         assert r.success is True
 
     def test_none_input_is_success(self) -> None:
-        r = dcc_mcp_core.validate_action_result(None)
+        r = meshy_dcc_core.validate_action_result(None)
         assert r.success is True
 
     def test_returns_action_result_model(self) -> None:
-        r = dcc_mcp_core.validate_action_result({"success": True})
-        assert isinstance(r, dcc_mcp_core.ToolResult)
+        r = meshy_dcc_core.validate_action_result({"success": True})
+        assert isinstance(r, meshy_dcc_core.ToolResult)
 
     def test_dict_with_context(self) -> None:
-        r = dcc_mcp_core.validate_action_result({"success": True, "message": "m", "context": {"k": "v"}})
+        r = meshy_dcc_core.validate_action_result({"success": True, "message": "m", "context": {"k": "v"}})
         assert r.success is True
         assert r.context["k"] == "v"
         assert "context" not in r.context
 
     def test_action_result_model_passthrough(self) -> None:
-        original = dcc_mcp_core.success_result("hello")
-        r = dcc_mcp_core.validate_action_result(original)
+        original = meshy_dcc_core.success_result("hello")
+        r = meshy_dcc_core.validate_action_result(original)
         assert r.success is True
         assert r.message == "hello"
 
@@ -764,39 +764,39 @@ class TestFromException:
     """from_exception() produces error results from exception messages."""
 
     def test_success_is_false(self) -> None:
-        r = dcc_mcp_core.from_exception("something went wrong")
+        r = meshy_dcc_core.from_exception("something went wrong")
         assert r.success is False
 
     def test_error_contains_message(self) -> None:
-        r = dcc_mcp_core.from_exception("connection timeout")
+        r = meshy_dcc_core.from_exception("connection timeout")
         assert r.error == "Exception"
         assert r._meta["dcc.error"]["message"] == "connection timeout"
 
     def test_returns_action_result_model(self) -> None:
-        r = dcc_mcp_core.from_exception("err")
-        assert isinstance(r, dcc_mcp_core.ToolResult)
+        r = meshy_dcc_core.from_exception("err")
+        assert isinstance(r, meshy_dcc_core.ToolResult)
 
     def test_with_custom_message(self) -> None:
-        r = dcc_mcp_core.from_exception("err detail", message="custom msg")
+        r = meshy_dcc_core.from_exception("err detail", message="custom msg")
         assert r.message == "custom msg"
 
     def test_default_message_not_empty(self) -> None:
-        r = dcc_mcp_core.from_exception("err detail")
+        r = meshy_dcc_core.from_exception("err detail")
         assert isinstance(r.message, str)
 
     def test_with_prompt(self) -> None:
-        r = dcc_mcp_core.from_exception("err", prompt="try again")
+        r = meshy_dcc_core.from_exception("err", prompt="try again")
         assert r.prompt == "try again"
 
     def test_possible_solutions_in_context_or_error(self) -> None:
-        r = dcc_mcp_core.from_exception(
+        r = meshy_dcc_core.from_exception(
             "err",
             possible_solutions=["check network", "retry"],
         )
         assert r.success is False
 
     def test_include_traceback_false(self) -> None:
-        r = dcc_mcp_core.from_exception("err", include_traceback=False)
+        r = meshy_dcc_core.from_exception("err", include_traceback=False)
         assert r.success is False
         assert r.error == "Exception"
         assert "traceback" not in r._meta["dcc.error"]

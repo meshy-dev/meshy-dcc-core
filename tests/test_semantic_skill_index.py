@@ -4,16 +4,16 @@ from __future__ import annotations
 
 import pytest
 
-from dcc_mcp_core import LexicalSkillIndex
-from dcc_mcp_core import RrfFusionIndex
-from dcc_mcp_core import SkillDocument
-from dcc_mcp_core import SkillSearchHit
-from dcc_mcp_core.semantic_skill_index import LexicalSkillIndex as LegacyLexicalSkillIndex
-from dcc_mcp_core.semantic_skill_index import RrfFusionIndex as LegacyRrfFusionIndex
-from dcc_mcp_core.skill_index import LexicalSkillIndex as CanonicalLexicalSkillIndex
-from dcc_mcp_core.skill_index import RrfFusionIndex as CanonicalRrfFusionIndex
-from dcc_mcp_core.skill_index import SkillDocument as CanonicalSkillDocument
-from dcc_mcp_core.skill_index import SkillSearchHit as CanonicalSkillSearchHit
+from meshy_dcc_core import LexicalSkillIndex
+from meshy_dcc_core import RrfFusionIndex
+from meshy_dcc_core import SkillDocument
+from meshy_dcc_core import SkillSearchHit
+from meshy_dcc_core.semantic_skill_index import LexicalSkillIndex as LegacyLexicalSkillIndex
+from meshy_dcc_core.semantic_skill_index import RrfFusionIndex as LegacyRrfFusionIndex
+from meshy_dcc_core.skill_index import LexicalSkillIndex as CanonicalLexicalSkillIndex
+from meshy_dcc_core.skill_index import RrfFusionIndex as CanonicalRrfFusionIndex
+from meshy_dcc_core.skill_index import SkillDocument as CanonicalSkillDocument
+from meshy_dcc_core.skill_index import SkillSearchHit as CanonicalSkillSearchHit
 
 
 def test_skill_index_public_and_compatibility_aliases_are_identical() -> None:

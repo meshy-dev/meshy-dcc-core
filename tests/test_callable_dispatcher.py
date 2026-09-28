@@ -10,16 +10,16 @@ import time
 import pytest
 
 # Import local modules
-import dcc_mcp_core
-from dcc_mcp_core._server.callable_dispatcher import BaseDccCallableDispatcherFull
-from dcc_mcp_core._server.callable_dispatcher import BaseDccPump
-from dcc_mcp_core._server.callable_dispatcher import DrainStats
-from dcc_mcp_core._server.callable_dispatcher import InProcessCallableDispatcher
-from dcc_mcp_core._server.callable_dispatcher import JobEntry
-from dcc_mcp_core._server.callable_dispatcher import JobOutcome
-from dcc_mcp_core._server.callable_dispatcher import PendingEnvelope
-from dcc_mcp_core._server.callable_dispatcher import PumpStats
-from dcc_mcp_core._server.callable_dispatcher import current_callable_job
+import meshy_dcc_core
+from meshy_dcc_core._server.callable_dispatcher import BaseDccCallableDispatcherFull
+from meshy_dcc_core._server.callable_dispatcher import BaseDccPump
+from meshy_dcc_core._server.callable_dispatcher import DrainStats
+from meshy_dcc_core._server.callable_dispatcher import InProcessCallableDispatcher
+from meshy_dcc_core._server.callable_dispatcher import JobEntry
+from meshy_dcc_core._server.callable_dispatcher import JobOutcome
+from meshy_dcc_core._server.callable_dispatcher import PendingEnvelope
+from meshy_dcc_core._server.callable_dispatcher import PumpStats
+from meshy_dcc_core._server.callable_dispatcher import current_callable_job
 
 # ── public surface ───────────────────────────────────────────────────────────
 
@@ -34,8 +34,8 @@ def test_top_level_exports() -> None:
         "PendingEnvelope",
         "current_callable_job",
     ):
-        assert hasattr(dcc_mcp_core, name), name
-        assert name in dcc_mcp_core.__all__
+        assert hasattr(meshy_dcc_core, name), name
+        assert name in meshy_dcc_core.__all__
 
 
 def test_protocols_runtime_checkable() -> None:

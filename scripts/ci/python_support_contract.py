@@ -92,10 +92,10 @@ def validate_contract(contract: dict[str, Any]) -> None:
         raise ContractError("the modern wheel profile must remain abi3-py38")
 
     expected_distributions = {
-        "dcc-mcp-core": "pyproject.toml",
-        "dcc-mcp-server": "pkg/dcc-mcp-server-bin/pyproject.toml",
-        "dcc-mcp-core-semantic": "pkg/dcc-mcp-core-semantic/pyproject.toml",
-        "dcc-mcp-cli": "pkg/dcc-mcp-cli-bin/pyproject.toml",
+        "meshy-dcc-core": "pyproject.toml",
+        "meshy-dcc-server": "pkg/meshy-dcc-server-bin/pyproject.toml",
+        "meshy-dcc-core-semantic": "pkg/meshy-dcc-core-semantic/pyproject.toml",
+        "meshy-dcc-cli": "pkg/meshy-dcc-cli-bin/pyproject.toml",
     }
     if not isinstance(distributions, dict) or set(distributions) != set(expected_distributions):
         raise ContractError("all released Python distributions must be declared")
@@ -127,10 +127,10 @@ def validate_contract(contract: dict[str, Any]) -> None:
                 raise ContractError(f"distribution {name} forbidden runtime dependency version must be non-empty")
 
     semantic = optional_dependencies.get("semantic", {})
-    if semantic.get("owner_distribution") != "dcc-mcp-core":
-        raise ContractError("semantic extra must belong to dcc-mcp-core")
-    if semantic.get("native_dependency") != "dcc-mcp-core-semantic":
-        raise ContractError("semantic extra must include dcc-mcp-core-semantic")
+    if semantic.get("owner_distribution") != "meshy-dcc-core":
+        raise ContractError("semantic extra must belong to meshy-dcc-core")
+    if semantic.get("native_dependency") != "meshy-dcc-core-semantic":
+        raise ContractError("semantic extra must include meshy-dcc-core-semantic")
     if semantic.get("python_fallback_dependency") != "fastembed":
         raise ContractError("semantic extra must identify fastembed as its Python fallback")
     if semantic.get("fallback_minimum_python") != "3.8":
@@ -171,10 +171,10 @@ def validate_contract(contract: dict[str, Any]) -> None:
         imports = smoke.get(profile)
         if not isinstance(imports, list) or not imports:
             raise ContractError(f"runtime_smoke.{profile} must be a non-empty list")
-    if "dcc_mcp_core._core" not in smoke["native_py37"]:
-        raise ContractError("native_py37 smoke must import dcc_mcp_core._core")
-    if "dcc_mcp_core._core" in smoke["lite_py37"]:
-        raise ContractError("lite_py37 smoke must not require dcc_mcp_core._core")
+    if "meshy_dcc_core._core" not in smoke["native_py37"]:
+        raise ContractError("native_py37 smoke must import meshy_dcc_core._core")
+    if "meshy_dcc_core._core" in smoke["lite_py37"]:
+        raise ContractError("lite_py37 smoke must not require meshy_dcc_core._core")
 
     for name in ("jsonschema_py37", "pytest", "pytest_xdist", "typing_extensions"):
         if not toolchain.get(name):
@@ -220,8 +220,8 @@ def _validate_wheel_profiles(wheel_profiles: Any) -> None:
                 raise ContractError(f"wheel profile {name} platform {platform} tags must be strings")
 
     native = wheel_profiles["native_py37"]
-    if native.get("distribution") != "dcc-mcp-core" or native.get("extension_module") != "dcc_mcp_core/_core":
-        raise ContractError("native_py37 must validate the dcc-mcp-core extension")
+    if native.get("distribution") != "meshy-dcc-core" or native.get("extension_module") != "meshy_dcc_core/_core":
+        raise ContractError("native_py37 must validate the meshy-dcc-core extension")
     expected_native_platforms = {
         "linux-x86_64": {"manylinux_2_17_x86_64", "manylinux2014_x86_64"},
         "windows-x86_64": {"win_amd64"},
@@ -234,21 +234,21 @@ def _validate_wheel_profiles(wheel_profiles: Any) -> None:
             raise ContractError(f"native_py37 {platform} must retain the legacy DCC platform baseline")
 
     lite = wheel_profiles["lite_py37"]
-    if lite.get("distribution") != "dcc-mcp-core" or lite.get("root_is_purelib") is not True:
-        raise ContractError("lite_py37 must remain a pure dcc-mcp-core wheel")
-    if lite.get("extension_module") != "dcc_mcp_core/_core" or lite.get("expects_extension") is not False:
-        raise ContractError("lite_py37 must reject the dcc-mcp-core extension")
+    if lite.get("distribution") != "meshy-dcc-core" or lite.get("root_is_purelib") is not True:
+        raise ContractError("lite_py37 must remain a pure meshy-dcc-core wheel")
+    if lite.get("extension_module") != "meshy_dcc_core/_core" or lite.get("expects_extension") is not False:
+        raise ContractError("lite_py37 must reject the meshy-dcc-core extension")
     if set(lite.get("platforms", {})) != {"any"}:
         raise ContractError("lite_py37 must remain platform independent")
 
     abi3 = wheel_profiles["abi3"]
     if (
-        abi3.get("distribution") != "dcc-mcp-core"
-        or abi3.get("extension_module") != "dcc_mcp_core/_core"
+        abi3.get("distribution") != "meshy-dcc-core"
+        or abi3.get("extension_module") != "meshy_dcc_core/_core"
         or abi3.get("root_is_purelib") is not False
         or abi3.get("expects_extension") is not True
     ):
-        raise ContractError("abi3 must validate the native dcc-mcp-core extension")
+        raise ContractError("abi3 must validate the native meshy-dcc-core extension")
     expected_abi3_platforms = {
         "linux-x86_64",
         "windows-x86_64",
@@ -279,8 +279,8 @@ def _validate_wheel_profiles(wheel_profiles: Any) -> None:
 
     semantic = wheel_profiles["semantic_native_py37"]
     if (
-        semantic.get("distribution") != "dcc-mcp-core-semantic"
-        or semantic.get("extension_module") != "dcc_mcp_core_semantic/_native"
+        semantic.get("distribution") != "meshy-dcc-core-semantic"
+        or semantic.get("extension_module") != "meshy_dcc_core_semantic/_native"
         or semantic.get("root_is_purelib") is not False
         or semantic.get("expects_extension") is not True
     ):
@@ -298,8 +298,8 @@ def _validate_wheel_profiles(wheel_profiles: Any) -> None:
 
     semantic_abi3 = wheel_profiles["semantic_abi3"]
     if (
-        semantic_abi3.get("distribution") != "dcc-mcp-core-semantic"
-        or semantic_abi3.get("extension_module") != "dcc_mcp_core_semantic/_native"
+        semantic_abi3.get("distribution") != "meshy-dcc-core-semantic"
+        or semantic_abi3.get("extension_module") != "meshy_dcc_core_semantic/_native"
         or semantic_abi3.get("root_is_purelib") is not False
         or semantic_abi3.get("expects_extension") is not True
     ):

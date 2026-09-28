@@ -10,11 +10,11 @@ from unittest.mock import patch
 
 import pytest
 
-from dcc_mcp_core.workflow_yaml import WorkflowTask
-from dcc_mcp_core.workflow_yaml import WorkflowYaml
-from dcc_mcp_core.workflow_yaml import get_workflow_path
-from dcc_mcp_core.workflow_yaml import load_workflow_yaml
-from dcc_mcp_core.workflow_yaml import register_workflow_yaml_tools
+from meshy_dcc_core.workflow_yaml import WorkflowTask
+from meshy_dcc_core.workflow_yaml import WorkflowYaml
+from meshy_dcc_core.workflow_yaml import get_workflow_path
+from meshy_dcc_core.workflow_yaml import load_workflow_yaml
+from meshy_dcc_core.workflow_yaml import register_workflow_yaml_tools
 
 # ── YAML fixture ──────────────────────────────────────────────────────────
 
@@ -207,9 +207,9 @@ class TestGetWorkflowPath:
         if wf_rel is None:
             md.metadata = {}
         elif nested:
-            md.metadata = {"dcc-mcp": {"workflows": wf_rel}}
+            md.metadata = {"meshy-dcc": {"workflows": wf_rel}}
         else:
-            md.metadata = {"dcc-mcp.workflows": wf_rel}
+            md.metadata = {"meshy-dcc.workflows": wf_rel}
         return md
 
     def test_flat_form(self, tmp_path: Path) -> None:
@@ -302,7 +302,7 @@ class TestRegisterWorkflowYamlTools:
             def registry(self):
                 raise AttributeError("no registry")
 
-        with patch.object(logging.getLogger("dcc_mcp_core.workflow_yaml"), "warning") as mock_warn:
+        with patch.object(logging.getLogger("meshy_dcc_core.workflow_yaml"), "warning") as mock_warn:
             register_workflow_yaml_tools(_BadServer(), workflows=[self._make_wf()])
         mock_warn.assert_called_once()
 

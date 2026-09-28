@@ -1,7 +1,7 @@
 """Starter template for a DCC-specific HostAdapter subclass.
 
-Copy this file into your DCC repo (``dcc-mcp-blender``, ``dcc-mcp-maya``,
-``dcc-mcp-photoshop``, …) and fill in the three hook methods. The base
+Copy this file into your DCC repo (``meshy-dcc-blender``, ``meshy-dcc-maya``,
+``meshy-dcc-photoshop``, …) and fill in the three hook methods. The base
 class handles lifecycle, context-manager, adaptive tick intervals, and
 the interactive / background-mode split for you.
 
@@ -27,8 +27,8 @@ can treat adapters interchangeably (LSP).
 
 from __future__ import annotations
 
-from dcc_mcp_core.host import HostAdapter
-from dcc_mcp_core.host import TickableDispatcher  # noqa: F401 — import for type hints
+from meshy_dcc_core.host import HostAdapter
+from meshy_dcc_core.host import TickableDispatcher  # noqa: F401 — import for type hints
 
 
 class YourDccHost(HostAdapter):
@@ -70,8 +70,8 @@ class YourDccHost(HostAdapter):
 
 # ── Typical entry point inside your DCC ──────────────────────────────
 #
-# from dcc_mcp_core import McpHttpConfig, McpHttpServer, ToolRegistry
-# from dcc_mcp_core.host import BlockingDispatcher
+# from meshy_dcc_core import McpHttpConfig, McpHttpServer, ToolRegistry
+# from meshy_dcc_core.host import BlockingDispatcher
 #
 # reg = ToolRegistry()
 # cfg = McpHttpConfig(port=18765, server_name="your-dcc")

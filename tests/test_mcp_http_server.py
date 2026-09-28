@@ -30,10 +30,10 @@ import pytest
 from conftest import McpClient
 
 # Import local modules
-import dcc_mcp_core
-from dcc_mcp_core import McpHttpConfig
-from dcc_mcp_core import McpHttpServer
-from dcc_mcp_core import ToolRegistry
+import meshy_dcc_core
+from meshy_dcc_core import McpHttpConfig
+from meshy_dcc_core import McpHttpServer
+from meshy_dcc_core import ToolRegistry
 
 # ── helpers ───────────────────────────────────────────────────────────────
 
@@ -546,7 +546,7 @@ class TestMcpHttpServerPythonApi:
     def test_config_defaults(self):
         cfg = McpHttpConfig()
         assert cfg.port == 0
-        assert cfg.server_name == "dcc-mcp"
+        assert cfg.server_name == "meshy-dcc"
 
     def test_config_custom(self):
         cfg = McpHttpConfig(port=9000, server_name="my-dcc", enable_cors=True)

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Retag and validate ``dcc-mcp-cli`` wrapper wheels.
+"""Retag and validate ``meshy-dcc-cli`` wrapper wheels.
 
 hatchling builds these wheels as pure Python (``py3-none-any``), but each one
 carries an archive for a single platform. This helper stamps the platform tag
@@ -25,9 +25,9 @@ def _github_error(message: str) -> None:
 
 
 def _find_wheels(wheel_dir: Path) -> list:
-    wheels = sorted(wheel_dir.glob("dcc_mcp_cli-*.whl"))
+    wheels = sorted(wheel_dir.glob("meshy_dcc_cli-*.whl"))
     if not wheels:
-        _github_error(f"No dcc-mcp-cli wrapper wheel was built under {wheel_dir}")
+        _github_error(f"No meshy-dcc-cli wrapper wheel was built under {wheel_dir}")
         raise SystemExit(1)
     return wheels
 
@@ -63,7 +63,7 @@ def _retag(wheel_dir: Path) -> None:
         import wheel
     except ModuleNotFoundError:
         _github_error(
-            "The Python 'wheel' package is required to retag dcc-mcp-cli wheels. "
+            "The Python 'wheel' package is required to retag meshy-dcc-cli wheels. "
             "Install it with `python -m pip install wheel>=0.46`."
         )
         raise SystemExit(1) from None
@@ -112,12 +112,12 @@ def _validate(wheel_dir: Path, version: str | None) -> None:
         if f"Requires-Python: {EXPECTED_REQUIRES_PYTHON}" not in metadata:
             _github_error(
                 f"{wheel.name} must declare Requires-Python: {EXPECTED_REQUIRES_PYTHON} "
-                "so Maya 2022 / Python 3.7 can install dcc-mcp-cli"
+                "so Maya 2022 / Python 3.7 can install meshy-dcc-cli"
             )
             raise SystemExit(1)
 
-        if "dcc-mcp-cli = dcc_mcp_cli:main" not in entry_points:
-            _github_error(f"{wheel.name} must expose the dcc-mcp-cli console script")
+        if "meshy-dcc-cli = meshy_dcc_cli:main" not in entry_points:
+            _github_error(f"{wheel.name} must expose the meshy-dcc-cli console script")
             raise SystemExit(1)
 
         for name in names:

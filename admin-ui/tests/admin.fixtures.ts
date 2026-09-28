@@ -75,7 +75,7 @@ export async function disableTestMotion(page: Page) {
 export async function mockAdminApi(page: Page) {
   const state = {
     skillPaths: [
-      { source: 'env:DCC_MCP_SKILL_PATHS', path: 'G:/studio/skills' },
+      { source: 'env:MESHY_DCC_SKILL_PATHS', path: 'G:/studio/skills' },
       { id: 7, source: 'admin_custom', path: 'G:/custom/admin-skills' },
     ],
   };
@@ -99,14 +99,14 @@ export async function mockAdminApi(page: Page) {
           default: 'toon',
           legacy_mime: 'application/json',
           compact_mime: 'application/toon',
-          token_estimator: 'dcc-mcp-byte4-v1',
+          token_estimator: 'meshy-dcc-byte4-v1',
         },
         gateway: {
           current: {
             name: 'local-gateway',
             role: 'active',
             host: '127.0.0.1',
-            port: 9765,
+            port: 19765,
             instance_id: 'gateway-1234567890',
             version: '0.17.7',
             adapter_version: null,
@@ -225,10 +225,10 @@ export async function mockAdminApi(page: Page) {
         body = {
           status: 'binary_not_found',
           error: 'binary_not_found',
-          message: "Binary 'dcc-mcp-server' was not found in the update manifest.",
+          message: "Binary 'meshy-dcc-server' was not found in the update manifest.",
           instance_id: instanceId,
           instance_short: 'blender-ab',
-          binary_name: 'dcc-mcp-server',
+          binary_name: 'meshy-dcc-server',
           current_version: null,
           current_version_source: 'unknown',
           update_available: false,
@@ -239,7 +239,7 @@ export async function mockAdminApi(page: Page) {
           status: 'available',
           instance_id: instanceId,
           instance_short: 'maya-123',
-          binary_name: 'dcc-mcp-server',
+          binary_name: 'meshy-dcc-server',
           current_version: '0.19.56',
           current_version_source: 'instance_metadata',
           latest_version: '0.18.0',
@@ -578,7 +578,7 @@ export async function mockAdminApi(page: Page) {
             },
             token_accounting: {
               response_format: 'toon',
-              token_estimator: 'dcc-mcp-byte4-v1',
+              token_estimator: 'meshy-dcc-byte4-v1',
               original_bytes: 400,
               returned_bytes: 160,
               original_tokens: 100,
@@ -599,7 +599,7 @@ export async function mockAdminApi(page: Page) {
             instance_id: 'maya-1234567890',
             transport: 'mcp',
             response_format: 'json',
-            token_estimator: 'dcc-mcp-byte4-v1',
+            token_estimator: 'meshy-dcc-byte4-v1',
             original_tokens: 50,
             returned_tokens: 50,
             saved_tokens: 0,
@@ -687,12 +687,12 @@ export async function mockAdminApi(page: Page) {
             input_tokens: 28,
             output_tokens: 18,
             total_tokens: 46,
-            payload_token_estimator: 'dcc-mcp-byte4-v1',
+            payload_token_estimator: 'meshy-dcc-byte4-v1',
             slowest_span_name: 'dispatch',
             slowest_span_ms: 42,
             token_accounting: {
               response_format: 'toon',
-              token_estimator: 'dcc-mcp-byte4-v1',
+              token_estimator: 'meshy-dcc-byte4-v1',
               original_bytes: 400,
               returned_bytes: 160,
               original_tokens: 100,
@@ -808,10 +808,10 @@ export async function mockAdminApi(page: Page) {
         output_tokens: 3,
         total_tokens: 6,
         estimated_total_tokens: 6,
-        payload_token_estimator: 'dcc-mcp-byte4-v1',
+        payload_token_estimator: 'meshy-dcc-byte4-v1',
         token_accounting: {
           response_format: 'toon',
-          token_estimator: 'dcc-mcp-byte4-v1',
+          token_estimator: 'meshy-dcc-byte4-v1',
           original_bytes: 400,
           returned_bytes: 160,
           original_tokens: 100,
@@ -850,7 +850,7 @@ export async function mockAdminApi(page: Page) {
         avg_output_tokens_per_call: 32.5,
         avg_total_tokens_per_call: 62.5,
         avg_tokens_per_call: 62.5,
-        payload_token_estimator: 'dcc-mcp-byte4-v1',
+        payload_token_estimator: 'meshy-dcc-byte4-v1',
         top_app_types: [{ name: 'maya', count: 3 }, { name: 'blender', count: 1 }],
         top_tools: [{ name: 'maya-1234__create_sphere', count: 3 }],
         top_instances: [{ name: 'maya-1234567890', count: 3 }],
@@ -928,7 +928,7 @@ export async function mockAdminApi(page: Page) {
       };
     } else if (path === '/governance') {
       body = {
-        schema_version: 'dcc-mcp.admin.governance.v1',
+        schema_version: 'meshy-dcc.admin.governance.v1',
         generated_at: now,
         mode: {
           admin_mutations: 'disabled',
@@ -1067,7 +1067,7 @@ export async function mockAdminApi(page: Page) {
       };
     } else if (path === '/traffic') {
       body = {
-        schema_version: 'dcc-mcp.admin.traffic.v1',
+        schema_version: 'meshy-dcc.admin.traffic.v1',
         total: 1,
         capture_status: {
           state: 'captured',
@@ -1093,7 +1093,7 @@ export async function mockAdminApi(page: Page) {
             name: 'traffic.frame',
             id: 'evt-traffic',
             timestamp_ns: 1779091200000000000,
-            source: { service: 'dcc-mcp-gateway' },
+            source: { service: 'meshy-dcc-gateway' },
             correlation: {
               request_id: 'req-traffic',
               trace_id: 'trace-traffic',
@@ -1170,7 +1170,7 @@ export async function mockAdminApi(page: Page) {
             level: 'debug',
             source: 'file',
             message: 'dispatch cache hit for search_tools',
-            target: 'dcc_mcp_http_server:executor',
+            target: 'meshy_dcc_http_server:executor',
             thread: 'ThreadId(01)',
             instance_id: 'local',
           },
@@ -1301,7 +1301,7 @@ export async function mockAdminApi(page: Page) {
             '---',
             'name: maya-modeling',
             'metadata:',
-            '  dcc-mcp:',
+            '  meshy-dcc:',
             '    dcc: maya',
             '    layer: infrastructure',
             '---',
@@ -1364,9 +1364,9 @@ export async function mockAdminApi(page: Page) {
         template: '',
       };
       const webhooksConfig = {
-        config_path: '~/dcc-mcp/etc/webhooks.yaml',
-        write_config_path: '~/dcc-mcp/etc/webhooks.yaml',
-        config_text: 'queue_capacity: 1024\nwebhooks:\n  - name: studio-events\n    url: http://127.0.0.1:9000/dcc-mcp-events\n    events:\n      - tool.failed\n      - gateway.instance.*\n',
+        config_path: '~/meshy-dcc/etc/webhooks.yaml',
+        write_config_path: '~/meshy-dcc/etc/webhooks.yaml',
+        config_text: 'queue_capacity: 1024\nwebhooks:\n  - name: studio-events\n    url: http://127.0.0.1:9000/meshy-dcc-events\n    events:\n      - tool.failed\n      - gateway.instance.*\n',
       };
       if (method === 'PUT') {
         const payload = route.request().postDataJSON() as { kind?: string; config?: Record<string, unknown> };
@@ -1384,10 +1384,10 @@ export async function mockAdminApi(page: Page) {
               status: 'pending_restart' as const,
               config: { ...sentryConfig, ...payload.config },
               env_locked_fields: [
-                { key: 'dsn', locked: true, env_var: 'DCC_MCP_SENTRY_DSN' },
-                { key: 'environment', locked: false, env_var: 'DCC_MCP_SENTRY_ENVIRONMENT' },
-                { key: 'release', locked: false, env_var: 'DCC_MCP_SENTRY_RELEASE' },
-                { key: 'sample_rate', locked: false, env_var: 'DCC_MCP_SENTRY_SAMPLE_RATE' },
+                { key: 'dsn', locked: true, env_var: 'MESHY_DCC_SENTRY_DSN' },
+                { key: 'environment', locked: false, env_var: 'MESHY_DCC_SENTRY_ENVIRONMENT' },
+                { key: 'release', locked: false, env_var: 'MESHY_DCC_SENTRY_RELEASE' },
+                { key: 'sample_rate', locked: false, env_var: 'MESHY_DCC_SENTRY_SAMPLE_RATE' },
               ],
             };
           }
@@ -1396,13 +1396,13 @@ export async function mockAdminApi(page: Page) {
           body = {
             kind: 'wecom',
             label: 'WeCom Message Push',
-            description: 'Push selected DCC-MCP events to an Enterprise WeChat group robot.',
+            description: 'Push selected Meshy DCC events to an Enterprise WeChat group robot.',
             status: 'pending_restart' as const,
             config: { ...wecomConfig, ...payload.config },
             env_locked_fields: [
-              { key: 'webhook_url', locked: false, env_var: 'DCC_MCP_WECOM_WEBHOOK_URL' },
-              { key: 'event_types', locked: false, env_var: 'DCC_MCP_WECOM_EVENTS' },
-              { key: 'template', locked: false, env_var: 'DCC_MCP_WECOM_TEMPLATE' },
+              { key: 'webhook_url', locked: false, env_var: 'MESHY_DCC_WECOM_WEBHOOK_URL' },
+              { key: 'event_types', locked: false, env_var: 'MESHY_DCC_WECOM_EVENTS' },
+              { key: 'template', locked: false, env_var: 'MESHY_DCC_WECOM_TEMPLATE' },
             ],
           };
         } else if (payload.kind === 'webhooks') {
@@ -1414,7 +1414,7 @@ export async function mockAdminApi(page: Page) {
             status: 'pending_restart' as const,
             config: { ...webhooksConfig, ...payload.config },
             env_locked_fields: [
-              { key: 'config_path', locked: false, env_var: 'DCC_MCP_WEBHOOKS_CONFIG' },
+              { key: 'config_path', locked: false, env_var: 'MESHY_DCC_WEBHOOKS_CONFIG' },
             ],
           };
         } else {
@@ -1432,10 +1432,10 @@ export async function mockAdminApi(page: Page) {
               status: 'active',
               config: sentryConfig,
               env_locked_fields: [
-                { key: 'dsn', locked: true, env_var: 'DCC_MCP_SENTRY_DSN' },
-                { key: 'environment', locked: false, env_var: 'DCC_MCP_SENTRY_ENVIRONMENT' },
-                { key: 'release', locked: false, env_var: 'DCC_MCP_SENTRY_RELEASE' },
-                { key: 'sample_rate', locked: false, env_var: 'DCC_MCP_SENTRY_SAMPLE_RATE' },
+                { key: 'dsn', locked: true, env_var: 'MESHY_DCC_SENTRY_DSN' },
+                { key: 'environment', locked: false, env_var: 'MESHY_DCC_SENTRY_ENVIRONMENT' },
+                { key: 'release', locked: false, env_var: 'MESHY_DCC_SENTRY_RELEASE' },
+                { key: 'sample_rate', locked: false, env_var: 'MESHY_DCC_SENTRY_SAMPLE_RATE' },
               ],
             },
             {
@@ -1445,19 +1445,19 @@ export async function mockAdminApi(page: Page) {
               status: 'inactive',
               config: webhooksConfig,
               env_locked_fields: [
-                { key: 'config_path', locked: false, env_var: 'DCC_MCP_WEBHOOKS_CONFIG' },
+                { key: 'config_path', locked: false, env_var: 'MESHY_DCC_WEBHOOKS_CONFIG' },
               ],
             },
             {
               kind: 'wecom',
               label: 'WeCom Message Push',
-              description: 'Push selected DCC-MCP events to an Enterprise WeChat group robot.',
+              description: 'Push selected Meshy DCC events to an Enterprise WeChat group robot.',
               status: 'inactive',
               config: wecomConfig,
               env_locked_fields: [
-                { key: 'webhook_url', locked: false, env_var: 'DCC_MCP_WECOM_WEBHOOK_URL' },
-                { key: 'event_types', locked: false, env_var: 'DCC_MCP_WECOM_EVENTS' },
-                { key: 'template', locked: false, env_var: 'DCC_MCP_WECOM_TEMPLATE' },
+                { key: 'webhook_url', locked: false, env_var: 'MESHY_DCC_WECOM_WEBHOOK_URL' },
+                { key: 'event_types', locked: false, env_var: 'MESHY_DCC_WECOM_EVENTS' },
+                { key: 'template', locked: false, env_var: 'MESHY_DCC_WECOM_TEMPLATE' },
               ],
             },
             {
@@ -1465,7 +1465,7 @@ export async function mockAdminApi(page: Page) {
               label: 'OTLP Telemetry',
               description: 'Export distributed traces via gRPC.',
               status: 'inactive',
-              config: { endpoint: '', service_name: 'dcc-mcp', headers: '' },
+              config: { endpoint: '', service_name: 'meshy-dcc', headers: '' },
               env_locked_fields: [
                 { key: 'endpoint', locked: false, env_var: 'OTEL_EXPORTER_OTLP_ENDPOINT' },
               ],
@@ -1579,7 +1579,7 @@ export async function mockAdminApi(page: Page) {
         health: {
           status: 'ok',
           uptime_secs: 86400,
-          leader: { name: 'gateway-primary', host: '127.0.0.1', port: 9765, version: '0.17.7' },
+          leader: { name: 'gateway-primary', host: '127.0.0.1', port: 19765, version: '0.17.7' },
           candidates: 2,
           limits: {
             body_max_bytes: 10485760,

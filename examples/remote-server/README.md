@@ -1,6 +1,6 @@
 # Standalone Internal MCP Service Example
 
-Minimal non-DCC service using `dcc-mcp-core`. It discovers the bundled
+Minimal non-DCC service using `meshy-dcc-core`. It discovers the bundled
 `hello-world` Skill, marks the runtime as `standalone`, and requires no DCC
 process, public catalog entry, or GitHub repository.
 
@@ -11,7 +11,7 @@ operator choice.
 ## Quick Start
 
 ```bash
-pip install dcc-mcp-core
+pip install meshy-dcc-core
 python server.py
 ```
 
@@ -26,14 +26,14 @@ MCP service listening at http://127.0.0.1:8765/mcp
 Validate the bundled Skill before starting:
 
 ```bash
-dcc-mcp-cli lint skills
+meshy-dcc-cli lint skills
 ```
 
 ## Run In The Open Dev Container
 
 The example includes a
 [Development Container](https://containers.dev/) configuration with Python,
-Node.js, `dcc-mcp-core`, and forwarded MCP Inspector ports. Open this directory
+Node.js, `meshy-dcc-core`, and forwarded MCP Inspector ports. Open this directory
 in a compatible editor and choose **Reopen in Container**, then run the Quick
 Start commands above. The container runs as a non-root user and does not mount
 the host container socket.
@@ -81,17 +81,17 @@ The response message is `Hello, Agent! (from the internal MCP service)`.
 Agents can exercise the same registered service without guessing tool slugs:
 
 ```bash
-dcc-mcp-cli list --output toon
-dcc-mcp-cli load-skill hello-world --dcc-type studio-service --output toon
-dcc-mcp-cli describe <tool-slug-returned-by-load> --output toon
-dcc-mcp-cli call <tool-slug-returned-by-load> --json '{"name":"Agent"}' --wait --output toon
+meshy-dcc-cli list --output toon
+meshy-dcc-cli load-skill hello-world --dcc-type studio-service --output toon
+meshy-dcc-cli describe <tool-slug-returned-by-load> --output toon
+meshy-dcc-cli call <tool-slug-returned-by-load> --json '{"name":"Agent"}' --wait --output toon
 ```
 
 Follow the returned `next_step`; do not guess the instance-qualified tool slug.
 
 ## Intranet Or Container Use
 
-Set `DCC_MCP_HOST=0.0.0.0` only inside a trusted network boundary. The example
+Set `MESHY_DCC_HOST=0.0.0.0` only inside a trusted network boundary. The example
 does not implement application-layer authentication. Put intranet or public
 traffic behind operator-owned TLS, authentication, firewall/origin policy, and
 audit controls.
@@ -107,12 +107,12 @@ Do not expose the MCP Inspector proxy to an untrusted network.
 
 | Variable | Default | Description |
 |---|---|---|
-| `DCC_MCP_HOST` | `127.0.0.1` | Bind address; keep loopback for local development |
-| `DCC_MCP_PORT` | `8765` | MCP service port |
-| `DCC_MCP_SKILL_PATHS` | _(none)_ | Optional additional private Skill directories |
+| `MESHY_DCC_HOST` | `127.0.0.1` | Bind address; keep loopback for local development |
+| `MESHY_DCC_PORT` | `8765` | MCP service port |
+| `MESHY_DCC_SKILL_PATHS` | _(none)_ | Optional additional private Skill directories |
 
 ## See Also
 
-- [Internal standalone service workflow](https://github.com/dcc-mcp/dcc-mcp-agent-plugins/blob/main/plugins/dcc-mcp/skills/dcc-mcp-creator/references/INTERNAL_SERVICE_WORKFLOW.md)
+- [Internal standalone service workflow](https://github.com/meshy-dev/meshy-dcc-agent-plugins/blob/main/plugins/meshy-dcc/skills/meshy-dcc-creator/references/INTERNAL_SERVICE_WORKFLOW.md)
 - [Remote-first deployment guide](../../docs/guide/remote-server.md)
 - [Production deployment](../../docs/guide/production-deployment.md)

@@ -45,14 +45,14 @@ Any string in `http.json` may contain `{{capture:NAME}}` filled from prior `capt
 ## Running the replayer
 
 ```bash
-python scripts/vrs_replay.py --base-url http://127.0.0.1:9765 \
+python scripts/vrs_replay.py --base-url http://127.0.0.1:19765 \
   --trace tests/vrs/traces/gateway-smoke.jsonl
 ```
 
 Or via Just:
 
 ```bash
-just vrs-replay TRACE=tests/vrs/traces/gateway-smoke.jsonl BASE=http://127.0.0.1:9765
+just vrs-replay TRACE=tests/vrs/traces/gateway-smoke.jsonl BASE=http://127.0.0.1:19765
 ```
 
 Environment:
@@ -74,7 +74,7 @@ python scripts/vrs_replay.py --base-url http://127.0.0.1:1 --dry-run --trace tes
 | File | Needs live DCC? | Purpose |
 |------|-----------------|--------|
 | `traces/gateway-smoke.jsonl` | No | `GET /v1/healthz` + browse `POST /v1/search`. |
-| `traces/core-1360-gateway-daemon-mode.jsonl` | No | `dcc-mcp-server gateway` daemon exposes gateway REST without a live DCC backend. |
+| `traces/core-1360-gateway-daemon-mode.jsonl` | No | `meshy-dcc-server gateway` daemon exposes gateway REST without a live DCC backend. |
 | `traces/core-1483-gateway-runtime-supervisor.jsonl` | No | Gateway daemon exposes `/v1/readyz` lifecycle and recovery-count fields while `/v1/instances` remains empty without a registered backend (PIP-483). |
 | `traces/core-2208-gateway-feedback.jsonl` | No | Gateway accepts correlated crash feedback even when the referenced DCC instance is already gone. |
 | `traces/core-1361-http-instance-registration.jsonl` | No | Gateway daemon accepts remote HTTP instance register → heartbeat → path-call resolution → deregister. |
@@ -115,7 +115,7 @@ python scripts/vrs_replay.py --base-url http://127.0.0.1:1 --dry-run --trace tes
 | `traces/core-record-replay-lifecycle.jsonl` | No | Caller-scoped start -> redacted capture -> stop -> review lifecycle rejects cross-session access and preserves no reusable approval authority. |
 | `traces/core-1652-load-skill-backend-failure.jsonl` | Yes (affected Maya/backend) | Gateway `load_skill` must surface backend `unknown-action` / `success:false` as a failure instead of decorating it as `loaded:true`. |
 | `traces/core-1659-load-skill-indexes-mgear-tools.jsonl` | Yes (Maya + maya-mgear) | Gateway `load_skill` must index the mGear tools returned by the backend response so `/v1/search` and `/v1/call` work even if the refresh route cannot rebuild the index. |
-| `traces/core-any-dcc-skill-sidecar-dispatch.jsonl` | Yes (Maya + dna-io) | A skill declared with `metadata.dcc-mcp.dcc: any` must resolve and execute through a concrete Maya sidecar instead of returning `unknown-action`. |
+| `traces/core-any-dcc-skill-sidecar-dispatch.jsonl` | Yes (Maya + dna-io) | A skill declared with `metadata.meshy-dcc.dcc: any` must resolve and execute through a concrete Maya sidecar instead of returning `unknown-action`. |
 | `traces/gateway-multi-instance-stress.jsonl` | Yes (≥3 live instances) | Skips unless `GET /v1/instances` reports `total >= 3`; then bursts health/instances/readyz/context/search to catch registry/probe regressions under load. |
 
 ## CI policy (recommended)
@@ -126,22 +126,22 @@ python scripts/vrs_replay.py --base-url http://127.0.0.1:1 --dry-run --trace tes
 
 ## Related issues
 
-- maya [#215](https://github.com/dcc-mcp/dcc-mcp-maya/issues/215) — execute_python crash regression
-- maya [#199](https://github.com/dcc-mcp/dcc-mcp-maya/issues/199) — prior crash report
-- maya [#235](https://github.com/dcc-mcp/dcc-mcp-maya/issues/235) — playblast / capture_viewport stops MCP HTTP server
-- core [#992](https://github.com/dcc-mcp/dcc-mcp-core/issues/992) — schema stripped between backend and gateway
-- core [#993](https://github.com/dcc-mcp/dcc-mcp-core/issues/993) — search_tools excludes unloaded skill actions
-- core [#994](https://github.com/dcc-mcp/dcc-mcp-core/issues/994) — search ranking dominated by meta-tools
-- core [#995](https://github.com/dcc-mcp/dcc-mcp-core/issues/995) — list_skills returns full metadata for every skill
-- core [#996](https://github.com/dcc-mcp/dcc-mcp-core/issues/996) — instance-offline envelope must carry restart cause
-- core [#1037](https://github.com/dcc-mcp/dcc-mcp-core/issues/1037) — cooperative gateway yield fallback should be structured and non-alarming
-- core [#1092](https://github.com/dcc-mcp/dcc-mcp-core/issues/1092) — stable `/v1/debug/*` API for agent diagnostics
-- core [#1093](https://github.com/dcc-mcp/dcc-mcp-core/issues/1093) — first-class Trace Context for full-chain debug bundles
-- core [#2013](https://github.com/dcc-mcp/dcc-mcp-core/issues/2013) — local CLI calls must expose and opt into gateway stats attribution
-- core [#1124](https://github.com/dcc-mcp/dcc-mcp-core/issues/1124) — HostExecutionBridge registration must satisfy main-affinity tools/call routing
-- core [#1125](https://github.com/dcc-mcp/dcc-mcp-core/issues/1125) — bundled diagnostics screenshot must return a dict through REST dispatch
-- core [#1133](https://github.com/dcc-mcp/dcc-mcp-core/issues/1133) — ui_control gateway discovery and REST dispatch
-- core [#1134](https://github.com/dcc-mcp/dcc-mcp-core/issues/1134) — ui_control DCC debugging workflow examples and REST traces
-- core [#1365](https://github.com/dcc-mcp/dcc-mcp-core/issues/1365) — gateway must enforce authentication and scope-bound DCC registration
-- core [#1652](https://github.com/dcc-mcp/dcc-mcp-core/issues/1652) — gateway load_skill must not report loaded=true when backend load fails
-- core [#1659](https://github.com/dcc-mcp/dcc-mcp-core/issues/1659) — gateway load_skill must index loaded skill tools after backend refresh failures
+- maya [#215](https://github.com/meshy-dev/meshy-dcc-maya/issues/215) — execute_python crash regression
+- maya [#199](https://github.com/meshy-dev/meshy-dcc-maya/issues/199) — prior crash report
+- maya [#235](https://github.com/meshy-dev/meshy-dcc-maya/issues/235) — playblast / capture_viewport stops MCP HTTP server
+- core [#992](https://github.com/meshy-dev/meshy-dcc-core/issues/992) — schema stripped between backend and gateway
+- core [#993](https://github.com/meshy-dev/meshy-dcc-core/issues/993) — search_tools excludes unloaded skill actions
+- core [#994](https://github.com/meshy-dev/meshy-dcc-core/issues/994) — search ranking dominated by meta-tools
+- core [#995](https://github.com/meshy-dev/meshy-dcc-core/issues/995) — list_skills returns full metadata for every skill
+- core [#996](https://github.com/meshy-dev/meshy-dcc-core/issues/996) — instance-offline envelope must carry restart cause
+- core [#1037](https://github.com/meshy-dev/meshy-dcc-core/issues/1037) — cooperative gateway yield fallback should be structured and non-alarming
+- core [#1092](https://github.com/meshy-dev/meshy-dcc-core/issues/1092) — stable `/v1/debug/*` API for agent diagnostics
+- core [#1093](https://github.com/meshy-dev/meshy-dcc-core/issues/1093) — first-class Trace Context for full-chain debug bundles
+- core [#2013](https://github.com/meshy-dev/meshy-dcc-core/issues/2013) — local CLI calls must expose and opt into gateway stats attribution
+- core [#1124](https://github.com/meshy-dev/meshy-dcc-core/issues/1124) — HostExecutionBridge registration must satisfy main-affinity tools/call routing
+- core [#1125](https://github.com/meshy-dev/meshy-dcc-core/issues/1125) — bundled diagnostics screenshot must return a dict through REST dispatch
+- core [#1133](https://github.com/meshy-dev/meshy-dcc-core/issues/1133) — ui_control gateway discovery and REST dispatch
+- core [#1134](https://github.com/meshy-dev/meshy-dcc-core/issues/1134) — ui_control DCC debugging workflow examples and REST traces
+- core [#1365](https://github.com/meshy-dev/meshy-dcc-core/issues/1365) — gateway must enforce authentication and scope-bound DCC registration
+- core [#1652](https://github.com/meshy-dev/meshy-dcc-core/issues/1652) — gateway load_skill must not report loaded=true when backend load fails
+- core [#1659](https://github.com/meshy-dev/meshy-dcc-core/issues/1659) — gateway load_skill must index loaded skill tools after backend refresh failures

@@ -7,10 +7,10 @@ import typing
 
 import pytest
 
-from dcc_mcp_core._typing import Literal
-from dcc_mcp_core._typing import Protocol
-from dcc_mcp_core._typing import runtime_checkable
-from dcc_mcp_core.schema import derive_schema
+from meshy_dcc_core._typing import Literal
+from meshy_dcc_core._typing import Protocol
+from meshy_dcc_core._typing import runtime_checkable
+from meshy_dcc_core.schema import derive_schema
 
 
 @runtime_checkable

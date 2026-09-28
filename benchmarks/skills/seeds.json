@@ -3,7 +3,7 @@
   "roots": [
     "skills",
     "examples/skills",
-    "python/dcc_mcp_core/skills",
+    "python/meshy_dcc_core/skills",
     "tests/fixtures/skills"
   ],
   "skills": [
@@ -17,17 +17,17 @@
         "Read"
       ],
       "metadata": {
-        "dcc-mcp.dcc": "python",
-        "dcc-mcp.layer": "domain",
-        "dcc-mcp.stage": "source",
-        "dcc-mcp.version": "1.0.0",
-        "dcc-mcp.tags": [
+        "meshy-dcc.dcc": "python",
+        "meshy-dcc.layer": "domain",
+        "meshy-dcc.stage": "source",
+        "meshy-dcc.version": "1.0.0",
+        "meshy-dcc.tags": [
           "pipeline",
           "asset-import",
           "read-only"
         ],
-        "dcc-mcp.search-hint": "search assets, find asset, resolve asset, asset descriptor, asset import source, cross-dcc asset",
-        "dcc-mcp.search-aliases": [
+        "meshy-dcc.search-hint": "search assets, find asset, resolve asset, asset descriptor, asset import source, cross-dcc asset",
+        "meshy-dcc.search-aliases": [
           "asset search",
           "find asset",
           "resolve asset",
@@ -35,25 +35,25 @@
           "import source",
           "asset descriptor"
         ],
-        "dcc-mcp.intent": "Search and resolve assets into a validated AssetDescriptor (local path + attribution) for cross-DCC import pipelines.",
-        "dcc-mcp.recall-context": {
+        "meshy-dcc.intent": "Search and resolve assets into a validated AssetDescriptor (local path + attribution) for cross-DCC import pipelines.",
+        "meshy-dcc.recall-context": {
           "app_type": "python",
           "domain": "asset",
           "workflow_stage": "source",
           "task_category": "query"
         },
-        "dcc-mcp.preconditions": [],
-        "dcc-mcp.side-effects": {
+        "meshy-dcc.preconditions": [],
+        "meshy-dcc.side-effects": {
           "creates": false,
           "modifies": false,
           "file_output": false,
           "targets": []
         },
-        "dcc-mcp.produces": [
+        "meshy-dcc.produces": [
           "asset_descriptor"
         ],
-        "dcc-mcp.requires": [],
-        "dcc-mcp.tools": "tools.yaml"
+        "meshy-dcc.requires": [],
+        "meshy-dcc.tools": "tools.yaml"
       },
       "dcc": "python",
       "tags": [
@@ -167,12 +167,12 @@
       "compatibility": "Python 3.7+",
       "allowed-tools": [],
       "metadata": {
-        "dcc-mcp.dcc": "python",
-        "dcc-mcp.version": "1.0.0",
-        "dcc-mcp.layer": "example",
-        "dcc-mcp.search-hint": "async tool, long-running, deferred hint, timeout hint, render async, authoring reference",
-        "dcc-mcp.tags": "example, async, render, deferred",
-        "dcc-mcp.tools": "tools.yaml"
+        "meshy-dcc.dcc": "python",
+        "meshy-dcc.version": "1.0.0",
+        "meshy-dcc.layer": "example",
+        "meshy-dcc.search-hint": "async tool, long-running, deferred hint, timeout hint, render async, authoring reference",
+        "meshy-dcc.tags": "example, async, render, deferred",
+        "meshy-dcc.tools": "tools.yaml"
       },
       "dcc": "python",
       "tags": [
@@ -235,11 +235,11 @@
       "compatibility": "Python 3.7+",
       "allowed-tools": [],
       "metadata": {
-        "dcc-mcp.dcc": "python",
-        "dcc-mcp.version": "1.0.0",
-        "dcc-mcp.layer": "example",
-        "dcc-mcp.search-hint": "cancellation, cancel, long-running, cooperative, check_cancelled, abort, authoring reference",
-        "dcc-mcp.tags": "example, cancellation, long-running"
+        "meshy-dcc.dcc": "python",
+        "meshy-dcc.version": "1.0.0",
+        "meshy-dcc.layer": "example",
+        "meshy-dcc.search-hint": "cancellation, cancel, long-running, cooperative, check_cancelled, abort, authoring reference",
+        "meshy-dcc.tags": "example, cancellation, long-running"
       },
       "dcc": "python",
       "tags": [
@@ -261,7 +261,7 @@
     },
     {
       "name": "clawhub-compat",
-      "description": "Example skill — demonstrates full compatibility with the ClawHub/OpenClaw skill format. Use as a reference when creating skills for both the dcc-mcp-core ecosystem and ClawHub marketplace. Not intended for production use — this is an authoring reference only.",
+      "description": "Example skill — demonstrates full compatibility with the ClawHub/OpenClaw skill format. Use as a reference when creating skills for both the meshy-dcc-core ecosystem and ClawHub marketplace. Not intended for production use — this is an authoring reference only.",
       "license": "MIT",
       "compatibility": "Requires curl binary on PATH",
       "allowed-tools": [
@@ -280,7 +280,7 @@
           },
           "primaryEnv": "EXAMPLE_API_KEY",
           "emoji": "🦀",
-          "homepage": "https://github.com/dcc-mcp/dcc-mcp-core",
+          "homepage": "https://github.com/meshy-dev/meshy-dcc-core",
           "install": [
             {
               "kind": "node",
@@ -291,11 +291,11 @@
             }
           ]
         },
-        "dcc-mcp.dcc": "python",
-        "dcc-mcp.layer": "example",
-        "dcc-mcp.version": "1.0.0",
-        "dcc-mcp.search-hint": "clawhub, openclaw, marketplace, skill format, compatibility reference",
-        "dcc-mcp.tags": "example, clawhub, openclaw, compatibility"
+        "meshy-dcc.dcc": "python",
+        "meshy-dcc.layer": "example",
+        "meshy-dcc.version": "1.0.0",
+        "meshy-dcc.search-hint": "clawhub, openclaw, marketplace, skill format, compatibility reference",
+        "meshy-dcc.tags": "example, clawhub, openclaw, compatibility"
       },
       "dcc": "python",
       "tags": [
@@ -319,7 +319,7 @@
     },
     {
       "name": "dcc-cua",
-      "description": "Project-owned DCC-CUA routing skill for bounded application UI automation. Use this skill whenever the user says dcc-cua, DCC CUA, our dcc-cua, or 我们的 dcc-cua, including browser and other non-DCC UI tasks. These phrases are a hard route to the dcc-mcp project UI Control stack and take precedence over generic Codex/OpenAI Computer Use, the computer-use Skill, @oai/sky, and Browser/Chrome plugins. If DCC-CUA is unavailable, repair or report the project route; never silently fall back to a generic computer-use provider.",
+      "description": "Project-owned DCC-CUA routing skill for bounded application UI automation. Use this skill whenever the user says dcc-cua, DCC CUA, our dcc-cua, or 我们的 dcc-cua, including browser and other non-DCC UI tasks. These phrases are a hard route to the meshy-dcc project UI Control stack and take precedence over generic Codex/OpenAI Computer Use, the computer-use Skill, @oai/sky, and Browser/Chrome plugins. If DCC-CUA is unavailable, repair or report the project route; never silently fall back to a generic computer-use provider.",
       "license": "MIT-0",
       "compatibility": "",
       "allowed-tools": [
@@ -329,14 +329,14 @@
       "metadata": {
         "openclaw": {
           "emoji": "🖱️",
-          "homepage": "https://github.com/dcc-mcp/dcc-mcp-core/tree/main/skills/dcc-cua"
+          "homepage": "https://github.com/meshy-dev/meshy-dcc-core/tree/main/skills/dcc-cua"
         },
-        "dcc-mcp.dcc": "python",
-        "dcc-mcp.layer": "infrastructure",
-        "dcc-mcp.compatibility": "Cross-platform routing contract. The current DCC-CUA host is installed and verified through the official dcc-mcp-cli component manifest; exact platform capabilities remain runtime-discovered.",
-        "dcc-mcp.version": "0.1.0",
-        "dcc-mcp.search-hint": "dcc-cua DCC CUA dcc cua our dcc-cua our dcc cua 我们的 dcc-cua 我们的 dcc cua project-owned UI control browser DOM exact PID HWND computer use automation",
-        "dcc-mcp.tags": "dcc-cua, dcc-ui-control, ui-control, browser-dom, exact-window, computer-use, infrastructure"
+        "meshy-dcc.dcc": "python",
+        "meshy-dcc.layer": "infrastructure",
+        "meshy-dcc.compatibility": "Cross-platform routing contract. The current DCC-CUA host is installed and verified through the official meshy-dcc-cli component manifest; exact platform capabilities remain runtime-discovered.",
+        "meshy-dcc.version": "0.1.0",
+        "meshy-dcc.search-hint": "dcc-cua DCC CUA dcc cua our dcc-cua our dcc cua 我们的 dcc-cua 我们的 dcc cua project-owned UI control browser DOM exact PID HWND computer use automation",
+        "meshy-dcc.tags": "dcc-cua, dcc-ui-control, ui-control, browser-dom, exact-window, computer-use, infrastructure"
       },
       "dcc": "python",
       "tags": [
@@ -365,12 +365,12 @@
       "compatibility": "",
       "allowed-tools": [],
       "metadata": {
-        "dcc-mcp.dcc": "python",
-        "dcc-mcp.version": "1.0.0",
-        "dcc-mcp.layer": "infrastructure",
-        "dcc-mcp.search-hint": "screenshot, capture, audit log, metrics, performance, process monitor, diagnostics, debug, health check, observability",
-        "dcc-mcp.tags": "diagnostics, observability, screenshot, audit, metrics, debug, infrastructure",
-        "dcc-mcp.tools": "tools.yaml"
+        "meshy-dcc.dcc": "python",
+        "meshy-dcc.version": "1.0.0",
+        "meshy-dcc.layer": "infrastructure",
+        "meshy-dcc.search-hint": "screenshot, capture, audit log, metrics, performance, process monitor, diagnostics, debug, health check, observability",
+        "meshy-dcc.tags": "diagnostics, observability, screenshot, audit, metrics, debug, infrastructure",
+        "meshy-dcc.tools": "tools.yaml"
       },
       "dcc": "python",
       "tags": [
@@ -437,7 +437,7 @@
         },
         {
           "name": "audit_log",
-          "description": "Query the dcc-mcp-core sandbox audit log — list recent action invocations, filter by outcome (success/denied), or search by action name. Helps diagnose why an action was blocked or what the agent did recently.",
+          "description": "Query the meshy-dcc-core sandbox audit log — list recent action invocations, filter by outcome (success/denied), or search by action name. Helps diagnose why an action was blocked or what the agent did recently.",
           "input_schema": {
             "type": "object",
             "properties": {
@@ -557,13 +557,13 @@
         "Read"
       ],
       "metadata": {
-        "dcc-mcp.dcc": "python",
-        "dcc-mcp.version": "1.0.0",
-        "dcc-mcp.layer": "example",
-        "dcc-mcp.search-hint": "layered architecture, complex skill, services, utils, tools, asset pipeline reference, authoring reference",
-        "dcc-mcp.tags": "example, architecture, layered, advanced, authoring reference",
-        "dcc-mcp.tools": "tools.yaml",
-        "dcc-mcp.prompts": "prompts/system.md"
+        "meshy-dcc.dcc": "python",
+        "meshy-dcc.version": "1.0.0",
+        "meshy-dcc.layer": "example",
+        "meshy-dcc.search-hint": "layered architecture, complex skill, services, utils, tools, asset pipeline reference, authoring reference",
+        "meshy-dcc.tags": "example, architecture, layered, advanced, authoring reference",
+        "meshy-dcc.tools": "tools.yaml",
+        "meshy-dcc.prompts": "prompts/system.md"
       },
       "dcc": "python",
       "tags": [
@@ -728,12 +728,12 @@
           "emoji": "🎬",
           "homepage": "https://ffmpeg.org"
         },
-        "dcc-mcp.dcc": "python",
-        "dcc-mcp.version": "1.0.0",
-        "dcc-mcp.layer": "infrastructure",
-        "dcc-mcp.search-hint": "ffmpeg, video transcode, audio convert, extract frames, resize video, image sequence, media processing",
-        "dcc-mcp.tags": "media, video, audio, ffmpeg, conversion, infrastructure",
-        "dcc-mcp.tools": "tools.yaml"
+        "meshy-dcc.dcc": "python",
+        "meshy-dcc.version": "1.0.0",
+        "meshy-dcc.layer": "infrastructure",
+        "meshy-dcc.search-hint": "ffmpeg, video transcode, audio convert, extract frames, resize video, image sequence, media processing",
+        "meshy-dcc.tags": "media, video, audio, ffmpeg, conversion, infrastructure",
+        "meshy-dcc.tools": "tools.yaml"
       },
       "dcc": "python",
       "tags": [
@@ -843,12 +843,12 @@
         "Read"
       ],
       "metadata": {
-        "dcc-mcp.dcc": "forgecad",
-        "dcc-mcp.version": "1.0.0",
-        "dcc-mcp.layer": "domain",
-        "dcc-mcp.search-hint": "create cube, create cylinder, create cone, forgecad, cad primitives",
-        "dcc-mcp.tags": "forgecad, cad, geometry, primitives, domain",
-        "dcc-mcp.tools": "tools.yaml"
+        "meshy-dcc.dcc": "forgecad",
+        "meshy-dcc.version": "1.0.0",
+        "meshy-dcc.layer": "domain",
+        "meshy-dcc.search-hint": "create cube, create cylinder, create cone, forgecad, cad primitives",
+        "meshy-dcc.tags": "forgecad, cad, geometry, primitives, domain",
+        "meshy-dcc.tools": "tools.yaml"
       },
       "dcc": "forgecad",
       "tags": [
@@ -958,12 +958,12 @@
           "emoji": "🔀",
           "homepage": "https://git-scm.com"
         },
-        "dcc-mcp.dcc": "python",
-        "dcc-mcp.version": "1.0.0",
-        "dcc-mcp.layer": "infrastructure",
-        "dcc-mcp.search-hint": "git commit, git diff, git branch, git log, version control, codebase analysis, git history",
-        "dcc-mcp.tags": "git, vcs, automation, devops, infrastructure",
-        "dcc-mcp.tools": "tools.yaml"
+        "meshy-dcc.dcc": "python",
+        "meshy-dcc.version": "1.0.0",
+        "meshy-dcc.layer": "infrastructure",
+        "meshy-dcc.search-hint": "git commit, git diff, git branch, git log, version control, codebase analysis, git history",
+        "meshy-dcc.tags": "git, vcs, automation, devops, infrastructure",
+        "meshy-dcc.tools": "tools.yaml"
       },
       "dcc": "python",
       "tags": [
@@ -1047,7 +1047,7 @@
     },
     {
       "name": "hello-world",
-      "description": "Example skill — minimal greeting tool demonstrating the dcc-mcp-core skill system. Use only when testing a new skill installation or onboarding to the skill authoring workflow. Not intended for production use.",
+      "description": "Example skill — minimal greeting tool demonstrating the meshy-dcc-core skill system. Use only when testing a new skill installation or onboarding to the skill authoring workflow. Not intended for production use.",
       "license": "MIT",
       "compatibility": "Python 3.7+",
       "allowed-tools": [
@@ -1055,11 +1055,11 @@
         "Read"
       ],
       "metadata": {
-        "dcc-mcp.dcc": "python",
-        "dcc-mcp.version": "1.0.0",
-        "dcc-mcp.layer": "example",
-        "dcc-mcp.search-hint": "greeting, hello, example, demo, test skill, starter",
-        "dcc-mcp.tags": "example, beginner, demo"
+        "meshy-dcc.dcc": "python",
+        "meshy-dcc.version": "1.0.0",
+        "meshy-dcc.layer": "example",
+        "meshy-dcc.search-hint": "greeting, hello, example, demo, test skill, starter",
+        "meshy-dcc.tags": "example, beginner, demo"
       },
       "dcc": "python",
       "tags": [
@@ -1108,12 +1108,12 @@
           "emoji": "🖼️",
           "homepage": "https://imagemagick.org"
         },
-        "dcc-mcp.dcc": "python",
-        "dcc-mcp.version": "1.0.0",
-        "dcc-mcp.layer": "infrastructure",
-        "dcc-mcp.search-hint": "imagemagick, resize image, convert texture, composite, watermark, batch image, thumbnail",
-        "dcc-mcp.tags": "image, processing, imagemagick, texture, compositing, infrastructure",
-        "dcc-mcp.tools": "tools.yaml"
+        "meshy-dcc.dcc": "python",
+        "meshy-dcc.version": "1.0.0",
+        "meshy-dcc.layer": "infrastructure",
+        "meshy-dcc.search-hint": "imagemagick, resize image, convert texture, composite, watermark, batch image, thumbnail",
+        "meshy-dcc.tags": "image, processing, imagemagick, texture, compositing, infrastructure",
+        "meshy-dcc.tools": "tools.yaml"
       },
       "dcc": "python",
       "tags": [
@@ -1247,7 +1247,7 @@
       "name": "marketplace-create-extension",
       "description": "Infrastructure skill — scaffold a new marketplace extension package (SKILL.md + tools.yaml + scripts/) with MIT-0 licensing. Use when creating a publishable marketplace entry for any DCC host. Not for editing existing extensions or driving live DCC scenes — use domain skills for that.",
       "license": "MIT-0",
-      "compatibility": "dcc-mcp-core 0.17+, Python 3.7+",
+      "compatibility": "meshy-dcc-core 0.17+, Python 3.7+",
       "allowed-tools": [
         "Bash",
         "Read",
@@ -1255,15 +1255,15 @@
       ],
       "metadata": {
         "openclaw": {
-          "homepage": "https://github.com/dcc-mcp/dcc-mcp-core/blob/main/skills/marketplace-create-extension/SKILL.md"
+          "homepage": "https://github.com/meshy-dev/meshy-dcc-core/blob/main/skills/marketplace-create-extension/SKILL.md"
         },
-        "dcc-mcp.dcc": "python",
-        "dcc-mcp.version": "0.18.9",
-        "dcc-mcp.layer": "infrastructure",
-        "dcc-mcp.search-hint": "create marketplace extension, scaffold extension package, new skill package, SKILL.md generator, marketplace entry, extension authoring",
-        "dcc-mcp.tags": "marketplace, extension, scaffolding, authoring, infrastructure",
-        "dcc-mcp.tools": "tools.yaml",
-        "dcc-mcp.skill-reference-docs": [
+        "meshy-dcc.dcc": "python",
+        "meshy-dcc.version": "0.18.9",
+        "meshy-dcc.layer": "infrastructure",
+        "meshy-dcc.search-hint": "create marketplace extension, scaffold extension package, new skill package, SKILL.md generator, marketplace entry, extension authoring",
+        "meshy-dcc.tags": "marketplace, extension, scaffolding, authoring, infrastructure",
+        "meshy-dcc.tools": "tools.yaml",
+        "meshy-dcc.skill-reference-docs": [
           "references/*.md"
         ]
       },
@@ -1279,7 +1279,7 @@
       "tools": [
         {
           "name": "create",
-          "description": "Scaffold a new marketplace extension package. Generates SKILL.md (with MIT-0 license frontmatter), tools.yaml skeleton, and a scripts/ directory with a placeholder action script. The output follows the standard dcc-mcp skill layout.",
+          "description": "Scaffold a new marketplace extension package. Generates SKILL.md (with MIT-0 license frontmatter), tools.yaml skeleton, and a scripts/ directory with a placeholder action script. The output follows the standard meshy-dcc skill layout.",
           "input_schema": {
             "type": "object",
             "required": [
@@ -1358,7 +1358,7 @@
           "source_file": "scripts/create_extension.py",
           "next-tools": {
             "on-success": [
-              "dcc_mcp_skills_creator__validate_skill_dir"
+              "meshy_dcc_skills_creator__validate_skill_dir"
             ],
             "on-failure": [
               "dcc_diagnostics__audit_log"
@@ -1391,7 +1391,7 @@
       "name": "marketplace-publish-extension",
       "description": "Infrastructure skill — publish (register/update) an extension package to a marketplace catalog. Reads the extension's SKILL.md frontmatter, constructs a CatalogEntry, and upserts it into the target marketplace.json. Optionally commits and pushes when the catalog source is a git repository. Use after scaffolding an extension with marketplace-create-extension. Not for installing or searching extensions — use marketplace-install or marketplace-search for that.",
       "license": "MIT-0",
-      "compatibility": "dcc-mcp-core 0.17+, Python 3.7+",
+      "compatibility": "meshy-dcc-core 0.17+, Python 3.7+",
       "allowed-tools": [
         "Bash",
         "Read",
@@ -1399,14 +1399,14 @@
       ],
       "metadata": {
         "openclaw": {
-          "homepage": "https://github.com/dcc-mcp/dcc-mcp-core/blob/main/skills/marketplace-publish-extension/SKILL.md"
+          "homepage": "https://github.com/meshy-dev/meshy-dcc-core/blob/main/skills/marketplace-publish-extension/SKILL.md"
         },
-        "dcc-mcp.dcc": "python",
-        "dcc-mcp.version": "0.18.9",
-        "dcc-mcp.layer": "infrastructure",
-        "dcc-mcp.search-hint": "publish extension, register extension, marketplace catalog, upsert catalog entry, marketplace.json, extension publishing, release to marketplace",
-        "dcc-mcp.tags": "marketplace, publishing, catalog, infrastructure",
-        "dcc-mcp.tools": "tools.yaml"
+        "meshy-dcc.dcc": "python",
+        "meshy-dcc.version": "0.18.9",
+        "meshy-dcc.layer": "infrastructure",
+        "meshy-dcc.search-hint": "publish extension, register extension, marketplace catalog, upsert catalog entry, marketplace.json, extension publishing, release to marketplace",
+        "meshy-dcc.tags": "marketplace, publishing, catalog, infrastructure",
+        "meshy-dcc.tools": "tools.yaml"
       },
       "dcc": "python",
       "tags": [
@@ -1429,11 +1429,11 @@
             "properties": {
               "extension_dir": {
                 "type": "string",
-                "description": "Absolute or relative path to the extension directory. Must contain a valid SKILL.md with dcc-mcp frontmatter metadata."
+                "description": "Absolute or relative path to the extension directory. Must contain a valid SKILL.md with meshy-dcc frontmatter metadata."
               },
               "marketplace_source": {
                 "type": "string",
-                "default": "dcc-mcp/marketplace",
+                "default": "meshy-dev/marketplace",
                 "description": "Marketplace catalog source. Can be a local path to an existing marketplace.json or the directory that contains it, a GitHub slug like \"owner/repo\", or a full URL to a marketplace.json file."
               },
               "install_url": {
@@ -1489,7 +1489,7 @@
               },
               "min_core_version": {
                 "type": "string",
-                "description": "Minimum dcc-mcp-core version required by this extension. Written into the CatalogEntry `min_core_version` field and serialized as `minCoreVersion` for v1 marketplace catalogs."
+                "description": "Minimum meshy-dcc-core version required by this extension. Written into the CatalogEntry `min_core_version` field and serialized as `minCoreVersion` for v1 marketplace catalogs."
               },
               "extension_url": {
                 "type": "string",
@@ -1597,13 +1597,13 @@
         "Write"
       ],
       "metadata": {
-        "dcc-mcp.dcc": "maya",
-        "dcc-mcp.version": "1.0.0",
-        "dcc-mcp.layer": "domain",
-        "dcc-mcp.search-hint": "create sphere, create cube, bevel edges, extrude faces, polygon modeling, Maya mesh, 3D primitives, rigging joint",
-        "dcc-mcp.tags": "maya, geometry, modeling, polygon, domain",
-        "dcc-mcp.tools": "tools.yaml",
-        "dcc-mcp.groups": "groups.yaml"
+        "meshy-dcc.dcc": "maya",
+        "meshy-dcc.version": "1.0.0",
+        "meshy-dcc.layer": "domain",
+        "meshy-dcc.search-hint": "create sphere, create cube, bevel edges, extrude faces, polygon modeling, Maya mesh, 3D primitives, rigging joint",
+        "meshy-dcc.tags": "maya, geometry, modeling, polygon, domain",
+        "meshy-dcc.tools": "tools.yaml",
+        "meshy-dcc.groups": "groups.yaml"
       },
       "dcc": "maya",
       "tags": [
@@ -1773,13 +1773,13 @@
         "Write"
       ],
       "metadata": {
-        "dcc-mcp.dcc": "maya",
-        "dcc-mcp.version": "2.0.0",
-        "dcc-mcp.layer": "domain",
-        "dcc-mcp.search-hint": "Maya project setup, export scene USD, asset pipeline, Maya export workflow, DCC pipeline orchestration",
-        "dcc-mcp.tags": "maya, pipeline, export, project setup, domain",
-        "dcc-mcp.tools": "tools.yaml",
-        "dcc-mcp.depends": "maya-geometry, usd-tools"
+        "meshy-dcc.dcc": "maya",
+        "meshy-dcc.version": "2.0.0",
+        "meshy-dcc.layer": "domain",
+        "meshy-dcc.search-hint": "Maya project setup, export scene USD, asset pipeline, Maya export workflow, DCC pipeline orchestration",
+        "meshy-dcc.tags": "maya, pipeline, export, project setup, domain",
+        "meshy-dcc.tools": "tools.yaml",
+        "meshy-dcc.depends": "maya-geometry, usd-tools"
       },
       "dcc": "maya",
       "tags": [
@@ -1897,12 +1897,12 @@
       "compatibility": "Uses vx on PATH; non-read-only media tools can bootstrap vx with the official install script.",
       "allowed-tools": [],
       "metadata": {
-        "dcc-mcp.dcc": "python",
-        "dcc-mcp.version": "0.1.0",
-        "dcc-mcp.layer": "infrastructure",
-        "dcc-mcp.search-hint": "media, ffmpeg, ffprobe, vx ffmpeg, image sequence, render output, playblast, mp4, transcode, extract frames, thumbnail, probe video",
-        "dcc-mcp.tags": "media, video, image-sequence, ffmpeg, ffprobe, vx, infrastructure, dcc-agnostic",
-        "dcc-mcp.tools": "tools.yaml"
+        "meshy-dcc.dcc": "python",
+        "meshy-dcc.version": "0.1.0",
+        "meshy-dcc.layer": "infrastructure",
+        "meshy-dcc.search-hint": "media, ffmpeg, ffprobe, vx ffmpeg, image sequence, render output, playblast, mp4, transcode, extract frames, thumbnail, probe video",
+        "meshy-dcc.tags": "media, video, image-sequence, ffmpeg, ffprobe, vx, infrastructure, dcc-agnostic",
+        "meshy-dcc.tools": "tools.yaml"
       },
       "dcc": "python",
       "tags": [
@@ -2315,17 +2315,17 @@
       "version": "0.1.0",
       "depends": [],
       "scripts": [
-        "python/dcc_mcp_core/skills/media/scripts/_media_common.py",
-        "python/dcc_mcp_core/skills/media/scripts/_media_image_stats.py",
-        "python/dcc_mcp_core/skills/media/scripts/_vx_bootstrap.py",
-        "python/dcc_mcp_core/skills/media/scripts/extract_frames.py",
-        "python/dcc_mcp_core/skills/media/scripts/image_stats.py",
-        "python/dcc_mcp_core/skills/media/scripts/probe.py",
-        "python/dcc_mcp_core/skills/media/scripts/sequence_to_mp4.py",
-        "python/dcc_mcp_core/skills/media/scripts/thumbnail.py",
-        "python/dcc_mcp_core/skills/media/scripts/transcode.py"
+        "python/meshy_dcc_core/skills/media/scripts/_media_common.py",
+        "python/meshy_dcc_core/skills/media/scripts/_media_image_stats.py",
+        "python/meshy_dcc_core/skills/media/scripts/_vx_bootstrap.py",
+        "python/meshy_dcc_core/skills/media/scripts/extract_frames.py",
+        "python/meshy_dcc_core/skills/media/scripts/image_stats.py",
+        "python/meshy_dcc_core/skills/media/scripts/probe.py",
+        "python/meshy_dcc_core/skills/media/scripts/sequence_to_mp4.py",
+        "python/meshy_dcc_core/skills/media/scripts/thumbnail.py",
+        "python/meshy_dcc_core/skills/media/scripts/transcode.py"
       ],
-      "skill_path": "python/dcc_mcp_core/skills/media",
+      "skill_path": "python/meshy_dcc_core/skills/media",
       "metadata_files": [],
       "groups": [],
       "layer": "infrastructure"
@@ -2334,16 +2334,16 @@
       "name": "mesh-ops",
       "description": "Cross-adapter polygon modeling recipe pack for the shared cross-DCC modeling vocabulary. Structured RECIPES.yaml entries for primitive creation, hard-surface edits, topology cleanup, UV generation, radial arraying, and material assignment. Reusable by every DCC adapter's mesh-ops skill (maya, blender, houdini, 3dsmax, and custom hosts) before falling back to raw scripting.",
       "license": "MIT",
-      "compatibility": "dcc-mcp-core 0.20.29+, Python 3.7+",
+      "compatibility": "meshy-dcc-core 0.20.29+, Python 3.7+",
       "allowed-tools": [
         "Read"
       ],
       "metadata": {
-        "dcc-mcp.dcc": "any",
-        "dcc-mcp.layer": "domain",
-        "dcc-mcp.stage": "modeling",
-        "dcc-mcp.version": "1.0.0",
-        "dcc-mcp.tags": [
+        "meshy-dcc.dcc": "any",
+        "meshy-dcc.layer": "domain",
+        "meshy-dcc.stage": "modeling",
+        "meshy-dcc.version": "1.0.0",
+        "meshy-dcc.tags": [
           "modeling",
           "mesh",
           "polygon",
@@ -2351,19 +2351,19 @@
           "recipe",
           "cross-dcc"
         ],
-        "dcc-mcp.search-hint": "modeling recipe, mesh recipe, create primitive, bevel edges, extrude faces, inset, boolean, edge loop, merge vertices, triangulate, cleanup mesh, combine meshes, mirror, loft sections, lathe profile, radial array, auto UV, UV projection, assign material, set pivot",
-        "dcc-mcp.intent": "Look up a structured, DCC-agnostic modeling recipe before dispatching an adapter's mesh-ops tools.",
-        "dcc-mcp.side-effects": {
+        "meshy-dcc.search-hint": "modeling recipe, mesh recipe, create primitive, bevel edges, extrude faces, inset, boolean, edge loop, merge vertices, triangulate, cleanup mesh, combine meshes, mirror, loft sections, lathe profile, radial array, auto UV, UV projection, assign material, set pivot",
+        "meshy-dcc.intent": "Look up a structured, DCC-agnostic modeling recipe before dispatching an adapter's mesh-ops tools.",
+        "meshy-dcc.side-effects": {
           "modifies": false,
           "creates": false,
           "deletes": false,
           "targets": []
         },
-        "dcc-mcp.produces": [
+        "meshy-dcc.produces": [
           "modeling_recipe"
         ],
-        "dcc-mcp.requires": [],
-        "dcc-mcp.recipes": "RECIPES.yaml"
+        "meshy-dcc.requires": [],
+        "meshy-dcc.recipes": "RECIPES.yaml"
       },
       "dcc": "any",
       "tags": [
@@ -2396,12 +2396,12 @@
         "Read"
       ],
       "metadata": {
-        "dcc-mcp.dcc": "python",
-        "dcc-mcp.version": "1.0.0",
-        "dcc-mcp.layer": "example",
-        "dcc-mcp.search-hint": "multi-script, cross-platform, python shell batch, script types, authoring reference",
-        "dcc-mcp.tags": "example, multi-language, cross-platform",
-        "dcc-mcp.tools": "tools.yaml"
+        "meshy-dcc.dcc": "python",
+        "meshy-dcc.version": "1.0.0",
+        "meshy-dcc.layer": "example",
+        "meshy-dcc.search-hint": "multi-script, cross-platform, python shell batch, script types, authoring reference",
+        "meshy-dcc.tags": "example, multi-language, cross-platform",
+        "meshy-dcc.tools": "tools.yaml"
       },
       "dcc": "python",
       "tags": [
@@ -2506,12 +2506,12 @@
       "compatibility": "",
       "allowed-tools": [],
       "metadata": {
-        "dcc-mcp.dcc": "python",
-        "dcc-mcp.version": "\\\"1.0.0\\\"",
-        "dcc-mcp.layer": "infrastructure",
-        "dcc-mcp.search-hint": "\\\"qt ui, qt widgets, gui introspection, find widget, describe widget, list windows, snapshot tree, wait for widget, PySide, PyQt, qtpy\\\"",
-        "dcc-mcp.tags": "\\\"qt, ui, introspection, infrastructure, gui\\\"",
-        "dcc-mcp.tools": "tools.yaml"
+        "meshy-dcc.dcc": "python",
+        "meshy-dcc.version": "\\\"1.0.0\\\"",
+        "meshy-dcc.layer": "infrastructure",
+        "meshy-dcc.search-hint": "\\\"qt ui, qt widgets, gui introspection, find widget, describe widget, list windows, snapshot tree, wait for widget, PySide, PyQt, qtpy\\\"",
+        "meshy-dcc.tags": "\\\"qt, ui, introspection, infrastructure, gui\\\"",
+        "meshy-dcc.tools": "tools.yaml"
       },
       "dcc": "python",
       "tags": [
@@ -2708,13 +2708,13 @@
       "version": "\\\"1.0.0\\\"",
       "depends": [],
       "scripts": [
-        "python/dcc_mcp_core/skills/qt-ui-inspector/scripts/describe_widget.py",
-        "python/dcc_mcp_core/skills/qt-ui-inspector/scripts/find_widgets.py",
-        "python/dcc_mcp_core/skills/qt-ui-inspector/scripts/list_windows.py",
-        "python/dcc_mcp_core/skills/qt-ui-inspector/scripts/snapshot_tree.py",
-        "python/dcc_mcp_core/skills/qt-ui-inspector/scripts/wait_for_widget.py"
+        "python/meshy_dcc_core/skills/qt-ui-inspector/scripts/describe_widget.py",
+        "python/meshy_dcc_core/skills/qt-ui-inspector/scripts/find_widgets.py",
+        "python/meshy_dcc_core/skills/qt-ui-inspector/scripts/list_windows.py",
+        "python/meshy_dcc_core/skills/qt-ui-inspector/scripts/snapshot_tree.py",
+        "python/meshy_dcc_core/skills/qt-ui-inspector/scripts/wait_for_widget.py"
       ],
-      "skill_path": "python/dcc_mcp_core/skills/qt-ui-inspector",
+      "skill_path": "python/meshy_dcc_core/skills/qt-ui-inspector",
       "metadata_files": [],
       "groups": [],
       "layer": "infrastructure"
@@ -2723,33 +2723,33 @@
       "name": "spatial-interchange",
       "description": "Plan deterministic coordinate-axis and unit conversions between DCCs, engines, and interchange formats from explicit right/up/forward axes and meters-per-unit values.",
       "license": "MIT",
-      "compatibility": "dcc-mcp-core 0.19.91+, Python 3.7+",
+      "compatibility": "meshy-dcc-core 0.19.91+, Python 3.7+",
       "allowed-tools": [],
       "metadata": {
-        "dcc-mcp.dcc": "python",
-        "dcc-mcp.layer": "infrastructure",
-        "dcc-mcp.stage": "interchange",
-        "dcc-mcp.version": "1.0.0",
-        "dcc-mcp.tags": [
+        "meshy-dcc.dcc": "python",
+        "meshy-dcc.layer": "infrastructure",
+        "meshy-dcc.stage": "interchange",
+        "meshy-dcc.version": "1.0.0",
+        "meshy-dcc.tags": [
           "pipeline",
           "read-only",
           "spatial",
           "interchange"
         ],
-        "dcc-mcp.search-hint": "coordinate conversion, axis conversion, unit conversion, handedness, DCC interchange, up axis, forward axis, meters per unit",
-        "dcc-mcp.intent": "Plan an auditable axis and unit conversion before importing or exporting DCC data.",
-        "dcc-mcp.side-effects": {
+        "meshy-dcc.search-hint": "coordinate conversion, axis conversion, unit conversion, handedness, DCC interchange, up axis, forward axis, meters per unit",
+        "meshy-dcc.intent": "Plan an auditable axis and unit conversion before importing or exporting DCC data.",
+        "meshy-dcc.side-effects": {
           "creates": false,
           "modifies": false,
           "file_output": false,
           "targets": []
         },
-        "dcc-mcp.produces": [
+        "meshy-dcc.produces": [
           "spatial_conversion_plan"
         ],
-        "dcc-mcp.requires": [],
-        "dcc-mcp.tools": "tools.yaml",
-        "dcc-mcp.skill-reference-docs": [
+        "meshy-dcc.requires": [],
+        "meshy-dcc.tools": "tools.yaml",
+        "meshy-dcc.skill-reference-docs": [
           "references/*.md"
         ]
       },
@@ -3069,11 +3069,11 @@
       "compatibility": "Python 3.10+",
       "allowed-tools": [],
       "metadata": {
-        "dcc-mcp.dcc": "python",
-        "dcc-mcp.version": "1.0.0",
-        "dcc-mcp.layer": "example",
-        "dcc-mcp.search-hint": "structured schema, dataclass, json schema, inputSchema, outputSchema, typed handler, pydantic-free",
-        "dcc-mcp.tags": "example, schema, structured"
+        "meshy-dcc.dcc": "python",
+        "meshy-dcc.version": "1.0.0",
+        "meshy-dcc.layer": "example",
+        "meshy-dcc.search-hint": "structured schema, dataclass, json schema, inputSchema, outputSchema, typed handler, pydantic-free",
+        "meshy-dcc.tags": "example, schema, structured"
       },
       "dcc": "python",
       "tags": [
@@ -3100,12 +3100,12 @@
       "compatibility": "dcc-cua 0.4.0+, Python 3.7+",
       "allowed-tools": [],
       "metadata": {
-        "dcc-mcp.dcc": "python",
-        "dcc-mcp.version": "0.5.0",
-        "dcc-mcp.layer": "infrastructure",
-        "dcc-mcp.search-hint": "dcc ui control, ui control, UI Control, cua, CUA, dcc-cua, dcc cua, computer use, ui automation, chrome cdp, edge cdp, screenshot, click, type, keypress, scroll, wait, trajectory recording",
-        "dcc-mcp.tags": "ui-control, cua, dcc-cua, computer-use, ui-automation, chrome-cdp, diagnostics, infrastructure",
-        "dcc-mcp.tools": "tools.yaml"
+        "meshy-dcc.dcc": "python",
+        "meshy-dcc.version": "0.5.0",
+        "meshy-dcc.layer": "infrastructure",
+        "meshy-dcc.search-hint": "dcc ui control, ui control, UI Control, cua, CUA, dcc-cua, dcc cua, computer use, ui automation, chrome cdp, edge cdp, screenshot, click, type, keypress, scroll, wait, trajectory recording",
+        "meshy-dcc.tags": "ui-control, cua, dcc-cua, computer-use, ui-automation, chrome-cdp, diagnostics, infrastructure",
+        "meshy-dcc.tools": "tools.yaml"
       },
       "dcc": "python",
       "tags": [
@@ -3122,7 +3122,7 @@
       "tools": [
         {
           "name": "snapshot",
-          "description": "Capture a bounded ui_control snapshot from the scoped application window. Start here before UI actions; use the returned snapshot_id when acting so stale controls can be detected. On Windows, DccServerBase automatically supplies its trusted adapter PID/HWND/title context. Dedicated servers can bind the DCC through DCC_MCP_UI_CONTROL_PROCESS_ID or DCC_MCP_UI_CONTROL_WINDOW_HANDLE. A request title can narrow a trusted PID to one window, and all request scope can only narrow the binding. A locked, disconnected, or secure Windows desktop returns desktop_unavailable without ending the logical session. After unlock, discard old ids and take a fresh snapshot to restore the capsule. Coordinates belong only to this adapter host and DCC logon session; RDP/session or monitor topology, resolution, and DPI changes require a fresh snapshot. A bounded target may span monitors whose virtual-desktop origins are negative or whose DPI differs; action coordinates remain PNG-relative.",
+          "description": "Capture a bounded ui_control snapshot from the scoped application window. Start here before UI actions; use the returned snapshot_id when acting so stale controls can be detected. On Windows, DccServerBase automatically supplies its trusted adapter PID/HWND/title context. Dedicated servers can bind the DCC through MESHY_DCC_UI_CONTROL_PROCESS_ID or MESHY_DCC_UI_CONTROL_WINDOW_HANDLE. A request title can narrow a trusted PID to one window, and all request scope can only narrow the binding. A locked, disconnected, or secure Windows desktop returns desktop_unavailable without ending the logical session. After unlock, discard old ids and take a fresh snapshot to restore the capsule. Coordinates belong only to this adapter host and DCC logon session; RDP/session or monitor topology, resolution, and DPI changes require a fresh snapshot. A bounded target may span monitors whose virtual-desktop origins are negative or whose DPI differs; action coordinates remain PNG-relative.",
           "input_schema": {
             "type": "object",
             "properties": {
@@ -3410,7 +3410,7 @@
         },
         {
           "name": "act",
-          "description": "Perform one scoped semantic or DCC UI Control action. Supports control ids, snapshot coordinates, pointer paths, text, and key presses where the selected backend supports them. Request policy may narrow or deny raw input. Every Windows mutation requires an adapter/operator-bound PID/HWND so the visible capsule and user interruption monitor cover semantic UIA as well as raw input. Raw input is enabled by default inside that exact bound scope and can be disabled with DCC_MCP_CUA_ALLOW_RAW_INPUT=false. Windows hard-denies raw type: enter non-sensitive text only through semantic set_text with an exact control_id. Passwords, authentication codes, and other credential material require a user hand-off or a host-owned secure credential flow. The type action is backend-specific to mock/CDP and is not a portable Windows action. Windows keypress rejects ordinary printable, Shift-text, and AltGr-text input; use only navigation/control/function keys or genuine Ctrl/Alt shortcuts. Windows game_navigation is the separately governed game-canvas path: it accepts up to four simultaneous supported canvas keys or `+` chords and an optional 0..500 ms hold, while preserving the existing raw-text denial. For application menu bars, invoke_menu resolves an explicit native menu_path inside the exact bound window. Prefer it when semantic menu clicks or Alt mnemonics cannot prove that a Qt popup opened; it never guesses pixels and always requires a fresh snapshot for verification. For a custom-drawn DCC canvas or face control that has no semantic node, use a path from the latest snapshot for one drag; Ctrl, Shift, and Alt in keys are held as pointer modifiers. Snapshot again immediately afterward. get_window_state, restore_window, show_window, and activate_window are recovery operations for the same host-bound PID/HWND and do not require a prior snapshot. They cannot enumerate or target another process/window; restore/show/activate invalidate any prior snapshot and are audited. desktop_unavailable means no Windows UI input was sent; keep the logical session, stop issuing UI calls, and ask the user to unlock or reconnect. Take a fresh snapshot only after that happens. Never use coordinates from the gateway, another host, or another logon session.",
+          "description": "Perform one scoped semantic or DCC UI Control action. Supports control ids, snapshot coordinates, pointer paths, text, and key presses where the selected backend supports them. Request policy may narrow or deny raw input. Every Windows mutation requires an adapter/operator-bound PID/HWND so the visible capsule and user interruption monitor cover semantic UIA as well as raw input. Raw input is enabled by default inside that exact bound scope and can be disabled with MESHY_DCC_CUA_ALLOW_RAW_INPUT=false. Windows hard-denies raw type: enter non-sensitive text only through semantic set_text with an exact control_id. Passwords, authentication codes, and other credential material require a user hand-off or a host-owned secure credential flow. The type action is backend-specific to mock/CDP and is not a portable Windows action. Windows keypress rejects ordinary printable, Shift-text, and AltGr-text input; use only navigation/control/function keys or genuine Ctrl/Alt shortcuts. Windows game_navigation is the separately governed game-canvas path: it accepts up to four simultaneous supported canvas keys or `+` chords and an optional 0..500 ms hold, while preserving the existing raw-text denial. For application menu bars, invoke_menu resolves an explicit native menu_path inside the exact bound window. Prefer it when semantic menu clicks or Alt mnemonics cannot prove that a Qt popup opened; it never guesses pixels and always requires a fresh snapshot for verification. For a custom-drawn DCC canvas or face control that has no semantic node, use a path from the latest snapshot for one drag; Ctrl, Shift, and Alt in keys are held as pointer modifiers. Snapshot again immediately afterward. get_window_state, restore_window, show_window, and activate_window are recovery operations for the same host-bound PID/HWND and do not require a prior snapshot. They cannot enumerate or target another process/window; restore/show/activate invalidate any prior snapshot and are audited. desktop_unavailable means no Windows UI input was sent; keep the logical session, stop issuing UI calls, and ask the user to unlock or reconnect. Take a fresh snapshot only after that happens. Never use coordinates from the gateway, another host, or another logon session.",
           "input_schema": {
             "type": "object",
             "required": [
@@ -3754,24 +3754,24 @@
       "version": "0.5.0",
       "depends": [],
       "scripts": [
-        "python/dcc_mcp_core/skills/ui-control/scripts/_backend.py",
-        "python/dcc_mcp_core/skills/ui-control/scripts/_cdp_runtime.py",
-        "python/dcc_mcp_core/skills/ui-control/scripts/_chrome_backend.py",
-        "python/dcc_mcp_core/skills/ui-control/scripts/_cua_backend.py",
-        "python/dcc_mcp_core/skills/ui-control/scripts/_cua_cli_host_client.py",
-        "python/dcc_mcp_core/skills/ui-control/scripts/_cua_support.py",
-        "python/dcc_mcp_core/skills/ui-control/scripts/_entrypoint.py",
-        "python/dcc_mcp_core/skills/ui-control/scripts/_scenario.py",
-        "python/dcc_mcp_core/skills/ui-control/scripts/act.py",
-        "python/dcc_mcp_core/skills/ui-control/scripts/find.py",
-        "python/dcc_mcp_core/skills/ui-control/scripts/recording_start.py",
-        "python/dcc_mcp_core/skills/ui-control/scripts/recording_state.py",
-        "python/dcc_mcp_core/skills/ui-control/scripts/recording_stop.py",
-        "python/dcc_mcp_core/skills/ui-control/scripts/snapshot.py",
-        "python/dcc_mcp_core/skills/ui-control/scripts/stop_computer_use.py",
-        "python/dcc_mcp_core/skills/ui-control/scripts/wait_for.py"
+        "python/meshy_dcc_core/skills/ui-control/scripts/_backend.py",
+        "python/meshy_dcc_core/skills/ui-control/scripts/_cdp_runtime.py",
+        "python/meshy_dcc_core/skills/ui-control/scripts/_chrome_backend.py",
+        "python/meshy_dcc_core/skills/ui-control/scripts/_cua_backend.py",
+        "python/meshy_dcc_core/skills/ui-control/scripts/_cua_cli_host_client.py",
+        "python/meshy_dcc_core/skills/ui-control/scripts/_cua_support.py",
+        "python/meshy_dcc_core/skills/ui-control/scripts/_entrypoint.py",
+        "python/meshy_dcc_core/skills/ui-control/scripts/_scenario.py",
+        "python/meshy_dcc_core/skills/ui-control/scripts/act.py",
+        "python/meshy_dcc_core/skills/ui-control/scripts/find.py",
+        "python/meshy_dcc_core/skills/ui-control/scripts/recording_start.py",
+        "python/meshy_dcc_core/skills/ui-control/scripts/recording_state.py",
+        "python/meshy_dcc_core/skills/ui-control/scripts/recording_stop.py",
+        "python/meshy_dcc_core/skills/ui-control/scripts/snapshot.py",
+        "python/meshy_dcc_core/skills/ui-control/scripts/stop_computer_use.py",
+        "python/meshy_dcc_core/skills/ui-control/scripts/wait_for.py"
       ],
-      "skill_path": "python/dcc_mcp_core/skills/ui-control",
+      "skill_path": "python/meshy_dcc_core/skills/ui-control",
       "metadata_files": [],
       "groups": [],
       "layer": "infrastructure"
@@ -3796,12 +3796,12 @@
           "emoji": "🎬",
           "homepage": "https://openusd.org"
         },
-        "dcc-mcp.dcc": "python",
-        "dcc-mcp.version": "1.0.0",
-        "dcc-mcp.layer": "infrastructure",
-        "dcc-mcp.search-hint": "USD stage, prim, schema validation, layer stack, usda, usdc, usdz, usdchecker, usdcat, raw USD file",
-        "dcc-mcp.tags": "usd, openusd, scene inspection, validation, infrastructure",
-        "dcc-mcp.tools": "tools.yaml"
+        "meshy-dcc.dcc": "python",
+        "meshy-dcc.version": "1.0.0",
+        "meshy-dcc.layer": "infrastructure",
+        "meshy-dcc.search-hint": "USD stage, prim, schema validation, layer stack, usda, usdc, usdz, usdchecker, usdcat, raw USD file",
+        "meshy-dcc.tags": "usd, openusd, scene inspection, validation, infrastructure",
+        "meshy-dcc.tools": "tools.yaml"
       },
       "dcc": "python",
       "tags": [
@@ -3891,12 +3891,12 @@
       "compatibility": "Uses ffmpeg/ffprobe on PATH (or via vx) only for non-PPM image decode and comparison-sheet compositing.",
       "allowed-tools": [],
       "metadata": {
-        "dcc-mcp.dcc": "python",
-        "dcc-mcp.version": "0.1.0",
-        "dcc-mcp.layer": "infrastructure",
-        "dcc-mcp.search-hint": "verification, capture, image stats, luma, histogram, comparison sheet, scene spec, uv coverage, blank frame, review views",
-        "dcc-mcp.tags": "verification, capture, image-stats, comparison-sheet, scene-spec, uv, dcc-agnostic",
-        "dcc-mcp.tools": "tools.yaml"
+        "meshy-dcc.dcc": "python",
+        "meshy-dcc.version": "0.1.0",
+        "meshy-dcc.layer": "infrastructure",
+        "meshy-dcc.search-hint": "verification, capture, image stats, luma, histogram, comparison sheet, scene spec, uv coverage, blank frame, review views",
+        "meshy-dcc.tags": "verification, capture, image-stats, comparison-sheet, scene-spec, uv, dcc-agnostic",
+        "meshy-dcc.tools": "tools.yaml"
       },
       "dcc": "python",
       "tags": [
@@ -4134,13 +4134,13 @@
       "version": "0.1.0",
       "depends": [],
       "scripts": [
-        "python/dcc_mcp_core/skills/verification/scripts/_common.py",
-        "python/dcc_mcp_core/skills/verification/scripts/capture_review_views.py",
-        "python/dcc_mcp_core/skills/verification/scripts/image_stats.py",
-        "python/dcc_mcp_core/skills/verification/scripts/make_comparison_sheet.py",
-        "python/dcc_mcp_core/skills/verification/scripts/validate_scene_vs_spec.py"
+        "python/meshy_dcc_core/skills/verification/scripts/_common.py",
+        "python/meshy_dcc_core/skills/verification/scripts/capture_review_views.py",
+        "python/meshy_dcc_core/skills/verification/scripts/image_stats.py",
+        "python/meshy_dcc_core/skills/verification/scripts/make_comparison_sheet.py",
+        "python/meshy_dcc_core/skills/verification/scripts/validate_scene_vs_spec.py"
       ],
-      "skill_path": "python/dcc_mcp_core/skills/verification",
+      "skill_path": "python/meshy_dcc_core/skills/verification",
       "metadata_files": [],
       "groups": [],
       "layer": "infrastructure"
@@ -4152,12 +4152,12 @@
       "compatibility": "",
       "allowed-tools": [],
       "metadata": {
-        "dcc-mcp.dcc": "python",
-        "dcc-mcp.version": "1.0.0",
-        "dcc-mcp.layer": "infrastructure",
-        "dcc-mcp.search-hint": "chain, sequence, pipeline, multi-step, orchestration, workflow, batch, run steps, automate",
-        "dcc-mcp.tags": "workflow, orchestration, chain, pipeline, automation, infrastructure",
-        "dcc-mcp.tools": "tools.yaml"
+        "meshy-dcc.dcc": "python",
+        "meshy-dcc.version": "1.0.0",
+        "meshy-dcc.layer": "infrastructure",
+        "meshy-dcc.search-hint": "chain, sequence, pipeline, multi-step, orchestration, workflow, batch, run steps, automate",
+        "meshy-dcc.tags": "workflow, orchestration, chain, pipeline, automation, infrastructure",
+        "meshy-dcc.tools": "tools.yaml"
       },
       "dcc": "python",
       "tags": [
@@ -4172,7 +4172,7 @@
       "tools": [
         {
           "name": "run_chain",
-          "description": "Execute a sequence of actions in order via the dcc-mcp-core ToolDispatcher. Each step's output context is merged into the next step's parameters. On failure, the chain stops and reports which step failed and why.",
+          "description": "Execute a sequence of actions in order via the meshy-dcc-core ToolDispatcher. Each step's output context is merged into the next step's parameters. On failure, the chain stops and reports which step failed and why.",
           "input_schema": {
             "type": "object",
             "required": [

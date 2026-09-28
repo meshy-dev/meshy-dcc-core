@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from conftest import REPO_ROOT
-import dcc_mcp_core
+import meshy_dcc_core
 
 DCC_CUA_SKILL_DIR = REPO_ROOT / "skills" / "dcc-cua"
 
@@ -16,20 +16,20 @@ def _normalized(path: Path) -> str:
 
 class TestDccCuaSkill:
     def test_skill_is_valid_and_scannable(self) -> None:
-        meta = dcc_mcp_core.parse_skill_md(str(DCC_CUA_SKILL_DIR))
+        meta = meshy_dcc_core.parse_skill_md(str(DCC_CUA_SKILL_DIR))
         assert meta is not None
         assert meta.name == "dcc-cua"
         assert meta.version == "0.1.0"
 
-        report = dcc_mcp_core.validate_skill(str(DCC_CUA_SKILL_DIR))
+        report = meshy_dcc_core.validate_skill(str(DCC_CUA_SKILL_DIR))
         assert report.is_clean, report.issues
 
-        scanner = dcc_mcp_core.SkillScanner()
+        scanner = meshy_dcc_core.SkillScanner()
         names = {Path(path).name for path in scanner.scan(extra_paths=[str(DCC_CUA_SKILL_DIR.parent)])}
         assert "dcc-cua" in names
 
     def test_named_requests_have_a_fail_closed_provider_boundary(self) -> None:
-        meta = dcc_mcp_core.parse_skill_md(str(DCC_CUA_SKILL_DIR))
+        meta = meshy_dcc_core.parse_skill_md(str(DCC_CUA_SKILL_DIR))
         assert meta is not None
         description = " ".join((meta.description or "").lower().split())
         for phrase in (
@@ -57,7 +57,7 @@ class TestDccCuaSkill:
             assert phrase in body
 
     def test_exact_name_wins_catalog_search(self) -> None:
-        catalog = dcc_mcp_core.SkillCatalog(dcc_mcp_core.ToolRegistry())
+        catalog = meshy_dcc_core.SkillCatalog(meshy_dcc_core.ToolRegistry())
         catalog.discover(extra_paths=[str(DCC_CUA_SKILL_DIR.parent)])
 
         for query in ("dcc-cua", "our dcc-cua", "我们的 dcc-cua"):
@@ -78,7 +78,7 @@ class TestDccCuaSkill:
             assert phrase in body
 
     def test_openai_interface_repeats_non_substitution_contract(self) -> None:
-        interface = dcc_mcp_core.yaml_loads((DCC_CUA_SKILL_DIR / "agents" / "openai.yaml").read_text(encoding="utf-8"))[
+        interface = meshy_dcc_core.yaml_loads((DCC_CUA_SKILL_DIR / "agents" / "openai.yaml").read_text(encoding="utf-8"))[
             "interface"
         ]
         assert interface["display_name"] == "DCC-CUA"

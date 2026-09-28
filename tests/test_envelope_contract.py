@@ -7,22 +7,22 @@ from typing import Any
 
 import pytest
 
-from dcc_mcp_core import SerializeFormat
-from dcc_mcp_core import deserialize_result
-from dcc_mcp_core import from_exception
-from dcc_mcp_core import serialize_result
-from dcc_mcp_core import validate_action_result
-from dcc_mcp_core._server.inprocess_executor import exception_to_error_envelope
-from dcc_mcp_core._server.inprocess_executor import sandbox_denied_envelope
-from dcc_mcp_core.result_envelope import ToolResultEnvelope
-from dcc_mcp_core.script_execution import ScriptExecutionResult
-from dcc_mcp_core.skill import skill_entry
-from dcc_mcp_core.skill import skill_error
-from dcc_mcp_core.skill import skill_error_with_trace
-from dcc_mcp_core.skill import skill_exception
-from dcc_mcp_core.skill import skill_success
-from dcc_mcp_core.skill import skill_warning
-from dcc_mcp_core.skills_helper import skill_error_from_exception
+from meshy_dcc_core import SerializeFormat
+from meshy_dcc_core import deserialize_result
+from meshy_dcc_core import from_exception
+from meshy_dcc_core import serialize_result
+from meshy_dcc_core import validate_action_result
+from meshy_dcc_core._server.inprocess_executor import exception_to_error_envelope
+from meshy_dcc_core._server.inprocess_executor import sandbox_denied_envelope
+from meshy_dcc_core.result_envelope import ToolResultEnvelope
+from meshy_dcc_core.script_execution import ScriptExecutionResult
+from meshy_dcc_core.skill import skill_entry
+from meshy_dcc_core.skill import skill_error
+from meshy_dcc_core.skill import skill_error_with_trace
+from meshy_dcc_core.skill import skill_exception
+from meshy_dcc_core.skill import skill_success
+from meshy_dcc_core.skill import skill_warning
+from meshy_dcc_core.skills_helper import skill_error_from_exception
 
 _CANONICAL_KEYS = {"success", "message", "error", "prompt", "context", "postcondition", "_meta"}
 
@@ -186,7 +186,7 @@ def test_runtime_from_exception_truncates_utf8_on_character_boundary(
         r"C:\scene.ma: access denied",
         "C:scene.ma: access denied",
         "https://example.invalid/file: failed",
-        "dcc-mcp://host/tool: failed",
+        "meshy-dcc://host/tool: failed",
         "Could not open: file",
     ],
 )

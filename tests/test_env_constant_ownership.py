@@ -5,10 +5,10 @@ from __future__ import annotations
 import ast
 from pathlib import Path
 
-from dcc_mcp_core import constants
+from meshy_dcc_core import constants
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-PACKAGE_ROOT = REPO_ROOT / "python" / "dcc_mcp_core"
+PACKAGE_ROOT = REPO_ROOT / "python" / "meshy_dcc_core"
 
 
 def test_runtime_env_names_are_owned_by_constants_module() -> None:
@@ -20,10 +20,10 @@ def test_runtime_env_names_are_owned_by_constants_module() -> None:
         tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(relative))
         for node in ast.walk(tree):
             value = getattr(node, "value", None)
-            if isinstance(node, ast.Constant) and isinstance(value, str) and value.startswith("DCC_MCP_"):
+            if isinstance(node, ast.Constant) and isinstance(value, str) and value.startswith("MESHY_DCC_"):
                 violations.append(f"{relative}:{node.lineno}:{value}")
 
-    assert not violations, "Runtime env names must come from dcc_mcp_core.constants:\n{}".format("\n".join(violations))
+    assert not violations, "Runtime env names must come from meshy_dcc_core.constants:\n{}".format("\n".join(violations))
 
 
 def test_all_env_constants_are_exported_and_namespaced() -> None:
@@ -32,5 +32,5 @@ def test_all_env_constants_are_exported_and_namespaced() -> None:
     }
 
     assert env_constants
-    assert all(value.startswith("DCC_MCP_") for value in env_constants.values())
+    assert all(value.startswith("MESHY_DCC_") for value in env_constants.values())
     assert set(env_constants).issubset(constants.__all__)

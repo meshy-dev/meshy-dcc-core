@@ -1,14 +1,14 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: dcc-mcp-gateway-config
+  name: meshy-dcc-gateway-config
   labels:
-    app.kubernetes.io/name: dcc-mcp-gateway
+    app.kubernetes.io/name: meshy-dcc-gateway
 data:
-  DCC_MCP_GATEWAY_PORT: "9765"
-  DCC_MCP_REGISTRY_DIR: "/var/lib/dcc-mcp/registry"
-  DCC_MCP_LOG_DIR: "/var/log/dcc-mcp"
-  DCC_MCP_HEARTBEAT_INTERVAL: "2"
-  DCC_MCP_STALE_TIMEOUT: "10"
-  DCC_MCP_SERVER_NAME: "dcc-mcp-gateway"
-  DCC_MCP_DCC: "generic"
+  MESHY_DCC_GATEWAY_PORT: "19765"
+  MESHY_DCC_REGISTRY_DIR: "/var/lib/meshy-dcc/registry"
+  MESHY_DCC_LOG_DIR: "/var/log/meshy-dcc"
+  MESHY_DCC_HEARTBEAT_INTERVAL: "2"
+  MESHY_DCC_STALE_TIMEOUT: "10"
+  MESHY_DCC_SERVER_NAME: "meshy-dcc-gateway"
+  MESHY_DCC_DCC: "generic"

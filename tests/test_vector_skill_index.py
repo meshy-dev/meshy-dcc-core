@@ -7,20 +7,20 @@ import math
 
 import pytest
 
-from dcc_mcp_core.skill_index import InMemoryVectorStore as CanonicalInMemoryVectorStore
-from dcc_mcp_core.skill_index import LexicalSkillIndex
-from dcc_mcp_core.skill_index import RrfFusionIndex
-from dcc_mcp_core.skill_index import SkillDocument
-from dcc_mcp_core.skill_index import VectorSkillIndex as CanonicalVectorSkillIndex
-from dcc_mcp_core.skill_index import VectorStore as CanonicalVectorStore
-from dcc_mcp_core.vector_embedder import DEFAULT_DIM
-from dcc_mcp_core.vector_embedder import Embedder
-from dcc_mcp_core.vector_embedder import EmbedderError
-from dcc_mcp_core.vector_embedder import HashedEmbedder
-from dcc_mcp_core.vector_embedder import OnnxEmbedder
-from dcc_mcp_core.vector_skill_index import InMemoryVectorStore
-from dcc_mcp_core.vector_skill_index import VectorSkillIndex
-from dcc_mcp_core.vector_skill_index import VectorStore
+from meshy_dcc_core.skill_index import InMemoryVectorStore as CanonicalInMemoryVectorStore
+from meshy_dcc_core.skill_index import LexicalSkillIndex
+from meshy_dcc_core.skill_index import RrfFusionIndex
+from meshy_dcc_core.skill_index import SkillDocument
+from meshy_dcc_core.skill_index import VectorSkillIndex as CanonicalVectorSkillIndex
+from meshy_dcc_core.skill_index import VectorStore as CanonicalVectorStore
+from meshy_dcc_core.vector_embedder import DEFAULT_DIM
+from meshy_dcc_core.vector_embedder import Embedder
+from meshy_dcc_core.vector_embedder import EmbedderError
+from meshy_dcc_core.vector_embedder import HashedEmbedder
+from meshy_dcc_core.vector_embedder import OnnxEmbedder
+from meshy_dcc_core.vector_skill_index import InMemoryVectorStore
+from meshy_dcc_core.vector_skill_index import VectorSkillIndex
+from meshy_dcc_core.vector_skill_index import VectorStore
 
 
 def test_vector_skill_index_compatibility_aliases_are_identical() -> None:
@@ -307,7 +307,7 @@ def test_onnx_embedder_raises_when_extra_missing() -> None:
     native_available = False
     fastembed_available = False
     try:
-        import dcc_mcp_core_semantic
+        import meshy_dcc_core_semantic
 
         native_available = True
     except ImportError:
@@ -326,7 +326,7 @@ def test_onnx_embedder_raises_when_extra_missing() -> None:
         )
     with pytest.raises(EmbedderError) as exc_info:
         OnnxEmbedder()
-    assert "pip install 'dcc-mcp-core[semantic]'" in str(exc_info.value)
+    assert "pip install 'meshy-dcc-core[semantic]'" in str(exc_info.value)
 
 
 def test_onnx_embedder_resolves_config_with_defaults() -> None:
@@ -454,7 +454,7 @@ def test_onnx_embedder_propagates_backend_failure_as_embedder_error() -> None:
 
 
 class _FakeNativeEmbedderModule:
-    """In-memory stand-in for ``dcc_mcp_core_semantic.native`` so the
+    """In-memory stand-in for ``meshy_dcc_core_semantic.native`` so the
     three-tier resolver tests run without the companion wheel installed.
 
     Mirrors the public surface of the Rust ``NativeEmbedder`` pyclass:
@@ -490,13 +490,13 @@ class _FakeNativeEmbedderInstance:
 
 
 def _inject_native(monkeypatch: pytest.MonkeyPatch, fake_native_module) -> None:
-    """Install a fake ``dcc_mcp_core_semantic`` package into ``sys.modules``."""
+    """Install a fake ``meshy_dcc_core_semantic`` package into ``sys.modules``."""
     import sys
     import types
 
-    pkg = types.ModuleType("dcc_mcp_core_semantic")
+    pkg = types.ModuleType("meshy_dcc_core_semantic")
     pkg.native = fake_native_module
-    monkeypatch.setitem(sys.modules, "dcc_mcp_core_semantic", pkg)
+    monkeypatch.setitem(sys.modules, "meshy_dcc_core_semantic", pkg)
 
 
 def test_load_backend_prefers_native_when_available(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -546,7 +546,7 @@ def test_load_backend_native_fatal_error_does_not_silently_fall_back(
     """
     fake_native = _FakeNativeEmbedderModule(raise_fatal=True)
     _inject_native(monkeypatch, fake_native)
-    with pytest.raises(EmbedderError, match="dcc-mcp-core-semantic native backend failed"):
+    with pytest.raises(EmbedderError, match="meshy-dcc-core-semantic native backend failed"):
         OnnxEmbedder()
 
 
@@ -559,7 +559,7 @@ def test_load_backend_uses_python_fastembed_when_native_not_installed(
     import sys
 
     # Ensure the native module is NOT present even if a previous test injected it.
-    monkeypatch.delitem(sys.modules, "dcc_mcp_core_semantic", raising=False)
+    monkeypatch.delitem(sys.modules, "meshy_dcc_core_semantic", raising=False)
 
     fake_python_module = type(
         "_FakeFastembed",

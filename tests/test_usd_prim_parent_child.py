@@ -22,10 +22,10 @@ from __future__ import annotations
 
 import pytest
 
-from dcc_mcp_core import SdfPath
-from dcc_mcp_core import UsdPrim
-from dcc_mcp_core import UsdStage
-from dcc_mcp_core import VtValue
+from meshy_dcc_core import SdfPath
+from meshy_dcc_core import UsdPrim
+from meshy_dcc_core import UsdStage
+from meshy_dcc_core import VtValue
 
 # ---------------------------------------------------------------------------
 # SdfPath tree tests

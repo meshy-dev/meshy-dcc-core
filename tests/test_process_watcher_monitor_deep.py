@@ -17,8 +17,8 @@ import time
 import pytest
 
 from _support.watcher import wait_for_event
-from dcc_mcp_core import PyProcessMonitor
-from dcc_mcp_core import PyProcessWatcher
+from meshy_dcc_core import PyProcessMonitor
+from meshy_dcc_core import PyProcessWatcher
 
 SELF_PID = os.getpid()
 

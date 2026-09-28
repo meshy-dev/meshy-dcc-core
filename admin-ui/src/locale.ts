@@ -1,6 +1,6 @@
 import { SUPPORTED_LOCALES, type SupportedLocale } from './i18n';
 
-export const LOCALE_STORAGE_KEY = 'dcc-mcp-admin-locale';
+export const LOCALE_STORAGE_KEY = 'meshy-dcc-admin-locale';
 
 export const LOCALE_LABELS: Record<SupportedLocale, string> = {
   en: 'English',

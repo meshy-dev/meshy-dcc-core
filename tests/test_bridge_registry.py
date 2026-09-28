@@ -13,10 +13,10 @@ from __future__ import annotations
 import pytest
 
 # Import local modules
-import dcc_mcp_core
-from dcc_mcp_core import BridgeContext
-from dcc_mcp_core import BridgeRegistry
-from dcc_mcp_core import DccCapabilities
+import meshy_dcc_core
+from meshy_dcc_core import BridgeContext
+from meshy_dcc_core import BridgeRegistry
+from meshy_dcc_core import DccCapabilities
 
 # ── BridgeContext ────────────────────────────────────────────────────────
 
@@ -180,24 +180,24 @@ class TestGlobalBridgeFunctions:
     def test_register_and_get_global(self) -> None:
         """Register and query via the global singleton functions."""
         # Use a unique DCC type to avoid collisions with other tests
-        dcc_mcp_core.register_bridge("_test_photoshop", "ws://localhost:9001")
-        ctx = dcc_mcp_core.get_bridge_context("_test_photoshop")
+        meshy_dcc_core.register_bridge("_test_photoshop", "ws://localhost:9001")
+        ctx = meshy_dcc_core.get_bridge_context("_test_photoshop")
         assert ctx is not None
         assert ctx.dcc_type == "_test_photoshop"
         assert ctx.bridge_url == "ws://localhost:9001"
         assert ctx.connected is True
 
     def test_get_bridge_context_missing(self) -> None:
-        assert dcc_mcp_core.get_bridge_context("_nonexistent_dcc") is None
+        assert meshy_dcc_core.get_bridge_context("_nonexistent_dcc") is None
 
     def test_register_bridge_empty_raises(self) -> None:
         with pytest.raises(ValueError):
-            dcc_mcp_core.register_bridge("", "ws://localhost:9001")
+            meshy_dcc_core.register_bridge("", "ws://localhost:9001")
 
     def test_get_bridge_context_returns_context_not_string(self) -> None:
         """Verify get_bridge_context returns BridgeContext, not just a URL string."""
-        dcc_mcp_core.register_bridge("_test_zbrush", "http://localhost:8765")
-        ctx = dcc_mcp_core.get_bridge_context("_test_zbrush")
+        meshy_dcc_core.register_bridge("_test_zbrush", "http://localhost:8765")
+        ctx = meshy_dcc_core.get_bridge_context("_test_zbrush")
         assert isinstance(ctx, BridgeContext)
         assert hasattr(ctx, "connected")
 

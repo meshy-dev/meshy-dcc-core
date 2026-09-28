@@ -1,0 +1,21 @@
+[package]
+name = "meshy-dcc-test-utils"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Shared test utilities for meshy-dcc-core workspace crates"
+
+[dependencies]
+meshy-dcc-skill-rest = { workspace = true, optional = true, features = ["test-fixtures"] }
+workspace-hack = { version = "0.1", path = "../workspace-hack" }
+
+[features]
+default = []
+skill-rest = ["dep:meshy-dcc-skill-rest"]
+
+[dev-dependencies]
+serde_json = { workspace = true }
+tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }

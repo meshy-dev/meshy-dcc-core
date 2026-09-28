@@ -7,15 +7,15 @@ helper while keeping the same AssetDescriptor contract.
 
 from __future__ import annotations
 
-from dcc_mcp_core.asset_import import AssetAttribution
-from dcc_mcp_core.asset_import import AssetDescriptor
-from dcc_mcp_core.asset_import import AssetFileVariant
-from dcc_mcp_core.asset_import import AssetFormat
-from dcc_mcp_core.asset_import import AxisHint
-from dcc_mcp_core.asset_import import UnitHint
-from dcc_mcp_core.skill import skill_entry
-from dcc_mcp_core.skill import skill_error
-from dcc_mcp_core.skill import skill_success
+from meshy_dcc_core.asset_import import AssetAttribution
+from meshy_dcc_core.asset_import import AssetDescriptor
+from meshy_dcc_core.asset_import import AssetFileVariant
+from meshy_dcc_core.asset_import import AssetFormat
+from meshy_dcc_core.asset_import import AxisHint
+from meshy_dcc_core.asset_import import UnitHint
+from meshy_dcc_core.skill import skill_entry
+from meshy_dcc_core.skill import skill_error
+from meshy_dcc_core.skill import skill_success
 
 # ---------------------------------------------------------------------------
 # Static demo catalog — replace with a real asset registry in production
@@ -226,6 +226,6 @@ def main(**kwargs) -> dict:
 
 
 if __name__ == "__main__":
-    from dcc_mcp_core.skill import run_main
+    from meshy_dcc_core.skill import run_main
 
     run_main(main)

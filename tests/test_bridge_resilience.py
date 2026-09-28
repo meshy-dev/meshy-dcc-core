@@ -11,14 +11,14 @@ from types import SimpleNamespace
 
 import pytest
 
-import dcc_mcp_core
-from dcc_mcp_core import BridgeConnectionError
-from dcc_mcp_core import BridgeFallbackClient
-from dcc_mcp_core import BridgeRetryPolicy
-from dcc_mcp_core import BridgeRpcError
-from dcc_mcp_core import BridgeTransportStrategy
-from dcc_mcp_core import DccBridge
-from dcc_mcp_core import ReverseBridgeSession
+import meshy_dcc_core
+from meshy_dcc_core import BridgeConnectionError
+from meshy_dcc_core import BridgeFallbackClient
+from meshy_dcc_core import BridgeRetryPolicy
+from meshy_dcc_core import BridgeRpcError
+from meshy_dcc_core import BridgeTransportStrategy
+from meshy_dcc_core import DccBridge
+from meshy_dcc_core import ReverseBridgeSession
 
 
 class _Strategy(BridgeTransportStrategy):
@@ -101,8 +101,8 @@ def test_bridge_resilience_symbols_exported() -> None:
         "ReverseBridgeRequest",
         "ReverseBridgeSession",
     ):
-        assert hasattr(dcc_mcp_core, name)
-        assert name in dcc_mcp_core.__all__
+        assert hasattr(meshy_dcc_core, name)
+        assert name in meshy_dcc_core.__all__
 
 
 def test_dcc_bridge_disconnect_closes_server_without_crashing_event_loop(monkeypatch, caplog) -> None:
@@ -110,7 +110,7 @@ def test_dcc_bridge_disconnect_closes_server_without_crashing_event_loop(monkeyp
     monkeypatch.setitem(sys.modules, "websockets", SimpleNamespace(serve=lambda *_args, **_kwargs: server))
     bridge = DccBridge(host="127.0.0.1", port=0)
 
-    with caplog.at_level(logging.ERROR, logger="dcc_mcp_core.bridge"):
+    with caplog.at_level(logging.ERROR, logger="meshy_dcc_core.bridge"):
         bridge.connect()
         loop = bridge._loop
         bridge.disconnect()

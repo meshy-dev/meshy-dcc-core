@@ -1,10 +1,10 @@
 from pathlib import Path
 
-from dcc_mcp_core import install_lifecycle
-import dcc_mcp_core._install_lifecycle_process as process_lifecycle
-import dcc_mcp_core._install_lifecycle_runtime as runtime_lifecycle
-import dcc_mcp_core._install_lifecycle_sidecar as sidecar_lifecycle
-from dcc_mcp_core._path_util import to_resolved_path
+from meshy_dcc_core import install_lifecycle
+import meshy_dcc_core._install_lifecycle_process as process_lifecycle
+import meshy_dcc_core._install_lifecycle_runtime as runtime_lifecycle
+import meshy_dcc_core._install_lifecycle_sidecar as sidecar_lifecycle
+from meshy_dcc_core._path_util import to_resolved_path
 
 
 def test_to_resolved_path_rejects_empty_values() -> None:
