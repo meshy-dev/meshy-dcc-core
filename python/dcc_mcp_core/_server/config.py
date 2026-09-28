@@ -146,6 +146,10 @@ CONTEXT_METADATA_ENV: dict[str, str] = {
     "skill_paths": ENV_SKILL_PATHS,
     "resource_paths": ENV_RESOURCE_PATHS,
     "prompt_paths": ENV_PROMPT_PATHS,
+    # Set by `start-instance` on the host it spawns; the CLI matches the
+    # registry row to its project and launch operation through these keys.
+    "dcc_mcp_project": "DCC_MCP_START_PROJECT",
+    "dcc_mcp_operation_id": "DCC_MCP_START_OPERATION_ID",
 }
 
 

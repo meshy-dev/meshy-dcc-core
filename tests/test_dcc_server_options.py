@@ -183,6 +183,15 @@ class TestResolvedServerConfig:
         assert metadata["project"] == "show-a"
         assert metadata["dcc_skill_paths"] == "C:/show/skills"
 
+    def test_context_metadata_from_env_binds_start_instance_launch(self, monkeypatch):
+        monkeypatch.setenv("DCC_MCP_START_PROJECT", "/work/city")
+        monkeypatch.setenv("DCC_MCP_START_OPERATION_ID", "op-1")
+
+        metadata = collect_context_metadata_from_env("blender")
+
+        assert metadata["dcc_mcp_project"] == "/work/city"
+        assert metadata["dcc_mcp_operation_id"] == "op-1"
+
     def test_build_mcp_http_config_populates_gateway_contract(self, tmp_path):
         opts = DccServerOptions.from_env(
             "photoshop",
