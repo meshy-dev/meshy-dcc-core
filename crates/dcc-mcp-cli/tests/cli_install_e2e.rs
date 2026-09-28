@@ -29,14 +29,14 @@ fn install_execute_json_reports_manual_registration_as_deferred() {
         "--python",
         "python",
         "--catalog",
-        UPSTREAM_CATALOG,
+        FIXTURE_CATALOG,
     ]);
     let python_path = fake_pip(&temp, plan["version"].as_str().unwrap());
     let output = cli_command()
         .args([
             "install",
             "--catalog",
-            UPSTREAM_CATALOG,
+            FIXTURE_CATALOG,
             "--dcc-type",
             "maya",
             "--python",
@@ -90,7 +90,7 @@ fn install_execute_json_failure_emits_one_safe_execution_report() {
         .args([
             "install",
             "--catalog",
-            UPSTREAM_CATALOG,
+            FIXTURE_CATALOG,
             "--dcc-type",
             "maya",
             "--python",
@@ -137,7 +137,7 @@ fn install_json_alias_preserves_the_plan_only_response() {
         .args([
             "install",
             "--catalog",
-            UPSTREAM_CATALOG,
+            FIXTURE_CATALOG,
             "--dcc-type",
             "maya",
             "--json",
@@ -208,7 +208,7 @@ fn install_uses_upstream_adapter_metadata_and_python_override() {
         &[
             "install",
             "--catalog",
-            UPSTREAM_CATALOG,
+            FIXTURE_CATALOG,
             "--dcc-type",
             "maya",
             "--version",
@@ -286,7 +286,7 @@ fn install_policy_env_disables_execute_with_a_stable_preflight_report() {
         .args([
             "install",
             "--catalog",
-            UPSTREAM_CATALOG,
+            FIXTURE_CATALOG,
             "--dcc-type",
             "maya",
             "--python",
@@ -334,7 +334,7 @@ fn install_upstream_catalog_covers_non_maya_first_party_adapters() {
         &[
             "install",
             "--catalog",
-            UPSTREAM_CATALOG,
+            FIXTURE_CATALOG,
             "--dcc-type",
             "blender",
         ],
@@ -359,7 +359,7 @@ fn upstream_catalog_reports_current_unity_adapter_version() {
         &[
             "install",
             "--catalog",
-            UPSTREAM_CATALOG,
+            FIXTURE_CATALOG,
             "--dcc-type",
             "unity",
         ],
@@ -377,7 +377,7 @@ fn install_rejects_pip_version_without_a_catalog_pinned_artifact() {
         .args([
             "install",
             "--catalog",
-            UPSTREAM_CATALOG,
+            FIXTURE_CATALOG,
             "--dcc-type",
             "maya",
             "--version",
@@ -402,7 +402,7 @@ fn unpublished_adapters_do_not_advertise_automatic_install_steps() {
             &[
                 "install",
                 "--catalog",
-                UPSTREAM_CATALOG,
+                FIXTURE_CATALOG,
                 "--dcc-type",
                 dcc_type,
             ],
@@ -434,7 +434,7 @@ fn upstream_catalog_reports_current_core_adapter_versions() {
             &[
                 "install",
                 "--catalog",
-                UPSTREAM_CATALOG,
+                FIXTURE_CATALOG,
                 "--dcc-type",
                 dcc_type,
             ],
@@ -452,7 +452,7 @@ fn upstream_catalog_reports_marmoset_adapter() {
         &[
             "install",
             "--catalog",
-            UPSTREAM_CATALOG,
+            FIXTURE_CATALOG,
             "--dcc-type",
             "marmoset",
         ],
@@ -471,7 +471,7 @@ fn install_prefers_adapter_over_same_dcc_skill_pack() {
         &[
             "install",
             "--catalog",
-            UPSTREAM_CATALOG,
+            FIXTURE_CATALOG,
             "--dcc-type",
             "photoshop",
         ],
@@ -491,7 +491,7 @@ fn install_accepts_human_dcc_name_aliases() {
         &[
             "install",
             "--catalog",
-            UPSTREAM_CATALOG,
+            FIXTURE_CATALOG,
             "--dcc-type",
             "3ds Max",
         ],

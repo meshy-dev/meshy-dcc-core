@@ -840,7 +840,7 @@ mod tests {
             python_overrides: overrides,
             catalog: Some(PathBuf::from(concat!(
                 env!("CARGO_MANIFEST_DIR"),
-                "/../../dcc-mcp-catalog.yml"
+                "/../../tests/fixtures/pip-adapter-catalog.yml"
             ))),
         };
         let (targets, catalog_error) = resolve_targets(&request);

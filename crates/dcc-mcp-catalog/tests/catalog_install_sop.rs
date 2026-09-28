@@ -176,7 +176,8 @@ fn bundled_sop_schema_digest_matches_the_published_schema_file() {
         "SOP_V1_DIGEST is stale; the Install SOP schema document changed"
     );
 
-    let catalog_path = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../dcc-mcp-catalog.yml");
+    let catalog_path =
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/fixtures/pip-adapter-catalog.yml");
     let entries = load_from_file(&catalog_path).expect("the bundled catalog must parse");
 
     let published: Vec<&CatalogEntry> = entries

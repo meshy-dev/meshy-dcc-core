@@ -43,7 +43,7 @@ fn payload_rejects_unknown_schema_duplicate_entries_and_mutable_revision() {
 #[test]
 fn payload_rejects_unbound_artifact_metadata() {
     let mut candidate = payload();
-    candidate.entries = dcc_mcp_catalog::load_from_str(super::super::UPSTREAM_CATALOG).unwrap();
+    candidate.entries = dcc_mcp_catalog::load_from_str(super::super::FIXTURE_CATALOG).unwrap();
     assert!(validate_payload(&candidate, 1500, true).is_ok());
     let entry = candidate
         .entries

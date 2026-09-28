@@ -11,9 +11,9 @@ use crate::domain::install::{
 };
 
 const BUNDLED_CATALOG: &str = include_str!("../../../../meshy-dcc-catalog.yml");
-/// Upstream dcc-mcp catalog; the bundled catalog takes the entries it names
-/// under `upstream` from here. Tests also use its pip adapters directly.
-const UPSTREAM_CATALOG: &str = include_str!("../../../../dcc-mcp-catalog.yml");
+/// Catalog of pip adapters that exercises the install mechanics in tests.
+#[cfg(test)]
+const FIXTURE_CATALOG: &str = include_str!("../../../../tests/fixtures/pip-adapter-catalog.yml");
 
 mod adobe;
 mod catalog;
@@ -976,9 +976,9 @@ mod tests {
         use crate::domain::install_catalog::CatalogProvenance;
         use sha2::{Digest, Sha256};
         service.catalog_snapshot = Some(catalog::ResolvedCatalog {
-            entries: dcc_mcp_catalog::load_from_str(UPSTREAM_CATALOG).unwrap(),
+            entries: dcc_mcp_catalog::load_from_str(FIXTURE_CATALOG).unwrap(),
             provenance: CatalogProvenance {
-                sha256: Some(hex::encode(Sha256::digest(UPSTREAM_CATALOG.as_bytes()))),
+                sha256: Some(hex::encode(Sha256::digest(FIXTURE_CATALOG.as_bytes()))),
                 ..CatalogProvenance::local(CatalogSource::Bundled)
             },
         });
@@ -995,38 +995,25 @@ mod tests {
         let entries = service.catalog_entries(None).unwrap();
         assert_eq!(
             entries,
-            dcc_mcp_catalog::load_curated(BUNDLED_CATALOG, UPSTREAM_CATALOG).unwrap()
+            dcc_mcp_catalog::load_from_str(BUNDLED_CATALOG).unwrap()
         );
-        // Every upstream entry the Meshy catalog names is bundled as it is.
-        for name in dcc_mcp_catalog::upstream_selection(BUNDLED_CATALOG).unwrap() {
-            assert!(entries.iter().any(|entry| entry.name == name), "{name}");
-        }
-
         let listing = service.dcc_types(None).unwrap();
-        let adapter = |dcc: &str| {
-            listing
-                .dcc_types
-                .iter()
-                .find(|entry| entry.dcc_type == dcc)
-                .unwrap()
-                .adapters[0]
-                .clone()
-        };
-        // An unpublished Meshy adapter yields to the named upstream one ...
-        assert_eq!(adapter("blender").name, "dcc-mcp-blender");
-        assert!(adapter("blender").catalog_install_available);
-        // ... and stays a placeholder where upstream has none.
-        assert_eq!(adapter("roblox").name, "meshy-dcc-roblox");
-        assert!(!adapter("roblox").catalog_install_available);
-        let roblox = entries
+        let blender = listing
+            .dcc_types
             .iter()
-            .find(|entry| entry.name == "meshy-dcc-roblox")
+            .find(|entry| entry.dcc_type == "blender")
             .unwrap();
-        assert!(roblox.policy.as_ref().unwrap().reason.is_some());
+        assert_eq!(blender.adapters[0].name, "meshy-dcc-blender");
+        assert!(!blender.adapters[0].catalog_install_available);
+        let entry = entries
+            .iter()
+            .find(|entry| entry.name == "meshy-dcc-blender")
+            .unwrap();
+        assert!(entry.policy.as_ref().unwrap().reason.is_some());
 
         let error = service
             .plan(InstallRequest {
-                dcc_type: "roblox".into(),
+                dcc_type: "blender".into(),
                 version: None,
                 catalog_path: None,
                 python: None,
@@ -1037,23 +1024,15 @@ mod tests {
             .unwrap_err();
         assert!(matches!(
             error,
-            InstallError::Plan(InstallPlanError::NotAvailable(name)) if name == "meshy-dcc-roblox"
+            InstallError::Plan(InstallPlanError::NotAvailable(name)) if name == "meshy-dcc-blender"
         ));
     }
 
     #[test]
-    fn every_installable_bundled_entry_passes_install_planning() {
-        let entries = dcc_mcp_catalog::load_curated(BUNDLED_CATALOG, UPSTREAM_CATALOG).unwrap();
-        let installable = entries.iter().filter(|entry| {
-            entry.install.is_some()
-                && entry
-                    .policy
-                    .as_ref()
-                    .is_none_or(|policy| policy.installation == "available")
-        });
-        let mut planned = 0;
-        for entry in installable {
-            InstallPlanner::plan(
+    fn bundled_entries_plan_or_report_not_available() {
+        let entries = dcc_mcp_catalog::load_from_str(BUNDLED_CATALOG).unwrap();
+        for entry in &entries {
+            let result = InstallPlanner::plan(
                 &entries,
                 InstallRequest {
                     dcc_type: entry.dcc[0].clone(),
@@ -1064,11 +1043,19 @@ mod tests {
                     plugin_source: None,
                     adobe_debug_root: None,
                 },
-            )
-            .unwrap_or_else(|error| panic!("{}: {error}", entry.name));
-            planned += 1;
+            );
+            let published = entry
+                .policy
+                .as_ref()
+                .is_none_or(|policy| policy.installation == "available");
+            match result {
+                Ok(_) => assert!(published, "{}", entry.name),
+                Err(InstallPlanError::NotAvailable(name)) => {
+                    assert!(!published && name == entry.name, "{}", entry.name)
+                }
+                Err(error) => panic!("{}: {error}", entry.name),
+            }
         }
-        assert!(planned > 0);
     }
 
     #[test]

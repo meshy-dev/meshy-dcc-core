@@ -1100,8 +1100,8 @@ mod tests {
         let finding = finding(FindingRedactionMode::PublicSafe);
         let plan_tracker = FakeTracker::with_searches(vec![vec![], vec![]]);
         let (temp, mut request) = request(&finding);
-        let source_catalog =
-            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../dcc-mcp-catalog.yml");
+        let source_catalog = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../../tests/fixtures/pip-adapter-catalog.yml");
         let catalog_path = temp.path().join("catalog.yml");
         std::fs::copy(source_catalog, &catalog_path).unwrap();
         request.catalog_path = Some(catalog_path.clone());
@@ -1130,8 +1130,8 @@ mod tests {
         let finding = finding(FindingRedactionMode::PublicSafe);
         let plan_tracker = FakeTracker::with_searches(vec![vec![], vec![]]);
         let (temp, mut request) = request(&finding);
-        let source_catalog =
-            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../dcc-mcp-catalog.yml");
+        let source_catalog = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../../tests/fixtures/pip-adapter-catalog.yml");
         let catalog_a = temp.path().join("catalog-a.yml");
         let catalog_b = temp.path().join("catalog-b.yml");
         std::fs::copy(&source_catalog, &catalog_a).unwrap();
@@ -1191,8 +1191,8 @@ mod tests {
         };
         let plan_dir = root.join("plan");
         let replay_dir = root.join("replay");
-        let source_catalog =
-            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../dcc-mcp-catalog.yml");
+        let source_catalog = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../../tests/fixtures/pip-adapter-catalog.yml");
         std::fs::copy(source_catalog, replay_dir.join(DEFAULT_CATALOG_PATH)).unwrap();
         let original_dir = std::env::current_dir().unwrap();
         std::env::set_current_dir(&plan_dir).unwrap();

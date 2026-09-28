@@ -6,7 +6,11 @@ use thiserror::Error;
 
 use crate::domain::feedback::{FeedbackRoute, FeedbackRouteError, route_finding};
 
-const BUNDLED_CATALOG: &str = include_str!("../../../../dcc-mcp-catalog.yml");
+#[cfg(not(test))]
+const BUNDLED_CATALOG: &str = include_str!("../../../../meshy-dcc-catalog.yml");
+// Feedback is off in meshy-dcc; its routing tests keep the pip-adapter fixture.
+#[cfg(test)]
+const BUNDLED_CATALOG: &str = include_str!("../../../../tests/fixtures/pip-adapter-catalog.yml");
 const MAX_FINDING_FILE_BYTES: u64 = 512 * 1024;
 
 pub(crate) struct FeedbackRouteSnapshot {

@@ -1146,27 +1146,15 @@ pub(crate) fn spawn_local_mcp_fixture() -> LocalMcpFixture {
 }
 
 /// Upstream dcc-mcp catalog; install mechanics tests pass it via `--catalog`.
-pub(crate) const UPSTREAM_CATALOG: &str =
-    concat!(env!("CARGO_MANIFEST_DIR"), "/../../dcc-mcp-catalog.yml");
+pub(crate) const FIXTURE_CATALOG: &str = concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/../../tests/fixtures/pip-adapter-catalog.yml"
+);
 
-/// The catalog bundled into `meshy-dcc` (the Meshy catalog merged with the
-/// upstream entries it names); default-catalog tests derive their
+/// The catalog bundled into `meshy-dcc`; default-catalog tests derive their
 /// expectations from it rather than hard-coding its entries.
 pub(crate) fn bundled_catalog() -> Vec<dcc_mcp_catalog::CatalogEntry> {
-    dcc_mcp_catalog::load_curated(
-        include_str!("../../../../meshy-dcc-catalog.yml"),
-        include_str!("../../../../dcc-mcp-catalog.yml"),
-    )
-    .unwrap()
-}
-
-/// Install runbook URL of the bundled entry for `dcc`.
-pub(crate) fn bundled_instructions_url(dcc: &str) -> String {
-    bundled_catalog()
-        .into_iter()
-        .find(|entry| entry.dcc.iter().any(|name| name == dcc))
-        .and_then(|entry| entry.install?.instructions_url)
-        .unwrap()
+    dcc_mcp_catalog::load_from_str(include_str!("../../../../meshy-dcc-catalog.yml")).unwrap()
 }
 
 /// Sorted adapter names in the bundled catalog.

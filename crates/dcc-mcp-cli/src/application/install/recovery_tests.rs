@@ -47,7 +47,7 @@ fn actual_planner_never_reports_manual_registration_as_ok() {
     actual["core_version"] = serde_json::json!("0.0.0-test");
     assert_eq!(
         actual["catalog"]["sha256"],
-        hex::encode(Sha256::digest(UPSTREAM_CATALOG.as_bytes()))
+        hex::encode(Sha256::digest(FIXTURE_CATALOG.as_bytes()))
     );
     actual["catalog"]["sha256"] = serde_json::json!("0".repeat(64));
     let expected: serde_json::Value = serde_json::from_str(include_str!(

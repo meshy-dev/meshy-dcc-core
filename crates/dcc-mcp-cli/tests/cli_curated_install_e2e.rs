@@ -6,7 +6,10 @@ use tempfile::TempDir;
 /// Plan against the upstream dcc-mcp catalog, whose curated pip releases these tests pin.
 fn upstream_plan(dcc: &str) -> Value {
     let root = TempDir::new().unwrap();
-    let catalog = concat!(env!("CARGO_MANIFEST_DIR"), "/../../dcc-mcp-catalog.yml");
+    let catalog = concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../tests/fixtures/pip-adapter-catalog.yml"
+    );
     let output = Command::new(env!("CARGO_BIN_EXE_meshy-dcc"))
         .args([
             "install",

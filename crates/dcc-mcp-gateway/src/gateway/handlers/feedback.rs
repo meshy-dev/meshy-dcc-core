@@ -28,7 +28,11 @@ fn now_millis() -> i64 {
 
 /// Catalog bundled into the binary so ingest routing never depends on a live
 /// marketplace fetch. Mirrors the CLI filing path, which uses the same file.
-const BUNDLED_CATALOG: &str = include_str!("../../../../../dcc-mcp-catalog.yml");
+#[cfg(not(test))]
+const BUNDLED_CATALOG: &str = include_str!("../../../../../meshy-dcc-catalog.yml");
+// Feedback is off in meshy-dcc; its routing tests keep the pip-adapter fixture.
+#[cfg(test)]
+const BUNDLED_CATALOG: &str = include_str!("../../../../../tests/fixtures/pip-adapter-catalog.yml");
 
 /// `POST /v1/feedback` — record feedback without requiring a live DCC instance.
 pub async fn handle_v1_feedback(

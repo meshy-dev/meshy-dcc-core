@@ -27,8 +27,6 @@ mod error;
 pub use error::{CatalogError, CatalogValidationError};
 mod validation;
 pub use validation::{validate_catalog_entries, validate_entry};
-mod curated;
-pub use curated::{load_curated, upstream_selection};
 
 // ── types ─────────────────────────────────────────────────────────────────────
 
@@ -1269,74 +1267,11 @@ entries:
     }
 
     #[test]
-    fn bundled_adapter_catalog_matches_compatibility_matrix() {
-        let entries = load_from_str(include_str!("../../../dcc-mcp-catalog.yml")).unwrap();
-        let matrix = include_str!("../../../docs/guide/adapter-compatibility-matrix.md");
-
-        let adapters: Vec<&CatalogEntry> = entries
-            .iter()
-            .filter(|entry| {
-                entry.install.is_some()
-                    && entry
-                        .tags
-                        .iter()
-                        .any(|tag| tag.eq_ignore_ascii_case("adapter"))
-            })
-            .collect();
-        assert!(
-            !adapters.is_empty(),
-            "bundled catalog should contain first-party adapter entries"
-        );
-
-        for entry in adapters {
-            let url = entry
-                .url
-                .as_deref()
-                .unwrap_or_else(|| panic!("adapter {} is missing url", entry.name));
-            let issues_url = entry
-                .issues_url
-                .as_deref()
-                .unwrap_or_else(|| panic!("adapter {} is missing issues_url", entry.name));
-            assert_eq!(
-                issues_url,
-                format!("{url}/issues"),
-                "adapter {} has a mismatched issues_url",
-                entry.name
-            );
-            let version = entry
-                .version
-                .as_deref()
-                .unwrap_or_else(|| panic!("adapter {} is missing version", entry.name));
-            let min_core = entry
-                .min_core_version
-                .as_deref()
-                .unwrap_or_else(|| panic!("adapter {} is missing min_core_version", entry.name));
-            let row = matrix
-                .lines()
-                .find(|line| line.contains(&format!("[{}]({url})", entry.name)))
-                .unwrap_or_else(|| {
-                    panic!(
-                        "compatibility matrix is missing adapter row for {}",
-                        entry.name
-                    )
-                });
-
-            assert!(
-                row.contains(&format!("| {version} |")),
-                "compatibility matrix row for {} has stale version: {row}",
-                entry.name
-            );
-            assert!(
-                row.contains(&format!("| >={min_core},<1.0.0 |")),
-                "compatibility matrix row for {} has stale core pin: {row}",
-                entry.name
-            );
-        }
-    }
-
-    #[test]
     fn bundled_pip_adapters_bind_published_wheels_and_entry_points() {
-        let entries = load_from_str(include_str!("../../../dcc-mcp-catalog.yml")).unwrap();
+        let entries = load_from_str(include_str!(
+            "../../../tests/fixtures/pip-adapter-catalog.yml"
+        ))
+        .unwrap();
         validate_catalog_entries(&entries).unwrap();
 
         let pip_entries = entries

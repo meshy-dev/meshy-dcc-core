@@ -1843,13 +1843,12 @@ fn dcc_types_lists_release_catalog_without_a_gateway() {
     listed.sort();
     listed.dedup();
     assert_eq!(listed, bundled_adapter_names());
-    // A Meshy DCC with no upstream adapter stays a non-installable placeholder.
-    let roblox = types
+    let blender = types
         .iter()
-        .find(|entry| entry["dcc_type"] == "roblox")
+        .find(|entry| entry["dcc_type"] == "blender")
         .unwrap();
-    assert_eq!(roblox["adapters"][0]["name"], "meshy-dcc-roblox");
-    assert_eq!(roblox["adapters"][0]["catalog_install_available"], false);
+    assert_eq!(blender["adapters"][0]["name"], "meshy-dcc-blender");
+    assert_eq!(blender["adapters"][0]["catalog_install_available"], false);
 }
 
 #[test]

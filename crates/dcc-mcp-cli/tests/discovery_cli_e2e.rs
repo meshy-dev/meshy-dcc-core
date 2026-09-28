@@ -23,12 +23,12 @@ fn dcc_types_distinguishes_catalog_support_from_zero_live_instances() {
     let registry = TempDir::new().unwrap();
     let registry_s = registry.path().to_string_lossy().to_string();
     let value = run_json_with_env(
-        &["--output", "json", "dcc-types", "--dcc-type", "unreal"],
+        &["--output", "json", "dcc-types", "--dcc-type", "blender"],
         &[("DCC_MCP_REGISTRY_DIR", registry_s.as_str())],
     );
 
     assert_eq!(value["schema_version"], 1);
-    assert_eq!(value["dcc_type"], "unreal");
+    assert_eq!(value["dcc_type"], "blender");
     assert_eq!(value["live_instances"], 0);
     assert_eq!(value["public_adapter"], "present");
     assert_eq!(value["released_catalog"], "present");
@@ -45,7 +45,10 @@ fn dcc_types_distinguishes_catalog_support_from_zero_live_instances() {
         value["uncertainties"],
         serde_json::json!(["version", "custom_fork", "real_host"])
     );
-    assert_eq!(value["next_action"]["id"], "plan_install");
+    // The Meshy Blender adapter is cataloged but not published, so there is
+    // nothing to install yet.
+    assert_eq!(value["failure_stage"], Value::Null);
+    assert_eq!(value["next_action"]["id"], "inspect_catalog");
     assert_eq!(value["next_action"]["requires_consent"], false);
     assert_eq!(
         value["next_action"]["command"],
@@ -54,15 +57,10 @@ fn dcc_types_distinguishes_catalog_support_from_zero_live_instances() {
             "--output",
             "json",
             "--non-interactive",
-            "install",
-            "--dcc-type",
-            "unreal"
+            "dcc-types"
         ])
     );
-    assert_eq!(
-        value["next_action"]["instructions_url"],
-        bundled_instructions_url("unreal")
-    );
+    assert_eq!(value["next_action"]["instructions_url"], Value::Null);
 
     validate_decision(&value);
 }
@@ -97,13 +95,13 @@ fn targeted_decision_uses_the_bundled_release_catalog_not_cwd() {
     std::fs::write(
         cwd.path().join("dcc-mcp-catalog.yml"),
         r#"entries:
-  - name: private-unreal
-    description: Private Unreal adapter
-    dcc: [unreal]
+  - name: private-blender
+    description: Private Blender adapter
+    dcc: [blender]
     tags: [adapter]
     install:
       type: pip
-      pip_package: private-unreal
+      pip_package: private-blender
       instructions_url: https://private.invalid/secret/install
 "#,
     )
@@ -112,7 +110,7 @@ fn targeted_decision_uses_the_bundled_release_catalog_not_cwd() {
     let output = cli_command()
         .current_dir(cwd.path())
         .env("DCC_MCP_REGISTRY_DIR", registry.path())
-        .args(["--output", "json", "dcc-types", "--dcc-type", "unreal"])
+        .args(["--output", "json", "dcc-types", "--dcc-type", "blender"])
         .output()
         .unwrap();
     assert!(
@@ -124,10 +122,9 @@ fn targeted_decision_uses_the_bundled_release_catalog_not_cwd() {
 
     assert_eq!(value["public_adapter"], "present");
     assert_eq!(value["released_catalog"], "present");
-    assert_eq!(
-        value["next_action"]["instructions_url"],
-        bundled_instructions_url("unreal")
-    );
+    // The cwd entry is installable; the bundled Meshy one is not published yet.
+    assert_eq!(value["next_action"]["id"], "inspect_catalog");
+    assert_eq!(value["next_action"]["instructions_url"], Value::Null);
     assert!(!value.to_string().contains("private.invalid"));
     validate_decision(&value);
 }
@@ -172,14 +169,14 @@ fn plan_only_install_uses_the_bundled_release_catalog_not_cwd() {
     std::fs::write(
         cwd.path().join("dcc-mcp-catalog.yml"),
         r#"entries:
-  - name: private-unreal
-    description: Private Unreal adapter
-    dcc: [unreal]
+  - name: private-blender
+    description: Private Blender adapter
+    dcc: [blender]
     tags: [adapter]
     url: https://private.invalid/secret/repository
     install:
       type: pip
-      pip_package: private-unreal
+      pip_package: private-blender
 "#,
     )
     .unwrap();
@@ -191,21 +188,21 @@ fn plan_only_install_uses_the_bundled_release_catalog_not_cwd() {
             "--non-interactive",
             "install",
             "--dcc-type",
-            "unreal",
+            "blender",
         ])
         .output()
         .unwrap();
-    assert!(
-        output.status.success(),
-        "stderr: {}",
+    // The cwd entry would plan; the bundled Meshy Blender entry is not published yet.
+    assert!(!output.status.success());
+    let combined = format!(
+        "{}{}",
+        String::from_utf8_lossy(&output.stdout),
         String::from_utf8_lossy(&output.stderr)
     );
-    let value: Value = serde_json::from_slice(&output.stdout).unwrap();
-    let serialized = value.to_string();
 
-    assert_eq!(value["adapter"]["name"], "dcc-mcp-unreal");
-    assert!(!serialized.contains("private-unreal"));
-    assert!(!serialized.contains("private.invalid"));
+    assert!(combined.contains("'meshy-dcc-blender' is not available for installation"));
+    assert!(!combined.contains("private-blender"));
+    assert!(!combined.contains("private.invalid"));
 }
 
 #[test]

@@ -1,8 +1,7 @@
 # Meshy DCC Core install catalog, bundled into `meshy-dcc`.
 #
-# Meshy-owned entries for the Meshy DCCs, plus the upstream entries named under
-# `upstream`. A DCC joins by adding an entry: core has no per-DCC code, it only
-# runs what the entry declares.
+# One entry per DCC with a Meshy adapter. A DCC joins by adding an entry: core
+# has no per-DCC code, it only runs what the entry declares.
 #
 # `host-package` installs download `url`, check `sha256`, then run the `host`
 # commands (argv lists, no shell) with the executable the operator passed via
@@ -11,147 +10,8 @@
 # Entries stay `policy.installation: not_available` until their adapter build
 # is published under https://cdn.meshy.ai/meshy-dcc-core/adapters/. Test
 # unpublished builds with `meshy-dcc install --catalog <file>`.
-#
-# `upstream` names entries taken as they are from the upstream dcc-mcp catalog
-# (dcc-mcp-catalog.yml, kept in the repository and updated by patches). While a
-# Meshy entry is not_available, a named upstream entry for the same DCC is used
-# instead, so the host stays installable until the Meshy adapter is published.
-# Other upstream adapters are not bundled; they are meant to be offered as
-# opt-in packages in the Meshy marketplace.
 
 version: "1"
-
-upstream:
-  # Pinned to each adapter's latest GitHub release (2026-09-28); upstream's own
-  # catalog lags behind. Interim adapters for Meshy DCCs come first.
-  - name: "dcc-mcp-blender"
-    version: "0.2.11"
-    url: "https://github.com/dcc-mcp/dcc-mcp-blender/releases/download/v0.2.11/dcc_mcp_blender-0.2.11-py3-none-any.whl"
-    sha256: "fbb269296ab4e31af91b466bb5bc9a21bfb47f5f9262381ad70bd1cf06f15293"
-    min_core_version: "0.20.0"
-    instructions_url: "https://raw.githubusercontent.com/dcc-mcp/dcc-mcp-blender/v0.2.11/install.md"
-  - name: "dcc-mcp-unity"
-    version: "0.13.0"
-    url: "https://files.pythonhosted.org/packages/a5/c9/292cf506c1efa398371c03ce8a7940e597c9ad0c8b90b60c05df3da659af/dcc_mcp_unity-0.13.0-py3-none-any.whl"
-    sha256: "8e70f21d089a7adfeca26913386fd9b0e942333891d93629646054d2642edf51"
-    min_core_version: "0.19.90"
-    instructions_url: "https://raw.githubusercontent.com/dcc-mcp/dcc-mcp-unity/v0.13.0/install.md"
-  - name: "dcc-mcp-godot"
-    version: "0.8.1"
-    url: "https://files.pythonhosted.org/packages/cb/9c/1ba25d1946b445c957b718a189e0bbaeaf6560aa48885a20e4edeaa99997/dcc_mcp_godot-0.8.1-py3-none-any.whl"
-    sha256: "2adb68e7da5adfc348c162f798005c20355b6c014d09a1546f9209829e6c0be9"
-    min_core_version: "0.19.45"
-    instructions_url: "https://raw.githubusercontent.com/dcc-mcp/dcc-mcp-godot/v0.8.1/install.md"
-    # 0.8.1 fixed the timeout-commit regression upstream held 0.4.0 for, and its
-    # release commit passed CI, including the real-editor Godot smoke.
-    policy: { installation: available }
-  - name: "dcc-mcp-unreal"
-    version: "0.3.8"
-    url: "https://github.com/dcc-mcp/dcc-mcp-unreal/releases/download/v0.3.8/dcc_mcp_unreal-0.3.8-py3-none-any.whl"
-    sha256: "181146b8c58aa875c037cd3f20b20816790ad197e5e1361910eaa514389291ed"
-    min_core_version: "0.20.13"
-    instructions_url: "https://raw.githubusercontent.com/dcc-mcp/dcc-mcp-unreal/v0.3.8/install.md"
-  - name: "dcc-mcp-zbrush"
-    version: "0.2.26"
-    url: "https://github.com/dcc-mcp/dcc-mcp-zbrush/releases/download/v0.2.26/dcc_mcp_zbrush-0.2.26-py3-none-any.whl"
-    sha256: "d4b5bd94edf1b243b9a46d78502cb166c328b4f2036b88ff255d676291d41a0a"
-    min_core_version: "0.20.14"
-    instructions_url: "https://raw.githubusercontent.com/dcc-mcp/dcc-mcp-zbrush/v0.2.26/install.md"
-  - name: "dcc-mcp-maya"
-    version: "0.9.31"
-    url: "https://github.com/dcc-mcp/dcc-mcp-maya/releases/download/v0.9.31/dcc_mcp_maya-0.9.31-py3-none-any.whl"
-    sha256: "0e109079fa5aba80d3e28e66bbd2df5fc2eda464ca203370922788fba451525a"
-    min_core_version: "0.19.45"
-    instructions_url: "https://raw.githubusercontent.com/dcc-mcp/dcc-mcp-maya/v0.9.31/install.md"
-  - name: "dcc-mcp-3dsmax"
-    version: "0.2.14"
-    url: "https://github.com/dcc-mcp/dcc-mcp-3dsmax/releases/download/v0.2.14/dcc_mcp_3dsmax-0.2.14-py3-none-any.whl"
-    sha256: "91504de5ba521f3d941540e358dde563caa7f2293bdb17ae0cbcbaebfd18b74a"
-    min_core_version: "0.20.24"
-    instructions_url: "https://raw.githubusercontent.com/dcc-mcp/dcc-mcp-3dsmax/v0.2.14/install.md"
-  # Further DCCs.
-  - name: "dcc-mcp-houdini"
-    version: "0.43.1"
-    url: "https://github.com/dcc-mcp/dcc-mcp-houdini/releases/download/v0.43.1/dcc_mcp_houdini-0.43.1-py3-none-any.whl"
-    sha256: "77c9b48b747877bc32978282a1cfafb6aaf69e098b1d8d892d15764cefb7206a"
-    min_core_version: "0.20.14"
-    instructions_url: "https://raw.githubusercontent.com/dcc-mcp/dcc-mcp-houdini/v0.43.1/install.md"
-  - name: "dcc-mcp-cinema4d"
-    version: "0.2.0"
-    url: "https://files.pythonhosted.org/packages/10/de/c615676821de491c2effab9ca96286f89c4757b333fbebafdf5856006eec/dcc_mcp_cinema4d-0.2.0-py3-none-any.whl"
-    sha256: "e0874e4da7ce05c08c857d1e9dfa173ab808e3be71d1ec766f566881f18b5afc"
-    min_core_version: "0.20.14"
-    instructions_url: "https://raw.githubusercontent.com/dcc-mcp/dcc-mcp-cinema4d/v0.2.0/install.md"
-  - name: "dcc-mcp-marmoset"
-    version: "0.1.2"
-    url: "https://files.pythonhosted.org/packages/0e/0b/d15fc0d38fa2a2d0b42b60987d466e611f5259a2be34d01b515a63c2c950/dcc_mcp_marmoset-0.1.2-py3-none-any.whl"
-    sha256: "380b11980eb70b6a938b80a4a8f7ee4d44e3336138fdb53805e5b20f46f53bf3"
-    min_core_version: "0.20.14"
-    instructions_url: "https://raw.githubusercontent.com/dcc-mcp/dcc-mcp-marmoset/v0.1.2/install.md"
-  - name: "dcc-mcp-substance3d-painter"
-    version: "0.6.0"
-    url: "https://github.com/dcc-mcp/dcc-mcp-substance3d-painter/releases/download/v0.6.0/dcc_mcp_substance3d_painter-0.6.0-py3-none-any.whl"
-    sha256: "80d530cee0322a9e70d766e396c1acb6d7b3bf3e108c31eb3bd5df831ba1c5a5"
-    min_core_version: "0.20.15"
-    instructions_url: "https://raw.githubusercontent.com/dcc-mcp/dcc-mcp-substance3d-painter/v0.6.0/install.md"
-  - name: "dcc-mcp-substance3d-designer"
-    version: "0.8.1"
-    url: "https://files.pythonhosted.org/packages/87/32/b93757c401ab174a195ecee56310982b083a273cff7e64c387a153ac80cc/dcc_mcp_substance3d_designer-0.8.1-py3-none-any.whl"
-    sha256: "7ab24e7ed3db3b251cfb55500f1aabcead49982e19a907d91cf7b901c98b06da"
-    min_core_version: "0.20.15"
-    instructions_url: "https://raw.githubusercontent.com/dcc-mcp/dcc-mcp-substance3d-designer/v0.8.1/install.md"
-  - name: "dcc-mcp-mari"
-    version: "0.3.0"
-    url: "https://files.pythonhosted.org/packages/13/70/f4f59d0f29ddd64d4202e3b50c5de9426329cd542f97c53999ef70b73f11/dcc_mcp_mari-0.3.0-py3-none-any.whl"
-    sha256: "e38dc9b396134ca23b5e386e5527493f8f86ec2b7b2ded5894ffa652c07b0a7d"
-    min_core_version: "0.19.91"
-    instructions_url: "https://raw.githubusercontent.com/dcc-mcp/dcc-mcp-mari/v0.3.0/install.md"
-  - name: "dcc-mcp-openusd"
-    version: "0.9.0"
-    url: "https://github.com/dcc-mcp/dcc-mcp-openusd/releases/download/v0.9.0/dcc_mcp_openusd-0.9.0-py3-none-any.whl"
-    sha256: "2103a180ed43d8a2586a755ee7172d3aebec6724a27c8ee297c0f2a277b3328a"
-    min_core_version: "0.19.45"
-    instructions_url: "https://raw.githubusercontent.com/dcc-mcp/dcc-mcp-openusd/v0.9.0/install.md"
-  - name: "dcc-mcp-katana"
-    version: "0.5.1"
-    url: "https://files.pythonhosted.org/packages/a8/92/ffdb12812973307974170d4a8ce0854247625584aa14d15bab1672aefa56/dcc_mcp_katana-0.5.1-py3-none-any.whl"
-    sha256: "a5d30ad4df7fd8dd3416e85511da2c6c0b114d84b135a2d5fdc664457eff5451"
-    min_core_version: "0.19.45"
-    instructions_url: "https://raw.githubusercontent.com/dcc-mcp/dcc-mcp-katana/v0.5.1/install.md"
-  - name: "dcc-mcp-mobu"
-    version: "0.4.0"
-    url: "https://files.pythonhosted.org/packages/12/54/0f3298bd9e11d9ae4678fe1ecde5e1e19bd99cf8812a286b8bb43c1388e2/dcc_mcp_mobu-0.4.0-py3-none-any.whl"
-    sha256: "cc7971fc7975a1db99c0b5e0ee93a342d842e6fdf34a286b6f086c3746363b13"
-    min_core_version: "0.19.45"
-    instructions_url: "https://raw.githubusercontent.com/dcc-mcp/dcc-mcp-mobu/v0.4.0/install.md"
-  - name: "dcc-mcp-sketchup"
-    version: "0.2.0"
-    url: "https://files.pythonhosted.org/packages/54/ed/b9e2435bfcb72565931b76f34720901e7e682c6b44a5e85126bf318a4a64/dcc_mcp_sketchup-0.2.0-py3-none-any.whl"
-    sha256: "b4bffc71df94c493e5797fc2cdc859b1ba7b2c3532d6eb8011dbc494102cdb4e"
-    min_core_version: "0.20.14"
-    instructions_url: "https://raw.githubusercontent.com/dcc-mcp/dcc-mcp-sketchup/v0.2.0/install.md"
-  - name: "dcc-mcp-freecad"
-    version: "0.2.0"
-    url: "https://files.pythonhosted.org/packages/81/b4/bca57d14abaeb3262bdd8e40cfe7b39969ccd22db7577cf9e8f3e9700564/dcc_mcp_freecad-0.2.0-py3-none-any.whl"
-    sha256: "25f2e96d53200ef7ca186b47fac1804241c39d44bbbeebbc02fdf00dfcdb7180"
-    min_core_version: "0.19.91"
-    instructions_url: "https://raw.githubusercontent.com/dcc-mcp/dcc-mcp-freecad/v0.2.0/install.md"
-  - name: "dcc-mcp-openscad"
-    version: "0.2.1"
-    url: "https://files.pythonhosted.org/packages/ce/0e/3bcb11f2ebeab949859be9f68fa0391dae8fcbbfa89f14c946190522ecdb/dcc_mcp_openscad-0.2.1-py3-none-any.whl"
-    sha256: "ef2ddb3d458fd693581071670165b13d35974e89bb45d78b5c02358d57459354"
-    min_core_version: "0.20.14"
-    instructions_url: "https://raw.githubusercontent.com/dcc-mcp/dcc-mcp-openscad/v0.2.1/install.md"
-  # Upstream publishes no install block for Material Maker; only the version applies.
-  - name: "dcc-mcp-material-maker"
-    version: "0.4.0"
-    min_core_version: "0.20.14"
-  - name: "dcc-mcp-photoshop"
-    version: "0.1.40"
-    url: "https://github.com/dcc-mcp/dcc-mcp-photoshop/releases/download/v0.1.40/dcc_mcp_photoshop-0.1.40-py3-none-any.whl"
-    sha256: "56718cd44f1763bff0c409218290184f8a9bcf0bb60ce910bbc597032bb8d44c"
-    min_core_version: "0.20.14"
-    instructions_url: "https://raw.githubusercontent.com/dcc-mcp/dcc-mcp-photoshop/v0.1.40/install.md"
 
 entries:
   - name: "meshy-dcc-blender"
@@ -254,3 +114,143 @@ entries:
     policy:
       installation: not_available
       reason: "The Meshy Omniverse adapter is planned."
+
+  - name: "meshy-dcc-houdini"
+    description: "Meshy DCC adapter for Houdini (planned)"
+    dcc: ["houdini"]
+    url: "https://www.meshy.ai"
+    tags: ["adapter", "meshy", "houdini"]
+    maintainer: "Meshy"
+    policy:
+      installation: not_available
+      reason: "The Meshy Houdini adapter is planned."
+
+  - name: "meshy-dcc-c4d"
+    description: "Meshy DCC adapter for Cinema 4D (planned)"
+    dcc: ["c4d"]
+    url: "https://www.meshy.ai"
+    tags: ["adapter", "meshy", "c4d"]
+    maintainer: "Meshy"
+    policy:
+      installation: not_available
+      reason: "The Meshy Cinema 4D adapter is planned."
+
+  - name: "meshy-dcc-marmoset"
+    description: "Meshy DCC adapter for Marmoset Toolbag (planned)"
+    dcc: ["marmoset"]
+    url: "https://www.meshy.ai"
+    tags: ["adapter", "meshy", "marmoset"]
+    maintainer: "Meshy"
+    policy:
+      installation: not_available
+      reason: "The Meshy Marmoset Toolbag adapter is planned."
+
+  - name: "meshy-dcc-substance3d-painter"
+    description: "Meshy DCC adapter for Substance 3D Painter (planned)"
+    dcc: ["substance3d_painter"]
+    url: "https://www.meshy.ai"
+    tags: ["adapter", "meshy", "substance3d-painter"]
+    maintainer: "Meshy"
+    policy:
+      installation: not_available
+      reason: "The Meshy Substance 3D Painter adapter is planned."
+
+  - name: "meshy-dcc-substance3d-designer"
+    description: "Meshy DCC adapter for Substance 3D Designer (planned)"
+    dcc: ["substance3d_designer"]
+    url: "https://www.meshy.ai"
+    tags: ["adapter", "meshy", "substance3d-designer"]
+    maintainer: "Meshy"
+    policy:
+      installation: not_available
+      reason: "The Meshy Substance 3D Designer adapter is planned."
+
+  - name: "meshy-dcc-mari"
+    description: "Meshy DCC adapter for Mari (planned)"
+    dcc: ["mari"]
+    url: "https://www.meshy.ai"
+    tags: ["adapter", "meshy", "mari"]
+    maintainer: "Meshy"
+    policy:
+      installation: not_available
+      reason: "The Meshy Mari adapter is planned."
+
+  - name: "meshy-dcc-openusd"
+    description: "Meshy DCC adapter for OpenUSD (headless) (planned)"
+    dcc: ["openusd"]
+    url: "https://www.meshy.ai"
+    tags: ["adapter", "meshy", "openusd"]
+    maintainer: "Meshy"
+    policy:
+      installation: not_available
+      reason: "The Meshy OpenUSD (headless) adapter is planned."
+
+  - name: "meshy-dcc-katana"
+    description: "Meshy DCC adapter for Katana (planned)"
+    dcc: ["katana"]
+    url: "https://www.meshy.ai"
+    tags: ["adapter", "meshy", "katana"]
+    maintainer: "Meshy"
+    policy:
+      installation: not_available
+      reason: "The Meshy Katana adapter is planned."
+
+  - name: "meshy-dcc-mobu"
+    description: "Meshy DCC adapter for MotionBuilder (planned)"
+    dcc: ["mobu"]
+    url: "https://www.meshy.ai"
+    tags: ["adapter", "meshy", "mobu"]
+    maintainer: "Meshy"
+    policy:
+      installation: not_available
+      reason: "The Meshy MotionBuilder adapter is planned."
+
+  - name: "meshy-dcc-sketchup"
+    description: "Meshy DCC adapter for SketchUp (planned)"
+    dcc: ["sketchup"]
+    url: "https://www.meshy.ai"
+    tags: ["adapter", "meshy", "sketchup"]
+    maintainer: "Meshy"
+    policy:
+      installation: not_available
+      reason: "The Meshy SketchUp adapter is planned."
+
+  - name: "meshy-dcc-freecad"
+    description: "Meshy DCC adapter for FreeCAD (planned)"
+    dcc: ["freecad"]
+    url: "https://www.meshy.ai"
+    tags: ["adapter", "meshy", "freecad"]
+    maintainer: "Meshy"
+    policy:
+      installation: not_available
+      reason: "The Meshy FreeCAD adapter is planned."
+
+  - name: "meshy-dcc-openscad"
+    description: "Meshy DCC adapter for OpenSCAD (planned)"
+    dcc: ["openscad"]
+    url: "https://www.meshy.ai"
+    tags: ["adapter", "meshy", "openscad"]
+    maintainer: "Meshy"
+    policy:
+      installation: not_available
+      reason: "The Meshy OpenSCAD adapter is planned."
+
+  - name: "meshy-dcc-material-maker"
+    description: "Meshy DCC adapter for Material Maker (planned)"
+    dcc: ["material-maker"]
+    url: "https://www.meshy.ai"
+    tags: ["adapter", "meshy", "material-maker"]
+    maintainer: "Meshy"
+    policy:
+      installation: not_available
+      reason: "The Meshy Material Maker adapter is planned."
+
+  - name: "meshy-dcc-photoshop"
+    description: "Meshy DCC adapter for Photoshop (planned)"
+    dcc: ["photoshop"]
+    url: "https://www.meshy.ai"
+    tags: ["adapter", "meshy", "photoshop"]
+    maintainer: "Meshy"
+    policy:
+      installation: not_available
+      reason: "The Meshy Photoshop adapter is planned."

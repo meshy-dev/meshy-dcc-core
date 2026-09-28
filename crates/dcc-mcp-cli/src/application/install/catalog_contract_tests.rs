@@ -15,7 +15,7 @@ fn request() -> InstallRequest {
 }
 
 fn service(source: CatalogSource, expires_at: u64) -> InstallService {
-    let mut entries = dcc_mcp_catalog::load_from_str(UPSTREAM_CATALOG).unwrap();
+    let mut entries = dcc_mcp_catalog::load_from_str(FIXTURE_CATALOG).unwrap();
     let entry = entries
         .iter_mut()
         .find(|entry| entry.name == "dcc-mcp-godot")
@@ -84,7 +84,7 @@ fn default_catalog_fallback_reports_bundled_and_cannot_bypass_freshness() {
         assert_eq!(provenance.sha256, Some(super::catalog::bundled_sha256()));
         // The gate must hold whatever the bundled entries are, so plan an
         // upstream adapter under the fallback's provenance.
-        let entries = dcc_mcp_catalog::load_from_str(UPSTREAM_CATALOG).unwrap();
+        let entries = dcc_mcp_catalog::load_from_str(FIXTURE_CATALOG).unwrap();
         let mut plan = InstallPlanner::plan(&entries, request()).unwrap();
         plan.catalog = Some(provenance);
         let report = service.execute_plan_with(
@@ -101,7 +101,7 @@ fn default_catalog_fallback_reports_bundled_and_cannot_bypass_freshness() {
 fn existing_default_and_requested_catalogs_report_explicit_source() {
     let root = tempfile::tempdir().unwrap();
     let path = root.path().join("catalog.yml");
-    std::fs::write(&path, UPSTREAM_CATALOG).unwrap();
+    std::fs::write(&path, FIXTURE_CATALOG).unwrap();
     let default_plan = InstallService::new(path.clone()).plan(request()).unwrap();
     assert_eq!(
         default_plan.catalog.unwrap().source,
