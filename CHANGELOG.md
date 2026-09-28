@@ -4,6 +4,15 @@ Meshy DCC Core release notes. The product uses its own semantic versions,
 independent of upstream dcc-mcp-core. Crates keep the fork base as their
 internal wire/compat version.
 
+## Unreleased
+
+### Added
+
+- `skills/meshy-dcc`: agent Skill for the `meshy-dcc` CLI. It covers
+  choosing an instance, finding and loading tools, calling them, reading the
+  scene back and handing off Meshy models. Blender is the first host it
+  covers.
+
 ## 0.1.0 (2026-09-28)
 
 First Meshy release line, built from dcc-mcp-core v0.20.36 source (MIT).
