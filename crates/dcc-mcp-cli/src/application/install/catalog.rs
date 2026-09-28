@@ -12,9 +12,6 @@ use sha2::{Digest, Sha256};
 
 use crate::domain::install_catalog::{CatalogProvenance, CatalogSource};
 
-const FEED_URL: &str =
-    "https://raw.githubusercontent.com/dcc-mcp/dcc-mcp-core/install-catalog/install-catalog.json";
-const WORKFLOW: &str = "https://github.com/dcc-mcp/dcc-mcp-core/.github/workflows/publish-install-catalog.yml@refs/heads/main";
 const MAX_BYTES: usize = 4 * 1024 * 1024;
 const MAX_LIFETIME: u64 = 7 * 24 * 60 * 60;
 
@@ -132,7 +129,7 @@ pub(super) async fn resolve(offline: bool) -> Result<ResolvedCatalog, RefreshErr
         Some(path) => std::path::PathBuf::from(path),
         None => dirs::cache_dir()
             .ok_or_else(|| invalid("cache directory is unavailable"))?
-            .join("dcc-mcp/install-catalog-v1.json"),
+            .join("meshy-dcc/install-catalog-v1.json"),
     };
     let now = now_seconds()?;
     let cached_bytes = read_cache(&cache)?;
@@ -186,13 +183,18 @@ async fn download() -> Result<Vec<u8>, RefreshError> {
         .build()
         .map_err(invalid)?;
     let mut response = client
-        .get(FEED_URL)
+        .get(dcc_mcp_updater::meshy_release::install_catalog_url())
         .header(reqwest::header::USER_AGENT, "meshy-dcc install-catalog")
         .header(reqwest::header::CACHE_CONTROL, "no-cache")
         .send()
         .await
         .map_err(|_| RefreshError::Unavailable)?;
-    if response.status() == reqwest::StatusCode::NOT_FOUND || response.status().is_server_error() {
+    // The CDN answers 403 for an object that is not published yet.
+    if matches!(
+        response.status(),
+        reqwest::StatusCode::NOT_FOUND | reqwest::StatusCode::FORBIDDEN
+    ) || response.status().is_server_error()
+    {
         return Err(RefreshError::Unavailable);
     }
     if !response.status().is_success() {
@@ -226,9 +228,7 @@ fn verify(bytes: &[u8], now: u64, require_current: bool) -> Result<ResolvedCatal
     let evidence = verify_attested_bytes(
         envelope.catalog.as_bytes(),
         &envelope.attestation.to_string(),
-        &GitHubAttestationPolicy {
-            workflow_identity: WORKFLOW.into(),
-        },
+        &GitHubAttestationPolicy::meshy_release(),
     )
     .map_err(|_| invalid("signature, workflow identity, or digest verification failed"))?;
     let payload: Payload = serde_json::from_str(&envelope.catalog).map_err(invalid)?;

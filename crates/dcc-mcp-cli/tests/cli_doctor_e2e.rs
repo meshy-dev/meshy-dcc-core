@@ -40,6 +40,8 @@ fn doctor_adapter_imports_skip_without_an_interpreter() {
             "doctor",
             "--gateway-port",
             &port_s,
+            "--adapter-catalog",
+            UPSTREAM_CATALOG,
         ],
         &envs,
     );

@@ -1,0 +1,118 @@
+# Meshy DCC Core install catalog, bundled into `meshy-dcc`.
+#
+# One entry per DCC that Meshy supports. A DCC joins by adding an entry: core has
+# no per-DCC code, it only runs what the entry declares.
+#
+# `host-package` installs download `url`, check `sha256`, then run the `host`
+# commands (argv lists, no shell) with the executable the operator passed via
+# `--dcc-path`. `host.launch` becomes the start-instance launch plan.
+#
+# Entries stay `policy.installation: not_available` until their adapter build
+# is published under https://cdn.meshy.ai/meshy-dcc-core/adapters/. Test
+# unpublished builds with `meshy-dcc install --catalog <file>`.
+#
+# The upstream dcc-mcp catalog (dcc-mcp-catalog.yml) stays in the repository
+# for reference and patches; meshy-dcc does not read it.
+
+version: "1"
+entries:
+  - name: "meshy-dcc-blender"
+    description: "Meshy DCC adapter for Blender 4.5+: scene, import, materials and render tools"
+    dcc: ["blender"]
+    url: "https://www.meshy.ai"
+    tags: ["adapter", "meshy", "blender"]
+    version: "0.2.11"
+    maintainer: "Meshy"
+    policy:
+      installation: not_available
+      reason: "The Meshy Blender adapter build is not published yet."
+    install:
+      type: host-package
+      url: "https://cdn.meshy.ai/meshy-dcc-core/adapters/blender/0.2.11/dcc_mcp_blender_addon_macos_v0.2.11.zip"
+      sha256: "b91a136be5af9a13b6dc8d6d3c914de997a135748b6a70200ef388f5de0c937b"
+      host:
+        uninstall:
+          - ["{dcc_path}", "--command", "extension", "remove", "user_default.dcc_mcp_blender"]
+        steps:
+          - ["{dcc_path}", "--command", "extension", "install-file", "-r", "user_default", "-e", "{package}"]
+        launch: ["{executable}"]
+
+  - name: "meshy-dcc-unity"
+    description: "Meshy DCC adapter for Unity (planned)"
+    dcc: ["unity"]
+    url: "https://www.meshy.ai"
+    tags: ["adapter", "meshy", "unity"]
+    maintainer: "Meshy"
+    policy:
+      installation: not_available
+      reason: "The Meshy Unity adapter is in development."
+
+  - name: "meshy-dcc-godot"
+    description: "Meshy DCC adapter for Godot (planned)"
+    dcc: ["godot"]
+    url: "https://www.meshy.ai"
+    tags: ["adapter", "meshy", "godot"]
+    maintainer: "Meshy"
+    policy:
+      installation: not_available
+      reason: "The Meshy Godot adapter is in development."
+
+  - name: "meshy-dcc-unreal"
+    description: "Meshy DCC adapter for Unreal Engine (planned)"
+    dcc: ["unreal"]
+    url: "https://www.meshy.ai"
+    tags: ["adapter", "meshy", "unreal"]
+    maintainer: "Meshy"
+    policy:
+      installation: not_available
+      reason: "The Meshy Unreal adapter is planned."
+
+  - name: "meshy-dcc-zbrush"
+    description: "Meshy DCC adapter for ZBrush 2026.1+ (planned)"
+    dcc: ["zbrush"]
+    url: "https://www.meshy.ai"
+    tags: ["adapter", "meshy", "zbrush"]
+    maintainer: "Meshy"
+    policy:
+      installation: not_available
+      reason: "The Meshy ZBrush adapter is planned."
+
+  - name: "meshy-dcc-roblox"
+    description: "Meshy DCC adapter for Roblox Studio (planned)"
+    dcc: ["roblox"]
+    url: "https://www.meshy.ai"
+    tags: ["adapter", "meshy", "roblox"]
+    maintainer: "Meshy"
+    policy:
+      installation: not_available
+      reason: "The Meshy Roblox Studio adapter is planned."
+
+  - name: "meshy-dcc-maya"
+    description: "Meshy DCC adapter for Maya (planned)"
+    dcc: ["maya"]
+    url: "https://www.meshy.ai"
+    tags: ["adapter", "meshy", "maya"]
+    maintainer: "Meshy"
+    policy:
+      installation: not_available
+      reason: "The Meshy Maya adapter is planned."
+
+  - name: "meshy-dcc-3dsmax"
+    description: "Meshy DCC adapter for 3ds Max on Windows (planned)"
+    dcc: ["3dsmax"]
+    url: "https://www.meshy.ai"
+    tags: ["adapter", "meshy", "3dsmax"]
+    maintainer: "Meshy"
+    policy:
+      installation: not_available
+      reason: "The Meshy 3ds Max adapter is planned."
+
+  - name: "meshy-dcc-omniverse"
+    description: "Meshy DCC adapter for NVIDIA Omniverse Kit apps (planned)"
+    dcc: ["omniverse"]
+    url: "https://www.meshy.ai"
+    tags: ["adapter", "meshy", "omniverse"]
+    maintainer: "Meshy"
+    policy:
+      installation: not_available
+      reason: "The Meshy Omniverse adapter is planned."

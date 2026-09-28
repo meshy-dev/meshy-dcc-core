@@ -15,7 +15,7 @@ fn request() -> InstallRequest {
 }
 
 fn service(source: CatalogSource, expires_at: u64) -> InstallService {
-    let mut entries = dcc_mcp_catalog::load_from_str(BUNDLED_CATALOG).unwrap();
+    let mut entries = dcc_mcp_catalog::load_from_str(UPSTREAM_CATALOG).unwrap();
     let entry = entries
         .iter_mut()
         .find(|entry| entry.name == "dcc-mcp-godot")
@@ -78,12 +78,19 @@ fn default_catalog_fallback_reports_bundled_and_cannot_bypass_freshness() {
         let mut service = InstallService::new(path.clone());
         service.require_fresh_catalog = true;
         service.auto_install_policy.enabled = true;
-        let plan = service.plan(request()).unwrap();
-        let provenance = plan.catalog.as_ref().unwrap();
+        let provenance = service.catalog_provenance(None);
         assert_eq!(provenance.source, CatalogSource::Bundled);
         assert!(!provenance.latest_checked);
         assert!(provenance.sha256.is_some());
-        assert_eq!(service.catalog_provenance(None), *provenance);
+        // Every bundled Meshy entry is unpublished, so plan an upstream adapter
+        // under the fallback's provenance to reach the freshness gate.
+        assert!(matches!(
+            service.plan(request()),
+            Err(InstallError::Plan(InstallPlanError::NotAvailable(_)))
+        ));
+        let entries = dcc_mcp_catalog::load_from_str(UPSTREAM_CATALOG).unwrap();
+        let mut plan = InstallPlanner::plan(&entries, request()).unwrap();
+        plan.catalog = Some(provenance);
         let report = service.execute_plan_with(
             &plan,
             true,
@@ -98,7 +105,7 @@ fn default_catalog_fallback_reports_bundled_and_cannot_bypass_freshness() {
 fn existing_default_and_requested_catalogs_report_explicit_source() {
     let root = tempfile::tempdir().unwrap();
     let path = root.path().join("catalog.yml");
-    std::fs::write(&path, BUNDLED_CATALOG).unwrap();
+    std::fs::write(&path, UPSTREAM_CATALOG).unwrap();
     let default_plan = InstallService::new(path.clone()).plan(request()).unwrap();
     assert_eq!(
         default_plan.catalog.unwrap().source,

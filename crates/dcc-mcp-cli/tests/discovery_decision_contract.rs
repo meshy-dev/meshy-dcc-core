@@ -37,10 +37,11 @@ fn game_engine_decisions_match_v1_schema_and_preserve_unknowns() {
         assert_eq!(decision["registry_registration"], "absent");
         assert_eq!(decision["exact_instance_call"], "not_run");
         assert_eq!(decision["real_host_effect"], "not_verified");
-        assert_eq!(
-            decision["next_action"]["instructions_url"],
-            case["expected_instructions_url"]
-        );
+        // The bundled Meshy engine adapters are cataloged but not published, so
+        // no install instructions are offered yet. `expected_instructions_url`
+        // in the fixture describes the upstream catalog.
+        assert_eq!(decision["next_action"]["id"], "inspect_catalog");
+        assert_eq!(decision["next_action"]["instructions_url"], Value::Null);
         assert!(
             decision["uncertainties"]
                 .as_array()

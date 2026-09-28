@@ -19,6 +19,11 @@ const MANIFEST_PREFIX: &str = "meshy-dcc-update-manifest-";
 const PLATFORMS: &[&str] = &["linux-x86_64", "windows-x86_64", "macos-universal2"];
 
 /// Latest update manifest for a release platform such as `macos-universal2`.
+/// Signed install catalog feed; `meshy-dcc` falls back to its bundled copy.
+pub fn install_catalog_url() -> String {
+    format!("{BASE_URL}/catalog/install-catalog.json")
+}
+
 pub fn update_manifest_url(platform: &str) -> String {
     format!("{BASE_URL}/latest/{MANIFEST_PREFIX}{platform}.json")
 }

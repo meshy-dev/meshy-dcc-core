@@ -3,10 +3,20 @@ use std::process::Command;
 use serde_json::Value;
 use tempfile::TempDir;
 
-fn bundled_plan(dcc: &str) -> Value {
+/// Plan against the upstream dcc-mcp catalog, whose curated pip releases these tests pin.
+fn upstream_plan(dcc: &str) -> Value {
     let root = TempDir::new().unwrap();
+    let catalog = concat!(env!("CARGO_MANIFEST_DIR"), "/../../dcc-mcp-catalog.yml");
     let output = Command::new(env!("CARGO_BIN_EXE_meshy-dcc"))
-        .args(["install", "--dcc-type", dcc, "--offline", "--json"])
+        .args([
+            "install",
+            "--catalog",
+            catalog,
+            "--dcc-type",
+            dcc,
+            "--offline",
+            "--json",
+        ])
         .env("DCC_MCP_INSTALL_CACHE", root.path().join("catalog.json"))
         .env_remove("DCC_MCP_CATALOG_PATH")
         .env_remove("DCC_MCP_INSTALL_DISABLED")
@@ -23,7 +33,7 @@ fn bundled_plan(dcc: &str) -> Value {
 
 #[test]
 fn obs_plan_uses_approved_release_bytes_and_matching_instructions() {
-    let plan = bundled_plan("obs");
+    let plan = upstream_plan("obs");
     assert_eq!(plan["version"], "1.4.0");
     let install = &plan["adapter"]["install"];
     assert_eq!(
@@ -51,7 +61,7 @@ fn obs_plan_uses_approved_release_bytes_and_matching_instructions() {
 
 #[test]
 fn godot_plan_explains_why_the_newer_unapproved_release_is_held() {
-    let plan = bundled_plan("godot");
+    let plan = upstream_plan("godot");
     assert_eq!(plan["version"], "0.4.0");
     let policy = &plan["adapter"]["policy"];
     assert_eq!(policy["installation"], "available");

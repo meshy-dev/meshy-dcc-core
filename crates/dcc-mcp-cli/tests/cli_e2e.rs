@@ -1834,34 +1834,26 @@ fn dcc_types_lists_release_catalog_without_a_gateway() {
 
     assert_eq!(value["custom_types_supported"], true);
     let types = value["dcc_types"].as_array().unwrap();
-    assert_eq!(types.len(), 38);
+    assert_eq!(types.len(), 9);
     for expected in [
-        "aftereffects",
-        "c4d",
-        "comfyui",
-        "freecad",
-        "gimp",
+        "3dsmax",
+        "blender",
         "godot",
-        "illustrator",
-        "kdenlive",
-        "krita",
-        "mari",
-        "marmoset",
-        "material-maker",
-        "obs",
-        "openusd",
-        "openscad",
-        "powerpoint",
-        "renderdoc",
-        "shotgrid",
-        "sketchup",
-        "shogun",
-        "tiled",
-        "touchdesigner",
+        "maya",
+        "omniverse",
+        "roblox",
         "unity",
-        "wwise",
+        "unreal",
+        "zbrush",
     ] {
-        assert!(types.iter().any(|entry| entry["dcc_type"] == expected));
+        let entry = types
+            .iter()
+            .find(|entry| entry["dcc_type"] == expected)
+            .unwrap_or_else(|| panic!("missing cataloged DCC type {expected}"));
+        let adapter = &entry["adapters"][0];
+        assert_eq!(adapter["name"], format!("meshy-dcc-{expected}"));
+        // No Meshy adapter build is published yet.
+        assert_eq!(adapter["catalog_install_available"], false, "{expected}");
     }
 }
 

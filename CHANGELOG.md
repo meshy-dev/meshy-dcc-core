@@ -28,6 +28,15 @@ internal wire/compat version.
 
 ### Changed
 
+- `meshy-dcc` bundles the Meshy install catalog (`meshy-dcc-catalog.yml`)
+  instead of upstream's, and refreshes it from
+  `cdn.meshy.ai/meshy-dcc-core/catalog/`, where it must carry a Meshy
+  signature. Until the feed is published, the CDN's 403 response counts as
+  unavailable and the bundled catalog is used. The catalog cache moved to
+  `meshy-dcc/`. No catalog is fetched from upstream GitHub any more.
+- Install catalogs accept `type: host-package` for adapters whose payload
+  is host-native. Its host commands run as argv without a shell, start with
+  the operator's `--dcc-path`, and can write the start-instance launch plan.
 - A local `call` must name its instance, either with an instance slug or
   with `--instance-id`, even when only one instance is live. The only
   exception is a tool the host marks `readOnlyHint: true`. The CLI rejects

@@ -10,7 +10,10 @@ use crate::domain::install::{
     InstallPlan, InstallPlanError, InstallPlanner, InstallPolicy, InstallRequest, InstallStepAction,
 };
 
-const BUNDLED_CATALOG: &str = include_str!("../../../../dcc-mcp-catalog.yml");
+const BUNDLED_CATALOG: &str = include_str!("../../../../meshy-dcc-catalog.yml");
+/// Upstream dcc-mcp catalog: its pip adapters exercise the install mechanics in tests.
+#[cfg(test)]
+const UPSTREAM_CATALOG: &str = include_str!("../../../../dcc-mcp-catalog.yml");
 
 mod adobe;
 mod catalog;
@@ -967,12 +970,47 @@ mod tests {
     use super::*;
     use crate::domain::install::InstallStep;
 
+    /// Serve the upstream catalog from the bundled slot, for tests of install
+    /// mechanics that need its pip adapters.
+    pub(super) fn with_upstream_catalog(mut service: InstallService) -> InstallService {
+        use crate::domain::install_catalog::CatalogProvenance;
+        use sha2::{Digest, Sha256};
+        service.catalog_snapshot = Some(catalog::ResolvedCatalog {
+            entries: dcc_mcp_catalog::load_from_str(UPSTREAM_CATALOG).unwrap(),
+            provenance: CatalogProvenance {
+                sha256: Some(hex::encode(Sha256::digest(UPSTREAM_CATALOG.as_bytes()))),
+                ..CatalogProvenance::local(CatalogSource::Bundled)
+            },
+        });
+        service
+    }
+
     #[test]
     fn service_uses_bundled_catalog_when_default_path_is_missing() {
         let service = InstallService::new(PathBuf::from("__missing_dcc_mcp_catalog__.yml"));
-        let plan = service
+        assert_eq!(
+            service.catalog_provenance(None).source,
+            CatalogSource::Bundled
+        );
+        let listing = service.dcc_types(None).unwrap();
+        assert_eq!(listing.total, 9);
+        let blender = listing
+            .dcc_types
+            .iter()
+            .find(|entry| entry.dcc_type == "blender")
+            .unwrap();
+        assert_eq!(blender.adapters[0].name, "meshy-dcc-blender");
+        assert!(!blender.adapters[0].catalog_install_available);
+        let entries = service.catalog_entries(None).unwrap();
+        let entry = entries
+            .iter()
+            .find(|entry| entry.name == "meshy-dcc-blender")
+            .unwrap();
+        assert!(entry.policy.as_ref().unwrap().reason.is_some());
+
+        let error = service
             .plan(InstallRequest {
-                dcc_type: "maya".into(),
+                dcc_type: "blender".into(),
                 version: None,
                 catalog_path: None,
                 python: None,
@@ -980,18 +1018,18 @@ mod tests {
                 plugin_source: None,
                 adobe_debug_root: None,
             })
-            .unwrap();
-
-        assert_eq!(plan.adapter.name, "dcc-mcp-maya");
+            .unwrap_err();
         assert!(matches!(
-            plan.steps[0].action,
-            Some(InstallStepAction::PipInstall { .. })
+            error,
+            InstallError::Plan(InstallPlanError::NotAvailable(name)) if name == "meshy-dcc-blender"
         ));
     }
 
     #[test]
-    fn bundled_catalog_prefers_an_adapter_over_its_skill_pack() {
-        let service = InstallService::new(PathBuf::from("__missing_dcc_mcp_catalog__.yml"));
+    fn upstream_catalog_prefers_an_adapter_over_its_skill_pack() {
+        let service = with_upstream_catalog(InstallService::new(PathBuf::from(
+            "__missing_dcc_mcp_catalog__.yml",
+        )));
         let plan = service
             .plan(InstallRequest {
                 dcc_type: "unreal".into(),
@@ -1012,8 +1050,10 @@ mod tests {
     }
 
     #[test]
-    fn bundled_catalog_lists_adapter_dcc_types_and_collapses_aliases() {
-        let service = InstallService::new(PathBuf::from("__missing_dcc_mcp_catalog__.yml"));
+    fn upstream_catalog_lists_adapter_dcc_types_and_collapses_aliases() {
+        let service = with_upstream_catalog(InstallService::new(PathBuf::from(
+            "__missing_dcc_mcp_catalog__.yml",
+        )));
         let catalog = service.dcc_types(None).unwrap();
 
         assert!(catalog.custom_types_supported);
@@ -1073,12 +1113,12 @@ mod tests {
 
     #[test]
     fn install_plan_reports_disabled_auto_install_policy_with_custom_prompt() {
-        let service = InstallService::with_auto_install_policy(
+        let service = with_upstream_catalog(InstallService::with_auto_install_policy(
             PathBuf::from("__missing_dcc_mcp_catalog__.yml"),
             AutoInstallPolicy::disabled(
                 "Auto install unavailable; contact PipelineTD to deploy {adapter} for {dcc_type}.",
             ),
-        );
+        ));
         let plan = service
             .plan(InstallRequest {
                 dcc_type: "maya".into(),
@@ -1100,12 +1140,12 @@ mod tests {
 
     #[test]
     fn execute_reports_preflight_failure_when_auto_install_is_disabled() {
-        let service = InstallService::with_auto_install_policy(
+        let service = with_upstream_catalog(InstallService::with_auto_install_policy(
             PathBuf::from("__missing_dcc_mcp_catalog__.yml"),
             AutoInstallPolicy::disabled(
                 "Automatic install disabled; ask PipelineTD for {adapter}.",
             ),
-        );
+        ));
 
         let report = service.execute(
             InstallRequest {

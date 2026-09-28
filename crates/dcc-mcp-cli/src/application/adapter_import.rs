@@ -838,7 +838,10 @@ mod tests {
         let request = AdapterImportRequest {
             inventory: None,
             python_overrides: overrides,
-            catalog: None,
+            catalog: Some(PathBuf::from(concat!(
+                env!("CARGO_MANIFEST_DIR"),
+                "/../../dcc-mcp-catalog.yml"
+            ))),
         };
         let (targets, catalog_error) = resolve_targets(&request);
         assert_eq!(catalog_error, None);

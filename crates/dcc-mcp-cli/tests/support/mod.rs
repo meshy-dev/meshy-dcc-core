@@ -1145,6 +1145,10 @@ pub(crate) fn spawn_local_mcp_fixture() -> LocalMcpFixture {
     }
 }
 
+/// Upstream dcc-mcp catalog; install mechanics tests pass it via `--catalog`.
+pub(crate) const UPSTREAM_CATALOG: &str =
+    concat!(env!("CARGO_MANIFEST_DIR"), "/../../dcc-mcp-catalog.yml");
+
 pub(crate) fn cli_command() -> Command {
     let mut command = Command::new(env!("CARGO_BIN_EXE_meshy-dcc"));
     command.env("DCC_MCP_INSTALL_OFFLINE", "true");

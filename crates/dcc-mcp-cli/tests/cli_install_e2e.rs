@@ -22,11 +22,21 @@ fn fake_pip(temp: &TempDir, version: &str) -> std::path::PathBuf {
 #[test]
 fn install_execute_json_reports_manual_registration_as_deferred() {
     let temp = TempDir::new().unwrap();
-    let plan = run_json(&["install", "--dcc-type", "maya", "--python", "python"]);
+    let plan = run_json(&[
+        "install",
+        "--dcc-type",
+        "maya",
+        "--python",
+        "python",
+        "--catalog",
+        UPSTREAM_CATALOG,
+    ]);
     let python_path = fake_pip(&temp, plan["version"].as_str().unwrap());
     let output = cli_command()
         .args([
             "install",
+            "--catalog",
+            UPSTREAM_CATALOG,
             "--dcc-type",
             "maya",
             "--python",
@@ -79,6 +89,8 @@ fn install_execute_json_failure_emits_one_safe_execution_report() {
     let output = cli_command()
         .args([
             "install",
+            "--catalog",
+            UPSTREAM_CATALOG,
             "--dcc-type",
             "maya",
             "--python",
@@ -122,7 +134,14 @@ fn install_execute_json_failure_emits_one_safe_execution_report() {
 #[test]
 fn install_json_alias_preserves_the_plan_only_response() {
     let output = cli_command()
-        .args(["install", "--dcc-type", "maya", "--json"])
+        .args([
+            "install",
+            "--catalog",
+            UPSTREAM_CATALOG,
+            "--dcc-type",
+            "maya",
+            "--json",
+        ])
         .env_remove("DCC_MCP_INSTALL_DISABLED")
         .output()
         .unwrap();
@@ -184,10 +203,12 @@ entries:
     assert_eq!(plan["next_steps"][3]["requires_live_instance"], true);
 }
 #[test]
-fn install_uses_bundled_adapter_metadata_and_python_override() {
+fn install_uses_upstream_adapter_metadata_and_python_override() {
     let plan = run_json_with_env_removed(
         &[
             "install",
+            "--catalog",
+            UPSTREAM_CATALOG,
             "--dcc-type",
             "maya",
             "--version",
@@ -264,6 +285,8 @@ fn install_policy_env_disables_execute_with_a_stable_preflight_report() {
     let output = cli_command()
         .args([
             "install",
+            "--catalog",
+            UPSTREAM_CATALOG,
             "--dcc-type",
             "maya",
             "--python",
@@ -306,9 +329,15 @@ fn install_policy_env_disables_execute_with_a_stable_preflight_report() {
 }
 
 #[test]
-fn install_bundled_catalog_covers_non_maya_first_party_adapters() {
+fn install_upstream_catalog_covers_non_maya_first_party_adapters() {
     let plan = run_json_with_env_removed(
-        &["install", "--dcc-type", "blender"],
+        &[
+            "install",
+            "--catalog",
+            UPSTREAM_CATALOG,
+            "--dcc-type",
+            "blender",
+        ],
         &[],
         &["DCC_MCP_CATALOG_PATH", "DCC_MCP_INSTALL_PYTHON"],
     );
@@ -325,9 +354,15 @@ fn install_bundled_catalog_covers_non_maya_first_party_adapters() {
 }
 
 #[test]
-fn bundled_catalog_reports_current_unity_adapter_version() {
+fn upstream_catalog_reports_current_unity_adapter_version() {
     let plan = run_json_with_env_removed(
-        &["install", "--dcc-type", "unity"],
+        &[
+            "install",
+            "--catalog",
+            UPSTREAM_CATALOG,
+            "--dcc-type",
+            "unity",
+        ],
         &[],
         &["DCC_MCP_CATALOG_PATH", "DCC_MCP_INSTALL_PYTHON"],
     );
@@ -341,6 +376,8 @@ fn install_rejects_pip_version_without_a_catalog_pinned_artifact() {
     let output = cli_command()
         .args([
             "install",
+            "--catalog",
+            UPSTREAM_CATALOG,
             "--dcc-type",
             "maya",
             "--version",
@@ -362,7 +399,13 @@ fn install_rejects_pip_version_without_a_catalog_pinned_artifact() {
 fn unpublished_adapters_do_not_advertise_automatic_install_steps() {
     for dcc_type in ["tiled", "material-maker", "wwise"] {
         let plan = run_json_with_env_removed(
-            &["install", "--dcc-type", dcc_type],
+            &[
+                "install",
+                "--catalog",
+                UPSTREAM_CATALOG,
+                "--dcc-type",
+                dcc_type,
+            ],
             &[],
             &["DCC_MCP_CATALOG_PATH", "DCC_MCP_INSTALL_PYTHON"],
         );
@@ -379,7 +422,7 @@ fn unpublished_adapters_do_not_advertise_automatic_install_steps() {
 }
 
 #[test]
-fn bundled_catalog_reports_current_core_adapter_versions() {
+fn upstream_catalog_reports_current_core_adapter_versions() {
     for (dcc_type, expected_version) in [
         ("maya", "0.9.22"),
         ("houdini", "0.31.5"),
@@ -388,7 +431,13 @@ fn bundled_catalog_reports_current_core_adapter_versions() {
         ("photoshop", "0.1.37"),
     ] {
         let plan = run_json_with_env_removed(
-            &["install", "--dcc-type", dcc_type],
+            &[
+                "install",
+                "--catalog",
+                UPSTREAM_CATALOG,
+                "--dcc-type",
+                dcc_type,
+            ],
             &[],
             &["DCC_MCP_CATALOG_PATH", "DCC_MCP_INSTALL_PYTHON"],
         );
@@ -398,9 +447,15 @@ fn bundled_catalog_reports_current_core_adapter_versions() {
 }
 
 #[test]
-fn bundled_catalog_reports_marmoset_adapter() {
+fn upstream_catalog_reports_marmoset_adapter() {
     let plan = run_json_with_env_removed(
-        &["install", "--dcc-type", "marmoset"],
+        &[
+            "install",
+            "--catalog",
+            UPSTREAM_CATALOG,
+            "--dcc-type",
+            "marmoset",
+        ],
         &[],
         &["DCC_MCP_CATALOG_PATH", "DCC_MCP_INSTALL_PYTHON"],
     );
@@ -413,7 +468,13 @@ fn bundled_catalog_reports_marmoset_adapter() {
 #[test]
 fn install_prefers_adapter_over_same_dcc_skill_pack() {
     let plan = run_json_with_env_removed(
-        &["install", "--dcc-type", "photoshop"],
+        &[
+            "install",
+            "--catalog",
+            UPSTREAM_CATALOG,
+            "--dcc-type",
+            "photoshop",
+        ],
         &[],
         &["DCC_MCP_CATALOG_PATH", "DCC_MCP_INSTALL_PYTHON"],
     );
@@ -427,7 +488,13 @@ fn install_prefers_adapter_over_same_dcc_skill_pack() {
 #[test]
 fn install_accepts_human_dcc_name_aliases() {
     let plan = run_json_with_env_removed(
-        &["install", "--dcc-type", "3ds Max"],
+        &[
+            "install",
+            "--catalog",
+            UPSTREAM_CATALOG,
+            "--dcc-type",
+            "3ds Max",
+        ],
         &[],
         &["DCC_MCP_CATALOG_PATH", "DCC_MCP_INSTALL_PYTHON"],
     );
