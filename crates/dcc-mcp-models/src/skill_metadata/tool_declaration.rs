@@ -619,11 +619,13 @@ impl<'de> serde::Deserialize<'de> for ToolDeclaration {
         let annotations = if let Some(nested) = w.annotations {
             nested
         } else {
+            // Adapters also write the plain `read_only: true` form; without
+            // this it never reaches the MCP annotations.
             SkillToolAnnotations {
                 title: None,
-                read_only_hint: w.read_only_hint,
-                destructive_hint: w.destructive_hint,
-                idempotent_hint: w.idempotent_hint,
+                read_only_hint: w.read_only_hint.or(w.read_only.then_some(true)),
+                destructive_hint: w.destructive_hint.or(w.destructive.then_some(true)),
+                idempotent_hint: w.idempotent_hint.or(w.idempotent.then_some(true)),
                 open_world_hint: w.open_world_hint,
                 deferred_hint: w.deferred_hint,
             }

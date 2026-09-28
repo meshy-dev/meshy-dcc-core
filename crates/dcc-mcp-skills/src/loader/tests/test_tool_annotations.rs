@@ -51,6 +51,31 @@ fn annotations_shorthand_flat_keys_parse() {
     assert_eq!(ann.deferred_hint, None);
 }
 
+/// The plain `read_only: true` / `destructive: true` / `idempotent: true`
+/// form that adapters write reaches the annotations; `false` stays undeclared.
+#[test]
+fn annotations_plain_bool_keys_become_hints() {
+    let tmp = tempfile::tempdir().unwrap();
+    let dir = tmp.path().join("plain");
+    std::fs::create_dir_all(&dir).unwrap();
+    std::fs::write(
+        dir.join("tools.yaml"),
+        "tools:\n  - name: list_objects\n    read_only: true\n    destructive: false\n    idempotent: true\n  - name: open_scene\n    read_only: false\n    destructive: true\n",
+    )
+    .unwrap();
+    let body = "---\nname: plain\nmetadata:\n  dcc-mcp:\n    tools: tools.yaml\n---\n";
+    std::fs::write(dir.join(SKILL_METADATA_FILE), body).unwrap();
+
+    let meta = parse_skill_md(&dir).expect("parsed");
+    let list = &meta.tools[0].annotations;
+    assert_eq!(list.read_only_hint, Some(true));
+    assert_eq!(list.idempotent_hint, Some(true));
+    assert_eq!(list.destructive_hint, None);
+    let open = &meta.tools[1].annotations;
+    assert_eq!(open.read_only_hint, None);
+    assert_eq!(open.destructive_hint, Some(true));
+}
+
 /// When both nested `annotations:` and shorthand flat keys are present,
 /// the nested map wins entirely (whole-map replacement, not per-field merge).
 #[test]
