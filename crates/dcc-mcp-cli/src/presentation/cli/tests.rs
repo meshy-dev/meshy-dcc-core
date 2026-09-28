@@ -863,6 +863,7 @@ fn gateway_endpoint_for_command_ensures_gateway_for_agent_control_commands() {
                 expected_owner: Some("release-smoke-test".to_string()),
                 expected_session: Some("test".to_string()),
                 operation_id: None,
+                discard_unsaved: false,
             },
             &local,
         )

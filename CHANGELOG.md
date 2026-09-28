@@ -12,6 +12,19 @@ internal wire/compat version.
   choosing an instance, finding and loading tools, calling them, reading the
   scene back and handing off Meshy models. Blender is the first host it
   covers.
+- `stop-instance --discard-unsaved` tells the host it may close even though
+  work might be unsaved. Send it only after the user has agreed.
+- `dcc_mcp_core.safe_stop.serve_safe_stop` serves a loopback endpoint that an
+  adapter can advertise as `safe_stop_url`. It accepts JSON bodies only.
+
+### Fixed
+
+- A host launched by `start-instance` now records its project and operation
+  (`dcc_mcp_project`, `dcc_mcp_operation_id`) in its registry row, so
+  `start-instance` can find and reuse that instance.
+- When a `tools.yaml` entry sets `read_only`, `destructive` or `idempotent` to
+  `true` and declares no `*_hint` key, the matching MCP annotation is now
+  published.
 
 ### Changed
 

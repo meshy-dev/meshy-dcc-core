@@ -865,6 +865,7 @@ pub async fn stop_instance_local(
                 "dcc_type": entry.dcc_type,
                 "owner": metadata_value(&entry, &["owner", "test_owner", "dcc_mcp_owner", "dcc_mcp_test_owner", "dcc_mcp.owner"]),
                 "session": metadata_value(&entry, &["session", "test_session", "dcc_mcp_session", "dcc_mcp_test_session", "dcc_mcp.session"]),
+                "discard_unsaved": request.discard_unsaved,
             }),
         )
         .await

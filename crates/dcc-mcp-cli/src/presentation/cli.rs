@@ -555,6 +555,7 @@ async fn run_with_args(args: Args) -> anyhow::Result<()> {
             expected_owner,
             expected_session,
             operation_id,
+            discard_unsaved,
         } => {
             // A stop scoped to a lifecycle operation may only touch the
             // instance that operation launched and owns. Any supplied
@@ -596,6 +597,7 @@ async fn run_with_args(args: Args) -> anyhow::Result<()> {
                 expected_owner,
                 expected_session,
                 operation_id,
+                discard_unsaved,
             };
             control.stop_instance(request).await?
         }

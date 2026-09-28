@@ -100,6 +100,9 @@ pub struct StopInstanceRequest {
     /// `start-instance` operation.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub operation_id: Option<String>,
+    /// The user agreed to lose unsaved work in the host.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub discard_unsaved: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]

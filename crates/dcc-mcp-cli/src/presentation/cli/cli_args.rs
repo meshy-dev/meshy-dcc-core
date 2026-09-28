@@ -238,6 +238,11 @@ pub(crate) enum Command {
         /// `start-instance` operation.
         #[arg(long, value_name = "OPERATION_ID")]
         operation_id: Option<String>,
+        /// Tell the host it may close even if work is unsaved. Pass it only
+        /// after the user agreed to lose unsaved changes; hosts that cannot
+        /// tell whether work is unsaved refuse to stop without it.
+        #[arg(long)]
+        discard_unsaved: bool,
     },
     /// Launch a project-bound DCC host and wait for readiness (zero-instance path).
     StartInstance {
