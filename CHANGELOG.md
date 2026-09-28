@@ -13,6 +13,13 @@ internal wire/compat version.
   scene back and handing off Meshy models. Blender is the first host it
   covers.
 
+### Changed
+
+- A local `call` must name its instance, either with an instance slug or
+  with `--instance-id`, even when only one instance is live. The only
+  exception is a tool the host marks `readOnlyHint: true`. The CLI rejects
+  the call before sending anything to the host.
+
 ## 0.1.0 (2026-09-28)
 
 First Meshy release line, built from dcc-mcp-core v0.20.36 source (MIT).

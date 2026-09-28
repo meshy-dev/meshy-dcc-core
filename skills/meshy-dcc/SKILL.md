@@ -54,6 +54,9 @@ Name that instance explicitly in every later command:
 - search and load-skill take `--instance-id <instance_id>`;
 - call and describe take a slug that contains its `instance_short`.
 
+A call that doesn't name its instance is refused unless the host marks the tool read-only,
+even when only one instance is live.
+
 A restarted host gets a new ID and new slugs. Run `list` again, load the skills again and
 use the new slugs. Never reroute a call to another instance.
 

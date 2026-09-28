@@ -494,13 +494,14 @@ async fn local_call_retry_exposes_the_discovery_attempt_request_id() {
     entry
         .metadata
         .insert("discovery_mcp_url".to_string(), discovery_url);
+    let instance_id = entry.instance_id.to_string();
     registry.register(entry).expect("register local DCC");
 
     let output = call_local(
         registry_dir.path().to_path_buf(),
         "3dsmax_scripting__execute_maxscript".to_string(),
         Some("3dsmax".to_string()),
-        None,
+        Some(instance_id),
         json!({"script": "\"BRAVO\"", "confirm_execution": true}),
         None,
         Duration::from_secs(1),
@@ -515,4 +516,75 @@ async fn local_call_retry_exposes_the_discovery_attempt_request_id() {
     assert_eq!(output["result"]["message"], "discovery handled call");
     dispatch_server.abort();
     discovery_server.abort();
+}
+
+#[tokio::test]
+async fn local_write_without_named_instance_is_refused_before_dispatch() {
+    use std::sync::{Arc, Mutex};
+
+    use axum::Json;
+    use axum::Router;
+    use axum::extract::State;
+    use axum::routing::post;
+    use dcc_mcp_transport::discovery::file_registry::FileRegistry;
+    use tempfile::TempDir;
+
+    async fn mcp(
+        State(called): State<Arc<Mutex<Vec<String>>>>,
+        Json(request): Json<Value>,
+    ) -> Json<Value> {
+        let id = request.get("id").cloned().unwrap_or(Value::Null);
+        let result = if request["method"] == "tools/list" {
+            json!({"tools": [
+                {"name": "scene__list", "annotations": {"readOnlyHint": true}},
+                {"name": "scene__delete", "annotations": {"readOnlyHint": false}},
+                {"name": "scene__save"},
+            ]})
+        } else {
+            let name = request["params"]["name"].as_str().unwrap_or_default();
+            called.lock().expect("calls").push(name.to_string());
+            json!({"success": true})
+        };
+        Json(json!({"jsonrpc": "2.0", "id": id, "result": result}))
+    }
+
+    let called = Arc::new(Mutex::new(Vec::new()));
+    let app = Router::new()
+        .route("/mcp", post(mcp))
+        .with_state(called.clone());
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+        .await
+        .expect("bind MCP fixture");
+    let address = listener.local_addr().expect("MCP fixture address");
+    let server = tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
+    let registry_dir = TempDir::new().expect("registry tempdir");
+    let registry = FileRegistry::new(registry_dir.path()).expect("file registry");
+    let mut entry = ServiceEntry::new("blender", "127.0.0.1", 0);
+    entry
+        .metadata
+        .insert("mcp_url".to_string(), format!("http://{address}/mcp"));
+    let slug = local_instance::local_tool_slug(&entry, "scene__save");
+    registry.register(entry).expect("register local DCC");
+
+    let call = |tool: &str| {
+        call_local(
+            registry_dir.path().to_path_buf(),
+            tool.to_string(),
+            Some("blender".to_string()),
+            None,
+            json!({}),
+            None,
+            Duration::from_secs(1),
+        )
+    };
+    for write in ["scene__delete", "scene__save"] {
+        let error = call(write).await.expect_err("write needs a named instance");
+        assert!(error.to_string().contains("not marked read-only"), "{error}");
+    }
+    assert!(called.lock().expect("calls").is_empty(), "no write may reach the host");
+
+    call("scene__list").await.expect("read-only tool may use the only instance");
+    call(&slug).await.expect("an instance slug names the instance");
+    assert_eq!(*called.lock().expect("calls"), ["scene__list", "scene__save"]);
+    server.abort();
 }

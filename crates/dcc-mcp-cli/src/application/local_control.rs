@@ -506,6 +506,9 @@ pub async fn call_local(
     )?;
     enforce_active_instance_lease(&route.entry, meta.as_ref())?;
     let gateway = HttpGateway::with_timeout(timeout);
+    if !route.explicit_instance {
+        require_read_only_without_instance(&gateway, &route).await?;
+    }
     let dispatch_mcp_url = local_dispatch_mcp_url(&route.entry, &route.backend_tool);
     let mut call = mcp_call_tool_correlated(
         &gateway,
@@ -551,6 +554,27 @@ pub async fn call_local(
         "result": result,
         "source": "local_mcp",
     }))
+}
+
+/// A write must name its instance even when only one is live; only a tool the
+/// host marks `readOnlyHint: true` may run on the single live instance.
+async fn require_read_only_without_instance(
+    gateway: &HttpGateway,
+    route: &ToolRoute,
+) -> anyhow::Result<()> {
+    let tools = list_mcp_tools(gateway, &local_instance::discovery_mcp_url(&route.entry)).await?;
+    let read_only = tools.iter().any(|tool| {
+        tool.get("name").and_then(Value::as_str) == Some(route.backend_tool.as_str())
+            && tool.pointer("/annotations/readOnlyHint").and_then(Value::as_bool) == Some(true)
+    });
+    if !read_only {
+        anyhow::bail!(
+            "{} is not marked read-only, so name its instance: call {} or pass --instance-id",
+            route.backend_tool,
+            route.tool_slug
+        );
+    }
+    Ok(())
 }
 
 fn should_retry_local_call_via_discovery(result: &Value) -> bool {
@@ -866,6 +890,9 @@ struct ToolRoute {
     entry: ServiceEntry,
     backend_tool: String,
     tool_slug: String,
+    /// The caller named the instance (slug or `--instance-id`) instead of
+    /// relying on it being the only live match.
+    explicit_instance: bool,
 }
 
 impl ToolRoute {
@@ -898,6 +925,7 @@ fn resolve_tool_route(
         tool_slug: local_instance::local_tool_slug(&entry, &backend_tool),
         entry,
         backend_tool,
+        explicit_instance: instance.is_some(),
     })
 }
 
