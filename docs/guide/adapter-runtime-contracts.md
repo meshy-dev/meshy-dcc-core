@@ -1,0 +1,168 @@
+# Adapter Runtime Contracts
+
+Core exposes small, DCC-agnostic contracts for runtime material that agents
+need while tools and jobs are running. Adapters keep host-specific collection
+and safety policy; core standardizes the shapes and resource hand-off paths.
+
+## Session events
+
+Use `SessionEventBuffer` for bounded stdout/stderr/log/progress/checkpoint
+events. Register it as an MCP resource:
+
+```python
+from dcc_mcp_core import SessionEventBuffer
+
+events = SessionEventBuffer("maya-001", maxlen=1000, max_message_bytes=4096)
+server.resources().register_session_event_buffer(events)
+events.append("python", "stdout", "Created rig control", tool_call_id="req-1")
+```
+
+Clients read `events://session/maya-001?cursor=N&limit=100`. The response
+includes `next_cursor`, so clients avoid duplicate events without needing a
+live subscription. `drain=true` is available for clients that want
+consume-on-read behavior.
+
+## Artefact references
+
+Use the existing `FileRef` / `ArtefactStore` path for large or binary outputs:
+
+- `artefact://sha256/<hex>` never exposes adapter filesystem paths.
+- Sidecars carry MIME, size, digest, display name, session/tool/job/correlation
+  fields, expiry, and adapter metadata.
+- Bounded stores can enforce max payload bytes, max retained entries, max total
+  bytes, and default TTL.
+
+Tool results should return the small `FileRef` object in context and let
+clients fetch bytes through `resources/read`.
+
+## Debug descriptors
+
+Use `DebugSessionDescriptor` to publish optional attach metadata without
+adding a hard debugger dependency to core. The descriptor supports
+`unavailable`, `available`, `listening`, `client_connected`, and `error`
+states, plus host/port, runtime/process identity, path mappings, log URI,
+setup instructions, and adapter metadata.
+
+Python adapters can use:
+
+```python
+from dcc_mcp_core import DebugSessionDescriptor
+
+descriptor = DebugSessionDescriptor.listening("debugpy", "127.0.0.1", 5678)
+```
+
+Publish the resulting `descriptor.to_dict()` through a docs/custom resource or
+an adapter-owned optional tool.
+
+## UI Control automation contract
+
+The `ui_control` contract is a schema and workflow, not a universal click bot.
+Adapters may implement it with Qt, native accessibility APIs, webviews, or
+DCC-specific UI APIs. The public tool names use `ui_control__*` because the
+capability is intentionally broader than a DCC-only UI namespace: the same
+contract can describe a DCC preferences dialog, an external launcher, a license
+utility, or another adapter-owned application window.
+
+The Core-facing schema lives in `dcc_mcp_core.adapter_contracts`; native
+automation is supplied by the standalone `dcc-cua` manifest and Host protocol.
+This keeps UI automation independent from the HTTP server layer.
+
+Core shapes include:
+
+- `UiControlNode` and `UiSnapshot` for bounded UI trees.
+- `UiFindRequest` for locating controls by query, role, label, or object name.
+- `UiActionRequest` for one bounded action such as click, set text, toggle,
+  set checked, select option, or focus.
+- `UiWaitCondition` and `UiWaitResult` for in-tool polling such as "wait until
+  status text equals Applied" or "wait until the modal is gone".
+- `UiActionResult` with structured errors such as `stale_control`, `denied`,
+  `unsupported_action`, and optional screenshot/artefact refs.
+- `UiControlPolicy` and `UiControlAuditRecord` for scoped action controls and
+  privacy-preserving audit output.
+
+Adapters must return structured errors instead of hanging when controls go
+stale, and adapter-side safety policy still decides which actions are allowed.
+
+Preferred agent loop:
+
+1. `ui_control__snapshot` observes a scoped application window and returns a
+   `snapshot_id`.
+2. `ui_control__find` resolves a stable control id by query, role, label, or object
+   name.
+3. `ui_control__act` performs one action against that control id. Pass the
+   `snapshot_id` when available so stale controls fail with `stale_control`
+   instead of acting on the wrong target.
+4. `ui_control__wait_for` polls inside one call until the expected UI state is true
+   or returns `timeout` with structured details.
+5. `ui_control__snapshot` verifies the final state.
+
+Native application menu bars may use
+`ui_control__act(action="invoke_menu", menu_path=[...])` without a prior
+snapshot when the Host advertises `native_menu_path`. The path is resolved
+inside the exact bound window and fails closed on missing or ambiguous levels.
+The operation invalidates current observations; honor `verification_required`
+and verify the popup or resulting application state with a fresh snapshot.
+
+Use native DCC skills or APIs first. Use `ui_control__*` only when the behavior is
+visible in the application UI but not exposed through a reliable host API.
+Workflow examples and recovery patterns live in
+[ui-control-workflows.md](ui-control-workflows.md).
+
+Safety expectations:
+
+- Snapshot/find tools are read-only and may run on any thread when the backend
+  supports it.
+- Mutating actions should declare conservative safety annotations, main-thread
+  affinity when required by the host, and a timeout that reflects UI polling.
+- Declare MCP `annotations`, `execution`, `affinity`, and
+  `timeout_hint_secs` in `tools.yaml`. Gateway `search_tools` / `/v1/search`
+  carry compact safety hints, and `describe_tool` / `/v1/describe` expose the
+  full schema plus `_meta.dcc` affinity, execution, timeout, and risk hints.
+- Gateway instance rows include `diagnostics.ui_control.status`: `available` when
+  `ui_control__*` capabilities are indexed, `unavailable` when none are present,
+  or `disabled_by_policy` when adapter registry metadata publishes
+  `ui_control.status=disabled` (optionally with `ui_control.reason`).
+- Policy should disable whole-desktop access by default. Scope to an
+  adapter-owned process, window, or explicit allow-list. Keep
+  `UiControlPolicy.require_scoped_window` enabled unless the user explicitly opts
+  into a backend-specific whole-desktop fallback.
+- Raw coordinate clicks and keyboard shortcuts are high risk. Keep them disabled
+  unless an adapter explicitly opts in and documents the fallback.
+- Audit records should include action kind, target control id/role/label when
+  safe, before/after focus ids, success/failure, and a structured error code.
+  Sensitive typed text and screenshot bytes should be redacted or returned only
+  as artefact/resource references.
+
+The bundled `ui-control` skill defaults to standalone `dcc-cua` 0.4.0 or newer.
+The deterministic mock backend is explicit test infrastructure only. Set
+`DCC_MCP_UI_CONTROL_BACKEND=chrome` to use the
+experimental CDP backend and drive browser or webview search through the same
+`ui_control__snapshot`, `ui_control__find`, `ui_control__act`, and `ui_control__wait_for`
+tools. The CDP backend supports presets: `reuse` attaches to an existing
+DevTools endpoint first so current browser tokens can be reused, `isolated`
+launches a temporary Chrome profile, and `auroraview` attaches to AuroraView's
+CDP endpoint using `DCC_MCP_UI_CONTROL_AURORAVIEW_CDP_PORT`,
+`AURORAVIEW_CDP_PORT`, `DCC_MCP_UI_CONTROL_CDP_PORT`, or port `9222`. The same
+runtime also supports `edge` for Microsoft Edge CDP and `agent-browser` for
+Vercel's `agent-browser` CLI, which exposes its DevTools URL through
+`agent-browser get cdp-url` and can be provisioned in CI with
+`agent-browser install`.
+
+The default `DCC_MCP_UI_CONTROL_BACKEND=cua` uses the standalone `dcc-cua`
+CLI/Host for native applications on Windows, Linux, and macOS. Core probes the
+official dcc-mcp install directory, versioned standalone installs, and `PATH`;
+`DCC_MCP_CUA_BINARY` remains the explicit custom-layout override.
+`DccServerBase` injects the resolved adapter PID/HWND/title from
+`DccServerOptions` after public argument validation. Dedicated servers may use
+`DCC_MCP_UI_CONTROL_PROCESS_ID` and `DCC_MCP_UI_CONTROL_WINDOW_HANDLE`
+overrides. Request arguments may narrow this scope but cannot widen it, and a
+title constraint is forwarded to the Host to resolve one window inside a
+multi-window process before an exact capability is minted. The Host owns
+platform accessibility, capture, visible control markers, input serialization,
+and Escape interruption.
+
+A request may also repeat `process_name` beside the trusted PID/HWND as
+metadata or an additional constraint. That redundant field preserves the
+trusted native scope when it is consistent with
+`DCC_MCP_UI_CONTROL_PROCESS_NAME`; a conflict fails with `invalid_target`.
+Process names and titles alone never establish the native capability boundary.

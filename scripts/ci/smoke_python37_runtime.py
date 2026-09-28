@@ -1,0 +1,221 @@
+"""Run the contracted import and behavior smoke on a real Python 3.7."""
+
+from __future__ import annotations
+
+import argparse
+import importlib
+import os
+from pathlib import Path
+import sys
+import tempfile
+
+try:
+    from .python_support_contract import load_contract
+except ImportError:  # pragma: no cover - direct script execution
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    from python_support_contract import load_contract
+
+
+def _install_sop_report() -> dict:
+    return {
+        "schema_version": 1,
+        "status": "planned",
+        "dcc_type": "example",
+        "adapter_version": "1.2.3",
+        "core_version": "0.20.23",
+        "steps": [{"id": "preflight", "status": "ok"}],
+        "next_steps": [
+            {
+                "id": "execute",
+                "description": "Execute the validated plan.",
+                "why": "Planning does not mutate the host.",
+                "command": ["dcc-mcp-example", "install", "--yes"],
+            }
+        ],
+        "receipt_path": None,
+        "verify": {
+            "directly_usable": False,
+            "failure_stage": None,
+            "failure_reason": None,
+        },
+    }
+
+
+def _verify_install_sop_validation(profile: str) -> None:
+    from dcc_mcp_core import validate_install_sop_report
+
+    report = _install_sop_report()
+    if profile == "lite_py37":
+        try:
+            validate_install_sop_report(report)
+        except RuntimeError as exc:
+            if "native dcc-mcp-core wheel" not in str(exc):
+                raise
+        else:
+            raise RuntimeError("lite_py37 silently claimed native Install SOP validation")
+        return
+
+    validate_install_sop_report(report)
+    report["schema_version"] = 2
+    try:
+        validate_install_sop_report(report)
+    except ValueError as exc:
+        if "/schema_version" not in str(exc) or "const" not in str(exc):
+            raise
+    else:
+        raise RuntimeError("native_py37 accepted an unsupported Install SOP version")
+
+
+def _verify_profile(profile: str) -> None:
+    contract = load_contract()
+    expected = tuple(int(part) for part in contract["build"][profile]["python"].split("."))
+    if sys.version_info[:2] != expected:
+        actual = sys.version_info[:2]
+        raise RuntimeError(f"{profile} smoke requires Python {expected[0]}.{expected[1]}, got {actual[0]}.{actual[1]}")
+
+    for module_name in contract["runtime_smoke"][profile]:
+        importlib.import_module(module_name)
+
+    _verify_install_sop_validation(profile)
+
+    if profile == "native_py37":
+        from dcc_mcp_core import ToolRegistry
+
+        registry = ToolRegistry()
+        if registry.count_actions() != 0:
+            raise RuntimeError("new ToolRegistry must be empty")
+    else:
+        try:
+            importlib.import_module("dcc_mcp_core._core")
+        except ImportError:
+            pass
+        else:
+            raise RuntimeError("lite_py37 must not contain dcc_mcp_core._core")
+
+        from dcc_mcp_core import ENV_DISABLE_ACCUMULATED_SKILLS
+        from dcc_mcp_core import ENV_DISABLE_DEFAULT_SKILL_PATHS
+        from dcc_mcp_core import ENV_SKILL_PATHS
+        from dcc_mcp_core import ENV_TEAM_SKILL_PATHS
+        from dcc_mcp_core import ENV_USER_SKILL_PATHS
+        from dcc_mcp_core import create_skill_server
+        from dcc_mcp_core import json_dumps
+        from dcc_mcp_core import json_loads
+        from dcc_mcp_core import parse_skill_md
+        from dcc_mcp_core import skills_helper
+        import dcc_mcp_core._json_codec as json_codec
+        from dcc_mcp_core.host import BlockingDispatcher
+        from dcc_mcp_core.host import StandaloneHost
+        from dcc_mcp_core.skill import skill_success
+        from dcc_mcp_core.wire import normalize_tool_arguments
+        from dcc_mcp_core.wire import normalize_tool_meta
+
+        if json_dumps is not skills_helper.json_dumps or json_dumps is not json_codec.json_dumps:
+            raise RuntimeError("lite_py37 json_dumps aliases do not share one callable")
+        if json_loads is not skills_helper.json_loads or json_loads is not json_codec.json_loads:
+            raise RuntimeError("lite_py37 json_loads aliases do not share one callable")
+        if json_loads(json_dumps({"name": "café"}, ensure_ascii=False)) != {"name": "café"}:
+            raise RuntimeError("lite_py37 stdlib JSON fallback failed round-trip")
+        if normalize_tool_arguments(None) != {} or normalize_tool_arguments("") != {}:
+            raise RuntimeError("lite_py37 arguments normalization defaults diverged")
+        if normalize_tool_arguments('{"name":"cube"}') != {"name": "cube"}:
+            raise RuntimeError("lite_py37 arguments object-string normalization failed")
+        if normalize_tool_meta(None) is not None or normalize_tool_meta("") is not None:
+            raise RuntimeError("lite_py37 meta normalization defaults diverged")
+        for invalid in ("not json", [], 42, True, "[]", "42", "true"):
+            try:
+                normalize_tool_arguments(invalid)
+            except ValueError:
+                pass
+            else:
+                raise RuntimeError("lite_py37 arguments accepted a non-object root")
+
+        if ENV_DISABLE_DEFAULT_SKILL_PATHS != "DCC_MCP_DISABLE_DEFAULT_SKILL_PATHS":
+            raise RuntimeError("lite_py37 exposed an invalid default-skill-path flag")
+        if ENV_DISABLE_ACCUMULATED_SKILLS != "DCC_MCP_DISABLE_ACCUMULATED_SKILLS":
+            raise RuntimeError("lite_py37 exposed an invalid accumulated-skill flag")
+        if ENV_SKILL_PATHS != "DCC_MCP_SKILL_PATHS":
+            raise RuntimeError("lite_py37 exposed an invalid skill-path variable")
+        if ENV_USER_SKILL_PATHS != "DCC_MCP_USER_SKILL_PATHS":
+            raise RuntimeError("lite_py37 exposed an invalid user skill-path variable")
+        if ENV_TEAM_SKILL_PATHS != "DCC_MCP_TEAM_SKILL_PATHS":
+            raise RuntimeError("lite_py37 exposed an invalid team skill-path variable")
+
+        original_skill_paths = os.environ.get("DCC_MCP_SKILL_PATHS")
+        with tempfile.TemporaryDirectory() as skill_dir:
+            skill_path = Path(skill_dir) / "public-smoke"
+            skill_path.mkdir()
+            # Byte write on purpose: the skill front matter must stay LF, and
+            # Path.write_text() would translate it to CRLF on Windows.
+            (skill_path / "SKILL.md").write_bytes(
+                b"---\n"
+                b"name: py37-public-smoke\n"
+                b"description: Public factory discovery smoke\n"
+                b"metadata:\n"
+                b"  dcc-mcp:\n"
+                b"    dcc: maya\n"
+                b'    version: "1.2.3"  # smoke version\n'
+                b"    tags: [py37, smoke]\n"
+                b"---\n"
+            )
+            server = create_skill_server("maya", extra_paths=[skill_dir], accumulated=False)
+            if getattr(server, "backend", None) != "sidecar":
+                raise RuntimeError("lite_py37 public factory did not select the sidecar backend")
+            names = [skill.name for skill in server.list_skills()]
+            if "py37-public-smoke" not in names:
+                raise RuntimeError("lite_py37 public factory did not discover the explicit skill")
+            matches = [skill.name for skill in server.search_skills(query="discovery smoke")]
+            if "py37-public-smoke" not in matches:
+                raise RuntimeError("lite_py37 public skill search did not return the explicit skill")
+            parsed = parse_skill_md(str(skill_path))
+            discovered = server.get_skill("py37-public-smoke")
+            if parsed is None or discovered is None:
+                raise RuntimeError("lite_py37 shared skill parser returned no metadata")
+            for field in ("name", "description", "dcc", "version", "tags"):
+                if getattr(parsed, field) != getattr(discovered, field):
+                    raise RuntimeError(f"lite_py37 skill metadata diverged for {field}")
+            launch_env = server._launch_environment()
+            if skill_dir not in launch_env.get("DCC_MCP_SKILL_PATHS", "").split(os.pathsep):
+                raise RuntimeError("lite_py37 extra_paths did not reach the sidecar launch environment")
+            if launch_env.get("DCC_MCP_DISABLE_ACCUMULATED_SKILLS") != "1":
+                raise RuntimeError("lite_py37 accumulated=False did not reach the sidecar launch environment")
+            try:
+                server.load_skill("py37-public-smoke")
+            except RuntimeError as exc:
+                if "dispatch-only" not in str(exc):
+                    raise
+            else:
+                raise RuntimeError("lite_py37 metadata-only server silently claimed skill activation")
+        if os.environ.get("DCC_MCP_SKILL_PATHS") != original_skill_paths:
+            raise RuntimeError("lite_py37 public factory mutated the host skill-path environment")
+
+        try:
+            create_skill_server("maya", unsupported=True)
+        except TypeError:
+            pass
+        else:
+            raise RuntimeError("lite_py37 public factory silently accepted an unknown keyword")
+
+        if not skill_success("py37 smoke").get("success"):
+            raise RuntimeError("skill_success fallback returned an invalid result")
+        dispatcher = BlockingDispatcher()
+        with StandaloneHost(dispatcher):
+            if dispatcher.post(lambda: 37).wait(timeout=2.0) != 37:
+                raise RuntimeError("pure-Python host dispatcher smoke failed")
+
+
+def main(argv: list[str] | None = None) -> int:
+    """Run one Python 3.7 compatibility profile."""
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--profile", choices=("native_py37", "lite_py37"), required=True)
+    args = parser.parse_args(argv)
+    try:
+        _verify_profile(args.profile)
+    except Exception as exc:
+        sys.stderr.write(f"python37-runtime-smoke: {exc}\n")
+        return 1
+    sys.stdout.write(f"python37-runtime-smoke: {args.profile} OK\n")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

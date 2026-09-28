@@ -1,0 +1,223 @@
+[build-system]
+requires = ["maturin>=1.0,<2.0"]
+build-backend = "maturin"
+
+[project]
+name = "dcc-mcp-core"
+version = "0.20.36" # x-release-please-version
+description = "Foundational library for the DCC Model Context Protocol (MCP) ecosystem"
+authors = [
+    {name = "Hal Long", email = "hal.long@outlook.com"}
+]
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.7"
+keywords = ["dcc", "mcp", "maya", "blender", "houdini", "rust", "pyo3"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Programming Language :: Rust",
+    "Topic :: Software Development :: Libraries",
+    "Topic :: Multimedia :: Graphics :: 3D Modeling",
+]
+
+dependencies = [
+    # dcc-mcp-server (Python 3.7+): provides the sidecar gateway daemon binary
+    # and the packaging toolchain for standalone DCC MCP server bundles.
+    # Maya 2022 / Blender 2.83 embed Python 3.7; the py37-lite wheel ships
+    # pure-Python code only and users install dcc-mcp-server separately when
+    # their platform provides a compatible binary wheel.
+    #
+    # Same-batch contract: dcc-mcp-core and dcc-mcp-server ship from one
+    # release, so a deployment must pair them at the same major.minor. The
+    # floor is deliberately older than the current release because the matching
+    # wheel only exists on PyPI after release-please publishes it. The runtime
+    # enforces the pairing: the gateway bootstrap prefers the binary on PATH
+    # (the resolved environment) over the importable dcc_mcp_server package and
+    # logs a WARNING when their major.minor differs. Keep this declaration in
+    # place — a rez/venv resolve that omits dcc-mcp-server makes hosts import a
+    # workstation-local copy instead.
+    "dcc-mcp-server>=0.18.17,<1.0.0",
+]
+
+[project.scripts]
+dcc-mcp-install-lifecycle = "dcc_mcp_core.install_lifecycle_cli:main"
+dcc-mcp-ui-control-server = "dcc_mcp_core.ui_control_server:cli"
+
+[project.optional-dependencies]
+test = [
+    "jsonschema>=4.18; python_version>='3.8'",
+    "jsonschema==4.17.3; python_version<'3.8'",  # Last jsonschema line supporting the Python 3.7 LTS gate
+    "pytest>=8.3.0; python_version>='3.8'",  # CVE-2025-71176: fixed line for maintained Python runtimes
+    "pytest==7.4.4,<8.0; python_version<'3.8'",  # Last pytest line supporting the Python 3.7 LTS gate
+    "pytest-cov>=4.0; python_version>='3.8'",
+    "pytest-cov>=4.0,<5.0; python_version<'3.8'",
+    "pytest-xdist>=3.0; python_version>='3.8'",
+    "pytest-xdist==3.5.0; python_version<'3.8'",
+    # Test-only conformance fixture. Production code must never import this backport.
+    "typing-extensions==4.7.1; python_version<'3.8'",
+    "rez",
+    "zipp>=3.19.1; python_version>='3.8'",  # CVE-2024-5569; fixed releases require Python 3.8+
+    # Qt UI inspector live-Qt tests (issue #1332); skipped on Py<3.9 / when missing
+    "pytest-qt>=4.4; python_version>='3.9'",
+    "PySide6-Essentials>=6.5; python_version>='3.9'",
+]
+dev = [
+    "dcc-mcp-core[test]",
+    "ruff>=0.8.0; python_version>='3.8'",
+    "mypy>=1.0; python_version>='3.8'",
+    "maturin>=1.0",
+]
+# WebSocket JSON-RPC bridge for non-Python DCC hosts. Pip selects the newest
+# release compatible with the active Python interpreter from this range.
+bridge = ["websockets>=11,<18"]
+# Optional ONNX-backed semantic embeddings for VectorSkillIndex
+# (issues #1393, #1395). Default install stays zero-dep; install this extra
+# when ``HashedEmbedder`` (the deterministic hashing-trick default) is not
+# enough for natural-language skill discovery in studios with hundreds of
+# skills.
+#
+# The extra pulls in BOTH:
+#   * ``dcc-mcp-core-semantic`` — preferred Rust-native backend
+#     (fastembed-rs + ONNX Runtime, lives in pkg/dcc-mcp-core-semantic/).
+#     Released through the same Release Please version stream.
+#   * ``fastembed`` — pure-Python fallback for platforms the Rust wheel
+#     does not cover (rare; included as a safety net).
+#
+# `OnnxEmbedder._load_backend` walks these in order so the same Python
+# code works regardless of which backend is available at runtime.
+# Both backends are listed: `OnnxEmbedder._load_backend` prefers the
+# Rust-native companion, and falls back to the pure-Python `fastembed`
+# package only on platforms where the Rust wheel is unavailable. The
+# `>=` constraint on the companion is intentional — release-please bumps
+# both packages in lockstep from the same release, so the operator's pip
+# resolver will pick the matching version. Users that want lockstep can
+# pin both explicitly.
+semantic = [
+    "dcc-mcp-core-semantic>=0.17.37",
+    "fastembed>=0.3; python_version>='3.8'",
+]
+
+[project.urls]
+Homepage = "https://dcc-mcp.github.io/dcc-mcp-core/"
+Documentation = "https://dcc-mcp.github.io/dcc-mcp-core/"
+Repository = "https://github.com/dcc-mcp/dcc-mcp-core"
+Issues = "https://github.com/dcc-mcp/dcc-mcp-core/issues"
+Changelog = "https://github.com/dcc-mcp/dcc-mcp-core/blob/main/CHANGELOG.md"
+"Release Notes" = "https://github.com/dcc-mcp/dcc-mcp-core/releases"
+
+# VFX Reference Platform alignment. `core` is imported inside Python 3.7 hosts
+# (Maya 2022 and friends) and inside CY2026 hosts, so it is checked against both
+# tiers: every runtime dependency has to resolve to a release that installs on
+# Python 3.7 and to a release inside the CY2026 baseline. Dependencies that only
+# hold on newer interpreters must carry an environment marker instead. See
+# config/vfx-platform-baseline.json and scripts/ci/check_vfx_baseline.py.
+[tool.dcc-mcp.vfx-platform]
+year = ["CY2026", "py37"]
+host = "core"
+
+[tool.maturin]
+python-source = "python"
+module-name = "dcc_mcp_core._core"
+# Source builds default to the CPython 3.8+ stable ABI. Native CPython 3.7
+# wheels are separate CI/release artifacts built without ``abi3-py38``;
+# ``requires-python >=3.7`` covers both explicitly validated profiles.
+# Feature list MUST stay in sync with `WHEEL_FEATURES` in the root justfile.
+# The justfile is the single source of truth for CI; this list only matters
+# for downstream `pip install .` / sdist rebuilds that bypass our CI.
+features = ["python-bindings", "ext-module", "abi3-py38", "workflow", "scheduler", "prometheus", "job-persist-sqlite", "admin", "mcp-2026-07-28"]
+bindings = "pyo3"
+[tool.mypy]
+python_version = "3.7"
+strict = true
+ignore_missing_imports = true
+disable_error_code = ["type-arg", "misc", "no-any-return"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py37"
+src = ["python/dcc_mcp_core", "tests", "examples"]
+# `_core.pyi` is regenerated from the Rust extension by `pyo3-stub-gen`
+# on every build; running ruff against it produces ~1k spurious diffs
+# that would just get clobbered the next time `maturin develop` runs.
+extend-exclude = ["python/dcc_mcp_core/_core.pyi"]
+
+[tool.ruff.lint]
+select = [
+    "E", # pycodestyle
+    "F", # pyflakes
+    "D", # pydocstyle
+    "I", # isort (replaces standalone isort)
+    "UP", # pyupgrade
+    "RUF", # ruff-specific rules
+    "PTH", # pathlib migration hints
+    "SIM", # simplification
+    "B", # bugbear
+]
+ignore = ["D203", "D213", "D107", "D105", "D102"]
+
+[tool.ruff.lint.isort]
+force-single-line = true
+force-sort-within-sections = true
+known-first-party = ["dcc_mcp_core"]
+# Import convention (enforced via ``ruff check`` rule **I**, not ``ruff format``):
+# stdlib → third-party → first-party, one import per line. Prefer module-level imports.
+# For symbols implemented in the PyO3 extension, import from ``dcc_mcp_core._core``
+# instead of ``from dcc_mcp_core import …`` so submodules avoid the lazy package facade.
+
+[tool.ruff.lint.per-file-ignores]
+# Python 3.7 (Maya 2022) compat: use typing.Optional/Dict/List instead of PEP 604 syntax.
+"python/dcc_mcp_core/_server/host_ui_dispatcher.py" = ["UP006", "UP045"]
+"python/dcc_mcp_core/host_errors.py" = ["UP006", "UP045"]
+"python/dcc_mcp_core/_server/tools_list_policy.py" = ["UP006", "UP045"]
+"python/dcc_mcp_core/_install_lifecycle_process.py" = ["UP006", "UP045"]
+"python/dcc_mcp_core/_install_lifecycle_sidecar.py" = ["UP006", "UP045"]
+"python/dcc_mcp_core/cua_cli.py" = ["UP006", "UP045"]
+"python/dcc_mcp_core/metadata_registration.py" = ["UP006", "UP045"]
+"python/dcc_mcp_core/_registration.py" = ["UP006", "UP045"]
+"python/dcc_mcp_core/usd_resources.py" = ["UP006", "UP007", "UP045"]
+"python/dcc_mcp_core/skills/ui-control/scripts/*.py" = ["UP006", "UP045"]
+"python/dcc_mcp_core/skills/media/scripts/*.py" = ["UP006", "UP045"]
+"python/dcc_mcp_core/skills/verification/scripts/*.py" = ["UP006", "UP045"]
+"python/dcc_mcp_core/verification/*.py" = ["UP006", "UP045"]
+"python/dcc_mcp_core/adapter_contracts.py" = ["UP006", "UP037", "UP045"]
+"python/dcc_mcp_core/asset_import.py" = ["UP006", "UP045"]
+"python/dcc_mcp_core/asset_sync.py" = ["UP006", "UP007", "UP045"]
+"python/dcc_mcp_core/spatial.py" = ["UP006", "UP007", "UP045"]
+"skills/spatial-interchange/scripts/*.py" = ["UP006", "UP045"]
+"python/dcc_mcp_core/install_lifecycle.py" = ["UP006", "UP007", "UP045"]
+"python/dcc_mcp_core/install_lifecycle_cli.py" = ["UP006", "UP007", "UP045"]
+"python/dcc_mcp_core/ui_control_server.py" = ["UP045"]
+"scripts/check_py37_syntax.py" = ["UP032"]  # intentional: f-strings are syntax errors on 3.7; verified by py37-syntax-check CI job. Enforced in CI via check-py37-syntax job.
+"__init__.py" = ["F401"]
+"tests/test_metadata_registration.py" = ["UP006", "UP007", "UP045"]
+"tests/test_cua_cli.py" = ["UP006"]
+"tests/*.py" = ["F401", "F811", "F821", "E711", "E712", "SIM117", "SIM118", "D100", "D101", "D103", "D106", "D205", "D400", "D415", "E501"]
+"examples/**/*.py" = ["D100", "D101", "D103", "D104", "E402", "INP001"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+# Import order is handled by isort under ``[tool.ruff.lint]`` (rule **I**), not the formatter.
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+markers = [
+    "dcc: marks tests that require a DCC application (e.g., Blender)",
+    "anyio: async test that needs an anyio backend (mcp Python SDK e2e suite)",
+    "qt: live-Qt tests via pytest-qt (skipped when PySide6/pytest-qt not installed)",
+]

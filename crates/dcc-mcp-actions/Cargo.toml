@@ -1,0 +1,34 @@
+[package]
+name = "dcc-mcp-actions"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Action registry and event system for the DCC-MCP ecosystem"
+
+[dependencies]
+pyo3 = { workspace = true, optional = true }
+
+# Type-stub generation (opt-in via `stub-gen` feature).
+pyo3-stub-gen = { workspace = true, optional = true }
+pyo3-stub-gen-derive = { workspace = true, optional = true }
+
+dcc-mcp-naming = { workspace = true }
+dcc-mcp-pybridge = { workspace = true, optional = true }
+dcc-mcp-models = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+dashmap = { workspace = true }
+tracing = { workspace = true }
+parking_lot = { workspace = true }
+workspace-hack = { version = "0.1", path = "../workspace-hack" }
+
+[dev-dependencies]
+dcc-mcp-models = { workspace = true, features = ["testing"] }
+
+[features]
+default = []
+python-bindings = ["pyo3", "dcc-mcp-naming/python-bindings", "dcc-mcp-models/python-bindings", "dep:dcc-mcp-pybridge", "dcc-mcp-pybridge/python-bindings"]
+# Enable `pyo3-stub-gen` annotations on this crate's PyO3 types.
+stub-gen = ["python-bindings", "dep:pyo3-stub-gen", "dep:pyo3-stub-gen-derive"]

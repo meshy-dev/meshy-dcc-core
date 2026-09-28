@@ -1,0 +1,717 @@
+# CLI 参考
+
+仓库提供四个面向运维的二进制文件。本页是所有旗标、所有环境变量、以及五个
+典型部署场景的**唯一信息源**。每个二进制的旗标都一对一映射到一个
+`DCC_MCP_*` 环境变量，所以任何部署清单都能驱动同一套配置面板。
+
+`dcc-mcp-cli` 与 `dcc-mcp-server` 会在每个 Release 作为原生 GitHub
+Release 资产发布。它是所有具备 shell 能力的 Agent 的首选控制路径。如果尚未
+安装，先安装公开的
+[`dcc-mcp` Skill](https://clawhub.ai/loonghao/skills/dcc-mcp)，让 Agent 获得路由、
+安全与恢复流程。只有创建完整 adapter 时才使用
+[`dcc-mcp-creator`](https://clawhub.ai/loonghao/skills/dcc-mcp-creator)，创建 DCC
+专项 Skill 包时才使用
+[`dcc-mcp-skills-creator`](https://clawhub.ai/loonghao/skills/dcc-mcp-skills-creator)。
+安装 CLI 前先征得用户同意，再从已安装的 `dcc-mcp` Skill 目录运行：
+
+```bash
+python scripts/check_cli.py --ensure-cli --pretty
+```
+
+这个 bundled helper 固定使用 `dcc-mcp/dcc-mcp-core` 官方 release，先验证
+当前平台的 update manifest 和 CLI SHA-256，再替换二进制。URL、manifest、
+摘要或下载异常时会 fail closed，不会覆盖已有 CLI。SHA-256 是完整性检查，
+不等同于数字签名。如果没有安装 Skill，请把官方 installer 下载为本地文件，
+先检查，再执行：
+
+```bash
+curl -fL https://raw.githubusercontent.com/dcc-mcp/dcc-mcp-core/main/scripts/install-cli.sh -o install-cli.sh
+cat install-cli.sh
+# 检查完成后：
+sh ./install-cli.sh
+```
+
+```powershell
+Invoke-WebRequest https://raw.githubusercontent.com/dcc-mcp/dcc-mcp-core/main/scripts/install-cli.ps1 -OutFile .\install-cli.ps1
+Get-Content -Raw .\install-cli.ps1
+# 检查完成后，遵循当前执行策略：
+& .\install-cli.ps1
+```
+
+本地 installer 使用相同的固定来源和验证契约。不要把它通过管道直接交给 shell，
+也不要绕过机器的脚本执行策略。
+
+固定版本可运行 `sh ./install-cli.sh --version v0.19.63`，或
+`& .\install-cli.ps1 -Version v0.19.63`。
+
+| 二进制 | 角色 | 源码位置 |
+|---|---|---|
+| [`dcc-mcp-cli`](#dcc-mcp-cli) | 面向用户/CI 的控制面 CLI，用来访问本地或远程 DCC-MCP REST 端点。 | `crates/dcc-mcp-cli/` |
+| [`dcc-mcp-server`](#dcc-mcp-server) | per-DCC MCP + REST 服务器，内置自动网关。 | `crates/dcc-mcp-server/` |
+| [`dcc-mcp-tunnel-relay`](#dcc-mcp-tunnel-relay) | 面向公网的 WebSocket 隧道中继（零配置远程访问，#504）。 | `crates/dcc-mcp-tunnel-relay/` |
+| [`dcc-mcp-tunnel-agent`](#dcc-mcp-tunnel-agent) | 在工作站上注册到中继、转发 MCP 流量的本地 sidecar。 | `crates/dcc-mcp-tunnel-agent/` |
+
+开发辅助二进制（`stub_gen`）在
+[`AGENTS.md`](https://github.com/dcc-mcp/dcc-mcp-core/blob/main/AGENTS.md) 里。
+
+---
+
+## `dcc-mcp-cli`
+
+DCC-MCP 的客户端控制面。它是主要用户/agent 入口；它不托管 skills，也不替代
+底层 runtime binary `dcc-mcp-server`。
+
+`dcc-mcp-cli` 有两种 gateway 模式：
+
+- `local`（默认）：直接读取 core 默认 FileRegistry，并用选中 DCC instance
+  暴露的 MCP HTTP endpoint 执行 `search`、`describe`、`load-skill`、`call`、
+  `wait-ready` 和受保护的 `stop-instance`。
+- 命名远程 profile：同一套控制流程通过选中的远程 gateway base URL 执行。
+
+注册和选择远程 profile：
+
+```bash
+dcc-mcp-cli gateway register https://workstation.example:19293 --name pcA
+dcc-mcp-cli gateway list
+dcc-mcp-cli gateway set pcA
+dcc-mcp-cli gateway set local
+```
+
+`--gateway <name>` 可为单次命令覆盖当前 profile。`--base-url` 与
+`DCC_MCP_BASE_URL` 继续作为旧脚本和 smoke check 的直接 endpoint override。
+
+工具调用支持 `--transport auto|rest|mcp`（或设置
+`DCC_MCP_CLI_TRANSPORT`）。默认 `auto` 保持兼容路径：先调用 gateway 的
+`POST /v1/call`，只有 REST catalog 报告工具未知时才回退到 MCP
+`tools/call`。`--transport rest` 是严格 REST 模式，不会回退；
+`--transport mcp` 会直接向 `/mcp` 发送 JSON-RPC `tools/call`，适合协议一致性
+检查和只在 MCP 暴露的工具。批量调用以及带 `--dcc-type`/`--instance-id` 的
+direct backend 调用仍是 REST 操作；local profile 的 direct-instance 调用本来就
+走 MCP；选择 `rest` 时则会改为通过本机 gateway 的 REST control plane 路由。
+
+如果本地调用必须进入 Gateway audit/stats，请加 `--require-gateway`（或设置
+`DCC_MCP_CLI_REQUIRE_GATEWAY=true`）。该路径 fail-closed，不会静默回退到
+direct MCP。再加 `--agent-session-id <task-id>`（或
+`DCC_MCP_AGENT_SESSION_ID`），CLI 会为单次和批量调用写入一致的
+`_meta.agent_context.session_id`。它与 UI Control 参数中的业务
+`session_id` 不是同一个字段。
+
+默认 `local` profile 下，agent-control 命令会先确保 machine-wide loopback
+gateway 健康，然后本地 `list` 读取 FileRegistry；本地 `search`、
+`describe`、`load-skill`、`call`、`wait-ready` 和 `stop-instance` 会从
+registry 解析目标实例，并直连该实例声明的 `mcp_url` / `readyz` /
+`safe_stop_url`。gateway daemon 仍会保持可用，用于 Admin、health、update
+和跨实例控制面路由。当前 profile 是远程，或传了 `--gateway pcA` /
+`--base-url ...` 时，同一组命令走 gateway `/v1/*`。
+
+`list` 是 inventory 和诊断命令：它会保留仍然 live 的 `booting` 行，以及
+`dispatch_status=unavailable` 的 sidecar 行，方便看到启动失败原因。本地
+`search`、`describe`、`load-skill`、`call` 和 `reload-skills` 只会路由到
+已经可被本地 CLI 直控的 direct MCP 实例（`status=available` 或 `busy`，
+且如果上报了 `dispatch_status`，必须是 `ready`）。per-DCC sidecar 行在
+`dispatch_status=ready` 后也可以被本地路由；在 ready 之前仍保留为启动诊断，
+不会用于 tool call。如果 `list` 里能看到实例但还不能被本地 CLI 直控，用
+`wait-ready` 或 `doctor` 判断它卡在哪个 readiness 阶段。每个本地 `list`
+行都会带 `direct_control.recommended_next_action`，agent 可以据此区分
+“可通过 local MCP 路由”或“继续等待 sidecar dispatch readiness”。本地行还会带
+`direct_control.diagnostics`，集中暴露 sidecar 的 `failure_stage`、
+`failure_reason`、`host_rpc_*`、gateway guardian/recovery 字段，以及 DCC
+supervisor 写入 registry 的 stdout/stderr 日志路径。`doctor` 会把不可直控的本地行
+汇总到 `local.inventory.direct_control.not_ready_instances`。
+
+Agent 控制命令（`list`、`search`、`describe`、`load-skill`、`call`、
+`wait-ready`、`reload-skills`、`stop-instance`，以及 marketplace
+`install --reload`）和仍需要本机 gateway 的
+endpoint 级命令（`health`、`stats`、`update`，以及未显式传 `--url` 的 `smoke`）只会
+对 loopback HTTP 目标（`http://127.0.0.1:<port>` 或
+`http://localhost:<port>`）执行 auto-ensure。单次禁用可传
+`--no-auto-gateway`。只操作本地文件的命令（`install`、未带 `--reload` 的
+marketplace 命令、`lint`）、显式生命周期命令（`gateway ...`），以及带显式 `--url` 的 smoke
+check 不会自动启动 gateway。
+启动状态不清楚时，先运行 `dcc-mcp-cli doctor`。它会输出当前 profile
+配置、选中的模式、registry 目录和 inventory、direct-control readiness 汇总、
+本机 gateway daemon 状态、以及 server binary 的路径/来源/版本，而且不会启动
+或下载任何服务。
+
+```bash
+dcc-mcp-cli list
+dcc-mcp-cli list --gateway pcA
+dcc-mcp-cli doctor
+dcc-mcp-cli health
+dcc-mcp-cli stats --range 7d --dcc-type houdini --skill houdini-render
+dcc-mcp-cli stats --tool render_rop --status failure --session-id solar-session
+dcc-mcp-cli --no-auto-gateway health
+dcc-mcp-cli gateway register https://workstation.example:19293 --name pcA
+dcc-mcp-cli gateway list
+dcc-mcp-cli gateway set pcA
+dcc-mcp-cli gateway set local
+dcc-mcp-cli search --query sphere --dcc-type maya --instance-id abc12345
+dcc-mcp-cli describe maya.abc12345.create_sphere
+dcc-mcp-cli load-skill workflow --dcc-type 3dsmax --instance-id 80321760
+dcc-mcp-cli call maya.abc12345.create_sphere --require-gateway --agent-session-id task-42 --json '{"radius":2}'
+dcc-mcp-cli --transport mcp call jobs_get_status --json '{"job_id":"job-42"}'
+dcc-mcp-cli call maya_scene__get_session_info --dcc-type maya --instance-id abc12345 --json '{}'
+dcc-mcp-cli wait-ready --dcc-type maya --instance-id abc12345 --require skill_catalog,host_execution_bridge
+dcc-mcp-cli stop-instance --dcc-type maya --instance-id abc12345 --expected-owner release-smoke-test
+dcc-mcp-cli stop-instance --operation-id 6f1f2c0e-5f2b-4a5e-9a63-2f0f6a1d7c11
+dcc-mcp-cli start-instance --dcc-type unity --project /abs/path/MyProject --dry-run
+dcc-mcp-cli start-instance --dcc-type unity --project /abs/path/MyProject --wait-ready --yes
+dcc-mcp-cli install --dcc-type maya
+dcc-mcp-cli install --dcc-type maya --python "C:/Program Files/Autodesk/Maya2026/bin/mayapy.exe"
+dcc-mcp-cli install --dcc-type maya --python "C:/Program Files/Autodesk/Maya2026/bin/mayapy.exe" --execute
+dcc-mcp-cli marketplace add dcc-mcp/marketplace
+dcc-mcp-cli marketplace search --query hunyuan --dcc maya
+dcc-mcp-cli marketplace inspect dcc-asset-hunyuan-download
+dcc-mcp-cli marketplace install dcc-asset-hunyuan-download --dcc maya --reload
+dcc-mcp-cli marketplace list-installed --dcc maya
+dcc-mcp-cli marketplace outdated --dcc maya
+dcc-mcp-cli marketplace update dcc-mcp-maya-skills --dcc maya
+dcc-mcp-cli reload-skills --dcc-type maya
+dcc-mcp-cli marketplace update --all
+dcc-mcp-cli marketplace pack path/to/skill --out dist/
+dcc-mcp-cli marketplace publish path/to/skill --catalog marketplace.json --install-url https://example.com/skill.zip --sha256 sha256:<digest>
+dcc-mcp-cli update check
+dcc-mcp-cli update check --binary dcc-mcp-server --current-version 0.18.16
+dcc-mcp-cli update apply --yes  # 仅在用户确认后执行
+dcc-mcp-cli gateway daemon start
+dcc-mcp-cli gateway daemon restart
+dcc-mcp-cli gateway daemon stop
+dcc-mcp-cli gateway daemon status
+dcc-mcp-cli lint path/to/skills
+```
+
+`call --wait` 会轮询路由后的 `jobs_get_status` 工具直到终态，并将进度
+写入 stderr。Gateway 短暂中断时会保留同一 `job_id` 并输出
+`control_plane_reconnecting`；恢复后的终态 payload 带 `wait_recovery`，
+且不会重新提交任务。如果拥有 Job 的 DCC/sidecar 已退出，CLI 返回
+`tracking_status=owner_exited`，并引导 isolated 操作改查 worker 自己
+持有的状态工具。
+
+### 命令
+
+| 命令 | REST/API 契约 | 说明 |
+|---|---|---|
+| `health` | `GET /v1/healthz` | 检查配置的端点。 |
+| `stats [--range 1h\|24h\|7d\|all] [--dcc-type <dcc>] [--skill <name>] [--tool <name>] [--status success\|failure] [--instance-id <id>] [--session-id <id>]` | `GET /v1/debug/stats` | 查询 Gateway 持久化调用统计，并通过 `stats_coverage` 明确列出未计入聚合的 direct route。 |
+| `feedback --tool-name <name> --intent <text> --blocker <text> [--attempt <text>] [--severity <level>] [--dcc-type <dcc>] [--instance-id <id>] [--request-id <id>] [--job-id <id>]` | `POST /v1/feedback` | 即使相关 DCC 已退出，也可向 Gateway 提交有界反馈；回执指向 `resources://gateway/events`。 |
+| `feedback list [--range 1h\|24h\|7d\|all] [--dcc <dcc>] [--severity <level>] [--limit <n>] [--json]` | `GET /admin/api/feedback` | 按时间倒序列出实例持久化反馈；Gateway 按 feedback id 去重，显式报告损坏/超长行计数，并在扫描超出安全边界时失败。 |
+| `feedback export [--range 1h\|24h\|7d\|all] [--dcc <dcc>] [--severity <level>] [--limit <n>] [--json]` | `GET /admin/api/feedback` | 导出同一结构化契约，默认上限 1,000 条；`--json` 等价于 `--output json`。 |
+| `feedback route <finding.json> [--catalog <path>] [--json]` | 本地 Finding v1 + 公开 catalog | 不启动 Gateway，把已校验 Finding 解析为 `repo`、`issues_url` 和稳定理由；不会创建 Issue，归属缺失或冲突时 fail-closed。 |
+| `feedback bundle <finding.json> [--install-report <report.json>] [--dcc-pid <pid>] [--log-dir <path>] [--host-error-lines <1-200>] [--json]` | 本地 Finding/doctor/host error/Install SOP v1 report + 可选 `GET /v1/debug/issue-reports/{request_id}` | 不自动启动 Gateway，组装 `dcc-mcp.feedback-bundle.v1`。Finding 必须已标记 public-safe；`--install-report` 只接受最大 256 KiB 的终态常规非符号链接 Install SOP v1 执行报告，并将 DCC/Core/adapter 身份与 Finding 绑定后仅投影 public-safe 字段。无效或不匹配的报告会 fail-closed；缺失组件显式标记，所有组件均已解析时才有 `complete=true`。 |
+| `feedback file <finding.json> [--catalog <path>] [--existing <number>\|--create] [--yes] [--json]` | 本地 public-safe Finding + GitHub CLI | 默认只读去重并返回可执行 `next_step`；审查并获得用户授权后只能原样执行该 argv。写入必须绑定规范 Finding 路径、规范 catalog 路径或精确内置 sentinel、内容 SHA、fingerprint 和仓库。任何漂移、超过 65,536 个 Unicode 标量值的正文、冲突、歧义、closed Issue、tracker 错误或有界 `gh` 进程树超时都会在 mutation 前终止。 |
+| `doctor [--registry-dir <path>] [--gateway-port <port>]` | local filesystem + gateway probe | 不启动或下载服务，输出 profile、有效 control route、该路径是否进入 Gateway stats、本地 readiness、daemon 状态和 server binary 诊断。 |
+| `list [--gateway <profile>]` | local FileRegistry 或 `GET /v1/instances` | 列出在线 DCC 实例。默认先确保 loopback gateway，再读取本机 FileRegistry；远程 profile 走选中的 gateway。 |
+| `search [--instance-id <id>]` | 本地 MCP `search_tools` 或远程 `POST /v1/search` | 搜索可调用能力，可限定完整 UUID 或唯一前缀。 |
+| `describe <tool-slug>` | 本地 MCP `tools/list` 或远程 `POST /v1/describe` | 调用前检查能力 schema。 |
+| `load-skill <skill-name> [--dcc-type <dcc>] [--instance-id <id>]` | 本地 MCP `tools/call load_skill` 或远程 `POST /v1/load_skill` | 激活 progressive skill 并输出已注册工具。 |
+| `call <tool-slug> --json <object>` | 本地 MCP `tools/call` 或远程 `POST /v1/call` | 调用一个能力。 |
+| `call <backend-tool> --dcc-type <dcc> --instance-id <id> --json <object>` | 本地 MCP `tools/call` 或远程 `POST /v1/dcc/{dcc}/instances/{id}/call` | 不手工拼 dotted gateway slug，直接调用指定实例上的 backend tool。 |
+| `wait-ready [--dcc-type <dcc>] [--instance-id <id>] [--require <bits>]` | 本地 registry + per-instance `/v1/readyz`，或远程 gateway inventory + `/v1/readyz` | 等待 release smoke test 所需 readiness bit，例如 `skill_catalog` 或 `host_execution_bridge`。 |
+| `reload-skills [--dcc-type <dcc>] [--instance-id <id>]` | 本地 MCP `tools/call dcc_admin__reload_skills`，或远程 `POST /v1/dcc/{dcc}/instances/{id}/call` | marketplace 安装或 skill path 变更后，让正在运行的 adapter 重新扫描 skill 搜索路径。 |
+| `stop-instance --dcc-type <dcc> --instance-id <id>` | 本地 `safe_stop_url` 或远程 `POST /v1/dcc/{dcc}/instances/{id}/stop` | 对声明了 `safe_stop_url` 的实例发起带保护条件的 safe-stop 请求。 |
+| `stop-instance --operation-id <id>` | 本地 lifecycle 记录 + `safe_stop_url` | 只停止该 `start-instance` operation 自己启动并拥有的实例。operation 作用域是叠加在「owner/session 强制门禁」之上的可选约束：目标收到 `operation_id` 时才生效，未声明 operation 的实例会被拒停而不是放行。 |
+| `start-instance --dcc-type <dcc> --project <path> [--launch-plan <path>] [--version <v>] [--instance-id <id>] [--wait-ready] [--require <bits>] [--timeout-secs <n>] [--dry-run] [--yes]` | adapter 提供的启动计划 + 本地 FileRegistry + per-instance `/v1/readyz` | 没有在线实例时按项目启动 DCC 宿主，或收敛到已有的精确实例。多个实例都声明同一 project 时用 `--instance-id` 指定唯一目标。派生 GUI 进程必须 `--yes`；`--dry-run` 只解析并报告计划。 |
+| `install --dcc-type <dcc> [--version <catalog-version>] [--python <path>] [--execute]` | catalog-backed local plan / executor | 解析匹配的 adapter 并输出可审计安装计划；加 `--execute` 后会在确认后执行 package 安装步骤、失败回滚并做 package/path 验证。Live DCC 检查保留在返回的 `next_steps` 中。 |
+| `marketplace install <name> [--dcc <dcc>] [--reload]` | marketplace catalog + local installed state；可选控制运行中的 DCC | 安装本地 marketplace skill 包；`--reload` 会让匹配的运行中 adapter 重新扫描 skill path，并把刷新结果写入安装 JSON。 |
+| `marketplace search/update/...` | marketplace catalog + local installed state | 搜索、卸载和更新本地 marketplace skill 包。 |
+| `marketplace pack <path> [--out <path>]` | local filesystem + zip | 生成 marketplace 发布 ZIP 并输出 SHA-256 摘要。 |
+| `marketplace publish <path> --catalog <file> --install-url <url>` | local marketplace catalog file | 根据 `SKILL.md` 元数据和 CLI 覆盖字段创建或更新 `marketplace.json` 条目。 |
+| `update check [--binary <name>] [--current-version <version>]` | `GET /v1/update/check` | 检查 gateway update manifest。默认检查 CLI 自身；检查 Admin 面板里的实例版本时，传 `--binary dcc-mcp-server` 和对应 server 版本。 |
+| `update apply --yes` | `GET /v1/update/check` + download URL | 用户明确确认后下载并暂存 CLI binary，下一次 CLI 启动时应用。它不会更新或重启正在运行的 server 实例；请在目标 server 环境里运行 `dcc-mcp-server update apply`。 |
+| `gateway register <url> --name <profile>` | local profile config | 保存命名远程 gateway profile。 |
+| `gateway list` | local profile config | 显示已配置的远程 profile 和当前 local/remote 选择。 |
+| `gateway set <profile\|local>` | local profile config | 选择当前 gateway profile。 |
+| `gateway daemon start/restart/stop/status` | local process | 显式管理本机 machine-wide gateway daemon 生命周期；`start` 和 `restart` 的启动阶段默认传 `--gateway-idle-timeout-secs 0`，无 backend 时也保持存活；`status` 会输出 registry dir、PID file、health URL 和 CLI version 等诊断字段。 |
+| `gateway ensure/start/stop/status` | local process | 旧脚本兼容 alias；面向用户文档优先使用 `gateway daemon ...`。 |
+| `lint [PATH ...]` | local filesystem validator | 默认递归校验每个路径下两层内的 SKILL.md 包。 |
+
+`marketplace install` 会直接解析准确的包名，因此已知 ID 时可以省略
+`inspect`。当 catalog 条目只声明一个 DCC 时也可以省略 `--dcc`；多 DCC
+条目仍需显式指定。
+
+### `start-instance`（项目绑定启动与等待就绪）
+
+adapter 可能已经安装并记录了精确项目根目录，但 `dcc-mcp-cli list` 仍报
+`total: 0`，因为没有宿主进程在跑。`start-instance` 用于补上这个零实例缺口：
+按项目启动 DCC 宿主，并等到它就绪。
+
+```bash
+dcc-mcp-cli start-instance --dcc-type unity --project /abs/path/MyProject --dry-run
+dcc-mcp-cli start-instance --dcc-type unity --project /abs/path/MyProject --wait-ready --yes
+dcc-mcp-cli start-instance --dcc-type unity --project /abs/path/MyProject \
+  --wait-ready --require skill_catalog --timeout-secs 600 --yes
+dcc-mcp-cli stop-instance --operation-id <operation-id>
+```
+
+职责划分：**core 定义生命周期与就绪契约，adapter 提供经过校验的启动计划。**
+core 不会拼接任何 DCC 专属命令行，不会下载、安装、升级或修改配置；没有可用
+计划时按 `blocking_state: launch_plan_missing` fail-closed。
+
+启动计划按“最具体优先”解析：
+
+1. `--launch-plan <path>`
+2. `<project>/.dcc-mcp/launch-plan.json`
+3. `<registry-dir>/launch-plans/<dcc>.json`
+
+计划为 `schema_version: 1` JSON，包含 `dcc_type`、磁盘上真实存在的绝对
+`executable`、非空且首元素等于该可执行文件的 `argv`，以及可选的 `version`、
+`project_markers`、`cwd`。`argv` 支持 `{executable}`、`{project}`、
+`{dcc_type}`、`{version}` 占位符。
+
+安全边界：
+
+- 启动 GUI 进程必须显式 `--yes`；否则返回 `authorization_required` 且不派生
+  任何进程；
+- 绑定其他项目的实例只在 `diagnostics.other_project_instances` 中报告，绝不
+  复用或关闭；
+- 多个在线实例同时声明同一项目时按 `ambiguous_reuse` fail-closed，并要求精确
+  指定实例；该状态返回 `retryable: false`——重放同一请求只会再次撞上同一个
+  歧义，操作者必须先停掉多余实例或传 `--instance-id`；
+- 进程创建绝不等于就绪：不加 `--wait-ready` 时报告停在 `stage: registration`，
+  不会给出 `terminal`；
+- `--dry-run` 只解析计划、不派生宿主，因此按设计返回 `ready: false`；即使同时
+  传入 `--wait-ready` 也视为成功退出，两个 flag 可以组合，dry run 不算超时；
+- 同一个 operation ID 贯穿启动、注册、domain reload、sidecar 注册与就绪；宿主
+  通过 `DCC_MCP_START_OPERATION_ID`、`DCC_MCP_START_PROJECT`、
+  `DCC_MCP_START_DCC_TYPE` 收到它；
+- 第二次相同请求会收敛到已有实例（`reused: true`、
+  `converged_on_operation_id`），不会再开一个宿主。
+
+终态报告（`schema_version: 1`）包含 `operation_id`、解析出的 `executable` 与
+`version`、规范化 `project`、`launched` / `reused` / `owned`、`pid`、adapter
+上报时的 `window_handle`、`instance_id`、`mcp_url`、`readyz_url`、
+`dispatch_state`、`host_progress`（compiling、importing、domain reload、
+play mode 等元数据原样透传）、`stage`、`timeout_stage`、`blocking_state`、
+`retryable`，以及一个有界的 `next_action`。
+
+`blocking_state` 取值包括 `none`、`restart_required`、`project_lock`、
+`license`、`modal_dialog`、`adapter_bootstrap`、`missing_executable`、
+`version_mismatch`、`ambiguous_reuse`、`launch_plan_missing`、
+`authorization_required`、`timeout`、`cancelled`、`invalid_launch_plan`、
+`project_not_found`、`project_marker_missing`、`launch_failed`。非 `none` 状态
+都会给出带精确 `command` 数组、可直接非交互执行的 `next_action`，但只在人工
+确认后执行。
+
+停止仍然是独立且受保护的操作：`stop-instance --operation-id <id>` 只能停止该
+operation 自己启动并拥有的实例（`stop_scope: owned_operation`）；不传
+`--operation-id` 时沿用原有 owner/session 校验。当某个 DCC 在线实例数为 0 且
+该项目存在已校验的启动计划时，`dcc-types --dcc-type <dcc> --project <path>`
+会推荐 `start-instance`。
+
+### 错误自查与 Bug 上报
+
+1. 保留失败调用的 `request_id`、trace/job id、tool slug、instance、脱敏后的参数、
+   error code 和验证结果；不要直接重放有副作用的调用。
+2. profile、registry、daemon、binary 或 readiness 异常先运行
+   `dcc-mcp-cli doctor`；任务范围内的失败证据运行
+   `dcc-mcp-cli stats --range 24h --status failure --session-id <session-id>`。
+3. 运行 `dcc-mcp-cli feedback`，提交 `tool_name`、`intent`、`attempt`、
+   `blocker` 和 `severity`，已知时附带 DCC/instance/request/job id。该
+   Gateway 路由在实例退出后仍可用，只记录有界事件，不会创建 GitHub issue。
+4. 使用 `dcc-mcp-cli feedback list --range 7d --dcc <dcc> --json` 检查持久化
+   反馈；需要最大有界机器可读窗口时使用 `feedback export`。
+5. 已有 Finding v1 JSON 时运行
+   `dcc-mcp-cli feedback route finding.json --json`。该离线命令只使用精确的
+   catalog 或 Skill 元数据归属，不会创建外部 Issue；路由失败时不得猜测仓库。
+6. 人工审查 Finding 并设置所有 public-safe 排除标志后，运行
+   `dcc-mcp-cli feedback bundle finding.json --install-report install-report.json --json`。
+   如果 `install --execute --json` 生成了单一 JSON stdout 对象，应把该终态报告
+   原样保存并传入。命令会组合 safe issue report、脱敏 doctor、版本矩阵、准确文件的
+   有界 host-error tail，以及 public-safe Install SOP v1 报告；报告必须是最大
+   256 KiB 的常规非符号链接文件，且 DCC/Core/adapter 身份与 Finding 一致。
+   验证失败会 fail-closed；任何 `unavailable` 组件或 `complete=false` 都表示证据不完整。
+7. 运行 `dcc-mcp-cli feedback file finding.json --json` 做只读去重。只有在
+   人工审查并获得用户授权后，才可原样执行返回的 `next_step.argv`；禁止根据
+   `--existing`/`--create` 手工重建。CLI 会在写入前复核规范 Finding 路径、规范
+   catalog 路径或精确内置 sentinel、Finding 内容 SHA-256、fingerprint、责任仓库、
+   catalog SHA-256 和精确命中，并把 `gh` 固定到 `github.com`。任何漂移、超过
+   65,536 个 Unicode 标量值的正文或进程树超时都会 fail-closed；超时会终止并回收
+   整棵进程树，pipe 清理也有硬上限。
+8. gateway 路径失败时，读取 public-safe
+   `/v1/debug/issue-reports/<request_id>`；其中已有摘要和建议的 GitHub
+   title/body。`?mode=raw` 只能本地人工审查，禁止自动上传。
+9. schema/script/workflow 问题归属对应 Skill；host dispatch/readiness 问题归属
+   adapter；CLI/gateway/protocol 共性问题归属 `dcc-mcp-core`。只有得到用户授权后
+   才创建外部 issue。
+
+`gateway daemon start` 和 `gateway daemon restart` 是持久 operator 路径。默认
+`--gateway-idle-timeout-secs 0` 会关闭 idle shutdown；只有脚本明确想要短生命周期
+daemon 时才传非零 timeout。本机 loopback auto-ensure 覆盖 agent-control path
+和 endpoint 命令；单次不想启动可传 `--no-auto-gateway`。
+
+`install` 默认仍是规划契约：它解析 catalog entry，并列出 adapter package、
+host plugin 和验证步骤，不会静默修改 DCC 插件目录。JSON plan 还会包含
+机器可读的 `next_steps`：当 catalog 或 GitHub repo URL 提供安装说明时，第一步是
+指向 adapter 仓库 raw `install.md` 的 `read-install-instructions`，随后是覆盖
+`doctor`、`list`、`wait-ready`、`search`、marketplace skill
+`search` / `inspect` / `install`、`reload-skills` 的命令数组，并包含手动启动/启用 DCC host plugin 的步骤。pip adapter 需要安装进特定 DCC 解释器时，
+传 `--python`（或设置 `DCC_MCP_INSTALL_PYTHON`），例如 `mayapy`、`hython` 或
+Blender 自带 Python。传 `--execute` 后才会请求确认并执行
+可执行 package 安装步骤。执行时如果后续步骤失败，会按相反顺序回滚已完成步骤；
+pip 安装使用 `<python> -m pip`，并用 `pip show` 验证；git/zip/path 安装会检查目标路径
+确实存在，且目标目录不是空目录。DCC 只有在 host plugin / sidecar 启动、保持存活、
+并出现在 `dcc-mcp-cli list` 中后才算在线；CLI install 不会伪造 gateway 注册。
+
+Pip execution requires the catalog-pinned universal wheel URL, exact version,
+and SHA-256. `--version` may only repeat that reviewed artifact version.
+
+如果工作室有专门的 Pipeline 部署流程，可以设置
+`DCC_MCP_INSTALL_DISABLED=1` 禁用自动执行安装。plan 仍会返回 adapter metadata 和
+`next_steps`，但 `install_policy.auto_install_enabled` 为 `false`，`--execute` 会被跳过，
+agent-facing 提示词来自 `DCC_MCP_INSTALL_DISABLED_PROMPT`（支持 `{adapter}`、
+`{dcc_type}`、`{version}` 占位）。可用于类似 “Automatic install is unavailable;
+contact Pipeline TD to deploy {adapter} for {dcc_type}.” 的内部提示。
+
+`marketplace` 是面向 CLI 的官方/私有 skill 包发现入口。安装位置默认为
+`~/.dcc-mcp/marketplace/<dcc>/<name>/`，可用
+`DCC_MCP_MARKETPLACE_INSTALL_ROOT` 覆盖。DCC adapter 会把
+`~/.dcc-mcp/marketplace/<dcc>` 加入 skill 搜索路径，因此新安装的 skill 会在
+adapter 启动时被发现。要让运行中的 adapter 立即看到准确包名对应的 skill，使用
+`dcc-mcp-cli marketplace install <name> --dcc <dcc> --reload`；否则单独运行
+`dcc-mcp-cli reload-skills --dcc-type <dcc>`。刷新后，如果 adapter
+没有自动加载该 skill，再运行
+`dcc-mcp-cli load-skill <skill-name> --dcc-type <dcc> --instance-id <id>`。
+
+`dcc-mcp-cli update` 面向由 gateway update manifest 暴露的二进制更新；官方
+release build 最多每 24 小时用独立后台进程刷新一次缓存，失败后等待一小时再试，
+不会阻塞当前命令。缓存确认有新版时，普通命令会在 stderr 提示，并把包含
+current/latest version、缓存来源和年龄、兼容性状态及确认策略的 `cli_update`
+对象加入结构化结果。Agent 读取到 `version_status: "update_available"` 后必须先
+询问用户，再执行 `update_policy.apply_command`。设置
+`DCC_MCP_DISABLE_UPDATE_CHECK=1` 可关闭这种被动检查。
+
+显式更新命令面向由 gateway update manifest 暴露的二进制更新；
+manifest 通过 `DCC_MCP_UPDATE_MANIFEST_URL`（或
+`GatewayConfig.update_manifest_url`）配置。`update check` 只读取
+`/v1/update/check`，适合人和 agent 使用；CLI 会在请求前默认确保本机 gateway
+存在。有更新时，manifest 必须同时提供 URL 和 64 位十六进制 SHA-256。
+`update apply --yes` 流式下载并校验该资产，只暂存一个与当前安装绑定的 CLI component；
+下次启动替换前会再次校验，替换后用原参数重启 CLI。旧的 `pending.bin` /
+`pending.marker` 没有摘要，只会被隔离，绝不会应用。
+
+官方 `dcc-mcp/dcc-mcp-core` update manifest 还必须携带由 `main` 分支 release
+workflow 生成的 detached Sigstore bundle。Gateway 会在解析条目前验证 manifest
+原始字节、GitHub Actions certificate identity 和公开 transparency-log proof。
+自定义 `DCC_MCP_UPDATE_MANIFEST_URL` 是 operator 显式信任的边界，不会冒充
+官方 DCC-MCP release。
+
+Admin 实例页对所有 binary 都只做检查；gateway 无法证明本机或远端实例的实际
+安装目录，因此不会代替目标环境暂存更新。请在目标 server 环境运行
+`dcc-mcp-server update apply`。它使用相同的强制摘要与应用前复验契约，并且只
+暂存 server 自身；独立的 `dcc-cua` CLI 单独更新。
+
+`lint` 复用生产 `dcc-mcp-skills` validator，因此本地检查与运行时加载会因同一类
+结构问题失败。它还会加载每个同级 `tools.yaml` 工具表，并使用确定性的 mock
+handler 通过 Core 真实路由调用每项声明：同步声明必须返回结果，异步声明必须返回
+pending job envelope；探测过程不会执行 adapter 或 DCC 代码。CI 也通过
+`just lint-skills` 显式传入仓库 skill roots，跑同一条 `dcc-mcp-cli lint <PATH...>`
+路径。
+
+### CLI 安装资产
+
+安装脚本会下载以下 GitHub Release 资产之一：
+
+| 平台 | 资产 |
+|---|---|
+| Linux x86_64 | `dcc-mcp-cli-linux-x86_64` |
+| Windows x86_64 | `dcc-mcp-cli-windows-x86_64.exe` |
+| macOS universal2 | `dcc-mcp-cli-macos-universal2` |
+
+默认安装位置：Linux/macOS 为 `~/.local/bin`，Windows 为
+`%LOCALAPPDATA%\dcc-mcp\bin`。可用 `DCC_MCP_INSTALL_DIR` 或
+`--install-dir` 覆盖。
+
+---
+
+## `dcc-mcp-server`
+
+适配器、sidecar、bridge 与整机 gateway daemon 使用的底层 runtime binary。
+它仍然适合 CI 和运维脚本，但主要用户/agent UX 是 `dcc-mcp-cli`。
+
+不带子命令调用 `dcc-mcp-server` 仍保持向后兼容：行为等同于
+`dcc-mcp-server auto`，会确保本机 gateway daemon 已启动，注册当前
+per-DCC server 为 backend，并在 backend 存活期间保留轻量 guardian。
+
+### 运行模式
+
+| 命令 | 角色 | 网关行为 |
+|---|---|---|
+| `dcc-mcp-server` | 向后兼容的隐式 `auto`。 | 确保独立 gateway daemon，然后注册为 backend。 |
+| `dcc-mcp-server auto` | 默认行为的显式写法。 | 与无子命令路径相同。 |
+| `dcc-mcp-server serve` | per-DCC MCP server。 | 确保独立 gateway daemon，然后注册为 backend。 |
+| `dcc-mcp-server serve --no-auto-gateway` | 仅运行 per-DCC MCP server。 | 提供 MCP 工具，但绝不尝试绑定 gateway port。 |
+| `dcc-mcp-server auto --legacy-gateway-election` | 旧的嵌入式 gateway 模式。 | per-DCC 进程直接竞争 gateway port。 |
+| `dcc-mcp-server sidecar` | per-DCC sidecar worker。 | 确保独立 gateway daemon，注册 `per-dcc-sidecar` 行，并通过 host RPC 派发。运行时由 `dcc-mcp-sidecar` 实现。 |
+| `dcc-mcp-server gateway` | 整机 gateway daemon。 | 只托管 discovery、routing、resources/prompts、admin 与 audit，不内联执行 DCC tool。 |
+| `dcc-mcp-server update check/apply` | Server runtime 更新助手。 | 读取 `127.0.0.1:<gateway-port>` 上的 gateway update manifest，并只暂存 server binary。 |
+
+`auto` 与 `serve` 共享下面的 server 旗标。`gateway` 有更小的独立旗标面，
+会拒绝 `--app` 这类 server-only 旗标。
+
+### 核心旗标
+
+| 旗标 | 环境变量 | 默认值 | 说明 |
+|---|---|---|---|
+| `--mcp-port` | `DCC_MCP_MCP_PORT` | `0` | MCP Streamable HTTP 端口。`0` = OS 分配。 |
+| `--ws-port` | `DCC_MCP_WS_PORT` | `9001` | 给非 Python DCC 插件用的 WebSocket 桥端口。 |
+| `--app` | `DCC_MCP_APP` | `""` | 应用标签（`"maya"`、`"blender"`、`"photoshop"` …）。驱动 skill 发现 + 注册表行。 |
+| `--skill-paths` | — | `[]` | 附加的 skill 搜索路径（可重复）。 |
+| `--server-name` | `DCC_MCP_SERVER_NAME` | `"dcc-mcp-server"` | 通告给 MCP 客户端的服务器名。 |
+| `--no-bridge` | — | `false` | 关闭 WebSocket 桥；仅 MCP HTTP。 |
+| `--host` | — | `127.0.0.1` | 绑定主机。 |
+| `--pid-file` | — | — | 运行期间把服务器 PID 写入此文件。 |
+| `--force` | — | `false` | 覆盖指向活进程的 PID 文件。 |
+| `--shutdown-timeout-secs` | `DCC_MCP_SHUTDOWN_TIMEOUT_SECS` | `10` | 优雅关闭时限。 |
+
+### 自动网关旗标（`auto` / `serve`）
+
+| 旗标 | 环境变量 | 默认值 | 说明 |
+|---|---|---|---|
+| `--gateway-port` | `DCC_MCP_GATEWAY_PORT` | `9765` | 要争的公认端口。`0` 完全关闭网关角色，因此也关闭 admin。 |
+| `--no-admin` | `DCC_MCP_NO_ADMIN` | `false` | 关闭获选网关上的 Admin UI。默认获选网关会开启 admin。 |
+| `--admin-path` | `DCC_MCP_ADMIN_PATH` | `/admin` | Admin UI 与其 JSON API 的 URL 前缀。 |
+| `--registry-dir` | `DCC_MCP_REGISTRY_DIR` | `<temp>/dcc-mcp-registry` | CLI local mode、sidecar 与 gateway runner 共用的 `FileRegistry` 目录。 |
+| `--stale-timeout-secs` | `DCC_MCP_STALE_TIMEOUT` | `30` | 没心跳后多少秒实例被判为过期。 |
+| `--app-version` | `DCC_MCP_APP_VERSION` | — | 应用版本（如 `"2024.2"`）；记入注册表。 |
+| `--scene` | `DCC_MCP_SCENE` | — | 当前打开的场景 / 文档；记入注册表，多实例 disambiguation 使用。 |
+| `--heartbeat-secs` | `DCC_MCP_HEARTBEAT_INTERVAL` | `5` | 心跳周期。`0` 关闭。 |
+
+Admin 审计/trace 持久化只通过环境变量配置：设置 `DCC_MCP_GATEWAY_AUDIT_DIR` 为可写目录后，`/admin/api/calls` 行会写入 `audit.jsonl`，dispatch traces 会写入 `traces.jsonl`；`DCC_MCP_GATEWAY_AUDIT_MAX_ROWS`（默认 `5000`）限制每个文件保留行数。
+
+> **已移除** —— `--gateway-tool-exposure` /
+> `DCC_MCP_GATEWAY_TOOL_EXPOSURE` 已删除。网关表面现在无条件最小化，详见
+> `docs/zh/guide/rest-api-surface.md`。
+>
+> **已移除** —— `--gateway-cursor-safe-tool-names` /
+> `DCC_MCP_GATEWAY_CURSOR_SAFE_TOOL_NAMES`。聚合网关的 `prompts/list` 始终使用
+> cursor-safe 的 `i_<id8>__<escaped>` 线格式（#656）。
+
+### 独立 gateway 旗标（`gateway`）
+
+| 旗标 | 环境变量 | 默认值 | 说明 |
+|---|---|---|---|
+| `--daemon` | `DCC_MCP_DAEMON` | `false` | 重新执行当前可执行文件，启动 detached gateway child，然后父进程退出。Unix child 会进入新 session；Windows child 使用 detached process flags。respawn 失败会在父进程退出前报错。 |
+| `--pidfile PATH` | `DCC_MCP_PIDFILE` | — | 隐式开启 daemon mode。pidfile 记录 detached child PID，并在 child 正常退出时移除。pidfile 写入失败会在父进程退出前报错。 |
+| `--gateway-persist` | `DCC_MCP_GATEWAY_PERSIST` | `false` | 即使没有已注册 backend，也保持 gateway daemon 存活。 |
+| `--gateway-idle-timeout-secs` | `DCC_MCP_GATEWAY_IDLE_TIMEOUT_SECS` | `30` | 最后一个 backend 消失后等待多少秒再关闭。`0` 关闭 idle shutdown。 |
+
+Daemon auto-ensure 路径默认传有界 idle timeout，除非设置
+`DCC_MCP_GATEWAY_IDLE_TIMEOUT_SECS` 覆盖。面向用户的
+`dcc-mcp-cli gateway daemon start` wrapper 默认传 `0`，因此显式管理的整机
+daemon 不会只因为暂时没有 DCC 注册就退出。
+
+### 文件日志旗标
+
+| 旗标 | 环境变量 | 默认值 | 说明 |
+|---|---|---|---|
+| `--no-log-file` | `DCC_MCP_NO_LOG_FILE` | `false` | 关闭文件日志（stderr 日志仍开）。 |
+| `--log-dir` | `DCC_MCP_LOG_DIR` | 平台默认 | 日志目录。 |
+| `--log-max-size` | `DCC_MCP_LOG_MAX_SIZE` | 10 MiB | 单文件达到该大小触发滚动。 |
+| `--log-max-files` | `DCC_MCP_LOG_MAX_FILES` | `7` | 保留多少个滚动文件。 |
+| `--log-rotation` | `DCC_MCP_LOG_ROTATION` | `"both"` | 滚动策略：`size`、`daily`、`both`。 |
+| `--log-file-prefix` | `DCC_MCP_LOG_FILE_PREFIX` | `"dcc-mcp"` | 文件名前缀。完整名：`<prefix>.<pid>.<YYYYMMDD>.log`。 |
+| `--log-retention-days` | `DCC_MCP_LOG_RETENTION_DAYS` | `7` | 按天保留。`0` 关闭。 |
+| `--log-max-total-size-mb` | `DCC_MCP_LOG_MAX_TOTAL_SIZE_MB` | `100` | 总目录容量上限（MiB）。`0` 关闭。 |
+
+### Capture replay/diff
+
+`dcc-mcp-server capture` 处理由
+`DCC_MCP_TRAFFIC_CAPTURE=jsonl:<path>` 或 `DCC_MCP_TRAFFIC_CONFIG=<yaml>`
+产生的离线 traffic capture 文件。它不会自动开启 capture；只有 `replay`
+模式需要一个在线 gateway。
+
+如果 YAML 配置包含 `admin_live` sink，可以从 `/admin/api/traffic/export`
+（或稳定镜像 `/v1/debug/traffic/export`）把保留在内存里的窗口下载为 JSONL，
+然后像其他 capture 文件一样交给 `capture replay` 或 `capture diff`。
+
+```bash
+# 把记录下来的 client -> gateway 请求重放到在线 gateway MCP endpoint。
+dcc-mcp-server capture replay ./captures/run.sqlite \
+    --target http://127.0.0.1:9765/mcp \
+    --session sess_01HQX \
+    --assert outputs-compatible
+
+# 逐帧比较两份 capture。
+dcc-mcp-server capture diff ./captures/before.sqlite ./captures/after.sqlite \
+    --before-session sess_before \
+    --after-session sess_after
+```
+
+Replay 断言模式：
+
+| Mode | 契约 |
+|---|---|
+| `outputs-compatible` | HTTP status 与 JSON-RPC result/error 形状必须和记录响应一致。 |
+| `outputs-equal` | HTTP status 与响应 JSON 必须完全一致。 |
+| `outputs-ignored` | 只发送并计数请求，不比较响应 body。 |
+
+当文件扩展名不足以判断格式时，使用 `--format jsonl` 或
+`--format sqlite`。`--rebind-instance-id <id>` 会重写捕获到的 gateway tool
+slug（例如 `maya.old.tool`）以及 `instance_id` 字段，方便把旧记录重放到当前
+在线实例。
+
+### 典型调用
+
+```bash
+# 1) 向后兼容的 auto 模式（等同于：dcc-mcp-server auto --app maya）。
+dcc-mcp-server --app maya
+
+# 2) 仅 per-DCC server，不竞争共享 gateway port。
+dcc-mcp-server serve --no-auto-gateway --app maya
+
+# 3) 工作站上多 DCC 的网关赢家。
+#    第一个终端赢网关端口，后续的注册成普通实例。
+dcc-mcp-server auto --app maya --server-name maya-shotgun-alpha \
+               --scene /shots/ep101/sh0200/shot.ma \
+               --log-dir /var/log/dcc-mcp
+
+# 4) 整台工作站的 gateway daemon。
+dcc-mcp-server gateway --host 127.0.0.1 --port 9765 \
+                       --registry-dir /var/lib/dcc-mcp
+
+# 4b) 同一个 gateway，以显式 detached daemon 方式运行。
+dcc-mcp-server gateway --host 127.0.0.1 --port 9765 \
+                       --registry-dir /var/lib/dcc-mcp \
+                       --daemon --pidfile /var/run/dcc-mcp-gateway.pid
+```
+
+---
+
+## `dcc-mcp-tunnel-relay`
+
+面向公网的 WebSocket 中继，接收本地隧道 agent 的注册，把远端 AI
+助手的多路 MCP 会话转发到正确的工作站。
+
+编译：`cargo build --bin dcc-mcp-tunnel-relay --features bin`。
+
+| 旗标 | 环境变量 | 默认值 | 说明 |
+|---|---|---|---|
+| `--jwt-secret-file` | `DCC_MCP_TUNNEL_RELAY_JWT_SECRET_FILE` | **必需** | HS256 JWT 密钥文件路径。生产环境 ≥32 字节（`openssl rand -base64 48`）。密钥从文件读取，不会出现在 `ps` 里。 |
+| `--public-host` | `DCC_MCP_TUNNEL_RELAY_PUBLIC_HOST` | `localhost` | 公网主机名（写入 JWT `iss` 声明）。 |
+| `--base-url` | `DCC_MCP_TUNNEL_RELAY_BASE_URL` | `ws://localhost:9870` | WebSocket 基础 URL；拼接到 `RegisterAck.public_url`。 |
+| `--agent-bind` | `DCC_MCP_TUNNEL_RELAY_AGENT_BIND` | `0.0.0.0:9870` | agent 控制面绑定。 |
+| `--frontend-bind` | `DCC_MCP_TUNNEL_RELAY_FRONTEND_BIND` | `0.0.0.0:9871` | 远端客户端 TCP 前端绑定。 |
+| `--ws-frontend-bind` | `DCC_MCP_TUNNEL_RELAY_WS_FRONTEND_BIND` | — | 可选 WebSocket 前端绑定（`/tunnel/<id>` 升级）。不填即关闭。 |
+| `--admin-bind` | `DCC_MCP_TUNNEL_RELAY_ADMIN_BIND` | — | 可选只读管理端点（`GET /tunnels`、`GET /healthz`）。不填即关闭。 |
+| `--stale-timeout-secs` | `DCC_MCP_TUNNEL_RELAY_STALE_TIMEOUT_SECS` | `30` | 无心跳后多少秒隧道被剔除。 |
+| `--max-tunnels` | `DCC_MCP_TUNNEL_RELAY_MAX_TUNNELS` | `0` | 并发隧道硬上限。`0` 不限。 |
+
+关停：SIGINT / SIGTERM（Windows 下 Ctrl+C）触发 accept loops 的排空，
+活动 session 自行关闭。
+
+```bash
+dcc-mcp-tunnel-relay \
+    --jwt-secret-file /etc/dcc-mcp/tunnel-secret \
+    --public-host relay.example.com \
+    --base-url wss://relay.example.com \
+    --agent-bind 0.0.0.0:9870 \
+    --frontend-bind 0.0.0.0:9871 \
+    --ws-frontend-bind 0.0.0.0:9880 \
+    --admin-bind 127.0.0.1:9877
+```
+
+---
+
+## `dcc-mcp-tunnel-agent`
+
+本地 sidecar，向中继注册并把每会话流量桥接到本地 DCC MCP 服务器。根据
+配置的重连策略，在瞬态故障下维持连接。
+
+编译：`cargo build --bin dcc-mcp-tunnel-agent --features bin`。
+
+| 旗标 | 环境变量 | 默认值 | 说明 |
+|---|---|---|---|
+| `--relay-url` | `DCC_MCP_TUNNEL_AGENT_RELAY_URL` | **必需** | 中继 WebSocket URL（`wss://relay.example.com`）。 |
+| `--token-file` | `DCC_MCP_TUNNEL_AGENT_TOKEN_FILE` | **必需** | JWT bearer token 文件路径（`dcc_mcp_tunnel_protocol::auth::issue` 铸造）。 |
+| `--dcc` | `DCC_MCP_TUNNEL_AGENT_DCC` | **必需** | agent 标识的 DCC 标签；必须在 JWT `allowed_dcc` 列表里。 |
+| `--local-target` | `DCC_MCP_TUNNEL_AGENT_LOCAL_TARGET` | **必需** | 要桥接的本地 MCP HTTP 服务器地址（`host:port`）。 |
+| `--heartbeat-secs` | `DCC_MCP_TUNNEL_AGENT_HEARTBEAT_SECS` | `10` | 心跳周期。留足余量，远小于中继的 `--stale-timeout-secs`。 |
+| `--reconnect-policy` | `DCC_MCP_TUNNEL_AGENT_RECONNECT_POLICY` | `exponential` | `constant` 或 `exponential`。 |
+| `--reconnect-initial-secs` | `DCC_MCP_TUNNEL_AGENT_RECONNECT_INITIAL_SECS` | `2` | 指数退避：首次重试等待秒数。 |
+| `--reconnect-max-secs` | `DCC_MCP_TUNNEL_AGENT_RECONNECT_MAX_SECS` | `60` | 指数退避：重试延迟硬上限。 |
+| `--reconnect-constant-secs` | `DCC_MCP_TUNNEL_AGENT_RECONNECT_CONSTANT_SECS` | `5` | 固定退避的延迟。 |
+| `--capabilities` | `DCC_MCP_TUNNEL_AGENT_CAPABILITIES` | `[]` | 逗号分隔能力标签，通过 `/tunnels` 展示给远端客户端。 |
+
+不可重试的 `Rejected` 错误（JWT 不对、DCC 类型不匹配）以非零退出码终止，
+避免 supervisor 无限重启循环。
+
+```bash
+dcc-mcp-tunnel-agent \
+    --relay-url wss://relay.example.com \
+    --token-file ~/.config/dcc-mcp/tunnel.jwt \
+    --dcc maya \
+    --local-target 127.0.0.1:8765 \
+    --heartbeat-secs 10 \
+    --reconnect-policy exponential \
+    --reconnect-initial-secs 2 \
+    --reconnect-max-secs 60
+```
+
+---
+
+## 部署场景
+
+### 场景 1 —— 嵌入 DCC 宿主
+
+Maya / Blender / Houdini 插件把 `dcc_mcp_core` 加载到宿主的 Python
+解释器里，直接调 `create_skill_server()`。不涉及任何外部二进制。大多数
+终端用户场景都长这样。
+
+参考 `examples/host_adapter_template.py`。
+
+### 场景 2 —— 独立 per-DCC 服务
+
+工作站上一个 `dcc-mcp-server` 进程，由 DCC supervisor 或用户 autostart
+拉起。适合跑 `mayapy` 批处理、Python-only 渲染器等仍想通过 MCP + REST
+对外暴露能力的场景。
+
+```bash
+dcc-mcp-server --app maya --scene /shots/ep101/sh0200/shot.ma
+```
+
+### 场景 3 —— 网关汇聚多个 DCC 服务
+
+同一工作站上多个 `dcc-mcp-server`。先起的绑定网关端口 `9765` 成为
+赢家，并索引其余实例。客户端只连 `127.0.0.1:9765/mcp`（或 `/v1/*`），
+用 MCP `search` / `describe` 做发现，再通过 REST `/v1/call` 或
+`/v1/call_batch` 访问任意 DCC。
+
+示例清单：`examples/compose/gateway-ha/` 与 `examples/k8s/gateway-ha/`。
+
+### 场景 4 —— 远程中继 + 隧道 agent
+
+中继跑在运维方的公网主机上；每台艺术家工作站跑一个 agent 向中继注册。
+SaaS AI 客户端（企业防火墙后的 Claude.ai、Cursor 桌面版等）连中继前端，
+被转发到工作站本地的 MCP 服务。
+
+```bash
+# 中继主机（公网）：
+dcc-mcp-tunnel-relay \
+    --jwt-secret-file /etc/dcc-mcp/tunnel-secret \
+    --public-host relay.example.com \
+    --base-url wss://relay.example.com
+
+# 艺术家工作站：
+dcc-mcp-tunnel-agent \
+    --relay-url wss://relay.example.com \
+    --token-file ~/.config/dcc-mcp/tunnel.jwt \
+    --dcc maya --local-target 127.0.0.1:8765
+```
+
+用 `dcc_mcp_tunnel_protocol::auth::issue` 铸造 JWT；通过 `allowed_dcc`
+声明按艺术家 / 按 DCC 限定作用域。
+
+### 场景 5 —— CI / 测试夹具
+
+集成测试在进程内拉起 `McpHttpServer` 并直接打它的 `/v1/*` 端点。不涉及
+外部二进制、不涉及网关。
+
+参考模式：`crates/dcc-mcp-skill-rest/src/tests.rs`、
+`crates/dcc-mcp-http/tests/http/`。
+
+---
+
+## 相关阅读
+
+- [REST API 面板](rest-api-surface.md) —— `/v1/*` 契约。
+- [网关争用与调试](gateway-diagnostics.md) —— 多实例竞争网关时怎么读日志 + 指标。

@@ -1,0 +1,1703 @@
+from __future__ import annotations
+
+import contextlib
+from http.client import BadStatusLine
+import json
+import logging
+import os
+from pathlib import Path
+import socket
+import sys
+import threading
+import time
+import types
+
+import pytest
+
+import dcc_mcp_core._server._gateway_server_bin as gsb
+import dcc_mcp_core._server.gateway_guardian as gg
+
+
+@pytest.fixture(autouse=True)
+def _reset_server_bin_warning_ledgers():
+    """Give every test a process-fresh warning ledger.
+
+    Both ledgers are module-level, so a test that trips a once-per-process
+    warning would otherwise silence that warning for every test after it.
+    """
+    saved_drift = gsb._SERVER_VERSION_DRIFT_WARNED
+    saved_resolution = gsb._SERVER_BIN_WARNED
+    gsb._SERVER_VERSION_DRIFT_WARNED = set()
+    gsb._SERVER_BIN_WARNED = set()
+    yield
+    gsb._SERVER_VERSION_DRIFT_WARNED = saved_drift
+    gsb._SERVER_BIN_WARNED = saved_resolution
+
+
+def _wait_until(predicate, *, timeout: float = 10.0, interval: float = 0.01) -> bool:
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        if predicate():
+            return True
+        time.sleep(interval)
+    return predicate()
+
+
+def _install_scoped_readiness_probe(monkeypatch, *, host, port, healthy_after):
+    """Patch ``gg._is_application_ready`` with a thread- and endpoint-scoped stub.
+
+    The patrol loop resolves its helpers through the ``gateway_guardian`` module on
+    every probe (see ``_guardian()``), so patching a seam on that module also
+    redirects patrol threads leaked by earlier tests. With a plain counter-driven
+    stub those foreign probes spend the budget before this test's own first probe
+    runs, and ``ensure_gateway_daemon`` short-circuits to ``already_healthy``
+    instead of ``spawned``.
+
+    The stub is therefore scoped twice over:
+
+    * only *host*/*port* is answered at all; every other endpoint stays down.
+    * only calls made by the thread that installed the stub consume the budget;
+      probes from any other thread are answered ``False`` without counting.
+    """
+    owner = threading.get_ident()
+    endpoint = (host, int(port))
+    counts: dict[int, int] = {}
+    lock = threading.Lock()
+
+    def _is_application_ready(h, p, timeout=0.5, **_kwargs):
+        if (h, int(p)) != endpoint:
+            return False
+        ident = threading.get_ident()
+        with lock:
+            count = counts.get(ident, 0) + 1
+            counts[ident] = count
+        if ident != owner:
+            # Foreign (possibly leaked) prober: never healthy, never counted.
+            return False
+        return count >= healthy_after
+
+    monkeypatch.setattr(gg, "_is_application_ready", _is_application_ready)
+    return counts
+
+
+class _Resp:
+    status = 200
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_exc):
+        return False
+
+    def read(self):
+        return b'{"ok": true}'
+
+
+class _EmptyResp(_Resp):
+    def read(self):
+        return b""
+
+
+class _JsonResp(_Resp):
+    def __init__(self, payload, status: int = 200):
+        self._payload = payload
+        self.status = status
+
+    def read(self):
+        return json.dumps(self._payload).encode("utf-8")
+
+
+def test_application_ready_requires_readyz_ok_and_ignores_stale_liveness(monkeypatch):
+    """A listening gateway with a non-ready application must be challenged."""
+    calls = []
+
+    def _urlopen(url, **_kwargs):
+        calls.append(url)
+        if url.endswith("/v1/readyz"):
+            return _JsonResp({"ok": False})
+        return _Resp()
+
+    monkeypatch.setattr(gg, "urlopen", _urlopen)
+
+    assert gg._is_application_ready("127.0.0.1", 9765, timeout=0.1) is False
+    assert calls == ["http://127.0.0.1:9765/v1/readyz"]
+
+
+def test_application_ready_uses_health_only_for_explicit_legacy_404(monkeypatch):
+    calls = []
+
+    def _urlopen(url, **_kwargs):
+        calls.append(url)
+        if url.endswith("/v1/readyz"):
+            response = _Resp()
+            response.status = 404
+            return response
+        return _Resp()
+
+    monkeypatch.setattr(gg, "urlopen", _urlopen)
+
+    assert gg._is_application_ready("127.0.0.1", 9765, timeout=0.1) is True
+    assert calls == [
+        "http://127.0.0.1:9765/v1/readyz",
+        "http://127.0.0.1:9765/health",
+    ]
+
+
+def test_application_ready_transport_failure_does_not_fallback_to_health(monkeypatch):
+    calls = []
+
+    def _urlopen(url, **_kwargs):
+        calls.append(url)
+        raise OSError("service-dead")
+
+    monkeypatch.setattr(gg, "urlopen", _urlopen)
+    monkeypatch.setattr(gg, "_is_healthy", lambda *_a, **_k: pytest.fail("transport failure must not use stale health"))
+
+    assert gg._is_application_ready("127.0.0.1", 9765, timeout=0.1) is False
+    assert calls == ["http://127.0.0.1:9765/v1/readyz"]
+
+
+def test_application_ready_rejects_empty_success_body(monkeypatch):
+    monkeypatch.setattr(gg, "urlopen", lambda *_args, **_kwargs: _EmptyResp())
+
+    assert gg._is_application_ready("127.0.0.1", 9765, timeout=0.1) is False
+
+
+def test_application_ready_rejects_live_hanging_port_within_probe_timeout():
+    """A listening but unresponsive holder must not block gateway recovery."""
+    listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    listener.bind(("127.0.0.1", 0))
+    listener.listen(1)
+    listener.settimeout(0.05)
+    port = listener.getsockname()[1]
+    stop = threading.Event()
+
+    def _hold_connection():
+        while not stop.is_set():
+            try:
+                conn, _ = listener.accept()
+            except socket.timeout:
+                continue
+            with conn:
+                while not stop.wait(0.01):
+                    pass
+
+    thread = threading.Thread(target=_hold_connection, daemon=True)
+    thread.start()
+    started = time.monotonic()
+    try:
+        assert gg._is_application_ready("127.0.0.1", port, timeout=0.1) is False
+    finally:
+        stop.set()
+        listener.close()
+        thread.join(timeout=1.0)
+
+    assert time.monotonic() - started < 1.0
+
+
+def test_is_healthy_treats_malformed_http_response_as_unhealthy(monkeypatch):
+    def _raise_bad_status_line(*_args, **_kwargs):
+        raise BadStatusLine("GET /health HTTP/1.1")
+
+    monkeypatch.setattr(gg, "urlopen", _raise_bad_status_line)
+
+    assert gg._is_healthy("127.0.0.1", 9765, timeout=0.5) is False
+
+
+def test_ensure_gateway_daemon_reports_existing_health(monkeypatch):
+    monkeypatch.setattr(gg, "urlopen", lambda *args, **kwargs: _Resp())
+    result = gg.ensure_gateway_daemon(
+        gateway_host="127.0.0.1",
+        gateway_port=9765,
+        registry_dir=None,
+        dcc_type="blender",
+    )
+    assert result["ok"] is True
+    assert result["reason"] == "already_healthy"
+
+
+def test_resolve_server_bin_uses_packaged_binary_when_path_missing(monkeypatch, tmp_path):
+    binary = tmp_path / "dcc-mcp-server"
+    binary.write_text("", encoding="utf-8")
+    module = types.ModuleType("dcc_mcp_server")
+    module.binary_path = lambda: binary
+
+    monkeypatch.delenv("DCC_MCP_SERVER_BIN", raising=False)
+    monkeypatch.setattr(gsb.shutil, "which", lambda _name: None)
+    monkeypatch.setitem(sys.modules, "dcc_mcp_server", module)
+
+    assert gg._resolve_server_bin() == str(binary)
+
+
+def test_resolve_server_bin_prefers_explicit_env(monkeypatch, tmp_path):
+    explicit = tmp_path / "custom-server"
+    module = types.ModuleType("dcc_mcp_server")
+    module.binary_path = lambda: Path("/unused/dcc-mcp-server")
+
+    monkeypatch.setenv("DCC_MCP_SERVER_BIN", str(explicit))
+    monkeypatch.setitem(sys.modules, "dcc_mcp_server", module)
+
+    assert gg._resolve_server_bin() == str(explicit)
+
+
+def test_resolve_server_bin_prefers_path_over_python_import(monkeypatch, tmp_path):
+    """A binary on PATH wins over any importable ``dcc_mcp_server`` package.
+
+    Under a managed resolve PATH points at the resolved binary, while a Python
+    import can silently hit a stale user-level copy.
+    """
+    on_path = tmp_path / "resolved" / "dcc-mcp-server"
+    stale = tmp_path / "stale" / "dcc-mcp-server"
+    module = types.ModuleType("dcc_mcp_server")
+    module.binary_path = lambda: stale
+    module.__version__ = "9.9.9"
+
+    monkeypatch.delenv("DCC_MCP_SERVER_BIN", raising=False)
+    monkeypatch.setattr(gsb.shutil, "which", lambda _name: str(on_path))
+    monkeypatch.setitem(sys.modules, "dcc_mcp_server", module)
+    monkeypatch.setattr(gsb, "_SERVER_VERSION_DRIFT_WARNED", set())
+
+    assert gg._resolve_server_bin() == str(on_path)
+
+
+def test_resolve_server_bin_warns_when_falling_back_to_module(monkeypatch, tmp_path, caplog):
+    binary = tmp_path / "dcc-mcp-server"
+    binary.write_text("", encoding="utf-8")
+    module = types.ModuleType("dcc_mcp_server")
+    module.binary_path = lambda: binary
+
+    monkeypatch.delenv("DCC_MCP_SERVER_BIN", raising=False)
+    monkeypatch.setattr(gsb.shutil, "which", lambda _name: None)
+    monkeypatch.setitem(sys.modules, "dcc_mcp_server", module)
+    monkeypatch.setattr(gsb, "_SERVER_VERSION_DRIFT_WARNED", set())
+
+    with caplog.at_level(logging.WARNING, logger=gsb.__name__):
+        resolved = gg._resolve_server_bin()
+
+    assert resolved == str(binary)
+    assert any("not on PATH" in record.getMessage() for record in caplog.records)
+
+
+def test_resolve_server_bin_warns_on_version_drift(monkeypatch, tmp_path, caplog):
+    """A major.minor mismatch between server and core is reported once."""
+    binary = tmp_path / "dcc-mcp-server"
+    binary.write_text("", encoding="utf-8")
+    module = types.ModuleType("dcc_mcp_server")
+    module.binary_path = lambda: binary
+    module.__version__ = "0.19.8"
+
+    monkeypatch.delenv("DCC_MCP_SERVER_BIN", raising=False)
+    monkeypatch.setattr(gsb.shutil, "which", lambda _name: None)
+    monkeypatch.setitem(sys.modules, "dcc_mcp_server", module)
+    monkeypatch.setenv(gsb.ENV_CORE_VERSION, "0.20.28")
+    monkeypatch.setattr(gsb, "_SERVER_VERSION_DRIFT_WARNED", set())
+
+    with caplog.at_level(logging.WARNING, logger=gsb.__name__):
+        gg._resolve_server_bin()
+        first = len(caplog.records)
+        gg._resolve_server_bin()
+
+    messages = [record.getMessage() for record in caplog.records]
+    assert any("0.19.8" in message and "0.20.28" in message for message in messages)
+    # The second call must not repeat an already-reported drift pair.
+    assert len([m for m in messages if "0.19.8" in m and "0.20.28" in m]) == 1
+    assert first >= 1
+
+
+def test_resolve_server_bin_silent_when_versions_match(monkeypatch, tmp_path, caplog):
+    binary = tmp_path / "dcc-mcp-server"
+    binary.write_text("", encoding="utf-8")
+    module = types.ModuleType("dcc_mcp_server")
+    module.binary_path = lambda: binary
+    module.__version__ = "0.20.31"
+
+    monkeypatch.delenv("DCC_MCP_SERVER_BIN", raising=False)
+    monkeypatch.setattr(gsb.shutil, "which", lambda _name: None)
+    monkeypatch.setitem(sys.modules, "dcc_mcp_server", module)
+    monkeypatch.setenv(gsb.ENV_CORE_VERSION, "0.20.28")
+    monkeypatch.setattr(gsb, "_SERVER_VERSION_DRIFT_WARNED", set())
+
+    with caplog.at_level(logging.WARNING, logger=gsb.__name__):
+        gg._resolve_server_bin()
+
+    assert not [record for record in caplog.records if "does not match" in record.getMessage()]
+
+
+def test_resolve_server_bin_warns_when_nothing_found(monkeypatch, caplog):
+    monkeypatch.delenv("DCC_MCP_SERVER_BIN", raising=False)
+    monkeypatch.setattr(gsb.shutil, "which", lambda _name: None)
+    monkeypatch.setitem(sys.modules, "dcc_mcp_server", None)
+    monkeypatch.setattr(gsb, "_SERVER_VERSION_DRIFT_WARNED", set())
+
+    with caplog.at_level(logging.WARNING, logger=gsb.__name__):
+        resolved = gg._resolve_server_bin()
+
+    assert resolved == "dcc-mcp-server"
+    assert any("unavailable" in record.getMessage() for record in caplog.records)
+
+
+def test_resolve_server_bin_reports_the_fallback_once_per_process(monkeypatch, tmp_path, caplog):
+    """The patrol re-resolves every few seconds; the fallback must not repeat.
+
+    A guardian patrol cycle defaults to 5s, so an unmanaged server used to log
+    this line on every cycle instead of once.
+    """
+    binary = tmp_path / "dcc-mcp-server"
+    binary.write_text("", encoding="utf-8")
+    module = types.ModuleType("dcc_mcp_server")
+    module.binary_path = lambda: binary
+
+    monkeypatch.delenv("DCC_MCP_SERVER_BIN", raising=False)
+    monkeypatch.setattr(gsb.shutil, "which", lambda _name: None)
+    monkeypatch.setitem(sys.modules, "dcc_mcp_server", module)
+
+    with caplog.at_level(logging.WARNING, logger=gsb.__name__):
+        gg._resolve_server_bin()
+        gg._resolve_server_bin()
+        gg._resolve_server_bin()
+
+    messages = [record.getMessage() for record in caplog.records]
+    assert len([message for message in messages if "not on PATH" in message]) == 1
+
+
+def test_resolve_server_bin_reports_an_unavailable_binary_once_per_process(monkeypatch, caplog):
+    monkeypatch.delenv("DCC_MCP_SERVER_BIN", raising=False)
+    monkeypatch.setattr(gsb.shutil, "which", lambda _name: None)
+    monkeypatch.setitem(sys.modules, "dcc_mcp_server", None)
+
+    with caplog.at_level(logging.WARNING, logger=gsb.__name__):
+        gg._resolve_server_bin()
+        gg._resolve_server_bin()
+
+    messages = [record.getMessage() for record in caplog.records]
+    assert len([message for message in messages if "binary unavailable" in message]) == 1
+    # The failed package lookup behind it is throttled the same way.
+    assert len([message for message in messages if "binary_path unavailable" in message]) == 1
+
+
+def test_resolve_server_bin_skips_drift_check_when_path_supplies_binary(monkeypatch, tmp_path, caplog):
+    """A PATH hit says nothing about the importable module's version.
+
+    Comparing them would report drift for a copy that never runs, so the check
+    only applies when the package itself supplies the binary.
+    """
+    on_path = tmp_path / "resolved" / "dcc-mcp-server"
+    module = types.ModuleType("dcc_mcp_server")
+    module.binary_path = lambda: tmp_path / "unused" / "dcc-mcp-server"
+    module.__version__ = "0.19.8"
+
+    monkeypatch.delenv("DCC_MCP_SERVER_BIN", raising=False)
+    monkeypatch.setattr(gsb.shutil, "which", lambda _name: str(on_path))
+    monkeypatch.setitem(sys.modules, "dcc_mcp_server", module)
+    monkeypatch.setenv(gsb.ENV_CORE_VERSION, "0.20.28")
+
+    with caplog.at_level(logging.WARNING, logger=gsb.__name__):
+        resolved = gg._resolve_server_bin()
+
+    assert resolved == str(on_path)
+    assert not [record for record in caplog.records if "does not match" in record.getMessage()]
+
+
+def test_ensure_gateway_daemon_spawns_and_becomes_healthy(tmp_path, monkeypatch):
+    _install_scoped_readiness_probe(monkeypatch, host="127.0.0.1", port=9876, healthy_after=3)
+
+    owner = threading.get_ident()
+    seen = {}
+
+    def _launch_detached(cmd, **kwargs):
+        if threading.get_ident() != owner:
+            # A leaked patrol thread must not overwrite what this test recorded.
+            return {"ok": True, "pid": 1}
+        seen["cmd"] = cmd
+        seen["env"] = kwargs.get("env", {})
+        return {"ok": True, "pid": 1}
+
+    monkeypatch.setattr(gg, "launch_detached", _launch_detached)
+    monkeypatch.setattr(gg, "_resolve_server_bin", lambda: "dcc-mcp-server")
+    monkeypatch.setenv("DCC_MCP_GATEWAY_PORT", "9876")
+    result = gg.ensure_gateway_daemon(
+        gateway_host="127.0.0.1",
+        gateway_port=9876,
+        registry_dir=str(tmp_path),
+        dcc_type="photoshop",
+        timeout_secs=1.0,
+    )
+    assert result["ok"] is True
+    assert result["reason"] == "spawned"
+    assert seen["cmd"][:2] == ["dcc-mcp-server", "gateway"]
+    assert "--port" in seen["cmd"]
+    assert "--registry-dir" not in seen["cmd"]
+    assert seen["env"]["DCC_MCP_GATEWAY_PORT"] == "9876"
+    assert seen["env"]["DCC_MCP_REGISTRY_DIR"] == str(tmp_path)
+    assert seen["env"]["DCC_MCP_DCC_TYPE"] == "photoshop"
+    assert not (tmp_path / "gateway-launch.lock").exists()
+
+
+def test_ensure_gateway_daemon_ignores_probes_from_foreign_threads(tmp_path, monkeypatch):
+    """A concurrent prober must not spend this test's readiness budget.
+
+    Regression guard for the ``already_healthy``/``spawned`` flake: the patrol loop
+    resolves its helpers through the guardian module, so a patrol thread leaked by
+    an earlier test hits whatever seam a later test patches. A shared counter-driven
+    stub lets those foreign probes answer this test's first probe, and
+    ``ensure_gateway_daemon`` returns ``already_healthy`` instead of ``spawned``.
+    """
+    _install_scoped_readiness_probe(monkeypatch, host="127.0.0.1", port=9876, healthy_after=3)
+    monkeypatch.setattr(gg, "launch_detached", lambda cmd, **_kwargs: {"ok": True, "pid": 1})
+    monkeypatch.setattr(gg, "_resolve_server_bin", lambda: "dcc-mcp-server")
+
+    stop_probing = threading.Event()
+    foreign_probes = []
+
+    def _foreign_prober():
+        while not stop_probing.is_set():
+            with contextlib.suppress(Exception):
+                gg._is_application_ready("127.0.0.1", 9876, timeout=0.05)
+            foreign_probes.append(1)
+            stop_probing.wait(0.001)
+
+    prober = threading.Thread(target=_foreign_prober, name="leaked-guardian-prober", daemon=True)
+    prober.start()
+    try:
+        result = gg.ensure_gateway_daemon(
+            gateway_host="127.0.0.1",
+            gateway_port=9876,
+            registry_dir=str(tmp_path),
+            dcc_type="photoshop",
+            timeout_secs=2.0,
+        )
+    finally:
+        stop_probing.set()
+        prober.join(timeout=5.0)
+
+    assert not prober.is_alive()
+    assert foreign_probes, "regression guard needs a competing prober to be meaningful"
+    assert result["ok"] is True
+    assert result["reason"] == "spawned"
+
+
+def test_ensure_gateway_daemon_spawn_failure_returns_embedded_fallback_reason(monkeypatch, tmp_path):
+    monkeypatch.setattr(gg, "urlopen", lambda *_a, **_k: (_ for _ in ()).throw(OSError("down")))
+
+    monkeypatch.setattr(
+        gg,
+        "launch_detached",
+        lambda *_a, **_k: {"ok": False, "reason": "spawn_failed", "error": "spawn fail"},
+    )
+    monkeypatch.setattr(gg, "_resolve_server_bin", lambda: "dcc-mcp-server")
+    result = gg.ensure_gateway_daemon(
+        gateway_host="127.0.0.1",
+        gateway_port=9765,
+        registry_dir=str(tmp_path),
+        dcc_type="maya",
+    )
+    assert result["ok"] is False
+    assert result["reason"] == "spawn_failed"
+    assert "command" in result
+
+
+def test_ensure_gateway_daemon_waits_when_launch_lock_exists(tmp_path, monkeypatch):
+    (tmp_path / "gateway-launch.lock").write_text("busy", encoding="utf-8")
+    monkeypatch.setattr(gg, "urlopen", lambda *_a, **_k: (_ for _ in ()).throw(OSError("down")))
+    monkeypatch.setattr(
+        gg,
+        "launch_detached",
+        lambda *_a, **_k: (_ for _ in ()).throw(AssertionError("must not spawn")),
+    )
+
+    result = gg.ensure_gateway_daemon(
+        gateway_host="127.0.0.1",
+        gateway_port=9765,
+        registry_dir=str(tmp_path),
+        dcc_type="maya",
+        timeout_secs=0.01,
+    )
+
+    assert result["ok"] is False
+    assert result["reason"] == "launch_in_progress_timeout"
+
+
+def test_ensure_gateway_daemon_lock_loser_succeeds_when_gateway_becomes_healthy(
+    tmp_path,
+    monkeypatch,
+):
+    """Lock loser waits and succeeds if the winner brings the gateway healthy."""
+    (tmp_path / "gateway-launch.lock").write_text("busy", encoding="utf-8")
+
+    # First probe fails, second and later succeed (winner finishes launch).
+    _install_scoped_readiness_probe(monkeypatch, host="127.0.0.1", port=9765, healthy_after=2)
+    monkeypatch.setattr(
+        gg,
+        "launch_detached",
+        lambda *_a, **_k: (_ for _ in ()).throw(AssertionError("must not spawn")),
+    )
+
+    result = gg.ensure_gateway_daemon(
+        gateway_host="127.0.0.1",
+        gateway_port=9765,
+        registry_dir=str(tmp_path),
+        dcc_type="maya",
+        timeout_secs=5.0,  # enough for the 100ms sleep between probes
+    )
+
+    assert result["ok"] is True
+    assert result["reason"] == "launch_in_progress"
+
+
+def test_ensure_gateway_daemon_respects_ensure_timeout_env_var(tmp_path, monkeypatch):
+    """DCC_MCP_GATEWAY_ENSURE_TIMEOUT_SECS overrides the default timeout."""
+    (tmp_path / "gateway-launch.lock").write_text("busy", encoding="utf-8")
+    monkeypatch.setattr(gg, "urlopen", lambda *_a, **_k: (_ for _ in ()).throw(OSError("down")))
+    monkeypatch.setattr(
+        gg,
+        "launch_detached",
+        lambda *_a, **_k: (_ for _ in ()).throw(AssertionError("must not spawn")),
+    )
+    monkeypatch.setenv("DCC_MCP_GATEWAY_ENSURE_TIMEOUT_SECS", "0.01")
+
+    result = gg.ensure_gateway_daemon(
+        gateway_host="127.0.0.1",
+        gateway_port=9765,
+        registry_dir=str(tmp_path),
+        dcc_type="houdini",
+    )
+
+    assert result["ok"] is False
+    assert result["reason"] == "launch_in_progress_timeout"
+
+
+def test_ensure_gateway_daemon_recovers_stale_launch_lock(tmp_path, monkeypatch):
+    lock_path = tmp_path / "gateway-launch.lock"
+    lock_path.write_text("stale", encoding="utf-8")
+    stale_time = time.time() - 120
+    os.utime(lock_path, (stale_time, stale_time))
+
+    _install_scoped_readiness_probe(monkeypatch, host="127.0.0.1", port=9765, healthy_after=3)
+
+    owner = threading.get_ident()
+    seen = {}
+
+    def _launch_detached(cmd, **kwargs):
+        if threading.get_ident() != owner:
+            return {"ok": True, "pid": 1}
+        seen["cmd"] = cmd
+        seen["env"] = kwargs.get("env", {})
+        return {"ok": True, "pid": 1}
+
+    monkeypatch.setenv("DCC_MCP_GATEWAY_LAUNCH_LOCK_STALE_SECS", "1")
+    monkeypatch.setattr(gg, "launch_detached", _launch_detached)
+    monkeypatch.setattr(gg, "_resolve_server_bin", lambda: "dcc-mcp-server")
+
+    result = gg.ensure_gateway_daemon(
+        gateway_host="127.0.0.1",
+        gateway_port=9765,
+        registry_dir=str(tmp_path),
+        dcc_type="houdini",
+        timeout_secs=1.0,
+    )
+
+    assert result["ok"] is True
+    assert result["reason"] == "spawned"
+    assert seen["cmd"][:2] == ["dcc-mcp-server", "gateway"]
+    assert seen["env"]["DCC_MCP_DCC_TYPE"] == "houdini"
+    assert not lock_path.exists()
+
+
+# ---------------------------------------------------------------------------
+# _LaunchLock TOCTOU race tests (PIP-1417)
+# ---------------------------------------------------------------------------
+
+
+def test_launch_lock_toctou_fresh_lock_appears_during_stale_reclaim(tmp_path, monkeypatch):
+    """Double-check catches a fresh lock that appears before unlink.
+
+    Simulates: Process A sees stale lock → Process B creates fresh lock
+    between A's first and second stat → A's double-check detects the fresh
+    lock and bails out (does NOT remove it).
+    """
+    lock_path = tmp_path / "gateway-launch.lock"
+
+    # Place a stale lock.
+    lock_path.write_text("stale", encoding="utf-8")
+    stale_time = time.time() - 120
+    os.utime(lock_path, (stale_time, stale_time))
+
+    monkeypatch.setenv("DCC_MCP_GATEWAY_LAUNCH_LOCK_STALE_SECS", "1")
+
+    # Override _remove_stale_launch_lock so that between the two stat calls
+    # a "peer" refreshes the lock.
+    original_remove = gg._remove_stale_launch_lock
+
+    call_counter = 0
+
+    def _remove_wrapper(path, stale_after):
+        nonlocal call_counter
+        call_counter += 1
+        if call_counter == 1:
+            # After the first stat (stale confirmed), simulate a peer
+            # recreating a fresh lock before our unlink.
+            path.write_text("fresh-from-peer", encoding="utf-8")
+            now = time.time()
+            os.utime(path, (now, now))
+        return original_remove(path, stale_after)
+
+    monkeypatch.setattr(gg, "_remove_stale_launch_lock", _remove_wrapper)
+
+    lock = gg._LaunchLock(lock_path)
+    acquired = lock.acquire()
+
+    # The double-check should refuse to remove the freshly recreated lock.
+    assert acquired is False
+    assert lock_path.exists()
+    # Content should be the peer's fresh lock.
+    assert lock_path.read_text() == "fresh-from-peer"
+
+
+def test_launch_lock_toctou_lock_appears_between_unlink_and_retry(tmp_path, monkeypatch):
+    """Retry-create fails gracefully when a peer creates a lock between unlink and retry.
+
+    Simulates: Process A removes stale lock → Process B creates a fresh lock
+    → A retries os.O_CREAT | os.O_EXCL → FileExistsError → acquire returns False.
+    """
+    lock_path = tmp_path / "gateway-launch.lock"
+
+    # Place a stale lock.
+    lock_path.write_text("stale", encoding="utf-8")
+    stale_time = time.time() - 120
+    os.utime(lock_path, (stale_time, stale_time))
+
+    monkeypatch.setenv("DCC_MCP_GATEWAY_LAUNCH_LOCK_STALE_SECS", "1")
+
+    # Override _remove_stale_launch_lock to simulate TOCTOU: after unlink
+    # succeeds, a peer immediately creates a fresh lock before we retry.
+    original_remove = gg._remove_stale_launch_lock
+
+    def _remove_wrapper(path, stale_after):
+        result = original_remove(path, stale_after)
+        if result:
+            # Peer creates a fresh lock right after our unlink.
+            path.write_text("peer-won-race", encoding="utf-8")
+        return result
+
+    monkeypatch.setattr(gg, "_remove_stale_launch_lock", _remove_wrapper)
+
+    lock = gg._LaunchLock(lock_path)
+    acquired = lock.acquire()
+
+    # Our retry should hit FileExistsError and return False.
+    assert acquired is False
+    assert lock_path.exists()
+    assert lock_path.read_text() == "peer-won-race"
+
+
+def test_launch_lock_acquire_single_attempt_no_loop(tmp_path, monkeypatch):
+    """acquire() makes exactly one stale-reclaim attempt — no implicit retry loop.
+
+    Verifies the flat control-flow structure aligned with Rust's
+    ``acquire_launch_lock_with_stale``.
+    """
+    lock_path = tmp_path / "gateway-launch.lock"
+
+    # Fresh lock held by another process.
+    lock_path.write_text("busy", encoding="utf-8")
+
+    monkeypatch.setenv("DCC_MCP_GATEWAY_LAUNCH_LOCK_STALE_SECS", "3600")
+
+    lock = gg._LaunchLock(lock_path)
+    acquired = lock.acquire()
+
+    assert acquired is False
+    assert lock_path.exists()
+
+
+def test_gateway_daemon_guardian_is_re_exported_from_the_patrol_module(monkeypatch):
+    """The patrol loop lives in its own module, reachable from the guardian.
+
+    The three guardian helpers the patrol calls must still be resolved through
+    the guardian module, or ``monkeypatch.setattr(gg, ...)`` stops steering the
+    loop and the whole suite silently tests a mock-free path.
+    """
+    import dcc_mcp_core._server._gateway_guardian_patrol as patrol
+
+    assert gg.GatewayDaemonGuardian is patrol.GatewayDaemonGuardian
+    assert patrol._guardian() is gg
+
+    calls = []
+    monkeypatch.setattr(gg, "_is_application_ready", lambda *_a, **_k: False)
+    monkeypatch.setattr(gg, "ensure_gateway_daemon", lambda **kwargs: calls.append(kwargs) or {"ok": True})
+    guardian = gg.GatewayDaemonGuardian(
+        gateway_host="127.0.0.1",
+        gateway_port=9765,
+        registry_dir=None,
+        dcc_type="maya",
+        failure_threshold=1,
+    )
+
+    assert guardian.probe_once()["ok"] is True
+    assert len(calls) == 1
+
+
+def test_gateway_daemon_guardian_restarts_after_failure_threshold(monkeypatch):
+    monkeypatch.setattr(gg, "_is_application_ready", lambda *_a, **_k: False)
+    calls = []
+
+    def _ensure(**kwargs):
+        calls.append(kwargs)
+        return {"ok": True, "reason": "spawned"}
+
+    monkeypatch.setattr(gg, "ensure_gateway_daemon", _ensure)
+    seen = []
+    guardian = gg.GatewayDaemonGuardian(
+        gateway_host="127.0.0.1",
+        gateway_port=9765,
+        registry_dir=None,
+        dcc_type="houdini",
+        failure_threshold=2,
+        status_callback=seen.append,
+    )
+
+    first = guardian.probe_once()
+    second = guardian.probe_once()
+
+    assert first["reason"] == "probe_failed"
+    assert second["reason"] == "spawned"
+    assert second["restart_attempts"] == 1
+    assert second["consecutive_failures"] == 0
+    assert len(calls) == 1
+    assert calls[0]["dcc_type"] == "houdini"
+    assert seen[-1]["reason"] == "spawned"
+
+
+def test_gateway_daemon_guardian_jitter_skips_when_peer_recovers(monkeypatch):
+    checks = iter([False, True])
+    monkeypatch.setattr(gg, "_is_application_ready", lambda *_a, **_k: next(checks))
+    monkeypatch.setattr(gg.random, "uniform", lambda *_a, **_k: 0.0)
+
+    def _ensure(**_kwargs):
+        raise AssertionError("peer recovery after jitter should skip re-ensure")
+
+    monkeypatch.setattr(gg, "ensure_gateway_daemon", _ensure)
+    guardian = gg.GatewayDaemonGuardian(
+        gateway_host="127.0.0.1",
+        gateway_port=9765,
+        registry_dir=None,
+        dcc_type="maya",
+        failure_threshold=1,
+        reensure_jitter_max_secs=2.0,
+    )
+
+    result = guardian.probe_once(apply_reensure_jitter=True)
+
+    assert result["reason"] == "healthy_after_jitter"
+    assert result["consecutive_failures"] == 0
+    assert result["restart_attempts"] == 0
+
+
+def test_gateway_daemon_guardian_resets_failures_on_health(monkeypatch):
+    checks = iter([False, True])
+    monkeypatch.setattr(gg, "_is_application_ready", lambda *_a, **_k: next(checks))
+    monkeypatch.setattr(gg, "_try_version_takeover", lambda **_kwargs: None)
+    guardian = gg.GatewayDaemonGuardian(
+        gateway_host="127.0.0.1",
+        gateway_port=9765,
+        registry_dir=None,
+        dcc_type="blender",
+        failure_threshold=2,
+    )
+
+    first = guardian.probe_once()
+    second = guardian.probe_once()
+
+    assert first["reason"] == "probe_failed"
+    assert second["reason"] == "healthy"
+    assert second["consecutive_failures"] == 0
+
+
+def test_gateway_daemon_guardian_audits_version_when_endpoint_is_healthy(monkeypatch, tmp_path):
+    """A healthy stale gateway must still enter the version takeover path."""
+    monkeypatch.setattr(gg, "_is_application_ready", lambda *_a, **_k: True)
+    calls = []
+
+    def _takeover(**kwargs):
+        calls.append(kwargs)
+        return {"ok": True, "reason": "version_takeover_spawned"}
+
+    monkeypatch.setattr(gg, "_try_version_takeover", _takeover)
+    guardian = gg.GatewayDaemonGuardian(
+        gateway_host="127.0.0.1",
+        gateway_port=9765,
+        registry_dir=str(tmp_path),
+        dcc_type="houdini",
+        restart_timeout_secs=17.0,
+    )
+
+    result = guardian.probe_once()
+
+    assert result["reason"] == "version_takeover_spawned"
+    assert result["restart_attempts"] == 1
+    assert calls == [
+        {
+            "gateway_host": "127.0.0.1",
+            "gateway_port": 9765,
+            "registry_dir": str(tmp_path),
+            "dcc_type": "houdini",
+            "timeout_secs": 17.0,
+            "gateway_persist": None,
+            "gateway_idle_timeout_secs": None,
+            "server_bin": None,
+        }
+    ]
+
+
+def test_guardian_run_catches_crash_and_increments_crash_count(monkeypatch):
+    """P0: probe_once crash is caught by _run(), crash_count increments."""
+    call_count = 0
+    crash_reported = threading.Event()
+
+    def _crash_after_one(*args, **kwargs):
+        nonlocal call_count
+        call_count += 1
+        raise RuntimeError("deliberate probe crash")
+
+    def _status_callback(status):
+        if status.get("crash_count", 0) >= 1:
+            crash_reported.set()
+
+    monkeypatch.setattr(gg, "_is_application_ready", _crash_after_one)
+
+    guardian = gg.GatewayDaemonGuardian(
+        gateway_host="127.0.0.1",
+        gateway_port=9765,
+        registry_dir=None,
+        dcc_type="crash-test",
+        probe_interval_secs=0.05,
+        failure_threshold=5,
+        status_callback=_status_callback,
+    )
+
+    guardian.start()
+    try:
+        assert _wait_until(
+            lambda: crash_reported.is_set() or guardian.status().get("crash_count", 0) >= 1,
+            timeout=30.0,
+        ), "Expected guardian crash status to be published"
+    finally:
+        stopped = guardian.stop(timeout=2.0)
+
+    status = guardian.status()
+    assert status["crash_count"] >= 1, f"Expected crash_count >= 1, got {status['crash_count']}"
+    # Guardian must report running=False after stop, and ``stop`` must say so: a
+    # patrol thread still probing after this test would pollute later tests.
+    assert stopped is True, "guardian patrol thread outlived stop(timeout=2.0)"
+    assert status["guardian_running"] is False
+
+
+@pytest.mark.skipif(
+    sys.platform == "win32" and sys.version_info >= (3, 14),
+    reason="Windows py3.14 guardian threading timeout (PIP-1610)",
+)
+def test_guardian_run_continues_after_exception(monkeypatch):
+    """P0: _run() loop survives exception and keeps probing."""
+    calls = []
+    crash_reported = threading.Event()
+    continued_after_crash = threading.Event()
+
+    def _probe(*args, **kwargs):
+        calls.append(1)
+        if len(calls) == 1:
+            raise RuntimeError("first probe crash")
+        continued_after_crash.set()
+        return False  # subsequent probes return healthy=False (no crash)
+
+    def _status_callback(status):
+        if status.get("crash_count", 0) >= 1:
+            crash_reported.set()
+
+    monkeypatch.setattr(gg, "_is_application_ready", _probe)
+
+    guardian = gg.GatewayDaemonGuardian(
+        gateway_host="127.0.0.1",
+        gateway_port=9765,
+        registry_dir=None,
+        dcc_type="resilient-test",
+        probe_interval_secs=0.05,
+        failure_threshold=100,
+        status_callback=_status_callback,
+    )
+
+    guardian.start()
+    try:
+        assert crash_reported.wait(timeout=10.0), "Expected guardian crash status to be published"
+        assert continued_after_crash.wait(timeout=10.0), "Expected guardian loop to continue probing"
+    finally:
+        stopped = guardian.stop(timeout=2.0)
+
+    # The loop survived the first crash and continued probing
+    assert len(calls) >= 2, f"Expected >= 2 probe calls, got {len(calls)}"
+    assert guardian.status()["crash_count"] >= 1
+    assert stopped is True, "guardian patrol thread outlived stop(timeout=2.0)"
+    assert guardian.status()["guardian_running"] is False
+
+
+def test_guardian_stop_keeps_a_thread_that_refuses_to_exit_visible():
+    """``stop()`` must not hide a patrol thread that is still running.
+
+    Clearing ``_thread`` on a timed-out join made a live prober invisible to every
+    liveness check while it kept probing through the guardian module, which is the
+    leak that fed the shared-probe-counter flake.
+    """
+    guardian = gg.GatewayDaemonGuardian(
+        gateway_host="127.0.0.1",
+        gateway_port=9765,
+        registry_dir=None,
+        dcc_type="stuck-test",
+        probe_interval_secs=0.05,
+    )
+    release = threading.Event()
+
+    def _blocked_run():
+        release.wait(30.0)
+
+    guardian._thread = threading.Thread(target=_blocked_run, name="stuck-guardian", daemon=True)
+    guardian._thread.start()
+    try:
+        assert guardian.stop(timeout=0.05) is False
+        assert guardian.status()["guardian_running"] is True
+    finally:
+        release.set()
+        guardian._thread.join(timeout=5.0)
+        guardian._thread = None
+
+
+def test_build_gateway_daemon_command_includes_persist_flags(monkeypatch, tmp_path):
+    monkeypatch.setattr(gg, "_resolve_server_bin", lambda: "dcc-mcp-server")
+    cmd, env = gg.build_gateway_daemon_command(
+        gateway_host="127.0.0.1",
+        gateway_port=9765,
+        registry_dir=str(tmp_path),
+        dcc_type="custom-host",
+        gateway_persist=True,
+        gateway_idle_timeout_secs=0,
+    )
+    assert cmd[:2] == ["dcc-mcp-server", "gateway"]
+    assert "--gateway-persist" in cmd
+    assert "--gateway-idle-timeout-secs" in cmd
+    assert env["DCC_MCP_GATEWAY_PERSIST"] == "1"
+    assert env["DCC_MCP_GATEWAY_IDLE_TIMEOUT_SECS"] == "0"
+    assert env["DCC_MCP_REGISTRY_DIR"] == str(tmp_path)
+    assert env["DCC_MCP_DCC_TYPE"] == "custom-host"
+
+
+def test_build_gateway_daemon_command_uses_adapter_idle_timeout_by_default(monkeypatch, tmp_path):
+    monkeypatch.setattr(gg, "_resolve_server_bin", lambda: "dcc-mcp-server")
+    cmd, env = gg.build_gateway_daemon_command(
+        gateway_host="127.0.0.1",
+        gateway_port=9765,
+        registry_dir=str(tmp_path),
+        dcc_type="maya",
+    )
+    assert "--gateway-persist" not in cmd
+    assert "--gateway-idle-timeout-secs" in cmd
+    assert str(gg._AUTO_ENSURE_GATEWAY_IDLE_TIMEOUT_DEFAULT) in cmd
+    assert "DCC_MCP_GATEWAY_PERSIST" not in env
+    assert env["DCC_MCP_GATEWAY_IDLE_TIMEOUT_SECS"] == str(gg._AUTO_ENSURE_GATEWAY_IDLE_TIMEOUT_DEFAULT)
+
+
+def test_build_gateway_daemon_command_respects_custom_server_bin(monkeypatch, tmp_path):
+    cmd, _env = gg.build_gateway_daemon_command(
+        gateway_host="127.0.0.1",
+        gateway_port=9765,
+        registry_dir=str(tmp_path),
+        dcc_type="nuke",
+        server_bin="/opt/bin/dcc-gw",
+    )
+    assert cmd[0] == "/opt/bin/dcc-gw"
+
+
+def test_ensure_gateway_daemon_spawn_includes_persist_flags(tmp_path, monkeypatch):
+    _install_scoped_readiness_probe(monkeypatch, host="127.0.0.1", port=9876, healthy_after=3)
+
+    owner = threading.get_ident()
+    seen: dict = {}
+
+    def _launch_detached(cmd, **kwargs):
+        if threading.get_ident() != owner:
+            return {"ok": True, "pid": 99}
+        seen["cmd"] = cmd
+        seen["env"] = kwargs.get("env", {})
+        return {"ok": True, "pid": 99}
+
+    monkeypatch.setattr(gg, "launch_detached", _launch_detached)
+    monkeypatch.setattr(gg, "_resolve_server_bin", lambda: "dcc-mcp-server")
+    result = gg.ensure_gateway_daemon(
+        gateway_host="127.0.0.1",
+        gateway_port=9876,
+        registry_dir=str(tmp_path),
+        dcc_type="ftrack",
+        timeout_secs=1.0,
+        gateway_persist=True,
+        gateway_idle_timeout_secs=120,
+    )
+    assert result["ok"] is True
+    assert "--gateway-persist" in seen["cmd"]
+    assert "--gateway-idle-timeout-secs" in seen["cmd"]
+    assert seen["env"]["DCC_MCP_GATEWAY_PERSIST"] == "1"
+    assert seen["env"]["DCC_MCP_GATEWAY_IDLE_TIMEOUT_SECS"] == "120"
+
+
+def test_launch_gateway_daemon_is_alias(monkeypatch):
+    monkeypatch.setattr(gg, "urlopen", lambda *args, **kwargs: _Resp())
+    result = gg.launch_gateway_daemon(
+        gateway_host="127.0.0.1",
+        gateway_port=9765,
+        registry_dir=None,
+        dcc_type="blender",
+    )
+    assert result["ok"] is True
+    assert result["reason"] == "already_healthy"
+
+
+def _make_runtime_controller(**owner_attrs):
+    """Build a thin ServerRuntimeController with a mock owner."""
+    # Import here to avoid circular import issues in test collection.
+    from dcc_mcp_core._server.runtime import ServerRuntimeController
+
+    attrs = {
+        "_config": type(
+            "Config",
+            (),
+            {
+                "gateway_port": 9765,
+                "registry_dir": None,
+                **(owner_attrs.pop("_config_kw", {})),
+            },
+        )(),
+        "_dcc_name": "test-dcc",
+        "_gateway_runtime_mode": "daemon-backed",
+        "_enable_gateway_failover": True,
+        "_gateway_guardian": None,
+        "_gateway_daemon_status": {},
+        "_publish_gateway_runtime_metadata": staticmethod(lambda: None),
+        **owner_attrs,
+    }
+    mock_owner = type("Owner", (), attrs)()
+    return ServerRuntimeController(mock_owner), mock_owner
+
+
+@pytest.fixture
+def runtime_controller():
+    """Build a ServerRuntimeController whose guardian threads are always torn down.
+
+    ``start_gateway_guardian_if_needed`` starts a real patrol thread plus a real
+    watchdog thread. Without teardown both outlive the test and keep probing
+    through the guardian module while later tests patch that module.
+    """
+    ctrl, owner = _make_runtime_controller()
+    try:
+        yield ctrl, owner
+    finally:
+        ctrl.stop_gateway_guardian()
+
+
+def test_start_guardian_replaces_dead_guardian(monkeypatch, runtime_controller):
+    """P1: start_gateway_guardian_if_needed replaces a dead guardian."""
+    monkeypatch.setattr(gg, "_is_application_ready", lambda *a, **k: False)
+    monkeypatch.setattr(gg, "ensure_gateway_daemon", lambda **kw: {"ok": True, "reason": "spawned"})
+    monkeypatch.setattr(gg, "_resolve_server_bin", lambda: "dcc-mcp-server")
+
+    ctrl, owner = runtime_controller
+
+    # Start the guardian normally.
+    ctrl.start_gateway_guardian_if_needed()
+    guardian = owner._gateway_guardian
+    assert guardian is not None
+    assert guardian.status()["guardian_running"] is True
+    first_id = id(guardian)
+
+    # Simulate guardian death: stop the thread so status shows not running.
+    guardian.stop(timeout=2.0)
+    assert guardian.status()["guardian_running"] is False
+
+    # Replace the dead guardian.
+    ctrl.start_gateway_guardian_if_needed()
+    new_guardian = owner._gateway_guardian
+    assert new_guardian is not None
+    assert id(new_guardian) != first_id
+    assert new_guardian.status()["guardian_running"] is True
+
+
+def test_guardian_watchdog_detects_dead_guardian(monkeypatch, runtime_controller):
+    """P1: Watchdog loop detects dead guardian and triggers restart."""
+    monkeypatch.setattr(gg, "_is_application_ready", lambda *a, **k: False)
+    monkeypatch.setattr(gg, "ensure_gateway_daemon", lambda **kw: {"ok": True, "reason": "spawned"})
+    monkeypatch.setattr(gg, "_resolve_server_bin", lambda: "dcc-mcp-server")
+
+    ctrl, owner = runtime_controller
+
+    # Start the guardian.
+    ctrl.start_gateway_guardian_if_needed()
+    guardian = owner._gateway_guardian
+    assert guardian is not None
+
+    # Kill the guardian thread.
+    guardian.stop(timeout=2.0)
+    assert guardian.status()["guardian_running"] is False
+
+    # Calling start_gateway_guardian_if_needed again should restore the guardian.
+    ctrl.start_gateway_guardian_if_needed()
+    new_guardian = owner._gateway_guardian
+    assert new_guardian is not None
+    assert id(new_guardian) != id(guardian)
+    assert new_guardian.status()["guardian_running"] is True
+
+
+# ---------------------------------------------------------------------------
+# Embedded fallback retry + strict-gateway tests (PIP-1398)
+# ---------------------------------------------------------------------------
+
+
+def test_ensure_gateway_daemon_if_needed_retries_before_fallback(monkeypatch):
+    """Ensure retries 2 times before falling back to embedded-fallback mode."""
+    from dcc_mcp_core._server import runtime as rt_mod
+
+    call_count = 0
+
+    def _ensure(**kwargs):
+        nonlocal call_count
+        call_count += 1
+        return {"ok": False, "reason": "spawn_failed", "error": "test error"}
+
+    monkeypatch.setattr(rt_mod, "ensure_gateway_daemon", _ensure)
+    # Speed up retries in tests
+    monkeypatch.setattr(rt_mod, "_RETRY_INTERVAL_SECS", 0.01)
+
+    ctrl, owner = _make_runtime_controller()
+    result = ctrl.ensure_gateway_daemon_if_needed()
+
+    # Should have attempted 1 + 2 = 3 times
+    assert call_count == 3, f"Expected 3 attempts, got {call_count}"
+    assert result is False
+    assert owner._gateway_runtime_mode == "embedded-fallback"
+    assert owner._gateway_daemon_status["reason"] == "spawn_failed"
+
+
+def test_ensure_gateway_daemon_if_needed_succeeds_on_retry(monkeypatch):
+    """First attempt fails, retry succeeds — must not fall back."""
+    from dcc_mcp_core._server import runtime as rt_mod
+
+    call_count = 0
+
+    def _ensure(**kwargs):
+        nonlocal call_count
+        call_count += 1
+        if call_count <= 2:
+            return {"ok": False, "reason": "spawn_failed", "error": "test error"}
+        return {"ok": True, "reason": "spawned"}
+
+    monkeypatch.setattr(rt_mod, "ensure_gateway_daemon", _ensure)
+    monkeypatch.setattr(rt_mod, "_RETRY_INTERVAL_SECS", 0.01)
+
+    ctrl, owner = _make_runtime_controller()
+    result = ctrl.ensure_gateway_daemon_if_needed()
+
+    assert call_count == 3, f"Expected 3 attempts, got {call_count}"
+    assert result is True
+    assert owner._gateway_runtime_mode == "daemon-backed"
+
+
+def test_strict_gateway_raises_instead_of_fallback(monkeypatch):
+    """With DCC_MCP_STRICT_GATEWAY=1, ensure failure raises RuntimeError."""
+    from dcc_mcp_core._server import runtime as rt_mod
+
+    def _ensure(**kwargs):
+        return {"ok": False, "reason": "spawn_failed", "error": "test error"}
+
+    monkeypatch.setattr(rt_mod, "ensure_gateway_daemon", _ensure)
+    monkeypatch.setattr(rt_mod, "_RETRY_INTERVAL_SECS", 0.01)
+    monkeypatch.setenv("DCC_MCP_STRICT_GATEWAY", "1")
+
+    ctrl, owner = _make_runtime_controller()
+
+    try:
+        ctrl.ensure_gateway_daemon_if_needed()
+        raise AssertionError("Expected RuntimeError was not raised")
+    except RuntimeError as exc:
+        assert "strict gateway" in str(exc).lower()
+        # Must not have fallen back
+        assert owner._gateway_runtime_mode != "embedded-fallback"
+
+
+def test_strict_gateway_via_owner_attribute(monkeypatch):
+    """Strict mode via owner._strict_gateway=True also raises RuntimeError."""
+    from dcc_mcp_core._server import runtime as rt_mod
+
+    def _ensure(**kwargs):
+        return {"ok": False, "reason": "spawn_timeout", "error": "timeout"}
+
+    monkeypatch.setattr(rt_mod, "ensure_gateway_daemon", _ensure)
+    monkeypatch.setattr(rt_mod, "_RETRY_INTERVAL_SECS", 0.01)
+
+    ctrl, owner = _make_runtime_controller()
+    owner._strict_gateway = True
+
+    try:
+        ctrl.ensure_gateway_daemon_if_needed()
+        raise AssertionError("Expected RuntimeError was not raised")
+    except RuntimeError as exc:
+        assert "spawn_timeout" in str(exc)
+
+
+def test_strict_gateway_happy_path_works_normally(monkeypatch):
+    """When daemon is healthy, strict mode has no effect (no exception)."""
+    from dcc_mcp_core._server import runtime as rt_mod
+
+    def _ensure(**kwargs):
+        return {"ok": True, "reason": "already_healthy"}
+
+    monkeypatch.setattr(rt_mod, "ensure_gateway_daemon", _ensure)
+    monkeypatch.setenv("DCC_MCP_STRICT_GATEWAY", "1")
+
+    ctrl, owner = _make_runtime_controller()
+    result = ctrl.ensure_gateway_daemon_if_needed()
+
+    assert result is True
+    assert owner._gateway_runtime_mode == "daemon-backed"
+
+
+def test_embedded_fallback_metadata_includes_daemon_status():
+    """_gateway_runtime_metadata surfaces daemon status for embedded-fallback."""
+    from dcc_mcp_core._server.lifecycle_controller import LifecycleController
+
+    # Build a minimal mock owner in embedded-fallback mode.
+    attrs = {
+        "_dcc_name": "meta-test",
+        "_gateway_runtime_mode": "embedded-fallback",
+        "_gateway_guardian": None,
+        "_gateway_daemon_status": {
+            "ok": False,
+            "reason": "spawn_failed",
+            "error": "connection refused",
+        },
+    }
+    mock_owner = type("Owner", (), attrs)()
+    ctrl = LifecycleController(mock_owner)
+
+    meta = ctrl._gateway_runtime_metadata()
+    assert meta["gateway_runtime_mode"] == "embedded-fallback"
+    assert meta["gateway_recovery_driver"] == "embedded_election"
+    assert meta["gateway_daemon_status"] == "spawn_failed"
+    assert meta["gateway_daemon_error"] == "connection refused"
+
+
+def test_embedded_fallback_metadata_omits_daemon_error_when_none():
+    """When daemon status has no error field, gateway_daemon_error is absent."""
+    from dcc_mcp_core._server.lifecycle_controller import LifecycleController
+
+    attrs = {
+        "_dcc_name": "meta-test2",
+        "_gateway_runtime_mode": "embedded-fallback",
+        "_gateway_guardian": None,
+        "_gateway_daemon_status": {"ok": False, "reason": "launch_in_progress_timeout"},
+    }
+    mock_owner = type("Owner", (), attrs)()
+    ctrl = LifecycleController(mock_owner)
+
+    meta = ctrl._gateway_runtime_metadata()
+    assert meta["gateway_runtime_mode"] == "embedded-fallback"
+    assert meta["gateway_daemon_status"] == "launch_in_progress_timeout"
+    assert "gateway_daemon_error" not in meta
+
+
+def test_daemon_backed_metadata_does_not_include_daemon_error():
+    """In daemon-backed mode, gateway_daemon_error is not leaked."""
+    from dcc_mcp_core._server.lifecycle_controller import LifecycleController
+
+    attrs = {
+        "_dcc_name": "meta-test3",
+        "_gateway_runtime_mode": "daemon-backed",
+        "_gateway_guardian": None,
+        "_gateway_daemon_status": {
+            "ok": True,
+            "reason": "already_healthy",
+        },
+    }
+    mock_owner = type("Owner", (), attrs)()
+    ctrl = LifecycleController(mock_owner)
+
+    meta = ctrl._gateway_runtime_metadata()
+    assert meta["gateway_runtime_mode"] == "daemon-backed"
+    assert meta["gateway_recovery_driver"] == "none"
+    assert "gateway_daemon_status" not in meta
+    assert "gateway_daemon_error" not in meta
+
+
+# ---------------------------------------------------------------------------
+# P0-3: semver parsing, version comparison, sentinel, and version takeover
+# ---------------------------------------------------------------------------
+
+
+def test_parse_semver_basic():
+    """P0-3: _parse_semver handles standard semver strings."""
+    assert gg._parse_semver("0.18.15") == (0, 18, 15)
+    assert gg._parse_semver("1.0.0") == (1, 0, 0)
+    assert gg._parse_semver("2.3") == (2, 3, 0)
+    assert gg._parse_semver("5") == (5, 0, 0)
+
+
+def test_parse_semver_with_v_prefix():
+    assert gg._parse_semver("v0.12.29") == (0, 12, 29)
+    assert gg._parse_semver("V1.2.3") == (1, 2, 3)
+
+
+def test_parse_semver_with_prerelease():
+    assert gg._parse_semver("1.0.0-rc1") == (1, 0, 0)
+    assert gg._parse_semver("v2.3.4-beta.2") == (2, 3, 4)
+
+
+def test_parse_semver_rejects_invalid_numeric_core():
+    assert gg._parse_semver("release") is None
+    assert gg._parse_semver("1.two.3") is None
+
+
+def test_is_newer_version():
+    assert gg._is_newer_version("1.0.0", "0.9.0") is True
+    assert gg._is_newer_version("0.18.15", "0.18.6") is True
+    assert gg._is_newer_version("0.18.6", "0.18.15") is False
+    assert gg._is_newer_version("1.0.0", "1.0.0") is False
+    assert gg._is_newer_version("release", "0.18.6") is False
+    assert gg._is_newer_version("1.0.0", "unknown") is False
+
+
+def test_get_core_version_env_override(monkeypatch):
+    """P0-3: _get_core_version respects DCC_MCP_CORE_VERSION env var."""
+    monkeypatch.setenv("DCC_MCP_CORE_VERSION", "9.8.7")
+    assert gg._get_core_version() == "9.8.7"
+
+
+def test_write_and_read_sentinel_entry(tmp_path):
+    """P0-3: _write_sentinel_entry and _read_gateway_version_from_registry roundtrip."""
+    reg = str(tmp_path / "dcc-mcp-registry")
+    Path(reg).mkdir()
+    (Path(reg) / "services.json").write_text(
+        json.dumps([{"dcc_type": "houdini", "instance_id": "live-row"}]),
+        encoding="utf-8",
+    )
+    # Write a sentinel.
+    ok = gg._write_sentinel_entry(
+        reg,
+        gateway_host="127.0.0.1",
+        gateway_port=9765,
+        crate_version="0.18.15",
+        adapter_version="0.3.0",
+        adapter_dcc="maya",
+    )
+    assert ok is True
+    assert (tmp_path / "dcc-mcp-registry" / "services.json").exists()
+    rows = json.loads((Path(reg) / "services.json").read_text(encoding="utf-8"))
+    assert rows[0]["instance_id"] == "live-row"
+    sentinel = rows[1]
+    assert sentinel["instance_id"]
+    assert sentinel["registered_at"] == sentinel["last_heartbeat"]
+    assert sentinel["status"] == "available"
+
+    # Read it back.
+    ver = gg._read_gateway_version_from_registry(
+        reg,
+        gateway_host="127.0.0.1",
+        gateway_port=9765,
+    )
+    assert ver == "0.18.15"
+
+
+def test_read_gateway_version_from_registry_filters_host_and_port(tmp_path):
+    """Only the sentinel for the probed gateway endpoint is authoritative."""
+    reg = tmp_path / "dcc-mcp-registry"
+    reg.mkdir()
+    (reg / "services.json").write_text(
+        json.dumps(
+            [
+                {
+                    "dcc_type": "__gateway__",
+                    "host": "127.0.0.1",
+                    "port": 9766,
+                    "version": "9.9.9",
+                },
+                {
+                    "dcc_type": "__gateway__",
+                    "host": "127.0.0.1",
+                    "port": 9765,
+                    "version": "0.18.20",
+                },
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    assert (
+        gg._read_gateway_version_from_registry(
+            str(reg),
+            gateway_host="127.0.0.1",
+            gateway_port=9765,
+        )
+        == "0.18.20"
+    )
+
+
+def test_read_gateway_version_from_admin_health(monkeypatch):
+    """Use admin health when the registry sentinel is missing or stale."""
+
+    def _urlopen(req, **_kwargs):
+        assert req == "http://127.0.0.1:9765/admin/api/health"
+        return _JsonResp({"gateway": {"current": {"version": "0.18.20"}}})
+
+    monkeypatch.setattr(gg, "urlopen", _urlopen)
+
+    assert gg._read_gateway_version_from_admin_health("127.0.0.1", 9765) == "0.18.20"
+
+
+def test_read_gateway_version_missing_registry():
+    """P0-3: _read_gateway_version_from_registry returns None for missing file."""
+    assert (
+        gg._read_gateway_version_from_registry(
+            "/nonexistent/path",
+            gateway_host="127.0.0.1",
+            gateway_port=9999,
+        )
+        is None
+    )
+
+
+def test_wait_managed_gateway_ready_rejects_health_only_challenger(monkeypatch, tmp_path):
+    """A temporary challenger sentinel cannot prove gateway ownership."""
+    monkeypatch.setattr(gg, "_is_application_ready", lambda *a, **k: True)
+    gg._write_sentinel_entry(
+        str(tmp_path),
+        gateway_host="127.0.0.1",
+        gateway_port=9765,
+        crate_version="0.19.23",
+    )
+
+    assert not gg._wait_managed_gateway_ready(
+        "127.0.0.1",
+        9765,
+        registry_dir=str(tmp_path),
+        minimum_version="0.19.23",
+        timeout_secs=0.01,
+    )
+
+
+def test_wait_managed_gateway_ready_accepts_owned_same_version(monkeypatch, tmp_path):
+    """A healthy process-owned sentinel satisfies the takeover contract."""
+    monkeypatch.setattr(gg, "_is_application_ready", lambda *a, **k: True)
+    services = [
+        {
+            "dcc_type": "__gateway__",
+            "instance_id": "gateway-instance",
+            "host": "127.0.0.1",
+            "port": 9765,
+            "version": "0.19.23",
+            "pid": 4242,
+        }
+    ]
+    (tmp_path / "services.json").write_text(json.dumps(services), encoding="utf-8")
+
+    assert gg._wait_managed_gateway_ready(
+        "127.0.0.1",
+        9765,
+        registry_dir=str(tmp_path),
+        minimum_version="0.19.23",
+        timeout_secs=0.2,
+    )
+
+
+def test_ensure_gateway_daemon_skips_takeover_when_gateway_newer(monkeypatch, tmp_path):
+    """P0-3: No takeover when running gateway version is same or newer."""
+    monkeypatch.setattr(gg, "urlopen", lambda *args, **kwargs: _Resp())
+    monkeypatch.setenv("DCC_MCP_CORE_VERSION", "0.18.15")
+
+    # Pre-populate registry with a same-version sentinel.
+    gg._write_sentinel_entry(
+        str(tmp_path),
+        gateway_host="127.0.0.1",
+        gateway_port=9765,
+        crate_version="0.18.15",
+    )
+
+    result = gg.ensure_gateway_daemon(
+        gateway_host="127.0.0.1",
+        gateway_port=9765,
+        registry_dir=str(tmp_path),
+        dcc_type="maya",
+    )
+    assert result["ok"] is True
+    assert result["reason"] == "already_healthy"
+
+
+def test_try_version_takeover_returns_none_when_dev_version(monkeypatch, tmp_path):
+    """P0-3: _try_version_takeover returns None when version is 0.0.0-dev."""
+    # 0.0.0-dev is the default when package metadata is unavailable.
+    # _get_core_version should return this in test environment.
+    monkeypatch.setattr(gg, "_get_core_version", lambda: "0.0.0-dev")
+    monkeypatch.setattr(gg, "_read_gateway_version_from_registry", lambda *a, **k: "0.18.0")
+    monkeypatch.setattr(gg, "_is_application_ready", lambda *a, **k: True)
+
+    result = gg._try_version_takeover(
+        gateway_host="127.0.0.1",
+        gateway_port=9765,
+        registry_dir=str(tmp_path),
+        dcc_type="maya",
+        timeout_secs=15.0,
+        gateway_persist=False,
+        gateway_idle_timeout_secs=None,
+        server_bin=None,
+    )
+    assert result is None
+
+
+def test_try_version_takeover_uses_admin_health_and_cooperative_yield(monkeypatch, tmp_path):
+    """A healthy old gateway without a registry sentinel can still be replaced."""
+    yield_requests = []
+    launches = []
+
+    monkeypatch.setattr(gg, "_get_core_version", lambda: "0.19.14")
+    monkeypatch.setattr(gg, "_read_gateway_version_from_registry", lambda *a, **k: None)
+    monkeypatch.setattr(gg, "_read_gateway_version_from_admin_health", lambda *a, **k: "0.18.20")
+    monkeypatch.setattr(gg, "_request_gateway_yield", lambda *a, **k: yield_requests.append(k) or True)
+    monkeypatch.setattr(
+        gg,
+        "_write_sentinel_entry",
+        lambda *a, **k: pytest.fail("cooperative yield must not rewrite FileRegistry"),
+    )
+    monkeypatch.setattr(gg, "_is_application_ready", lambda *a, **k: False)
+    monkeypatch.setattr(gg, "_wait_managed_gateway_ready", lambda *a, **k: True)
+
+    def _launch_detached(cmd, **kwargs):
+        launches.append((cmd, kwargs))
+        return {"ok": True, "pid": 4242}
+
+    monkeypatch.setattr(gg, "launch_detached", _launch_detached)
+    monkeypatch.setattr(gg, "_resolve_server_bin", lambda: "dcc-mcp-server")
+
+    result = gg._try_version_takeover(
+        gateway_host="127.0.0.1",
+        gateway_port=9765,
+        registry_dir=str(tmp_path),
+        dcc_type="houdini",
+        timeout_secs=15.0,
+        gateway_persist=False,
+        gateway_idle_timeout_secs=None,
+        server_bin=None,
+    )
+
+    assert result is not None
+    assert result["ok"] is True
+    assert result["reason"] == "version_takeover_spawned"
+    assert result["old_version"] == "0.18.20"
+    assert result["new_version"] == "0.19.14"
+    assert yield_requests[0]["challenger_version"] == "0.19.14"
+    assert launches[0][0][:2] == ["dcc-mcp-server", "gateway"]
+
+
+# ---------------------------------------------------------------------------
+# Watchdog interval (PIP-1416: 60s → 15s + env override + immediate retry)
+# ---------------------------------------------------------------------------
+
+
+def test_watchdog_interval_default_is_15s():
+    """PIP-1416: watchdog default interval is 15 s (was 60 s)."""
+    from dcc_mcp_core._server import runtime as rt_mod
+
+    # Resolve interval without env var set.
+    assert rt_mod._resolve_watchdog_interval() == 15.0
+
+
+def test_watchdog_interval_respects_env_var(monkeypatch):
+    """PIP-1416: DCC_MCP_GUARDIAN_WATCHDOG_INTERVAL overrides the default."""
+    monkeypatch.setenv("DCC_MCP_GUARDIAN_WATCHDOG_INTERVAL", "8.5")
+    from dcc_mcp_core._server import runtime as rt_mod
+
+    # _resolve_watchdog_interval() reads os.environ at call time — no reload needed.
+    assert rt_mod._resolve_watchdog_interval() == 8.5
+
+
+def test_watchdog_interval_env_floor_0_1s(monkeypatch):
+    """PIP-1416: watchdog interval env floors at 0.1 s."""
+    monkeypatch.setenv("DCC_MCP_GUARDIAN_WATCHDOG_INTERVAL", "0.01")
+    from dcc_mcp_core._server import runtime as rt_mod
+
+    assert rt_mod._resolve_watchdog_interval() == 0.1
+
+
+def test_watchdog_interval_env_invalid_falls_back(monkeypatch):
+    """PIP-1416: invalid env value falls back to default 15 s."""
+    monkeypatch.setenv("DCC_MCP_GUARDIAN_WATCHDOG_INTERVAL", "not_a_number")
+    from dcc_mcp_core._server import runtime as rt_mod
+
+    assert rt_mod._resolve_watchdog_interval() == 15.0
+
+
+def test_watchdog_immediate_retry_on_guardian_death(monkeypatch, runtime_controller):
+    """PIP-1416: watchdog immediately probes the new guardian after restart."""
+    monkeypatch.setattr(gg, "_is_application_ready", lambda *a, **k: False)
+    monkeypatch.setattr(gg, "ensure_gateway_daemon", lambda **kw: {"ok": True, "reason": "spawned"})
+    monkeypatch.setattr(gg, "_resolve_server_bin", lambda: "dcc-mcp-server")
+
+    ctrl, owner = runtime_controller
+
+    # Start the guardian.
+    ctrl.start_gateway_guardian_if_needed()
+    guardian = owner._gateway_guardian
+    assert guardian is not None
+
+    # Kill the guardian thread.
+    guardian.stop(timeout=2.0)
+    assert guardian.status()["guardian_running"] is False
+
+    # Track probe_once calls on the *new* guardian.
+    probe_calls = []
+
+    original_start = ctrl.start_gateway_guardian_if_needed
+
+    def _start_and_track():
+        original_start()
+        new_g = getattr(owner, "_gateway_guardian", None)
+        if new_g is not None:
+            original_probe = new_g.probe_once
+            new_g.probe_once = lambda **kw: probe_calls.append(1) or original_probe(**kw)
+
+    ctrl.start_gateway_guardian_if_needed = _start_and_track
+
+    # Simulate one watchdog tick: detect dead → restart → immediate retry.
+    ctrl._guardian_watchdog_stop.set()  # unblock wait() for one iteration
+    # Run one cycle of the watchdog loop logic manually.
+    guardian_obj = owner._gateway_guardian  # still the dead one
+    assert guardian_obj.status()["guardian_running"] is False
+
+    # Replicate the watchdog loop body directly.
+    status = guardian_obj.status()
+    assert status.get("guardian_running") is False
+    # Call start (which replaces guardian + monkeypatches probe_once).
+    ctrl.start_gateway_guardian_if_needed()
+    new_guardian = getattr(owner, "_gateway_guardian", None)
+    assert new_guardian is not None
+    assert new_guardian is not guardian_obj  # replaced
+    # Immediate retry: call probe_once.
+    new_guardian.probe_once()
+
+    assert len(probe_calls) == 1, f"Expected 1 immediate probe_once call, got {len(probe_calls)}"
+
+
+def test_ensure_gateway_daemon_handles_version_takeover_health(monkeypatch, tmp_path):
+    """P0-3: ensure_gateway_daemon returns already_healthy when takeover not needed."""
+    monkeypatch.setattr(gg, "urlopen", lambda *args, **kwargs: _Resp())
+    monkeypatch.setattr(gg, "_get_core_version", lambda: "0.18.15")
+    monkeypatch.setattr(gg, "_read_gateway_version_from_registry", lambda *a, **k: "1.0.0")  # gateway newer
+
+    result = gg.ensure_gateway_daemon(
+        gateway_host="127.0.0.1",
+        gateway_port=9765,
+        registry_dir=str(tmp_path),
+        dcc_type="blender",
+    )
+    assert result["ok"] is True
+    assert result["reason"] == "already_healthy"

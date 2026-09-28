@@ -1,0 +1,438 @@
+//! SkillMetadata — parsed from SKILL.md frontmatter.
+//!
+//! Supports three skill standards simultaneously:
+//!
+//! - **agentskills.io / Anthropic Skills**: `name`, `description`, `license`,
+//!   `compatibility`, `metadata`, `allowed-tools`
+//! - **ClawHub / OpenClaw**: `version`, `metadata.openclaw.*` (requires, install,
+//!   primaryEnv, emoji, homepage, os, always, skillKey)
+//! - **dcc-mcp-core extensions**: `dcc`, `tags`, `tools`, `depends`, `scripts`
+//!
+//! The same SKILL.md file can satisfy all three formats simultaneously.
+
+#[cfg(feature = "stub-gen")]
+use pyo3_stub_gen_derive::gen_stub_pyclass;
+
+use dcc_mcp_naming::{DEFAULT_DCC, DEFAULT_VERSION};
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+
+mod methods;
+mod serde_impl;
+
+use serde_impl::{
+    default_dcc, default_version, deserialize_allowed_tools, deserialize_tool_declarations,
+};
+
+// ── SkillMetadata ─────────────────────────────────────────────────────────
+
+/// Metadata parsed from a SKILL.md frontmatter.
+///
+/// Supports all three skill standards:
+///
+/// ## Minimal (agentskills.io compatible)
+/// ```yaml
+/// ---
+/// name: my-skill
+/// description: What it does and when to use it.
+/// ---
+/// ```
+///
+/// ## Full (all standards)
+/// ```yaml
+/// ---
+/// name: maya-bevel
+/// description: Bevel tools for Maya polygon modeling.
+/// # agentskills.io standard
+/// license: MIT
+/// compatibility: Maya 2022+, Python 3.7+
+/// allowed-tools: Bash Read
+/// metadata:
+///   author: studio-name
+///   category: modeling
+/// # ClawHub / OpenClaw
+/// version: "1.0.0"
+/// metadata:
+///   openclaw:
+///     requires:
+///       bins: [maya]
+///     emoji: "🎨"
+///     homepage: https://example.com
+/// # dcc-mcp-core extensions
+/// dcc: maya
+/// tags: [modeling, polygon]
+/// tools:
+///   - name: bevel
+///     description: Apply bevel to selected edges
+/// ---
+/// ```
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "stub-gen", gen_stub_pyclass)]
+#[cfg_attr(
+    feature = "python-bindings",
+    pyo3::pyclass(name = "SkillMetadata", from_py_object)
+)]
+// `#[derive(PyWrapper)]` (#528 M3.3) emits the trivial String / Vec<T>
+// getters and setters as a sibling `#[pymethods]` block. Custom logic
+// (`metadata` JSON round-trip, `policy` / `external_deps` serde, the
+// curated `__repr__`, plus every `py_*` method) stays hand-written in
+// `crate::python::skill_metadata`. The attribute is gated on
+// `python-bindings` because the macro and its `py_wrapper(...)` inert
+// attribute live in `dcc-mcp-pybridge-derive`, which is itself only
+// linked under that feature.
+#[cfg_attr(
+    feature = "python-bindings",
+    derive(dcc_mcp_pybridge::derive::PyWrapper)
+)]
+#[cfg_attr(
+    feature = "python-bindings",
+    py_wrapper(fields(
+        name: String => [get(by_str), set],
+        description: String => [get(by_str), set],
+        license: String => [get(by_str), set],
+        compatibility: String => [get(by_str), set],
+        allowed_tools: Vec<String> => [get(clone), set],
+        dcc: String => [get(by_str), set],
+        tags: Vec<String> => [get(clone), set],
+        search_hint: String => [get(by_str), set],
+        search_aliases: Vec<String> => [get(clone), set],
+        scripts: Vec<String> => [get(clone), set],
+        skill_path: String => [get(by_str), set],
+        version: String => [get(by_str), set],
+        depends: Vec<String> => [get(clone), set],
+        metadata_files: Vec<String> => [get(clone), set],
+        tools: Vec<crate::skill_metadata::ToolDeclaration> => [get(clone), set],
+        groups: Vec<crate::skill_metadata::SkillGroup> => [get(clone), set],
+        runtimes: Vec<crate::skill_metadata::SkillRuntimeDescriptor> => [get(clone), set],
+        layer: Option<String> => [get(clone), set],
+        stage: Option<String> => [get(clone), set],
+        resources_file: Option<String> => [get(clone), set],
+        branding: Option<crate::skill_metadata::SkillBranding> => [get(clone), set],
+        links: Option<crate::skill_metadata::SkillLinks> => [get(clone), set],
+        example_prompts: Vec<String> => [get(clone), set],
+    ))
+)]
+pub struct SkillMetadata {
+    /// Skill identifier — lowercase, hyphens only.
+    /// Must match the parent directory name (agentskills.io requirement).
+    pub name: String,
+
+    /// Human-readable description of what the skill does and when to use it.
+    /// Shown in skill discovery results. Keep under 1024 chars.
+    #[serde(default)]
+    pub description: String,
+
+    // ── agentskills.io / Anthropic Skills standard fields ─────────────
+    /// SPDX license identifier or short license description.
+    /// Example: `"MIT"`, `"Apache-2.0"`, `"Proprietary"`
+    #[serde(default)]
+    pub license: String,
+
+    /// Environment and dependency requirements for this skill.
+    /// Example: `"Python 3.7+, Maya 2022+"`, `"Requires docker and git"`
+    /// Keep under 500 chars.
+    #[serde(default)]
+    pub compatibility: String,
+
+    /// Pre-approved tools this skill may use (agentskills.io `allowed-tools`).
+    /// Space-delimited in SKILL.md YAML, stored as Vec<String> here.
+    ///
+    /// This is distinct from `tools` (MCP tool declarations):
+    /// - `allowed-tools`: permission whitelist for agent capabilities (e.g. `["Bash", "Read"]`)
+    /// - `tools`: MCP tool definitions with schemas
+    ///
+    /// Supports both space-delimited strings and YAML lists:
+    /// ```yaml
+    /// allowed-tools: Bash Read Write
+    /// # or:
+    /// allowed-tools: [Bash, Read, Write]
+    /// ```
+    #[serde(
+        default,
+        rename = "allowed-tools",
+        alias = "allowed_tools",
+        deserialize_with = "deserialize_allowed_tools"
+    )]
+    pub allowed_tools: Vec<String>,
+
+    /// Arbitrary metadata key-value pairs.
+    ///
+    /// Used by both agentskills.io (flat KV strings) and ClawHub (`openclaw.*`
+    /// nested structure). Stored as a JSON value to support both:
+    ///
+    /// ```yaml
+    /// # agentskills.io flat style
+    /// metadata:
+    ///   author: studio-name
+    ///   category: modeling
+    ///
+    /// # ClawHub nested style
+    /// metadata:
+    ///   openclaw:
+    ///     requires:
+    ///       bins: [ffmpeg]
+    ///     emoji: "🎬"
+    /// ```
+    #[serde(default, skip_serializing_if = "serde_json::Value::is_null")]
+    pub metadata: serde_json::Value,
+
+    // ── dcc-mcp-core extension fields ─────────────────────────────────
+    /// Target DCC application (e.g. "maya", "blender", "houdini", "python").
+    #[serde(default = "default_dcc")]
+    pub dcc: String,
+
+    /// Searchable tags for skill discovery.
+    #[serde(default)]
+    pub tags: Vec<String>,
+
+    /// Short search hint for lightweight skill discovery.
+    ///
+    /// Used by `search_skills` to match against without loading full tool schemas.
+    /// Should be a comma-separated list of keywords or a short phrase, e.g.:
+    /// `"polygon modeling, bevel, extrude, mesh editing"`
+    ///
+    /// Falls back to `description` if not set.
+    #[serde(default, rename = "search-hint", alias = "search_hint")]
+    pub search_hint: String,
+
+    /// Bounded search-only aliases and synonyms shared by every tool in the
+    /// skill. Tool declarations can add their own `search_aliases`.
+    ///
+    /// Set from `metadata.dcc-mcp.search-aliases` in SKILL.md frontmatter.
+    #[serde(
+        default,
+        rename = "search-aliases",
+        alias = "search_aliases",
+        skip_serializing_if = "Vec::is_empty"
+    )]
+    pub search_aliases: Vec<String>,
+
+    /// MCP tool declarations — defines the tools this skill exposes.
+    ///
+    /// Accepts both simple names and full declarations:
+    /// ```yaml
+    /// tools: ["bevel", "extrude"]
+    /// # or with full schema:
+    /// tools:
+    ///   - name: bevel
+    ///     description: Apply bevel to edges
+    ///     source_file: scripts/bevel.py
+    /// ```
+    #[serde(default, deserialize_with = "deserialize_tool_declarations")]
+    pub tools: Vec<ToolDeclaration>,
+
+    /// Semantic version string.
+    #[serde(default = "default_version")]
+    pub version: String,
+
+    /// Skill dependencies — names of other skills this skill requires.
+    #[serde(default)]
+    pub depends: Vec<String>,
+
+    // ── Runtime-populated fields (not in YAML) ─────────────────────────
+    /// Script files discovered in the `scripts/` subdirectory.
+    /// Populated at load time, not from SKILL.md frontmatter.
+    #[serde(default)]
+    pub scripts: Vec<String>,
+
+    /// Absolute path to the skill's root directory.
+    /// Populated at load time.
+    #[serde(default)]
+    pub skill_path: String,
+
+    /// Markdown files discovered in the `metadata/` subdirectory.
+    /// Populated at load time.
+    #[serde(default)]
+    pub metadata_files: Vec<String>,
+
+    // ── dcc-mcp-core: progressive discovery extensions ─────────────────
+    /// Invocation policy declared in SKILL.md frontmatter.
+    ///
+    /// Controls whether the skill may be loaded implicitly and which
+    /// DCC products it is available for.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub policy: Option<SkillPolicy>,
+
+    /// External dependencies declared in SKILL.md frontmatter.
+    ///
+    /// Declares required MCP servers, environment variables, or binaries
+    /// that must be available for this skill to function correctly.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub external_deps: Option<SkillDependencies>,
+
+    /// Optional adapter runtimes and install extras that affect capability
+    /// level without necessarily making the whole skill unavailable.
+    ///
+    /// Set from `metadata.dcc-mcp.runtimes` in SKILL.md frontmatter. The
+    /// descriptor is declarative and safe: core may probe environment variables,
+    /// `PATH`, or Python module specs for discovery output, but it never runs
+    /// installer commands or skill tool scripts.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub runtimes: Vec<SkillRuntimeDescriptor>,
+
+    /// Declared tool groups for progressive exposure (see [`SkillGroup`]).
+    ///
+    /// When a tool declares a group name that is not present in this list,
+    /// the catalog auto-inserts an inactive placeholder group at load time.
+    #[serde(default)]
+    pub groups: Vec<SkillGroup>,
+
+    /// Sibling-file reference for the MCP prompts primitive (issues #351, #355).
+    ///
+    /// Set from `metadata.dcc-mcp.prompts` in SKILL.md frontmatter. The value
+    /// is a path relative to the skill root — either a single YAML file that
+    /// contains a top-level `prompts:` (and optional `workflows:`) list, or a
+    /// glob (`prompts/*.prompt.yaml`) that enumerates one file per prompt.
+    ///
+    /// Parsing is deferred until the MCP server handles a `prompts/list` or
+    /// `prompts/get` call, so a skill with 50 prompt files pays zero cost at
+    /// scan / load time.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub prompts_file: Option<String>,
+
+    /// Sibling-file reference for the MCP resources primitive.
+    ///
+    /// Set from `metadata.dcc-mcp.resources` in SKILL.md frontmatter. The value
+    /// is a path relative to the skill root — either a single YAML file, a
+    /// directory containing `*.resource.yaml` entries, or a glob-like reference
+    /// whose non-glob parent directory is scanned.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub resources_file: Option<String>,
+
+    /// Architectural layer for skill routing and search partitioning.
+    ///
+    /// Set from `metadata.dcc-mcp.layer` in SKILL.md frontmatter. Valid values:
+    ///
+    /// - `"infrastructure"` — low-level mechanism skill (diagnostics, scripting,
+    ///   scene I/O). Not intended as the final answer to user intent; use when
+    ///   the domain skill's `on-failure` chain calls it.
+    /// - `"domain"` — intent-oriented skill mapping user workflows to DCC calls
+    ///   (geometry, animation, lighting, rendering). This is the primary entry
+    ///   point for AI agents.
+    /// - `"example"` — authoring reference or tutorial skill; not for production.
+    ///
+    /// Unset (`None`) is allowed for backward compatibility; tools that need to
+    /// filter by layer treat `None` as "any layer".
+    ///
+    /// See the skill layer taxonomy in `AGENTS.md` for the layering
+    /// rules that govern description prefixes and `search-hint` partitioning.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub layer: Option<String>,
+
+    /// Pipeline stage tag for orchestration / minimal-mode presets.
+    ///
+    /// Set from `metadata.dcc-mcp.stage` in SKILL.md frontmatter. Free-form
+    /// string — each DCC adapter owns its own stage vocabulary (e.g. Maya:
+    /// `bootstrap` / `scene` / `authoring` / `interchange` / `pipeline`). Core
+    /// stays vocabulary-agnostic.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub stage: Option<String>,
+
+    /// One-line statement of what user intent this skill satisfies
+    /// (issue #1335). Powers the search ranker's intent-match boost.
+    ///
+    /// Example: `"Import a USD layer into the active scene."`
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub intent: Option<String>,
+
+    /// Recall context (`app_type`, `domain`, `workflow_stage`,
+    /// `task_category`) used by the search ranker and capability graph
+    /// (issues #1335, #1336).
+    #[serde(
+        default,
+        rename = "recall_context",
+        alias = "recall-context",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub recall_context: Option<skill_recall::RecallContext>,
+
+    /// Structured preconditions that must hold before this skill can run
+    /// safely — software, plugin, selection, scene state, capability, or
+    /// free-form descriptions (issue #1335).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub preconditions: Vec<skill_recall::Precondition>,
+
+    /// Aggregate side-effect descriptor — what the skill changes in the host
+    /// (issue #1335). Feeds the capability graph and the safety surfaces.
+    #[serde(
+        default,
+        rename = "side_effects",
+        alias = "side-effects",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub side_effects: Option<skill_recall::SideEffects>,
+
+    /// Artefact / object / scene-state tags this skill produces (issue #1335).
+    /// Example: `["file:usd", "scene_node:transform", "render:beauty"]`.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub produces: Vec<String>,
+
+    /// Required upstream capabilities or skill names that must run before
+    /// this one is meaningful (issue #1335). Complements the load-blocking
+    /// `depends` field.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub requires: Vec<String>,
+
+    /// Aggregate runtime success metrics — populated by the ranker / memory
+    /// layer (#1334), never authored by hand in SKILL.md.
+    #[serde(
+        default,
+        rename = "success_metrics",
+        alias = "success-metrics",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub success_metrics: Option<skill_recall::SuccessMetrics>,
+
+    /// Sibling-file reference for skill recipes (issue #466).
+    ///
+    /// Set from `metadata.dcc-mcp.recipes` in SKILL.md frontmatter. The value
+    /// is a path relative to the skill root pointing to a TOML or YAML file
+    /// that declares pre-composed parameter templates for common workflows.
+    ///
+    /// Parsing is deferred; the path is stored here so callers can load it
+    /// lazily on demand.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub recipes_file: Option<String>,
+
+    /// Marketplace-card branding authored in `metadata.dcc-mcp.branding`.
+    ///
+    /// Optional — when absent the Admin UI falls back to a hash-derived
+    /// accent + DCC icon. See [`SkillBranding`] for the shape.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub branding: Option<SkillBranding>,
+
+    /// External links rendered as marketplace-card chips, set from
+    /// `metadata.dcc-mcp.links` in SKILL.md frontmatter.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub links: Option<SkillLinks>,
+
+    /// Author-supplied example prompts shown on the card detail pane.
+    ///
+    /// Set from `metadata.dcc-mcp.example-prompts`. Each entry is a
+    /// short natural-language phrase agents can paraphrase to trigger
+    /// the skill — for example `"Bevel the selected polygon edges"`.
+    #[serde(
+        default,
+        rename = "example-prompts",
+        alias = "example_prompts",
+        skip_serializing_if = "Vec::is_empty"
+    )]
+    pub example_prompts: Vec<String>,
+}
+
+mod execution;
+mod skill_branding;
+mod skill_dependency;
+mod skill_policy;
+mod skill_recall;
+mod skill_runtime;
+mod tests;
+mod tool_declaration;
+
+pub use execution::*;
+pub use skill_branding::*;
+pub use skill_dependency::*;
+pub use skill_policy::*;
+pub use skill_recall::*;
+pub use skill_runtime::*;
+pub use tool_declaration::*;

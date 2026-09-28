@@ -1,0 +1,23 @@
+[package]
+name = "dcc-mcp-gateway-ensure"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Shared gateway ensure primitives: health check, launch lock, spawn, pidfile, process utilities"
+
+[dependencies]
+anyhow.workspace = true
+libc.workspace = true
+reqwest.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+workspace-hack = { version = "0.1", path = "../workspace-hack" }
+
+[dev-dependencies]
+tempfile.workspace = true
+dcc-mcp-test-utils = { workspace = true }

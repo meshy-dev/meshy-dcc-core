@@ -1,0 +1,397 @@
+# FAQ
+
+Frequently asked questions about DCC-MCP-Core.
+
+## General
+
+### What is DCC-MCP-Core?
+
+DCC-MCP-Core is a foundational Rust library with Python bindings that provides:
+
+- **ToolRegistry** — Thread-safe tool registration and lookup
+- **SkillCatalog** — Progressive skill discovery and loading; scripts auto-registered as MCP tools via SKILL.md
+- **EventBus** — A publish-subscribe event system for DCC lifecycle hooks
+- **MCP Protocol Types** — Type definitions for the Model Context Protocol (Tools, Resources, Prompts)
+- **Transport Layer** — IPC and network communication for distributed DCC integration
+- **MCP HTTP Server** — A streamable HTTP server exposing DCC tools to AI clients
+
+### What DCC applications are supported?
+
+dcc-mcp-core is DCC-agnostic — the core library provides the infrastructure. DCC-specific integrations are separate projects:
+
+- **Maya** — via [dcc-mcp-maya](https://github.com/dcc-mcp/dcc-mcp-maya)
+- **Unreal Engine** — via [dcc-mcp-unreal](https://github.com/dcc-mcp/dcc-mcp-unreal) (in development, Python embedded)
+- **Photoshop** — via [dcc-mcp-photoshop](https://github.com/dcc-mcp/dcc-mcp-photoshop) (in development, WebSocket bridge)
+- **ZBrush** — via [dcc-mcp-zbrush](https://github.com/dcc-mcp/dcc-mcp-zbrush) (in development, HTTP bridge)
+- **Blender, Houdini, 3ds Max** — community/third-party integrations using this library
+
+The core library supports Python 3.7–3.14. Python 3.7 uses native `cp37-cp37m` wheels on Linux and Windows, with `py37-lite` as the sidecar fallback. See [Python 3.7 LTS Policy](/guide/maya2022-support).
+
+### What Python versions are supported?
+
+Python 3.7–3.14 are tested in CI. Python 3.7 has native wheel, runtime, and full-suite gates; Python 3.8+ uses `abi3-py38` and the maintained-version matrix.
+
+### Does it have any Python library runtime dependencies?
+
+**No third-party Python libraries.** Core logic is compiled into the Rust extension. The default package does depend on the companion `dcc-mcp-server` wheel so `DccServerBase` can launch the gateway daemon from a packaged binary without relying on `PATH`.
+
+## Installation
+
+### How do I install dcc-mcp-core?
+
+**From PyPI:**
+```bash
+pip install dcc-mcp-core
+```
+
+**From source (requires Rust 1.95+ and maturin):**
+```bash
+git clone https://github.com/dcc-mcp/dcc-mcp-core.git
+cd dcc-mcp-core
+pip install maturin
+maturin develop
+```
+
+### Which Agent Skill should I install?
+
+Install by task; most agents only need the first row:
+
+| Task | Skill |
+|------|-------|
+| Operate a live DCC, discover tools, or search the Marketplace | [`@loonghao/dcc-mcp`](https://clawhub.ai/loonghao/skills/dcc-mcp) |
+| Create or modernize a complete DCC-MCP adapter/runtime | [`@loonghao/dcc-mcp-creator`](https://clawhub.ai/loonghao/skills/dcc-mcp-creator) |
+| Create, validate, or improve a DCC-specific Skill package | [`@loonghao/dcc-mcp-skills-creator`](https://clawhub.ai/loonghao/skills/dcc-mcp-skills-creator) |
+
+```bash
+openclaw skills install @loonghao/dcc-mcp
+# Direct ClawHub CLI:
+npx --yes clawhub@0.23.1 install @loonghao/dcc-mcp
+```
+
+Start a new agent turn after installation. The `dcc-mcp` Skill then guides the
+agent through `dcc-mcp-cli list -> search -> describe/load-skill -> call`.
+
+## Tools
+
+### How do I register a tool?
+
+```python
+from dcc_mcp_core import ToolRegistry, ToolDispatcher
+import json
+
+reg = ToolRegistry()
+
+# Register tool metadata with an optional JSON Schema
+reg.register(
+    name="create_sphere",
+    description="Create a polygon sphere",
+    category="geometry",
+    tags=["create", "mesh"],
+    dcc="maya",
+    version="1.0.0",
+    input_schema=json.dumps({
+        "type": "object",
+        "required": ["radius"],
+        "properties": {"radius": {"type": "number", "minimum": 0.0}},
+    }),
+)
+
+# Attach a Python handler
+dispatcher = ToolDispatcher(reg)
+dispatcher.register_handler("create_sphere", lambda params: {"name": "sphere1"})
+result = dispatcher.dispatch("create_sphere", '{"radius": 1.0}')
+print(result["output"])  # {"name": "sphere1"}
+```
+
+### How do I return structured results from a tool?
+
+```python
+from dcc_mcp_core import success_result, error_result, from_exception
+
+# Success
+result = success_result("Sphere created", name="sphere1")
+print(result.success)   # True
+print(result.context)   # {"name": "sphere1"}
+
+# Error
+result = error_result("Failed to create sphere", error="no_active_scene")
+print(result.success)   # False
+
+# From exception
+try:
+    raise ValueError("radius must be > 0")
+except Exception:
+    result = from_exception("Invalid radius")
+```
+
+### How do I validate tool input?
+
+```python
+from dcc_mcp_core import ToolValidator
+
+validator = ToolValidator.from_schema_json('{"type":"object","required":["radius"],"properties":{"radius":{"type":"number"}}}')
+ok, errors = validator.validate('{"radius": 1.0}')
+assert ok
+
+ok, errors = validator.validate('{}')
+assert not ok
+print(errors)  # ['missing required field: radius']
+```
+
+## Events
+
+### How does the event system work?
+
+```python
+from dcc_mcp_core import EventBus
+
+bus = EventBus()
+
+# Subscribe — returns a subscription ID
+def on_save(file_path: str):
+    print(f"Saving to: {file_path}")
+
+sub_id = bus.subscribe("dcc.save", on_save)
+
+# Publish
+bus.publish("dcc.save", file_path="/tmp/scene.usd")
+
+# Unsubscribe
+bus.unsubscribe("dcc.save", sub_id)
+```
+
+::: warning Async handlers
+The EventBus does not natively support `async def` callbacks. Wrap async logic in a synchronous handler that schedules it with your event loop.
+:::
+
+## Skills
+
+### What is the quickest way to expose scripts as MCP tools?
+
+Use `create_skill_server` (v0.12.12+) — one call does everything:
+
+```python
+import os
+from dcc_mcp_core import create_skill_server, McpHttpConfig
+
+os.environ["DCC_MCP_MAYA_SKILL_PATHS"] = "/path/to/skills"
+server = create_skill_server("maya", McpHttpConfig(port=8765))
+handle = server.start()
+print(handle.mcp_url())  # http://127.0.0.1:8765/mcp
+```
+
+This automatically creates an `ToolRegistry`, `ToolDispatcher`, `SkillCatalog`, and `McpHttpServer`, and discovers skills from `DCC_MCP_MAYA_SKILL_PATHS` and `DCC_MCP_SKILL_PATHS`.
+
+### What is the Skills system?
+
+The Skills system allows zero-code script registration. Place scripts in a directory with an agentskills.io `SKILL.md` file plus sibling declaration files and they are automatically discovered and registered as MCP tools:
+
+`SKILL.md`:
+
+```markdown
+---
+name: maya-geometry
+description: "Geometry creation tools. Use when creating or editing Maya meshes."
+metadata:
+  dcc-mcp:
+    dcc: maya
+    version: "1.0.0"
+    tags: ["geometry"]
+    tools: tools.yaml
+---
+```
+
+`tools.yaml`:
+
+```yaml
+tools:
+  - name: create_sphere
+    description: "Create a sphere"
+    source_file: scripts/create_sphere.py
+```
+
+### How do I discover and load skills?
+
+```python
+from dcc_mcp_core import SkillScanner, SkillCatalog
+import os
+
+os.environ["DCC_MCP_SKILL_PATHS"] = "/path/to/skills"
+
+scanner = SkillScanner()
+catalog = SkillCatalog(scanner)
+
+# Discover skills
+catalog.discover(dcc_name="maya")
+
+# Load a skill
+ok = catalog.load_skill("maya-geometry")
+print(ok)  # True
+```
+
+### What's the tool naming convention for skill tools?
+
+Tools from skills are named `{skill_name_underscored}__{tool_name}`, e.g.:
+- skill `maya-geometry`, tool `create_sphere` → tool `maya_geometry__create_sphere`
+
+### How do I scan for skills without loading them?
+
+```python
+from dcc_mcp_core import scan_and_load_lenient
+
+skills, skipped = scan_and_load_lenient(extra_paths=["/my/skills"])
+for skill in skills:
+    print(f"{skill.name} ({len(skill.tools)} tools)")
+```
+
+## Transport Layer
+
+### What transport options are available?
+
+- **TCP** — Network communication (`TransportAddress.tcp(host, port)`)
+- **Named Pipes** — Low-latency local communication on Windows (`TransportAddress.named_pipe(name)`)
+- **Unix Domain Sockets** — Low-latency local communication on Linux/macOS (`TransportAddress.unix_socket(path)`)
+
+Use `TransportAddress.default_local(dcc_type, pid)` to automatically select the best IPC transport for the current platform.
+
+### How do I register a DCC service and connect to it?
+
+**DCC-side (server):**
+```python
+from dcc_mcp_core import IpcChannelAdapter, DccLinkFrame
+
+# Server: create named IPC endpoint and wait for client
+server = IpcChannelAdapter.create("maya-2025")
+server.wait_for_client()
+```
+
+**Agent-side (client):**
+```python
+from dcc_mcp_core import IpcChannelAdapter, DccLinkFrame
+
+# Client: connect to the DCC's IPC endpoint
+client = IpcChannelAdapter.connect("maya-2025")
+request = DccLinkFrame(msg_type=1, seq=0, body=b'{"method":"ping"}')
+client.send_frame(request)
+reply = client.recv_frame()
+```
+
+## MCP HTTP Server
+
+### How do I expose DCC tools via HTTP for AI clients?
+
+```python
+from dcc_mcp_core import ToolRegistry, McpHttpServer, McpHttpConfig
+
+registry = ToolRegistry()
+registry.register("get_scene_info", description="Get scene info", category="scene", dcc="maya")
+
+server = McpHttpServer(registry, McpHttpConfig(port=8765))
+handle = server.start()
+print(handle.mcp_url())  # http://127.0.0.1:8765/mcp
+# Connect your AI client to this URL
+handle.shutdown()
+```
+
+## Gateway
+
+### How do I run multiple DCC instances with a single endpoint?
+
+Use the **Gateway** feature. Set `gateway_port` on `McpHttpConfig` to a well-known port (default: `9765`). The first process to bind that port becomes the gateway; all others register as plain DCC instances:
+
+```python
+from dcc_mcp_core import ToolRegistry, McpHttpServer, McpHttpConfig
+
+registry = ToolRegistry()
+config = McpHttpConfig(port=0, server_name="maya-mcp")
+config.gateway_port = 9765
+config.dcc_type = "maya"
+
+server = McpHttpServer(registry, config)
+handle = server.start()
+print(handle.is_gateway)  # True if this process won the gateway port
+```
+
+Shell-capable agents use the `dcc-mcp` Skill and `dcc-mcp-cli`; the local
+profile discovers registered instances automatically. MCP-only clients connect
+to `http://localhost:9765/mcp` and read the `gateway://instances` resource when
+they need a concrete DCC process; each entry already carries `mcp_url`.
+
+### What is BridgeKind?
+
+`BridgeKind` describes how a DCC communicates when it does **not** have an embedded Python interpreter:
+- `Http` — HTTP REST bridge (e.g. ZBrush)
+- `WebSocket` — WebSocket JSON-RPC bridge (e.g. Photoshop UXP)
+- `NamedPipe` — Named pipe bridge (e.g. 3ds Max COM)
+
+Set `DccCapabilities(bridge_kind="http", bridge_endpoint="http://localhost:1234", has_embedded_python=False)` for bridge-based DCCs.
+
+## On-Demand Skill Discovery
+
+### How does on-demand skill discovery work?
+
+When `create_skill_server()` starts, it only **discovers** skills (reads SKILL.md files) — it does **not** load them. The direct per-DCC `tools/list` response shows:
+1. A small, always-on discovery/lifecycle surface (`search_skills`, `list_skills`, `get_skill_info`, `load_skill`, `unload_skill`, and related progressive-exposure helpers)
+2. Loaded skill tools with full schemas
+3. Unloaded skill stubs as `__skill__<name>` (name + one-line description only)
+
+Agents use `search_skills(query="keyword")` to find relevant skills, then `load_skill(skill_name="...")` to activate them. This keeps the initial tool list small and loads schemas only when needed.
+
+## Troubleshooting
+
+### My tool registration is not working. What should I check?
+
+1. Make sure the `ToolRegistry` instance used for registration is the same one used for lookup
+2. Call `reg.list_actions()` to verify the tool was registered
+3. Use `reg.get_action("my_action")` to check the stored metadata
+4. If using `ToolDispatcher`, verify `dispatcher.handler_count()` > 0
+
+### How do I enable debug logging?
+
+Set the `DCC_MCP_LOG` environment variable before importing:
+```bash
+export DCC_MCP_LOG=debug
+```
+
+Or configure via `TelemetryConfig`:
+```python
+from dcc_mcp_core import TelemetryConfig
+
+cfg = TelemetryConfig("my-service").with_stdout_exporter()
+cfg.init()
+```
+
+### How do I report a bug or request a feature?
+
+Agents should self-check before opening an issue:
+
+1. Keep the failed call's `request_id`; run `dcc-mcp-cli doctor` for startup or
+   readiness faults and `dcc-mcp-cli stats --status failure --session-id <id>`
+   for the bounded task slice.
+2. Run `dcc-mcp-cli feedback` to record structured feedback at the gateway;
+   include the last known instance/request/job ids for crash-class failures.
+   This remains available after the DCC exits.
+3. For a gateway-routed failure, retrieve public-safe
+   `/v1/debug/issue-reports/<request_id>`. It includes a suggested title/body;
+   never upload `?mode=raw` without human review.
+4. Route Skill contract bugs to the owning Skill, adapter/host bugs to the
+   adapter repository, and shared CLI/gateway/protocol bugs to
+   [dcc-mcp-core](https://github.com/dcc-mcp/dcc-mcp-core/issues).
+5. Open the external issue only when the user requested or approved it. Include
+   the DCC/core versions, smallest reproduction, expected/actual behavior, and
+   the public-safe report.
+
+## Contributing
+
+### How do I contribute to the project?
+
+See the [CONTRIBUTING.md](https://github.com/dcc-mcp/dcc-mcp-core/blob/main/CONTRIBUTING.md) guide. Key steps:
+
+1. Install Rust 1.95+ and Python 3.8+
+2. Clone the repository
+3. Run `vx just dev` to build and install in dev mode
+4. Run `vx just test` to run the test suite
+
+### Is there a community chat?
+
+Join the discussion on [GitHub Discussions](https://github.com/dcc-mcp/dcc-mcp-core/discussions).

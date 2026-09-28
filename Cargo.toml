@@ -1,0 +1,337 @@
+# dcc-mcp-core Workspace
+# Rust-powered core for the DCC MCP ecosystem
+
+[workspace]
+members = [
+    "crates/dcc-mcp-naming",
+    "crates/dcc-mcp-models",
+    "crates/dcc-mcp-actions",
+    "crates/dcc-mcp-skills",
+    "crates/dcc-mcp-skills-bench",
+    "crates/dcc-mcp-protocols",
+    "crates/dcc-mcp-jsonrpc",
+    "crates/dcc-mcp-wire",
+    "crates/dcc-mcp-job",
+    "crates/dcc-mcp-skill-rest",
+    "crates/dcc-mcp-gateway",
+    "crates/dcc-mcp-gateway-admin",
+    "crates/dcc-mcp-gateway-core",
+    "crates/dcc-mcp-gateway-ensure",
+    "crates/dcc-mcp-gateway-search",
+    "crates/dcc-mcp-logging",
+    "crates/dcc-mcp-pybridge",
+    "crates/dcc-mcp-pybridge-derive",
+    "crates/dcc-mcp-paths",
+    "crates/dcc-mcp-transport",
+    "crates/dcc-mcp-process",
+    "crates/dcc-mcp-telemetry",
+    "crates/dcc-mcp-sandbox",
+    "crates/dcc-mcp-shm",
+    "crates/dcc-mcp-capture",
+    "crates/dcc-mcp-usd",
+    "crates/dcc-mcp-http",
+    "crates/dcc-mcp-http-types",
+    "crates/dcc-mcp-http-server",
+    "crates/dcc-mcp-http-py",
+    "crates/dcc-mcp-cli",
+    "crates/dcc-mcp-server",
+    "crates/dcc-mcp-sidecar",
+    "crates/dcc-mcp-workflow",
+    "crates/dcc-mcp-scheduler",
+    "crates/dcc-mcp-artefact",
+    "crates/dcc-mcp-host",
+    "crates/dcc-mcp-host-rpc",
+    "crates/dcc-mcp-tunnel-protocol",
+    "crates/dcc-mcp-tunnel-relay",
+    "crates/dcc-mcp-tunnel-agent",
+    "crates/dcc-mcp-marketplace",
+    "crates/dcc-mcp-catalog",
+    "crates/dcc-mcp-db",
+    "crates/dcc-mcp-semantic",
+    "crates/dcc-mcp-updater",
+    "crates/dcc-mcp-attestation",
+    "crates/dcc-mcp-test-utils",
+    "crates/workspace-hack",
+]
+resolver = "2"
+
+[workspace.package]
+version = "0.20.36" # x-release-please-version
+edition = "2024"
+rust-version = "1.95"
+authors = ["Hal Long <hal.long@outlook.com>"]
+license = "MIT"
+repository = "https://github.com/dcc-mcp/dcc-mcp-core"
+
+[workspace.dependencies]
+# Internal crates
+dcc-mcp-naming = { path = "crates/dcc-mcp-naming" }
+dcc-mcp-models = { path = "crates/dcc-mcp-models" }
+dcc-mcp-actions = { path = "crates/dcc-mcp-actions" }
+dcc-mcp-skills = { path = "crates/dcc-mcp-skills" }
+dcc-mcp-skills-bench = { path = "crates/dcc-mcp-skills-bench" }
+dcc-mcp-protocols = { path = "crates/dcc-mcp-protocols" }
+dcc-mcp-jsonrpc = { path = "crates/dcc-mcp-jsonrpc" }
+dcc-mcp-wire = { path = "crates/dcc-mcp-wire" }
+dcc-mcp-job = { path = "crates/dcc-mcp-job" }
+dcc-mcp-skill-rest = { path = "crates/dcc-mcp-skill-rest" }
+dcc-mcp-logging = { path = "crates/dcc-mcp-logging" }
+dcc-mcp-pybridge = { path = "crates/dcc-mcp-pybridge" }
+dcc-mcp-pybridge-derive = { path = "crates/dcc-mcp-pybridge-derive" }
+dcc-mcp-paths = { path = "crates/dcc-mcp-paths" }
+dcc-mcp-transport = { path = "crates/dcc-mcp-transport" }
+dcc-mcp-process = { path = "crates/dcc-mcp-process" }
+dcc-mcp-telemetry = { path = "crates/dcc-mcp-telemetry" }
+dcc-mcp-sandbox = { path = "crates/dcc-mcp-sandbox" }
+dcc-mcp-shm = { path = "crates/dcc-mcp-shm" }
+dcc-mcp-capture = { path = "crates/dcc-mcp-capture" }
+dcc-mcp-usd = { path = "crates/dcc-mcp-usd" }
+dcc-mcp-http = { path = "crates/dcc-mcp-http" }
+dcc-mcp-http-types = { path = "crates/dcc-mcp-http-types" }
+dcc-mcp-http-server = { path = "crates/dcc-mcp-http-server" }
+dcc-mcp-http-py = { path = "crates/dcc-mcp-http-py" }
+dcc-mcp-cli = { path = "crates/dcc-mcp-cli" }
+dcc-mcp-server = { path = "crates/dcc-mcp-server" }
+dcc-mcp-sidecar = { path = "crates/dcc-mcp-sidecar" }
+dcc-mcp-workflow = { path = "crates/dcc-mcp-workflow" }
+dcc-mcp-scheduler = { path = "crates/dcc-mcp-scheduler" }
+dcc-mcp-artefact = { path = "crates/dcc-mcp-artefact" }
+dcc-mcp-host = { path = "crates/dcc-mcp-host" }
+dcc-mcp-host-rpc = { path = "crates/dcc-mcp-host-rpc" }
+dcc-mcp-tunnel-protocol = { path = "crates/dcc-mcp-tunnel-protocol" }
+dcc-mcp-tunnel-relay = { path = "crates/dcc-mcp-tunnel-relay" }
+dcc-mcp-tunnel-agent = { path = "crates/dcc-mcp-tunnel-agent" }
+dcc-mcp-marketplace = { path = "crates/dcc-mcp-marketplace" }
+dcc-mcp-catalog = { path = "crates/dcc-mcp-catalog" }
+dcc-mcp-db = { path = "crates/dcc-mcp-db" }
+dcc-mcp-gateway = { path = "crates/dcc-mcp-gateway" }
+dcc-mcp-gateway-admin = { path = "crates/dcc-mcp-gateway-admin" }
+dcc-mcp-gateway-core = { path = "crates/dcc-mcp-gateway-core" }
+dcc-mcp-updater = { path = "crates/dcc-mcp-updater" }
+dcc-mcp-attestation = { path = "crates/dcc-mcp-attestation" }
+dcc-mcp-gateway-ensure = { path = "crates/dcc-mcp-gateway-ensure" }
+dcc-mcp-gateway-search = { path = "crates/dcc-mcp-gateway-search" }
+dcc-mcp-semantic = { path = "crates/dcc-mcp-semantic" }
+dcc-mcp-test-utils = { path = "crates/dcc-mcp-test-utils" }
+
+# Shared dependencies (single version across workspace)
+pyo3 = { version = "0.28", features = ["multiple-pymethods"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+jsonschema = "0.28"
+serde_yaml_ng = "0.10"
+semver = "1.0"
+toon-format = { version = "0.5", default-features = false }
+dashmap = "6.1"
+dirs = "6.0"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+tracing-appender = "0.2"
+tracing-tracy = { version = "=0.11.4", default-features = false, features = ["enable", "ondemand", "only-localhost"] }
+time = { version = "0.3", features = ["formatting", "macros", "local-offset"] }
+parking_lot = "0.12"
+thiserror = "2.0"
+uuid = { version = "1.0", features = ["v4", "v5", "serde"] }
+tokio = { version = "1.0", features = ["net", "rt-multi-thread", "sync", "time", "macros", "io-util", "signal"] }
+rmp-serde = "1.3"
+sysinfo = "0.39"
+memmap2 = "0.9"
+lz4_flex = { version = "0.13", default-features = false, features = ["frame"] }
+libc = "0.2"
+notify = "8.0"
+anyhow = "1.0"
+tokio-tungstenite = "0.29"
+futures-util = "0.3"
+reqwest = { version = "0.13", default-features = false, features = ["blocking", "json", "stream", "rustls"] }
+socket2 = { version = "0.6", features = ["all"] }
+mdns-sd = { version = "0.20", default-features = false, features = ["async"] }
+criterion = { version = "0.8", features = ["html_reports"] }
+ipckit = { version = "0.1.7", features = ["async", "backend-interprocess"] }
+base64 = "0.22"
+# Optional SQLite backend for JobManager persistence (issue #328). Pulled in
+# only when the `job-persist-sqlite` feature is enabled on `dcc-mcp-http`;
+# otherwise zero SQLite code compiles into the wheel.
+rusqlite = { version = "0.39", features = ["bundled"] }
+axum = "0.8"
+tower = "0.5"
+tower-http = "0.6"
+tempfile = "3"
+sha2 = "0.11"
+# `chacha` pins corpus generation to a named generator (ChaCha8Rng). `StdRng`
+# makes no cross-version reproducibility guarantee, and the skills benchmark
+# needs its seeded corpus to be stable across `rand` patch bumps.
+rand = { version = "0.10", features = ["chacha"] }
+http = "1.0"
+futures = "0.3"
+async-trait = "0.1"
+
+# Safe zero-copy (de)serialisation for shared-memory headers.
+bytemuck = { version = "1.22", features = ["derive", "extern_crate_alloc", "min_const_generics"] }
+
+# JWT bearer auth for the tunnel relay (issue #504). HS256 today; RS256/EdDSA
+# can be added in a later PR without touching the protocol crate's public API.
+# jsonwebtoken 10.x is a security upgrade (CVE-2026-25537 — TryParse
+# type-confusion bypass). v10 made the crypto backend non-default; we pick
+# `rust_crypto` for portability across the wheels we ship (it works on every
+# host without `aws-lc-rs`'s build-time C toolchain requirement).
+jsonwebtoken = { version = "10.3", default-features = false, features = ["rust_crypto"] }
+
+# Official Rust MCP SDK (issue #985). Provides MCP Streamable HTTP transport
+# via modelcontextprotocol/rust-sdk.
+rmcp = { version = "1.6", features = ["transport-streamable-http-server"] }
+
+# Type-stub generation (opt-in via `stub-gen` feature). Used only by the
+# `stub_gen` binary target — never pulled into wheels or library consumers.
+pyo3-stub-gen = "0.23"
+pyo3-stub-gen-derive = "0.23"
+
+[workspace.lints.clippy]
+# Warn when a Result / error value can be silently dropped (issue #844).
+must_use_candidate = "warn"
+
+# Root package — Python bindings entry point
+# Compiles to `_core.pyd` / `_core.so`, exposed as `dcc_mcp_core._core`
+[package]
+name = "dcc-mcp-core"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Foundational library for the DCC Model Context Protocol (MCP) ecosystem"
+keywords = ["dcc", "mcp", "maya", "blender", "houdini", "pyo3"]
+
+[lib]
+name = "_core"
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+# Internal crates
+dcc-mcp-naming.workspace = true
+dcc-mcp-models.workspace = true
+dcc-mcp-actions.workspace = true
+dcc-mcp-skills.workspace = true
+dcc-mcp-protocols.workspace = true
+dcc-mcp-logging.workspace = true
+dcc-mcp-pybridge.workspace = true
+dcc-mcp-paths.workspace = true
+dcc-mcp-transport.workspace = true
+dcc-mcp-process.workspace = true
+dcc-mcp-telemetry.workspace = true
+dcc-mcp-sandbox.workspace = true
+dcc-mcp-shm.workspace = true
+dcc-mcp-capture.workspace = true
+dcc-mcp-usd.workspace = true
+dcc-mcp-http.workspace = true
+dcc-mcp-http-py.workspace = true
+dcc-mcp-artefact.workspace = true
+dcc-mcp-host.workspace = true
+dcc-mcp-wire.workspace = true
+
+# Workflow crate — opt-in via the top-level `workflow` feature.
+dcc-mcp-workflow = { workspace = true, optional = true }
+
+# Scheduler crate — opt-in via the top-level `scheduler` feature (issue #352).
+dcc-mcp-scheduler = { workspace = true, optional = true }
+
+# Gateway crate — opt-in via the top-level `admin` feature.
+dcc-mcp-gateway = { workspace = true, optional = true }
+
+# PyO3 (optional — only for wheel builds)
+pyo3 = { workspace = true, optional = true }
+reqwest = { workspace = true, optional = true }
+
+# Type-stub generation (opt-in via `stub-gen` feature, used by the
+# `stub_gen` binary target only).
+pyo3-stub-gen = { workspace = true, optional = true }
+workspace-hack = { version = "0.1", path = "crates/workspace-hack" }
+
+[dev-dependencies]
+serde_json.workspace = true
+
+# PoC binary: generate python/dcc_mcp_core/_core.pyi from annotated Rust code.
+# Build with: cargo run --bin stub_gen --features stub-gen
+[[bin]]
+name = "stub_gen"
+path = "src/bin/stub_gen.rs"
+required-features = ["stub-gen"]
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+strip = true
+
+[features]
+default = []
+python-bindings = ["pyo3", "dep:reqwest", "dcc-mcp-naming/python-bindings", "dcc-mcp-models/python-bindings", "dcc-mcp-actions/python-bindings", "dcc-mcp-skills/python-bindings", "dcc-mcp-protocols/python-bindings", "dcc-mcp-logging/python-bindings", "dcc-mcp-pybridge/python-bindings", "dcc-mcp-paths/python-bindings", "dcc-mcp-transport/python-bindings", "dcc-mcp-process/python-bindings", "dcc-mcp-telemetry/python-bindings", "dcc-mcp-sandbox/python-bindings", "dcc-mcp-shm/python-bindings", "dcc-mcp-capture/python-bindings", "dcc-mcp-usd/python-bindings", "dcc-mcp-http-py/python-bindings", "dcc-mcp-artefact/python-bindings", "dcc-mcp-host/python-bindings", "dcc-mcp-wire/python-bindings", "dcc-mcp-workflow?/python-bindings", "dcc-mcp-scheduler?/python-bindings"]
+# Opt into the first-class Workflow primitive (issue #348). Off by default
+# for one release — enables WorkflowSpec/WorkflowStatus in Python and the
+# workflows.* built-in tools in Rust. Step execution is stubbed; see #348.
+workflow = ["dep:dcc-mcp-workflow"]
+# Opt into the scheduler subsystem (issue #352). Off by default — enables
+# the cron + webhook-triggered workflow scheduler and exposes
+# ScheduleSpec / TriggerSpec in Python. Requires the `workflow` feature.
+scheduler = ["dep:dcc-mcp-scheduler", "workflow"]
+# Enable the Prometheus `/metrics` exporter (issue #331). Off by default.
+# Forwards to dcc-mcp-http/prometheus, which in turn enables the
+# prometheus feature on dcc-mcp-telemetry. When disabled, zero
+# Prometheus code is compiled into the wheel.
+prometheus = ["dcc-mcp-http/prometheus", "dcc-mcp-telemetry/prometheus"]
+# Persist JobManager state in SQLite so tracked jobs survive restarts
+# (issue #328). Forwards to `dcc-mcp-http/job-persist-sqlite`. Off by
+# default — when disabled, zero SQLite code compiles into the wheel.
+job-persist-sqlite = ["dcc-mcp-http/job-persist-sqlite"]
+# Enable the admin UI (Vite bundle in gateway). Forwards to both the
+# direct `dcc-mcp-gateway` dep and, crucially, the gateway pulled in via
+# `dcc-mcp-http`'s default `auto-gateway` feature (issue #2182). Off by
+# default — when disabled, zero admin UI code or front-end assets are
+# compiled into the wheel.
+admin = ["dcc-mcp-gateway/admin", "dcc-mcp-http/admin"]
+# Route explicitly negotiated MCP 2026-07-28 requests through the stateless
+# HTTP service while retaining the legacy session path.
+mcp-2026-07-28 = ["dcc-mcp-http/mcp-2026-07-28"]
+# Persist gateway admin state in SQLite (bundled `rusqlite`). Off by default
+# so the admin-persist-sqlite path no longer compiles the bundled `rusqlite`
+# driver (issue #2182). Note: the gateway's traffic-capture sink still depends
+# on `rusqlite` unconditionally; a separate follow-up is needed to fully
+# eliminate bundled SQLite from the default wheel.
+admin-persist-sqlite = ["dcc-mcp-http/admin-persist-sqlite", "dcc-mcp-gateway/admin-persist-sqlite"]
+# Opt-in local Tracy profiling through the existing logging subscriber.
+tracy = ["dcc-mcp-logging/tracy"]
+
+# py37-lite: pure-Python wheel profile for Maya 2022 / Python 3.7.
+# Intentionally empty: ``build-py37`` only packages ``python/`` sources and
+# must not compile Rust (see ``scripts/build_py37_pure_wheel.py``).
+# See also `build-py37` in justfile and the py37-lite CI workflows.
+py37-lite = []
+abi3-py38 = ["pyo3/abi3-py38"]
+# Python 3.7 wheel: non-abi3 build, no abi3-py38 feature
+ext-module = ["pyo3/extension-module"]
+# Generate `python/dcc_mcp_core/_core.pyi` from annotated Rust code.
+# PoC scope: currently only dcc-mcp-capture is annotated.
+stub-gen = [
+    "python-bindings",
+    "dep:pyo3-stub-gen",
+    "dcc-mcp-naming/stub-gen",
+    "dcc-mcp-models/stub-gen",
+    "dcc-mcp-actions/stub-gen",
+    "dcc-mcp-skills/stub-gen",
+    "dcc-mcp-protocols/stub-gen",
+    "dcc-mcp-logging/stub-gen",
+    "dcc-mcp-pybridge/stub-gen",
+    "dcc-mcp-paths/stub-gen",
+    "dcc-mcp-transport/stub-gen",
+    "dcc-mcp-process/stub-gen",
+    "dcc-mcp-telemetry/stub-gen",
+    "dcc-mcp-sandbox/stub-gen",
+    "dcc-mcp-shm/stub-gen",
+    "dcc-mcp-capture/stub-gen",
+    "dcc-mcp-usd/stub-gen",
+    "dcc-mcp-http-py/stub-gen",
+    "dcc-mcp-artefact/stub-gen",
+    "dcc-mcp-wire/stub-gen",
+    "dcc-mcp-workflow/stub-gen",
+    "dcc-mcp-scheduler/stub-gen",
+]

@@ -1,0 +1,382 @@
+# dcc-mcp-core development commands
+# Usage: just <recipe>  (or: just --list)
+#
+# All CI jobs use these recipes — local and CI are identical.
+
+set windows-shell := ["powershell.exe", "-NoLogo", "-Command"]
+set shell := ["sh", "-cu"]
+
+# ── Feature sets (single source of truth) ─────────────────────────────────────
+# Opt-in Cargo features that must ship in every wheel. Add new features here
+# and every recipe below — as well as CI workflows invoking `just build-*` —
+# will pick them up automatically.
+OPT_FEATURES := "workflow,scheduler,prometheus,job-persist-sqlite,admin,mcp-2026-07-28"
+CLI_BIN := if os_family() == "windows" { ".\\target\\release\\dcc-mcp-cli.exe" } else { "./target/release/dcc-mcp-cli" }
+
+# Feature set for `maturin develop` (no abi3, extension-module linkage)
+DEV_FEATURES := "python-bindings,ext-module," + OPT_FEATURES
+
+# Feature set for abi3 release wheels (Python 3.8+)
+WHEEL_FEATURES := "python-bindings,ext-module,abi3-py38," + OPT_FEATURES
+
+# Feature set for Python 3.7 native wheels (non-abi3 — PyO3 requires >=3.8 for abi3)
+WHEEL_FEATURES_PY37 := "python-bindings,ext-module," + OPT_FEATURES
+
+default:
+    @just --list
+
+# ── Git hooks ─────────────────────────────────────────────────────────────────
+
+# Install git hooks from .githooks/ (sets core.hooksPath).
+# Run once after clone. Also invoked automatically by `dev`.
+githooks-install:
+    git config core.hooksPath .githooks
+
+# ── Feature introspection (for CI / scripts) ──────────────────────────────────
+# CI workflows call these to pick up the canonical feature list from justfile
+# rather than hard-coding feature names in workflow YAML.
+#
+# Example (GitHub Actions):
+#   FEATURES=$(just print-wheel-features)
+#   maturin build --release --features "$FEATURES"
+
+print-opt-features:
+    @echo "{{OPT_FEATURES}}"
+
+print-dev-features:
+    @echo "{{DEV_FEATURES}}"
+
+print-wheel-features:
+    @echo "{{WHEEL_FEATURES}}"
+
+print-wheel-features-py37:
+    @echo "{{WHEEL_FEATURES_PY37}}"
+
+# ── Admin UI ──────────────────────────────────────────────────────────────────
+#
+# The Vite bundle is written to crates/dcc-mcp-gateway-admin/src/generated/
+# and is intentionally gitignored. It is rebuilt automatically whenever Cargo compiles
+# `dcc-mcp-gateway` with the `admin` feature (wheel builds, local `cargo check`, etc.);
+# `crates/dcc-mcp-gateway-admin/build.rs` installs dependencies with `vx npm`
+# and builds with the vx-managed Node runtime.
+#
+# Use these recipes when you iterate on JSX/CSS only and want fast rebuilds without
+# recompiling the whole Rust workspace.
+
+# Install admin UI dependencies from the committed lockfile (Node from vx.toml via vx)
+# Note: npm ci skips optional deps by default; use --include=optional to
+# ensure native bindings (rolldown) are installed and the Vite build succeeds.
+admin-install:
+    cd admin-ui; vx npm ci --ignore-scripts --include=optional
+
+# Build the React admin UI into the Rust-embedded generated HTML
+admin-build: admin-install
+    vx node admin-ui/node_modules/typescript/bin/tsc -b admin-ui/tsconfig.json
+    vx node admin-ui/node_modules/vite/bin/vite.js build admin-ui --config admin-ui/vite.config.ts
+
+# ── Rust ──────────────────────────────────────────────────────────────────────
+
+# Check all crates compile (also regenerates _core.pyi for IDE completions)
+check:
+    just stubgen
+    cargo check --workspace
+
+# Run clippy (same flags as CI)
+clippy:
+    cargo clippy --workspace -- -D warnings
+
+# Format Rust source
+fmt:
+    cargo fmt --all
+
+# Check Rust formatting (CI mode — no writes)
+fmt-check:
+    cargo fmt --all -- --check
+
+# Run Rust unit/integration tests (nextest for unit/integration, cargo test for doctests).
+# nextest runs each test in its own process (≈2-3× faster on Windows-MSVC) but does
+# not run doctests, so we chain a `cargo test --doc` pass to preserve coverage.
+#
+# `--no-fail-fast` is required: nextest stops at the first failure by default,
+# so one flaky test silently skipped every remaining test in the run (the
+# weekly matrix once executed only 2345 of 4080 tests on Windows). Retries and
+# the slow-test ceiling live in `.config/nextest.toml`. A real regression is
+# still fatal — nextest exits non-zero once retries are exhausted.
+#
+# The four suites must also survive a failing predecessor: `just` aborts a recipe
+# at the first non-zero line, so a red `cargo nextest run --workspace` skipped the
+# ~72 `job-persist-sqlite` tests and both doctest passes. Each recipe line runs in
+# its own shell process, so the aggregation lives in committed scripts —
+# `scripts/test-rust.sh` / `scripts/test-rust.ps1` (keep the two in sync). Both run
+# all four suites and exit non-zero when any of them failed, so the gate stays red
+# on a real regression. A shebang recipe is not used because just resolves the
+# shebang interpreter path on Windows, where `/usr/bin/env` has no reliable
+# resolution.
+[unix]
+test-rust:
+    sh scripts/test-rust.sh
+
+[windows]
+test-rust:
+    powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File scripts/test-rust.ps1; exit $LASTEXITCODE
+
+# Rust test coverage via cargo-llvm-cov (install: cargo install cargo-llvm-cov)
+# Generates lcov.info; CI uploads to Codecov (set `files: coverage/lcov.info`).
+rust-cov:
+    mkdir -p coverage
+    cargo llvm-cov --workspace --lcov --output-path coverage/lcov.info
+
+# Run criterion benchmarks for IPC transport
+bench:
+    cargo bench -p dcc-mcp-transport
+
+budget-args := ""
+
+# Run the MCP request-path stage benchmark and write pipeline-bench.json
+# (extra report args: just bench-pipeline budget-args="--budget route_tool=0.05")
+bench-pipeline:
+    cargo run --release -p dcc-mcp-telemetry --example pipeline_bench -- \
+        --iterations 500 --output target/pipeline-bench-raw.json
+    python scripts/bench_pipeline_report.py {{ budget-args }}
+
+# Regenerate workspace-hack (run after dependency updates to fix CI)
+hakari-generate:
+    cargo hakari generate
+
+# Verify workspace-hack is up to date (local preflight check)
+hakari-verify:
+    cargo hakari verify
+
+# ── Standalone binaries ─────────────────────────────────────────────────────
+
+# Build dcc-mcp-cli for the current platform
+build-cli:
+    cargo build --release -p dcc-mcp-cli
+
+# Build dcc-mcp-cli universal2 binary for macOS (requires both targets installed)
+[unix]
+build-cli-universal:
+    #!/usr/bin/env sh
+    set -eu
+    rustup target add x86_64-apple-darwin aarch64-apple-darwin 2>/dev/null || true
+    cargo build --release -p dcc-mcp-cli --target x86_64-apple-darwin
+    cargo build --release -p dcc-mcp-cli --target aarch64-apple-darwin
+    lipo -create -output dcc-mcp-cli-macos-universal2 \
+        target/x86_64-apple-darwin/release/dcc-mcp-cli \
+        target/aarch64-apple-darwin/release/dcc-mcp-cli
+    echo "Built: dcc-mcp-cli-macos-universal2"
+
+# Build dcc-mcp-server for the current platform
+build-server:
+    cargo build --release -p dcc-mcp-server
+
+# Build dcc-mcp-server universal2 binary for macOS (requires both targets installed)
+[unix]
+build-server-universal:
+    #!/usr/bin/env sh
+    set -eu
+    rustup target add x86_64-apple-darwin aarch64-apple-darwin 2>/dev/null || true
+    cargo build --release -p dcc-mcp-server --target x86_64-apple-darwin
+    cargo build --release -p dcc-mcp-server --target aarch64-apple-darwin
+    lipo -create -output dcc-mcp-server-macos-universal2 \
+        target/x86_64-apple-darwin/release/dcc-mcp-server \
+        target/aarch64-apple-darwin/release/dcc-mcp-server
+    echo "Built: dcc-mcp-server-macos-universal2"
+
+# Run the server locally (auto-discovers skills, competes for gateway :9765)
+run-server *ARGS:
+    cargo run --release -p dcc-mcp-server -- {{ARGS}}
+
+# Run two server instances to demo auto-gateway (open two terminals)
+# Terminal 1: just demo-gateway-maya   → wins gateway :9765
+# Terminal 2: just demo-gateway-maya2  → plain instance
+demo-gateway-maya:
+    cargo run -p dcc-mcp-server -- --app maya --scene shot01.ma
+
+demo-gateway-photoshop:
+    cargo run -p dcc-mcp-server -- --app photoshop --scene poster.psd
+
+# ── Python ────────────────────────────────────────────────────────────────────
+
+# Build and install wheel in dev/editable mode.
+# Always run maturin with *this repo's* .venv interpreter. If another project
+# (e.g. dcc-mcp-maya) left VIRTUAL_ENV active, the old recipe used that Python
+# and produced the wrong wheel ABI (e.g. cp312) for Maya's embedded runtime.
+[unix]
+dev:
+    #!/usr/bin/env sh
+    set -eu
+    just githooks-install
+    if [ ! -d .venv ]; then python -m venv .venv; fi
+    .venv/bin/python -m pip install maturin 2>/dev/null || true
+    just stubgen
+    .venv/bin/python -m maturin develop --features {{DEV_FEATURES}}
+
+[windows]
+dev:
+    just githooks-install
+    if (-not (Test-Path .venv)) { python -m venv .venv }
+    & .\.venv\Scripts\python.exe -m pip install --disable-pip-version-check maturin -q
+    just stubgen
+    & .\.venv\Scripts\python.exe -m maturin develop --features {{DEV_FEATURES}}
+
+# Build abi3-py38 release wheel and install it
+install:
+    just stubgen
+    maturin build --release --out dist --features {{WHEEL_FEATURES}}
+    pip install --force-reinstall --no-index --find-links dist dcc-mcp-core
+
+# Build abi3-py38 release wheel (dist/ only, no install).
+# EXTRA is forwarded to maturin — used by CI to pass --sdist,
+# --find-interpreter, --target, etc. without duplicating feature flags.
+build *EXTRA:
+    just stubgen
+    maturin build --release --out dist --features {{WHEEL_FEATURES}} {{EXTRA}}
+
+# Build the py37-lite pure-Python wheel (py3-none-any).
+# Uses no PyO3 features so maturin produces a wheel with only pure-Python
+# sources — no compiled _core extension. The wheel is tagged py3-none-any
+# and installable on Python 3.7 (Maya 2022 / Blender 2.83).
+build-py37-lite:
+    python scripts/build_py37_pure_wheel.py
+
+# Build Python 3.7 native wheel (non-abi3, compiled _core extension).
+# EXTRA is forwarded to maturin (e.g. `-i python3.7`, `--target x86_64`).
+build-py37 *EXTRA:
+    just stubgen
+    maturin build --release --out dist --features {{WHEEL_FEATURES_PY37}} {{EXTRA}}
+
+# Install dev/test dependencies
+install-dev-deps:
+    pip install maturin pytest pytest-cov anyio jsonschema ruff
+
+# ── Python tests ──────────────────────────────────────────────────────────────
+
+# Run Python test suite (single-process, fastest for local iteration)
+test:
+    pytest tests/ -q --tb=short --show-capture=no
+
+# Run full Python test suite with file-level process isolation (CI).
+# ``--dist loadfile`` runs each test file in its own subprocess, preventing
+# Rust ``OnceLock`` singleton conflicts, env-var leaks, and port TIME_WAIT
+# cascades between test modules. Use this for the authoritative CI gate.
+# ``-n 4`` caps workers to avoid OOM on smaller CI runners.
+test-suite:
+    pytest tests/ -q --tb=short --show-capture=no -n 4 --dist loadfile
+
+# Run Python tests with coverage report
+test-cov:
+    pytest tests/ -q --tb=short --show-capture=no --cov=dcc_mcp_core --cov-report=term --cov-report=xml:coverage.xml
+
+# Run mcpcall MCP end-to-end tests (set MCPCALL_CMD="vx mcpcall" for vx-managed local runs)
+test-e2e:
+    pytest tests/test_mcp_mcpcall_e2e.py -v --tb=short
+
+# Replay a Verified Regression Suite trace (HTTP against gateway REST /v1/*).
+# Example: `just vrs-replay`
+# Example: `just vrs-replay BASE=http://127.0.0.1:9765 TRACE=tests/vrs/traces/maya-215-execute-python-regression.jsonl`
+vrs-replay BASE="http://127.0.0.1:9765" TRACE="tests/vrs/traces/gateway-smoke.jsonl":
+    python scripts/vrs_replay.py --base-url "{{BASE}}" --trace "{{TRACE}}"
+
+# Lightweight standalone server idle-memory smoke (#1354).
+idle-memory-smoke:
+    python scripts/idle_memory_smoke.py
+
+# ── Type stubs (pyo3-stub-gen) ───────────────────────────────────────────
+
+# Generate python/dcc_mcp_core/_core.pyi from annotated Rust code.
+# Also run automatically as part of `build`, `dev`, and `install`.
+# Note: use `vx cargo` to ensure vx's cargo wrapper is used (CI fix).
+stubgen:
+    vx cargo run --bin stub_gen --features stub-gen
+
+# Check that _core.pyi is in sync with the Rust source (for CI drift detection).
+stubgen-check:
+    vx cargo run --bin stub_gen --features stub-gen -- --check
+
+# ── Docs ──────────────────────────────────────────────────────────────────────
+
+# Check VitePress docs build (catches dead links, syntax errors)
+docs-check:
+    #!/usr/bin/env bash
+    cd docs && npm ci && npm run docs:build
+
+# Mechanical documentation contract lint: heading structure, emoji policy, and
+# broken relative links. Read-only; never rewrites files.
+docs-lint:
+    python scripts/docs_lint.py .
+
+# Same lint plus the drift pass (documented flags/paths/identifiers that no
+# longer exist). Slower: it reads the whole tree to build a symbol corpus.
+docs-lint-symbols:
+    python scripts/docs_lint.py . --check-symbols
+
+# Agent-facing coverage only: every file listed in the playbook manifest must
+# mention the iteration playbook and name `workflows_resume`. Scoped to that
+# one rule family so CI can gate these entry points without inheriting
+# unrelated findings from the full docs lint.
+docs-lint-playbook:
+    python scripts/docs_lint.py . --playbook-only --playbook-manifest scripts/docs_lint_playbook_coverage.txt
+
+# ── Lint ──────────────────────────────────────────────────────────────────────
+
+# Lint Python source (ruff check only)
+lint-py:
+    ruff check python/dcc_mcp_core/ tests/ examples/ scripts/
+    ruff format --check python/dcc_mcp_core/ tests/ examples/ scripts/
+
+# Lint bundled, example, and fixture skills with the built production CLI
+lint-skills: build-cli
+    {{CLI_BIN}} lint --max-depth 4 python/dcc_mcp_core/skills examples/skills examples/remote-server/skills examples/rez-skills tests/fixtures/skills tests/fixtures/prompts_skills
+
+# Verify pure-Python sources parse on Python 3.7 (cp37 wheel parity).
+check-py37-syntax:
+    vx python@3.7 scripts/check_py37_syntax.py
+
+# Verify package metadata, build profiles, CI jobs, and docs match the LTS contract.
+check-python-support:
+    python scripts/ci/check_python_support.py
+
+# Verify declared dependencies match the VFX Platform baseline for the declared host.
+check-vfx-baseline:
+    python scripts/ci/check_vfx_baseline.py
+
+# Auto-fix Python lint issues and format
+lint-py-fix:
+    ruff check --fix python/dcc_mcp_core/ tests/ examples/ scripts/
+    ruff format python/dcc_mcp_core/ tests/ examples/ scripts/
+
+# Lint everything: Rust (clippy + fmt-check) + Python (ruff) + skills
+lint: clippy fmt-check lint-py lint-skills
+
+# Fix all fixable lint issues (Rust fmt + Python ruff)
+lint-fix: fmt lint-py-fix
+
+# ── Aggregate targets (CI + local) ────────────────────────────────────────────
+
+# Pre-flight: Rust check + clippy + fmt + tests + docs — run before every commit
+preflight: check clippy fmt-check test-rust
+
+# Full local CI pipeline: compatibility contract → preflight → wheel → tests → lint
+ci: check-python-support preflight install test lint-py
+
+# Run the UI Control desktop automation test harness (mock backend, no desktop needed)
+test-ui-control-automation:
+    pytest tests/test_ui_control_desktop_automation.py -v --tb=short --show-capture=no
+
+# Run all UI Control tests (skill + host + desktop automation)
+test-ui-control-all:
+    pytest tests/test_ui_control_*.py -v --tb=short --show-capture=no
+
+# ── Clean ─────────────────────────────────────────────────────────────────────
+
+[unix]
+clean:
+    rm -rf dist build target .coverage coverage.xml
+
+[windows]
+clean:
+    if (Test-Path dist) { Remove-Item -Recurse -Force dist }
+    if (Test-Path build) { Remove-Item -Recurse -Force build }
+    if (Test-Path target) { Remove-Item -Recurse -Force target }
+    Remove-Item -ErrorAction SilentlyContinue -Force .coverage, coverage.xml

@@ -1,0 +1,147 @@
+# Documentation Guide Index
+
+Quick-reference index for the `docs/guide/` directory. Use this to find the right
+document without scanning every file.
+
+Documentation contract:
+
+- Keep onboarding and one working quick start in `README.md` and
+  `getting-started.md`.
+- Keep CLI flags and command behavior in `cli-reference.md`.
+- Keep gateway and REST request contracts in `gateway.md` and
+  `rest-api-surface.md`.
+- Keep API details next to the relevant guide or under `docs/api/`.
+- Treat `Cargo.toml`, package metadata, and generated stubs as sources of truth;
+  do not copy volatile package counts, symbol counts, or version numbers into
+  navigation pages.
+
+## AI Agent Quick Path
+
+**Start here if you're an AI agent** — read these documents in order:
+
+| Your task | Install first |
+|-----------|---------------|
+| Operate a live DCC or discover Marketplace capabilities | [`dcc-mcp`](https://clawhub.ai/loonghao/skills/dcc-mcp) |
+| Create or modernize a complete DCC-MCP adapter | [`dcc-mcp-creator`](https://clawhub.ai/loonghao/skills/dcc-mcp-creator) |
+| Create or improve a DCC-specific Skill package | [`dcc-mcp-skills-creator`](https://clawhub.ai/loonghao/skills/dcc-mcp-skills-creator) |
+
+| Priority | Document | Why |
+|----------|----------|-----|
+| 1 | [`AGENTS.md`](https://github.com/dcc-mcp/dcc-mcp-core/blob/main/AGENTS.md) | Navigation map, response rules, PR rules, and links |
+| 2 | [`AI_AGENT_GUIDE.md`](https://github.com/dcc-mcp/dcc-mcp-core/blob/main/AI_AGENT_GUIDE.md) | Skills-First usage workflow for AI agents |
+| 3 | [agents-reference.md](agents-reference.md) | **Critical** — traps, do/don't, code style, constants |
+| 4 | [skills.md](skills.md) | How to write and register skills |
+| 5 | [gateway.md](gateway.md) + [rest-api-surface.md](rest-api-surface.md) + [dcc-rest-skill-api.md](dcc-rest-skill-api.md) | Gateway dynamic-capability, call wrapper payloads, and REST workflows |
+
+## Getting Started
+
+| Document | Purpose |
+|----------|---------|
+| [getting-started.md](getting-started.md) | Install the right Agent Skill/CLI, operate a DCC, or expose a first server |
+| [what-is-dcc-mcp-core.md](what-is-dcc-mcp-core.md) | High-level project overview and motivation |
+| [architecture.md](architecture.md) | Rust workspace layout, crate boundaries, PyO3 bridge |
+
+## AI Agent & Skill Authoring
+
+| Document | Purpose |
+|----------|---------|
+| [agents-reference.md](agents-reference.md) | **Critical** — traps, do/don't, code style, full example list |
+| [skills.md](skills.md) | Skill system: scanning, loading, lifecycle, persistence, semantic search, agent memory |
+| [skill-maintenance.md](skill-maintenance.md) | Checklist for SKILL/tools/scripts + `recipes` / `skill-reference-docs` |
+| [`../POLICY_SKILL_OWNERSHIP.md`](../POLICY_SKILL_OWNERSHIP.md) | Bundled adapter skill ownership policy; prevents duplicate file-operation tools |
+| [thin-harness.md](thin-harness.md) | Thin-harness layer: `execute_python` + recipes pattern |
+| [mcp-skills-integration.md](mcp-skills-integration.md) | How skills integrate with the MCP HTTP server |
+| [skill-scopes-policies.md](skill-scopes-policies.md) | SkillScope (trust levels) and SkillPolicy |
+| [context-bundles.md](context-bundles.md) | Project/task/asset-specific skill loading via resolved launch context |
+| [rez-skill-packages.md](rez-skill-packages.md) | Rez package layout and env-var contract for distributing skills |
+
+## MCP Server & HTTP
+
+| Document | Purpose |
+|----------|---------|
+| [remote-server.md](remote-server.md) | Cloud-hosted MCP agents: auth, batch, elicitation, rich content |
+| [gateway.md](gateway.md) | Multi-DCC gateway: aggregation, tool routing |
+| [gateway-election.md](gateway-election.md) | `DccGatewayElection` — automatic failover |
+| [dcc-rest-skill-api.md](dcc-rest-skill-api.md) | Per-DCC REST skill API surface (#658 / #660) |
+| [tunnel-relay.md](tunnel-relay.md) | Zero-config remote MCP relay (`RelayServer` + tunnel agent) |
+| [production-deployment.md](production-deployment.md) | Production checklist: logging, health probes, monitoring |
+| [protocols.md](protocols.md) | MCP protocol types and versioning |
+| [mcp-2026-07-28-migration.md](mcp-2026-07-28-migration.md) | MCP 2026-07-28 stateless protocol: breaking changes, dual-protocol window, client and adapter upgrade steps |
+| [middleware.md](middleware.md) | Pluggable BeforeCall/AfterCall middleware chain: audit, quota, redaction |
+| [admin-ui.md](admin-ui.md) | Built-in embedded `/admin` dashboard (instances, tools, calls, traces, stats, workers, merged logs, health, durable JSONL audit/trace persistence) |
+| [analytics-dashboard.md](analytics-dashboard.md) | Analytics dashboard: KPIs, timeseries, heatmap, top tools, CSV/JSONL export |
+| [sentry.md](sentry.md) | Sentry error monitoring: DSN config, environment tags, sample rate, E2E tests |
+| [marketplace.md](marketplace.md) | Marketplace skill packages: catalog sources, install/update lifecycle, security |
+| [translate.md](translate.md) | `translate` subcommand: bridge any stdio MCP server to HTTP/SSE |
+| [openapi-mount.md](openapi-mount.md) | OpenAPI-to-MCP mount helper: expose any REST API as MCP tools |
+| [catalog.md](catalog.md) | DCC-MCP public adapter catalog: search and describe |
+| [adapter-install-lifecycle.md](adapter-install-lifecycle.md) | Import-light adapter install/uninstall helpers for registry query, sidecar stop, and Windows native-file lock handling |
+| [adapter-install-sop.md](adapter-install-sop.md) | Install SOP: shared command, JSON result, exit-code, receipt, verification, and rollback contract |
+| [adapter-install-sop-v2-migration.md](adapter-install-sop-v2-migration.md) | Install SOP v2 migration: field delta from frozen v1, compatibility verdict, and adapter steps |
+
+## Operator & deployment
+
+| Document | Purpose |
+|----------|---------|
+| [cli-reference.md](cli-reference.md) | Canonical CLI commands, flags, profiles, install, marketplace, and update behavior |
+| [gateway-diagnostics.md](gateway-diagnostics.md) | Gateway health, readiness, registry, contention, and failure diagnosis |
+| [production-deployment.md](production-deployment.md) | Deployment checklist, probes, logging, and monitoring |
+
+## Core Subsystems
+
+| Document | Purpose |
+|----------|---------|
+| [actions.md](actions.md) | ToolRegistry, ToolDispatcher, ToolPipeline, VersionedRegistry |
+| [asset-import-contract.md](asset-import-contract.md) | `AssetDescriptor` → `ImportToSceneResult` contract for cross-DCC asset import |
+| [asset-sync.md](asset-sync.md) | Content-addressed revisions, optimistic conflict handling, and consumer-owned materialization for cross-DCC sync |
+| [custom-actions.md](custom-actions.md) | Adding custom tool types and validation strategies |
+| [events.md](events.md) | EventBus pub/sub system |
+| [naming.md](naming.md) | Client-safe tool name and action ID validation rules |
+| [transport.md](transport.md) | IPC transport: DccLinkFrame, IpcChannelAdapter, SocketServerAdapter |
+| [process.md](process.md) | Process management: launch, monitor, crash recovery |
+| [capture.md](capture.md) | Screen/window capture APIs |
+| [sandbox.md](sandbox.md) | SandboxPolicy, InputValidator, AuditLog |
+| [shm.md](shm.md) | Shared memory and zero-copy scene data |
+| [usd.md](usd.md) | OpenUSD bridge: UsdStage, scene info JSON |
+| [artefacts.md](artefacts.md) | FileRef + ArtefactStore — cross-tool file handoff |
+| [adapter-runtime-contracts.md](adapter-runtime-contracts.md) | Session events, artefact refs, debug descriptors, `ui_control` automation contracts |
+| [ui-control-workflows.md](ui-control-workflows.md) | Agent workflows for scoped `ui_control` UI automation, recovery, and VRS coverage |
+| [telemetry.md](telemetry.md) | ToolMetrics, ToolRecorder, RecordingGuard |
+| [observability.md](observability.md) | OTLP exporter, agent workflow spans, gateway event log (`resources://gateway/events`), Prometheus counters |
+| [metric-dictionary.md](metric-dictionary.md) | Canonical metric dictionary: units, sampling windows, null semantics, storage layer inventory |
+| [observability-schema.md](observability-schema.md) | Versioned schema, migration path, and query API versioning |
+| [observability-usage.md](observability-usage.md) | Agent, CLI, and Admin UI usage for observability data |
+| [observability-troubleshooting.md](observability-troubleshooting.md) | Operational troubleshooting runbook for observability issues |
+| [scheduler.md](scheduler.md) | ScheduleSpec, TriggerSpec, cron/webhook scheduling |
+| [workflows.md](workflows.md) | WorkflowSpec engine: step kinds, policies, persistence |
+| [job-persistence.md](job-persistence.md) | SQLite-backed job/workflow persistence and resume |
+| [project-persistence.md](project-persistence.md) | Project-level state (scene, assets, active skills) across sessions |
+| [prompts.md](prompts.md) | MCP Prompt definitions |
+| [capabilities.md](capabilities.md) | DccCapabilities and feature detection |
+| [faq.md](faq.md) | Frequently asked questions |
+
+## Thread Safety, Concurrency & Python 3.7 Compatibility
+
+| Document | Purpose |
+|----------|---------|
+| [dcc-thread-safety.md](dcc-thread-safety.md) | DCC main-thread dispatch, cooperative cancellation |
+| [host-adapter.md](host-adapter.md) | `HostAdapter` base class for per-DCC dispatcher wiring |
+| [adapter-dispatcher-migration.md](adapter-dispatcher-migration.md) | Dispatcher migration decision table, fake adapter conformance fixtures, and adapter-specific checklist |
+| [cross-dcc-verification.md](cross-dcc-verification.md) | `SceneStats` contract for producer→file→verifier round-trips |
+| [py37-lite-architecture.md](py37-lite-architecture.md) | **py37-lite**: Rust/Python decoupling, try/except import fallback, pure-Python wheel, maintenance guide |
+
+## Adapter Release Train & Onboarding
+
+| Document | Purpose |
+|----------|---------|
+| [adapter-release-checklist.md](adapter-release-checklist.md) | Release train checklist: core pin, sidecar metadata, gateway smoke, release-please config |
+| [new-adapter-onboarding.md](new-adapter-onboarding.md) | Onboarding template: pyproject deps, adapter_version, readiness, CI/CD, first skill |
+| [adapter-install-sop.md](adapter-install-sop.md) | Adapter-owned installation contract and reusable `install.md` template |
+| [adapter-install-sop-v2-migration.md](adapter-install-sop-v2-migration.md) | Install SOP v2 migration and the frozen-artifact rule for adapters |
+| [adapter-compatibility-matrix.md](adapter-compatibility-matrix.md) | Per-DCC compatibility rows: core pin, adapter version, DCC min version, dispatcher pattern |
+
+## Integration
+
+| Document | Purpose |
+|----------|---------|
+| [mcp-skills-integration.md](mcp-skills-integration.md) | Registering skills on an MCP HTTP server |

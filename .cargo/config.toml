@@ -1,0 +1,61 @@
+# ── Build profile overrides ──────────────────────────────────────────────────
+# These override [profile.release] in Cargo.toml for CI and local iteration.
+# The release workflow (maturin-action) overrides these back to full optimization
+# via MATURIN_* env vars, so these settings only affect cargo-build and dev
+# workflows where fast iteration matters more than binary performance.
+
+[profile.release]
+opt-level = 1
+codegen-units = 16
+lto = false
+# macOS: "packed" avoids dsymutil which is the #1 macOS link bottleneck.
+# On Linux/Windows this setting is ignored.
+split-debuginfo = "packed"
+
+[profile.test]
+# Speed up test builds: fewer codegen units + line-tables-only debug info.
+# Full DWARF (debug=2) is not needed to run tests; line tables are sufficient
+# for backtraces. On Windows this shrinks per-binary .pdb files ~70%, which
+# cuts link time significantly.
+codegen-units = 16
+debug = 1
+
+[profile.dev]
+# debug=1 (line-tables-only): strips type/variable metadata but keeps file:line
+# info for backtraces. Reduces PDB/DWARF by ~70% which speeds up the linker.
+# Use `debug = 2` (or `CARGO_PROFILE_DEV_DEBUG=2`) when you need full
+# variable inspection in a debugger.
+debug = 1
+opt-level = 1
+codegen-units = 16
+# macOS: "packed" avoids dsymutil which is the #1 macOS link bottleneck.
+# Windows/Linux: ignored.
+split-debuginfo = "packed"
+
+# ── Faster linker for Windows (requires LLVM/LLD installed) ─────────────────
+# Install LLVM: winget install LLVM.LLVM
+# This replaces the slow MSVC link.exe with LLD (10-30% faster links).
+[target.x86_64-pc-windows-msvc]
+rustflags = ["-C", "link-arg=-fuse-ld=lld"]
+
+# ── Compiler cache (sccache) — opt-in ───────────────────────────────────────
+# sccache is enabled via shell environment, *not* via this file, so a fresh
+# clone or a CI runner without sccache installed does not break `cargo *`
+# (cargo metadata in particular fails immediately if RUSTC_WRAPPER points to
+# a missing binary — see #4c56606 regression in rust-coverage CI).
+#
+# Local dev — bash:
+#     export RUSTC_WRAPPER=sccache
+#     export SCCACHE_DIR=~/.cache/sccache
+#     export SCCACHE_CACHE_SIZE=2G
+#
+# Local dev — PowerShell:
+#     $env:RUSTC_WRAPPER  = 'sccache'
+#     $env:SCCACHE_DIR    = "$HOME/.cache/sccache"
+#     $env:SCCACHE_CACHE_SIZE = '2G'
+#
+# Install:
+#     cargo install sccache --locked    (or: winget install Mozilla.sccache)
+#
+# CI: enable on a per-job basis by exporting RUSTC_WRAPPER in the workflow
+# step *after* `taiki-e/install-action` (or equivalent) installs sccache.

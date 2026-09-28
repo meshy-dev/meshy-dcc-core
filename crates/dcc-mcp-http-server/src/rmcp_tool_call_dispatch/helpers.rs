@@ -1,0 +1,364 @@
+//! Shared helpers for rmcp `tools/call` dispatch (gates, results, notifications).
+
+use base64::Engine as _;
+use base64::engine::general_purpose::STANDARD as BASE64_STANDARD;
+use serde_json::{Value, json};
+
+use dcc_mcp_actions::registry::ToolMeta;
+use dcc_mcp_gateway_core::capability_naming::{decode_skill_tool_name, extract_bare_tool_name};
+use dcc_mcp_jsonrpc::{
+    CallToolResult, DELTA_TOOLS_METHOD, NotificationBuilder, ToolContent,
+    error_codes::{BACKEND_NOT_READY, CAPABILITY_MISSING},
+};
+use dcc_mcp_models::NextTools;
+use dcc_mcp_protocols::error_envelope::ToolCallErrorEnvelope;
+
+use crate::mcp_tool_catalog::missing_capabilities;
+use crate::mcp_tool_list_builder::{group_stub_name, parse_group_stub_name};
+use crate::rmcp_registry_context::RegistryContext;
+use crate::server_state::ServerState;
+use crate::session::SessionManager;
+
+const MAX_INLINE_IMAGE_BASE64_BYTES: usize = 32 * 1024 * 1024;
+const NATIVE_IMAGE_PLACEHOLDER: &str = "<omitted; see native MCP image content>";
+const INVALID_IMAGE_PLACEHOLDER: &str = "<omitted; invalid inline image data>";
+
+fn notify_tools_list_changed(sessions: &SessionManager, session_id: &str) {
+    let event = NotificationBuilder::new("notifications/tools/list_changed")
+        .with_empty_params()
+        .as_sse_event();
+    sessions.push_event(session_id, event);
+}
+
+pub(in crate::rmcp_tool_call_dispatch) fn notify_tools_changed(
+    sessions: &SessionManager,
+    session_id: &str,
+    added: &[String],
+    removed: &[String],
+) {
+    if sessions.supports_delta_tools(session_id) {
+        let event = NotificationBuilder::new(DELTA_TOOLS_METHOD)
+            .with_params(json!({ "added": added, "removed": removed }))
+            .as_sse_event();
+        sessions.push_event(session_id, event);
+    } else {
+        notify_tools_list_changed(sessions, session_id);
+    }
+}
+
+pub(crate) fn attach_next_tools_meta(result: &mut CallToolResult, next_tools: &NextTools) {
+    let list = if result.is_error {
+        &next_tools.on_failure
+    } else {
+        &next_tools.on_success
+    };
+    if list.is_empty() {
+        return;
+    }
+    let key = if result.is_error {
+        "on_failure"
+    } else {
+        "on_success"
+    };
+    let mut next_tools_meta = serde_json::Map::new();
+    next_tools_meta.insert(
+        key.to_string(),
+        Value::Array(
+            list.iter()
+                .map(|name| Value::String(name.clone()))
+                .collect(),
+        ),
+    );
+    let meta = result.meta.get_or_insert_with(serde_json::Map::new);
+    meta.insert("dcc.next_tools".to_string(), Value::Object(next_tools_meta));
+}
+
+pub(crate) fn resolve_action_name(state: &ServerState, tool_name: &str) -> String {
+    if state.registry.get_action(tool_name, None).is_some() {
+        return tool_name.to_string();
+    }
+
+    if let Some((skill_part, bare_tool)) = decode_skill_tool_name(tool_name) {
+        let matched = state
+            .registry
+            .list_actions_by_skill(skill_part)
+            .into_iter()
+            .find(|m| extract_bare_tool_name(skill_part, &m.name) == bare_tool);
+        if let Some(m) = matched {
+            return m.name;
+        }
+        return tool_name.to_string();
+    }
+
+    let matched = state.registry.list_actions(None).into_iter().find(|m| {
+        m.skill_name
+            .as_deref()
+            .map(|skill_name| extract_bare_tool_name(skill_name, &m.name) == tool_name)
+            .unwrap_or(false)
+    });
+    if let Some(meta) = matched {
+        return meta.name;
+    }
+
+    tool_name.to_string()
+}
+
+pub(crate) fn capability_gate_result(
+    state: &ServerState,
+    resolved_name: &str,
+    action_meta: &ToolMeta,
+) -> Option<CallToolResult> {
+    let missing = missing_capabilities(
+        &action_meta.required_capabilities,
+        state.declared_capabilities.as_ref(),
+    );
+    if missing.is_empty() {
+        return None;
+    }
+    let msg = format!(
+        "tool {:?} requires capabilities not advertised by this DCC: {}",
+        resolved_name,
+        missing.join(", ")
+    );
+    Some(CallToolResult {
+        content: vec![ToolContent::Text { text: msg.clone() }],
+        structured_content: Some(json!({
+            "code": CAPABILITY_MISSING,
+            "message": msg,
+            "data": {
+                "tool": resolved_name,
+                "required_capabilities": action_meta.required_capabilities,
+                "declared_capabilities": state.declared_capabilities.as_ref(),
+                "missing_capabilities": missing,
+            }
+        })),
+        is_error: true,
+        meta: None,
+    })
+}
+
+pub(crate) fn readiness_gate_result(
+    _state: &ServerState,
+    ctx: &RegistryContext,
+    tool_name: &str,
+) -> Option<CallToolResult> {
+    let report = ctx.readiness.report();
+    if report.is_ready() {
+        return None;
+    }
+    tracing::warn!(
+        tool = tool_name,
+        readiness.process = report.process,
+        readiness.dcc = report.dcc,
+        readiness.skill_catalog = report.skill_catalog,
+        readiness.dispatcher = report.dispatcher,
+        readiness.host_execution_bridge = report.host_execution_bridge,
+        readiness.main_thread_executor = report.main_thread_executor,
+        "tools/call refused: backend not ready (issue #714)"
+    );
+    let msg = format!(
+        "Backend is not ready yet: {}. \
+         Refusing to queue `tools/call` for `{tool_name}` — retry once \
+         `/v1/readyz` reports ready.",
+        report.status_hint()
+    );
+    Some(CallToolResult {
+        content: vec![ToolContent::Text { text: msg.clone() }],
+        structured_content: Some(json!({
+            "code": BACKEND_NOT_READY,
+            "message": msg,
+            "data": {
+                "tool": tool_name,
+                "readiness": {
+                    "process": report.process,
+                    "dcc": report.dcc,
+                    "skill_catalog": report.skill_catalog,
+                    "dispatcher": report.dispatcher,
+                    "host_execution_bridge": report.host_execution_bridge,
+                    "main_thread_executor": report.main_thread_executor,
+                }
+            }
+        })),
+        is_error: true,
+        meta: None,
+    })
+}
+
+pub(crate) fn dispatch_json_result(output: Value) -> CallToolResult {
+    let mut safe_output = output;
+    let rich_image = take_native_rich_image(&mut safe_output);
+    let is_error = safe_output.get("success").and_then(Value::as_bool) == Some(false);
+    let text = serde_json::to_string(&safe_output).unwrap_or_else(|_| safe_output.to_string());
+    let mut content = vec![ToolContent::Text { text }];
+    content.extend(rich_image);
+    CallToolResult {
+        content,
+        structured_content: Some(safe_output),
+        is_error,
+        meta: None,
+    }
+}
+
+fn take_native_rich_image(output: &mut Value) -> Option<ToolContent> {
+    let rich = output.pointer_mut("/context/__rich__")?.as_object_mut()?;
+    if rich.get("kind").and_then(Value::as_str) != Some("image") {
+        return None;
+    }
+
+    let data = rich.remove("data");
+    rich.insert(
+        "data".to_string(),
+        Value::String(INVALID_IMAGE_PLACEHOLDER.to_string()),
+    );
+    let encoded = match data {
+        Some(Value::String(data)) => data,
+        Some(_) => {
+            record_native_image_error(rich, "image data must be a base64 string");
+            return None;
+        }
+        None => {
+            record_native_image_error(rich, "missing image data");
+            return None;
+        }
+    };
+    let Some(mime_type) = rich
+        .get("mime")
+        .and_then(Value::as_str)
+        .map(|mime| mime.trim().to_ascii_lowercase())
+        .filter(|mime| {
+            matches!(
+                mime.as_str(),
+                "image/png" | "image/jpeg" | "image/jpg" | "image/webp" | "image/gif"
+            )
+        })
+    else {
+        record_native_image_error(rich, "unsupported or missing image MIME type");
+        return None;
+    };
+    let encoded = encoded.trim();
+    if encoded.len() > MAX_INLINE_IMAGE_BASE64_BYTES {
+        record_native_image_error(rich, "inline image exceeds the 32 MiB base64 limit");
+        return None;
+    }
+    match BASE64_STANDARD.decode(encoded) {
+        Ok(bytes) if !bytes.is_empty() => {}
+        Ok(_) => {
+            record_native_image_error(rich, "decoded image data is empty");
+            return None;
+        }
+        Err(_) => {
+            record_native_image_error(rich, "invalid base64 image data");
+            return None;
+        }
+    }
+
+    rich.insert(
+        "data".to_string(),
+        Value::String(NATIVE_IMAGE_PLACEHOLDER.to_string()),
+    );
+    rich.remove("native_image_error");
+    Some(ToolContent::Image {
+        data: encoded.to_string(),
+        mime_type,
+    })
+}
+
+fn record_native_image_error(rich: &mut serde_json::Map<String, Value>, message: &str) {
+    rich.insert(
+        "native_image_error".to_string(),
+        Value::String(message.to_string()),
+    );
+}
+
+pub(crate) fn dispatch_err_result(tool_name: &str, msg: impl Into<String>) -> CallToolResult {
+    let err_msg = msg.into();
+    if let Some((code, detail)) = err_msg
+        .split_once(": ")
+        .filter(|(prefix, _)| prefix.starts_with(crate::split_phase::SPLIT_PHASE_ERROR_PREFIX))
+    {
+        let envelope = ToolCallErrorEnvelope::new("instance", code, detail);
+        let structured = serde_json::from_str::<Value>(&envelope.to_json()).ok();
+        return CallToolResult {
+            content: vec![ToolContent::Text {
+                text: envelope.to_json(),
+            }],
+            structured_content: structured,
+            is_error: true,
+            meta: None,
+        };
+    }
+    if err_msg.contains("no handler registered") {
+        let envelope = ToolCallErrorEnvelope::new(
+            "instance",
+            "NO_HANDLER",
+            format!("Tool '{tool_name}' is registered but has no handler."),
+        )
+        .with_hint("Register a handler via ToolDispatcher.register_handler().");
+        return CallToolResult::error(envelope.to_json());
+    }
+    CallToolResult::error(err_msg)
+}
+
+fn resolve_group_stub(state: &ServerState, tool_name: &str) -> Option<(Option<String>, String)> {
+    const HASHED_PREFIX: &str = "__group__scoped_";
+    let hashed = tool_name.strip_prefix(HASHED_PREFIX).is_some_and(|value| {
+        value.len() == 16 && value.bytes().all(|byte| byte.is_ascii_hexdigit())
+    });
+    if !hashed {
+        return parse_group_stub_name(tool_name)
+            .map(|(skill, group)| (skill.map(str::to_owned), group.to_owned()));
+    }
+
+    // ponytail: hashed stubs are an error path, so recover their display target
+    // with one registry scan instead of maintaining another runtime lookup map.
+    let mut matches = state
+        .registry
+        .list_actions(None)
+        .into_iter()
+        .filter(|meta| !meta.enabled && !meta.group.is_empty())
+        .filter_map(|meta| {
+            (group_stub_name(meta.skill_name.as_deref(), &meta.group) == tool_name)
+                .then_some((meta.skill_name, meta.group))
+        });
+    let target = matches.next()?;
+    (!matches.any(|candidate| candidate != target)).then_some(target)
+}
+
+pub(crate) fn handle_stub_tool(state: &ServerState, tool_name: &str) -> Option<CallToolResult> {
+    if let Some(skill_name) = tool_name.strip_prefix("__skill__") {
+        let envelope = ToolCallErrorEnvelope::new(
+            "gateway",
+            "SKILL_NOT_LOADED",
+            format!("Skill '{skill_name}' is not loaded."),
+        )
+        .with_hint(format!(
+            "Call load_skill with skill_name=\"{skill_name}\" to register its tools, \
+             then call the specific tool you need."
+        ));
+        return Some(CallToolResult::error(envelope.to_json().to_string()));
+    }
+    if let Some((skill_name, group_name)) = resolve_group_stub(state, tool_name) {
+        let envelope = ToolCallErrorEnvelope::new(
+            "gateway",
+            "GROUP_NOT_ACTIVATED",
+            match skill_name.as_deref() {
+                Some(skill_name) => {
+                    format!("Tool group '{group_name}' in skill '{skill_name}' is inactive.")
+                }
+                None => format!("Tool group '{group_name}' is inactive."),
+            },
+        )
+        .with_hint(match skill_name.as_deref() {
+            Some(skill_name) => format!(
+                "Call activate_tool_group(group_name=\"{group_name}\", \
+                 skill_name=\"{skill_name}\") to enable its tools, then re-list with tools/list."
+            ),
+            None => format!(
+                "Call activate_tool_group with group=\"{group_name}\" to enable its tools, \
+                 then re-list with tools/list."
+            ),
+        });
+        return Some(CallToolResult::error(envelope.to_json().to_string()));
+    }
+    None
+}

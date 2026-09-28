@@ -1,0 +1,627 @@
+//! The `JobManager` registry.
+//!
+//! See [`crate::job`] for the module-level overview and state diagram.
+
+use std::sync::Arc;
+use std::time::Duration as StdDuration;
+
+use chrono::{Duration, Utc};
+use dashmap::DashMap;
+use parking_lot::RwLock;
+use tokio_util::sync::CancellationToken;
+use tracing::debug;
+
+use super::types::{Job, JobEvent, JobOutputTarget, JobProgress, JobStatus, JobSubscriber};
+use super::{
+    JobPersistenceStatus,
+    persistence::{PersistenceCircuit, PersistenceWriter},
+};
+
+/// Thread-safe registry of [`Job`]s.
+pub struct JobManager {
+    jobs: DashMap<String, Arc<RwLock<Job>>>,
+    /// Subscribers invoked on every status transition. See [`Self::subscribe`].
+    subscribers: RwLock<Vec<JobSubscriber>>,
+    /// Optional persistence backend (issue #328). When `Some`, every
+    /// mutation is submitted to the owned persistence worker so the next
+    /// process incarnation can see and mark-interrupted in-flight jobs.
+    storage: Option<Arc<dyn crate::job_storage::JobStorage>>,
+    persistence: Arc<parking_lot::Mutex<PersistenceCircuit>>,
+    persistence_writer: Option<PersistenceWriter>,
+}
+
+impl Default for JobManager {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl std::fmt::Debug for JobManager {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("JobManager")
+            .field("jobs", &self.jobs.len())
+            .field("subscribers", &self.subscribers.read().len())
+            .field("has_storage", &self.storage.is_some())
+            .field("persistence", &self.persistence_status())
+            .finish()
+    }
+}
+
+impl JobManager {
+    /// Create an empty manager with no persistence backend.
+    pub fn new() -> Self {
+        Self {
+            jobs: DashMap::new(),
+            subscribers: RwLock::new(Vec::new()),
+            storage: None,
+            persistence: Arc::new(parking_lot::Mutex::new(PersistenceCircuit::default())),
+            persistence_writer: None,
+        }
+    }
+
+    /// Create a manager that writes every mutation through to `storage`
+    /// (issue #328).
+    ///
+    /// This constructor waits for each serialized worker transaction before
+    /// returning from a mutation. It does NOT perform recovery automatically — call
+    /// [`Self::recover_from_storage`] once after construction if the
+    /// backend may already contain rows from a previous process.
+    pub fn with_storage(storage: Arc<dyn crate::job_storage::JobStorage>) -> Self {
+        Self::with_storage_mode(storage, true)
+    }
+
+    /// Create a manager whose storage writes run on a single bounded worker.
+    ///
+    /// Job mutations enqueue persistence in FIFO order and return without
+    /// waiting for backend I/O. HTTP servers use this mode so synchronous
+    /// storage drivers cannot starve the request runtime. Drop gives the worker
+    /// a bounded shutdown window; a backend call that never returns cannot
+    /// block the owning runtime indefinitely.
+    pub fn with_offloaded_storage(storage: Arc<dyn crate::job_storage::JobStorage>) -> Self {
+        Self::with_storage_mode(storage, false)
+    }
+
+    fn with_storage_mode(
+        storage: Arc<dyn crate::job_storage::JobStorage>,
+        wait_for_completion: bool,
+    ) -> Self {
+        let (persistence, persistence_writer) =
+            Self::build_persistence_runtime(&storage, wait_for_completion);
+        Self {
+            jobs: DashMap::new(),
+            subscribers: RwLock::new(Vec::new()),
+            storage: Some(storage),
+            persistence,
+            persistence_writer,
+        }
+    }
+
+    fn build_persistence_runtime(
+        storage: &Arc<dyn crate::job_storage::JobStorage>,
+        wait_for_completion: bool,
+    ) -> (
+        Arc<parking_lot::Mutex<PersistenceCircuit>>,
+        Option<PersistenceWriter>,
+    ) {
+        let persistence = Arc::new(parking_lot::Mutex::new(PersistenceCircuit::configured()));
+        let persistence_writer =
+            PersistenceWriter::new(storage.clone(), persistence.clone(), wait_for_completion)
+                .map_err(|error| {
+                    tracing::error!(error = %error, "failed to start job persistence worker");
+                    persistence.lock().disable("worker_unavailable");
+                })
+                .ok();
+        (persistence, persistence_writer)
+    }
+
+    /// Attach a storage backend to an existing manager. Intended for
+    /// uncommon build-up paths; the primary entry point is
+    /// [`Self::with_storage`].
+    pub fn set_storage(&mut self, storage: Arc<dyn crate::job_storage::JobStorage>) {
+        let (persistence, persistence_writer) = Self::build_persistence_runtime(&storage, true);
+        self.storage = Some(storage);
+        self.persistence = persistence;
+        self.persistence_writer = persistence_writer;
+    }
+
+    /// Borrow the underlying storage, if any.
+    pub fn storage(&self) -> Option<Arc<dyn crate::job_storage::JobStorage>> {
+        self.storage.clone()
+    }
+
+    /// Return a payload-safe snapshot of persistence health.
+    pub fn persistence_status(&self) -> JobPersistenceStatus {
+        self.persistence.lock().status()
+    }
+
+    /// Close process-owned persistence resources before the HTTP server stops.
+    ///
+    /// Background job tasks may outlive the listener. Disable the circuit
+    /// first so they cannot enqueue further writes, then ask the backend to
+    /// release any process ownership lease within the bounded window. A
+    /// backend may force-close its ownership file when an arbitrary
+    /// in-flight call cannot be pre-empted.
+    pub fn shutdown_persistence(&self, timeout: StdDuration) -> bool {
+        let started = std::time::Instant::now();
+        let drained = self
+            .persistence_writer
+            .as_ref()
+            .map(|writer| writer.drain(timeout))
+            .unwrap_or(true);
+        self.persistence.lock().disable("server_shutdown");
+        let remaining = timeout.saturating_sub(started.elapsed());
+        let released = self
+            .storage
+            .as_ref()
+            .map(|storage| {
+                if !drained {
+                    let _ = storage.force_close();
+                    return false;
+                }
+                let released = storage.shutdown_with_timeout(remaining);
+                if !released {
+                    let _ = storage.force_close();
+                }
+                released
+            })
+            .unwrap_or(true);
+        drained && released
+    }
+
+    /// Disable persistence after a startup or administrative boundary fails.
+    pub fn disable_persistence(&self, error_kind: &str) {
+        self.persistence.lock().disable(error_kind);
+    }
+
+    /// Disable persistence after a storage operation fails outside the
+    /// background writer (for example, startup recovery). The health payload
+    /// keeps the same stable category mapping as write failures.
+    pub fn disable_persistence_for_storage_error(
+        &self,
+        error: &crate::job_storage::JobStorageError,
+    ) {
+        self.persistence
+            .lock()
+            .disable(super::persistence::error_kind(error));
+    }
+
+    /// Recover any in-flight rows left over by a previous process
+    /// (issue #328). Every row whose status is `Pending` or `Running`
+    /// is rewritten to [`JobStatus::Interrupted`] with
+    /// `error = "server restart"` and made visible to subscribers so
+    /// the `$/dcc.jobUpdated` SSE channel surfaces the transition.
+    ///
+    /// Terminal rows are left untouched — they remain queryable via
+    /// `jobs_get_status` / `jobs_cleanup`.
+    ///
+    /// Returns the number of rows that were flipped to `Interrupted`.
+    pub fn recover_from_storage(&self) -> Result<usize, crate::job_storage::JobStorageError> {
+        let storage = match &self.storage {
+            Some(s) => Arc::clone(s),
+            None => return Ok(0),
+        };
+        let all = storage.list(crate::job_storage::JobFilter::default())?;
+        let mut interrupted = 0usize;
+        let now = Utc::now();
+        for mut job in all {
+            let was_inflight = matches!(job.status, JobStatus::Pending | JobStatus::Running);
+            if was_inflight {
+                job.status = JobStatus::Interrupted;
+                job.error = Some("server restart".to_string());
+                job.updated_at = now;
+                job.completed_at = Some(now);
+                // Persist the new terminal state before we hand the row
+                // back out so a second crash does not re-flip it.  A failed
+                // retention pass may have opened the circuit; never bypass
+                // that decision with a direct storage write during recovery.
+                if self.persistence.lock().can_write() {
+                    if let Err(error) = storage.put(&job) {
+                        self.disable_persistence_for_storage_error(&error);
+                        return Err(error);
+                    }
+                } else {
+                    tracing::warn!(job_id = %job.id, "skipping restart recovery write while persistence is disabled");
+                }
+                interrupted += 1;
+            }
+            // Rehydrate the in-process map so reads and the next
+            // `gc_stale` pass see recovered rows.
+            let id = job.id.clone();
+            let should_emit = was_inflight;
+            let snapshot = job.clone();
+            self.jobs.insert(id, Arc::new(RwLock::new(job)));
+            if should_emit {
+                self.emit(&snapshot);
+            }
+        }
+        Ok(interrupted)
+    }
+
+    fn persist_put(&self, job: &Job) {
+        if let Some(writer) = &self.persistence_writer {
+            writer.put(job);
+        }
+    }
+
+    /// Register a subscriber invoked on every status transition.
+    ///
+    /// Subscribers are called synchronously while the internal write lock is
+    /// held, so they MUST be cheap and non-blocking. The notification
+    /// layer (#326) queues events onto a `broadcast::Sender` inside the
+    /// callback — it never performs I/O itself.
+    pub fn subscribe<F>(&self, f: F)
+    where
+        F: Fn(JobEvent) + Send + Sync + 'static,
+    {
+        self.subscribers.write().push(Arc::new(f));
+    }
+
+    fn emit(&self, job: &Job) {
+        let event = JobEvent {
+            id: job.id.clone(),
+            tool_name: job.tool_name.clone(),
+            status: job.status,
+            progress: job.progress.clone(),
+            error: job.error.clone(),
+            updated_at: job.updated_at,
+            created_at: job.created_at,
+            started_at: job.started_at,
+            completed_at: job.completed_at,
+        };
+        let subs = self.subscribers.read().clone();
+        for sub in subs {
+            sub(event.clone());
+        }
+    }
+
+    /// Create a new job in the `Pending` state and return a handle to it.
+    ///
+    /// Convenience wrapper for the common (no-parent) case.
+    pub fn create(&self, tool_name: impl Into<String>) -> Arc<RwLock<Job>> {
+        self.create_with_parent(tool_name, None)
+    }
+
+    /// Create a new job with an optional parent id (issue #318).
+    ///
+    /// When `parent_job_id` refers to a currently tracked job, the new job's
+    /// `cancel_token` is derived from the parent's via
+    /// [`CancellationToken::child_token`] — cancelling the parent cancels
+    /// this child within one cooperative checkpoint. If the parent id does
+    /// not exist the child gets a fresh standalone token and the parent id
+    /// is still recorded for diagnostic surfacing.
+    pub fn create_with_parent(
+        &self,
+        tool_name: impl Into<String>,
+        parent_job_id: Option<String>,
+    ) -> Arc<RwLock<Job>> {
+        let cancel_token = match &parent_job_id {
+            Some(pid) => match self.jobs.get(pid) {
+                Some(parent) => parent.read().cancel_token.child_token(),
+                None => CancellationToken::new(),
+            },
+            None => CancellationToken::new(),
+        };
+        let job = Job::new(tool_name.into(), parent_job_id, cancel_token);
+        let id = job.id.clone();
+        let entry = Arc::new(RwLock::new(job));
+        self.jobs.insert(id, Arc::clone(&entry));
+        {
+            let guard = entry.read();
+            self.persist_put(&guard);
+            self.emit(&guard);
+        }
+        entry
+    }
+
+    /// Record where a job's outputs land (issue #2262).
+    ///
+    /// `complete()` is the only transition that carries a result, so without
+    /// this a `Running` job has nowhere to read `output_dir` from and its disk
+    /// counters stay unreconciled until it reaches a terminal state. Safe to
+    /// call before [`Self::start`]; it deliberately does not change `status`,
+    /// and `updated_at` is left alone because nothing observable about the
+    /// job's lifecycle moved.
+    pub fn set_output(&self, id: &str, output: Option<JobOutputTarget>) -> Option<()> {
+        let entry = self.jobs.get(id)?;
+        let mut job = entry.write();
+        job.output = output;
+        let snapshot = job.clone();
+        drop(job);
+        self.persist_put(&snapshot);
+        Some(())
+    }
+
+    /// Transition `Pending → Running`.
+    pub fn start(&self, id: &str) -> Option<()> {
+        let entry = self.jobs.get(id)?;
+        let mut job = entry.write();
+        if job.status != JobStatus::Pending {
+            debug!(
+                job_id = %id,
+                from = ?job.status,
+                to = ?JobStatus::Running,
+                "invalid job transition"
+            );
+            return None;
+        }
+        let now = Utc::now();
+        job.status = JobStatus::Running;
+        job.started_at = Some(now);
+        job.updated_at = now;
+        let snapshot = job.clone();
+        drop(job);
+        self.persist_put(&snapshot);
+        self.emit(&snapshot);
+        Some(())
+    }
+
+    /// Transition `Running → Completed` and attach a result.
+    pub fn complete(&self, id: &str, result: serde_json::Value) -> Option<()> {
+        let entry = self.jobs.get(id)?;
+        let mut job = entry.write();
+        if job.status != JobStatus::Running {
+            debug!(
+                job_id = %id,
+                from = ?job.status,
+                to = ?JobStatus::Completed,
+                "invalid job transition"
+            );
+            return None;
+        }
+        let now = Utc::now();
+        job.status = JobStatus::Completed;
+        job.result = Some(result);
+        job.completed_at = Some(now);
+        job.updated_at = now;
+        let snapshot = job.clone();
+        drop(job);
+        self.persist_put(&snapshot);
+        self.emit(&snapshot);
+        Some(())
+    }
+
+    /// Transition `Running → Failed` and attach an error message.
+    pub fn fail(&self, id: &str, error: impl Into<String>) -> Option<()> {
+        let entry = self.jobs.get(id)?;
+        let mut job = entry.write();
+        if job.status != JobStatus::Running {
+            debug!(
+                job_id = %id,
+                from = ?job.status,
+                to = ?JobStatus::Failed,
+                "invalid job transition"
+            );
+            return None;
+        }
+        let now = Utc::now();
+        job.status = JobStatus::Failed;
+        job.error = Some(error.into());
+        job.completed_at = Some(now);
+        job.updated_at = now;
+        let snapshot = job.clone();
+        drop(job);
+        self.persist_put(&snapshot);
+        self.emit(&snapshot);
+        Some(())
+    }
+
+    /// Request cooperative cancellation.
+    ///
+    /// Valid from `Pending` or `Running`; no-op on terminal states. This only
+    /// triggers the cancellation token. The job remains non-terminal until
+    /// the execution lane observes the request and calls
+    /// [`Self::acknowledge_cancel`].
+    pub fn cancel(&self, id: &str) -> Option<()> {
+        let entry = self.jobs.get(id)?;
+        let job = entry.read();
+        match job.status {
+            JobStatus::Pending | JobStatus::Running => {
+                job.cancel_token.cancel();
+                Some(())
+            }
+            other => {
+                debug!(
+                    job_id = %id,
+                    from = ?other,
+                    to = ?JobStatus::Cancelled,
+                    "invalid job transition"
+                );
+                None
+            }
+        }
+    }
+
+    /// Confirm that the execution lane observed a cancellation checkpoint.
+    ///
+    /// This is the only transition from `Pending` or `Running` to
+    /// [`JobStatus::Cancelled`]. A bare cancellation request must not call
+    /// this method until queued work was skipped or active work yielded.
+    pub fn acknowledge_cancel(&self, id: &str) -> Option<()> {
+        let entry = self.jobs.get(id)?;
+        let mut job = entry.write();
+        match job.status {
+            JobStatus::Pending | JobStatus::Running if job.cancel_token.is_cancelled() => {
+                let now = Utc::now();
+                job.status = JobStatus::Cancelled;
+                job.completed_at = Some(now);
+                job.updated_at = now;
+                let snapshot = job.clone();
+                drop(job);
+                self.persist_put(&snapshot);
+                self.emit(&snapshot);
+                Some(())
+            }
+            other => {
+                debug!(
+                    job_id = %id,
+                    from = ?other,
+                    to = ?JobStatus::Cancelled,
+                    "cancellation was not requested or job is already terminal"
+                );
+                None
+            }
+        }
+    }
+
+    /// Update the progress of a running job.  Only valid while `Running`.
+    pub fn update_progress(&self, id: &str, progress: JobProgress) -> Option<()> {
+        let entry = self.jobs.get(id)?;
+        let mut job = entry.write();
+        if job.status != JobStatus::Running {
+            debug!(
+                job_id = %id,
+                status = ?job.status,
+                "ignoring progress update for non-running job"
+            );
+            return None;
+        }
+        if progress.current > progress.total
+            || job.progress.as_ref().is_some_and(|previous| {
+                progress.current < previous.current || progress.total < previous.total
+            })
+        {
+            debug!(
+                job_id = %id,
+                current = progress.current,
+                total = progress.total,
+                "ignoring non-monotonic job progress"
+            );
+            return None;
+        }
+        job.progress = Some(progress);
+        job.updated_at = Utc::now();
+        let snapshot = job.clone();
+        drop(job);
+        self.persist_put(&snapshot);
+        self.emit(&snapshot);
+        Some(())
+    }
+
+    /// Get a handle to a job by id.
+    pub fn get(&self, id: &str) -> Option<Arc<RwLock<Job>>> {
+        self.jobs.get(id).map(|e| Arc::clone(e.value()))
+    }
+
+    /// Snapshot of all currently tracked jobs.
+    pub fn list(&self) -> Vec<Arc<RwLock<Job>>> {
+        self.jobs.iter().map(|e| Arc::clone(e.value())).collect()
+    }
+
+    /// Purge terminal jobs whose `updated_at` is older than `older_than`.
+    ///
+    /// Returns the number of jobs removed. Non-terminal jobs are never
+    /// purged regardless of age. With an offloaded backend this non-blocking
+    /// API returns zero until a durable delete can be confirmed; use
+    /// [`Self::cleanup_older_than_hours_blocking`] when a confirmed count is
+    /// required.
+    pub fn gc_stale(&self, older_than: Duration) -> usize {
+        if self.persistence_status().state == super::JobPersistenceState::Disabled
+            && !self.persistence.lock().can_retry_retention()
+        {
+            return 0;
+        }
+        let cutoff = Utc::now() - older_than;
+        let stale: Vec<String> = self
+            .jobs
+            .iter()
+            .filter_map(|e| {
+                let job = e.value().read();
+                if job.status.is_terminal() && job.updated_at < cutoff {
+                    Some(job.id.clone())
+                } else {
+                    None
+                }
+            })
+            .collect();
+        if stale.is_empty() {
+            return 0;
+        }
+        if let Some(writer) = &self.persistence_writer
+            && !writer.delete_older_than(cutoff)
+        {
+            return 0;
+        }
+        let mut removed = 0usize;
+        for id in stale {
+            if self.jobs.remove(&id).is_some() {
+                removed += 1;
+            }
+        }
+        removed
+    }
+
+    /// TTL-based cleanup used by the built-in `jobs_cleanup` MCP tool
+    /// (issue #328). Purges terminal rows older than
+    /// `older_than_hours` from both the in-process map and any attached
+    /// [`JobStorage`] backend.
+    ///
+    /// Returns the number of rows removed from the in-process map. With
+    /// offloaded storage, the persisted-row delete is queued on the same FIFO
+    /// worker and may complete after this method returns.
+    pub fn cleanup_older_than_hours(&self, older_than_hours: u64) -> usize {
+        // Clamp to i64 to stay inside chrono's range. 1000 years is
+        // more than any real caller should ever pass.
+        let hours = older_than_hours.min(24 * 365 * 1000) as i64;
+        self.gc_stale(Duration::hours(hours))
+    }
+
+    /// TTL cleanup that waits for the persistence worker to confirm the
+    /// durable delete before removing rows from the in-process map.
+    ///
+    /// Callers must invoke this method from a blocking context. It is used by
+    /// the explicit MCP cleanup tool, which wraps it in `spawn_blocking` so
+    /// synchronous storage drivers cannot starve the async HTTP runtime.
+    pub fn cleanup_older_than_hours_blocking(&self, older_than_hours: u64) -> usize {
+        self.cleanup_older_than_hours_blocking_with_timeout(
+            older_than_hours,
+            StdDuration::from_secs(5),
+        )
+        .unwrap_or(0)
+    }
+
+    /// Bounded variant for request handlers. `None` means the durable delete
+    /// did not complete within `timeout`; in-memory rows remain visible.
+    pub fn cleanup_older_than_hours_blocking_with_timeout(
+        &self,
+        older_than_hours: u64,
+        timeout: StdDuration,
+    ) -> Option<usize> {
+        let hours = older_than_hours.min(24 * 365 * 1000) as i64;
+        self.gc_stale_blocking(Duration::hours(hours), timeout)
+    }
+
+    fn gc_stale_blocking(&self, older_than: Duration, timeout: StdDuration) -> Option<usize> {
+        if self.persistence_status().state == super::JobPersistenceState::Disabled
+            && !self.persistence.lock().can_retry_retention()
+        {
+            return Some(0);
+        }
+        let cutoff = Utc::now() - older_than;
+        let stale: Vec<String> = self
+            .jobs
+            .iter()
+            .filter_map(|e| {
+                let job = e.value().read();
+                if job.status.is_terminal() && job.updated_at < cutoff {
+                    Some(job.id.clone())
+                } else {
+                    None
+                }
+            })
+            .collect();
+        if stale.is_empty() {
+            return Some(0);
+        }
+        if let Some(writer) = &self.persistence_writer
+            && !writer.delete_older_than_blocking(cutoff, timeout)
+        {
+            return None;
+        }
+        Some(
+            stale
+                .into_iter()
+                .filter(|id| self.jobs.remove(id).is_some())
+                .count(),
+        )
+    }
+}

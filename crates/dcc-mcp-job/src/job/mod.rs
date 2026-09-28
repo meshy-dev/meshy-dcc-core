@@ -1,0 +1,67 @@
+//! In-process async job tracker for MCP tool calls (issue #316).
+//!
+//! `JobManager` provides a lightweight, thread-safe registry for async
+//! tool-call lifecycles.  It is used by the MCP HTTP server to expose job
+//! status / progress / cancellation to clients without losing state when
+//! `handle_tools_call` returns.
+//!
+//! This module is intentionally pure-Rust.  Python bindings are deferred to
+//! issue #319 where a coherent user-facing API (`jobs_get_status`,
+//! `jobs_cleanup`, …) lands together.
+//!
+//! # Concurrency model
+//!
+//! - Jobs are stored in `DashMap<String, Arc<RwLock<Job>>>` — per-entry locks
+//!   keep contention local to a single job.
+//! - `parking_lot::RwLock` is used instead of `std::sync::RwLock` for
+//!   performance and consistency with the rest of the workspace.
+//! - `cancel_token` is a `tokio_util::sync::CancellationToken`. `cancel()`
+//!   requests cooperative cancellation; the runner calls
+//!   `acknowledge_cancel()` only after observing a checkpoint.
+//!
+//! # State machine
+//!
+//! ```text
+//! Pending ──► Running ──► Completed
+//!    │           │        ╰► Failed
+//!    │           │        ╰► Cancelled
+//!    │           ╰► Cancelled
+//!    ╰► Cancelled
+//! ```
+//!
+//! Invalid transitions (e.g. `Completed → Running`) are rejected: the mutator
+//! returns `None` and logs at `debug` level.  The stored job state is left
+//! unchanged.
+//!
+//! ## Maintainer layout
+//!
+//! This module is a **thin facade** that re-exports the public surface.
+//! Implementation is split across sibling files:
+//!
+//! | File | Responsibility |
+//! |------|----------------|
+//! | `job_types.rs`   | `JobStatus`, `JobProgress`, `Job`, `JobEvent`, `JobSubscriber` |
+//! | `job_manager.rs` | `JobManager` — registry, transitions, persistence, subscribers, GC |
+//! | `job_tests.rs`   | Unit tests (lifecycle, cancellation, invalid transitions, GC, serde) |
+
+mod chunked;
+mod manager;
+mod persistence;
+mod types;
+
+#[cfg(test)]
+mod tests;
+
+pub use chunked::{ChunkedJobRunner, ChunkedStep, ChunkedStepOutput};
+pub use manager::JobManager;
+pub use persistence::{JobPersistenceState, JobPersistenceStatus};
+pub use types::{Job, JobEvent, JobOutputTarget, JobProgress, JobStatus, JobSubscriber};
+
+/// Unified poller registry (issue #2262) — re-exported for adapters that
+/// register a job type without going through the HTTP server.
+pub use crate::poller::{
+    COUNTER_SOURCE_DISK, COUNTER_SOURCE_REPORTED, JobPollRegistration, JobPollRegistry,
+    OutputCounter, PollContract, PollOwner, PollRegistryError, UnregisteredReason,
+    is_known_job_status, is_terminal_job_status, output_counter_from_result,
+    output_counter_from_target, reconcile_progress, reconcile_progress_value,
+};

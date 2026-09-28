@@ -1,0 +1,353 @@
+use super::*;
+
+// ── Default ─────────────────────────────────────────────────────────────────
+
+#[test]
+fn test_action_result_default() {
+    let data = ActionResultModelData::default();
+    assert!(data.success); // Consistent with Python __new__ default (success=true)
+    assert!(data.message.is_empty());
+    assert!(data.prompt.is_none());
+    assert!(data.error.is_none());
+    assert!(data.context.is_empty());
+}
+
+#[test]
+fn test_action_result_model_default_success_true() {
+    let model = ActionResultModel::default();
+    assert!(model.data().success);
+}
+
+// ── Factory methods ─────────────────────────────────────────────────────────
+
+#[test]
+fn test_success_factory() {
+    let data = ActionResultModelData::success(
+        "All done".to_string(),
+        Some("Next: verify mesh".to_string()),
+        HashMap::new(),
+    );
+    assert!(data.success);
+    assert_eq!(data.message, "All done");
+    assert_eq!(data.prompt.as_deref(), Some("Next: verify mesh"));
+    assert!(data.error.is_none());
+}
+
+#[test]
+fn test_failure_factory() {
+    let data = ActionResultModelData::failure(
+        "Operation failed".to_string(),
+        Some("FileNotFoundError: missing.py".to_string()),
+        Some("Check file path".to_string()),
+        HashMap::new(),
+    );
+    assert!(!data.success);
+    assert_eq!(data.message, "Operation failed");
+    assert_eq!(data.error.as_deref(), Some("FileNotFoundError: missing.py"));
+    assert_eq!(data.prompt.as_deref(), Some("Check file path"));
+}
+
+#[test]
+fn test_failure_factory_no_error() {
+    let data = ActionResultModelData::failure("Cancelled".to_string(), None, None, HashMap::new());
+    assert!(!data.success);
+    assert!(data.error.is_none());
+    assert!(data.prompt.is_none());
+}
+
+// ── from_data / data accessor ───────────────────────────────────────────────
+
+#[test]
+fn test_from_data_round_trip() {
+    let data = ActionResultModelData {
+        success: false,
+        message: "bad".to_string(),
+        prompt: None,
+        error: Some("oops".to_string()),
+        context: HashMap::from([("key".to_string(), serde_json::Value::Bool(true))]),
+    };
+    let model = ActionResultModel::from_data(data.clone());
+    assert_eq!(model.data(), &data);
+}
+
+// ── Display ─────────────────────────────────────────────────────────────────
+
+#[test]
+fn test_display_success() {
+    let model = ActionResultModel::from_data(ActionResultModelData {
+        success: true,
+        message: "render complete".to_string(),
+        ..Default::default()
+    });
+    let s = model.to_string();
+    assert!(s.contains("Success"));
+    assert!(s.contains("render complete"));
+}
+
+#[test]
+fn test_display_failure_with_error() {
+    let model = ActionResultModel::from_data(ActionResultModelData {
+        success: false,
+        message: "operation failed".to_string(),
+        error: Some("TypeError: bad arg".to_string()),
+        ..Default::default()
+    });
+    let s = model.to_string();
+    assert!(s.contains("Error"));
+    assert!(s.contains("TypeError: bad arg"));
+}
+
+#[test]
+fn test_display_failure_uses_message_when_no_error() {
+    let model = ActionResultModel::from_data(ActionResultModelData {
+        success: false,
+        message: "something went wrong".to_string(),
+        error: None,
+        ..Default::default()
+    });
+    let s = model.to_string();
+    assert!(s.contains("something went wrong"));
+}
+
+// ── Serialization ───────────────────────────────────────────────────────────
+
+#[test]
+fn test_action_result_serialization() {
+    let data = ActionResultModelData {
+        success: true,
+        message: "test".to_string(),
+        prompt: Some("next step".to_string()),
+        error: None,
+        context: HashMap::new(),
+    };
+    let json = serde_json::to_string(&data).unwrap();
+    assert!(json.contains("\"success\":true"));
+    assert!(json.contains("\"message\":\"test\""));
+    assert!(json.contains("\"prompt\":\"next step\""));
+    // Optional None fields are skipped
+    assert!(!json.contains("\"error\""));
+    // Empty metadata does not change the legacy wire shape.
+    assert!(!json.contains("\"_meta\""));
+}
+
+#[test]
+fn test_action_result_deserialization_round_trip() {
+    let data = ActionResultModelData {
+        success: false,
+        message: "failed operation".to_string(),
+        prompt: None,
+        error: Some("IOError: file not found".to_string()),
+        context: HashMap::from([("retry".to_string(), serde_json::json!(true))]),
+    };
+    let json = serde_json::to_string(&data).unwrap();
+    let back: ActionResultModelData = serde_json::from_str(&json).unwrap();
+    assert_eq!(data, back);
+}
+
+#[test]
+fn test_action_result_deserialize_minimal_json() {
+    // Only 'message' provided, everything else defaults
+    let json = r#"{"message": "hello"}"#;
+    let data: ActionResultModelData = serde_json::from_str(json).unwrap();
+    assert!(data.success); // default = true
+    assert_eq!(data.message, "hello");
+    assert!(data.error.is_none());
+}
+
+#[test]
+fn test_action_result_meta_round_trips_json_and_msgpack() {
+    let meta = HashMap::from([
+        (
+            "dcc.error".to_string(),
+            serde_json::json!({
+                "type": "RuntimeError",
+                "message": "host stopped",
+                "details": {"adapter": "maya", "retryable": false}
+            }),
+        ),
+        (
+            "vendor.trace".to_string(),
+            serde_json::json!(["frame-1", {"frame": 2}]),
+        ),
+    ]);
+    let model = ActionResultModel::from_data_with_meta(
+        ActionResultModelData {
+            success: false,
+            message: "Execution failed".to_string(),
+            error: Some("execution_error".to_string()),
+            context: HashMap::from([(
+                "action_name".to_string(),
+                serde_json::json!("create_sphere"),
+            )]),
+            ..Default::default()
+        },
+        meta.clone(),
+    );
+
+    for format in [SerializeFormat::Json, SerializeFormat::MsgPack] {
+        let encoded = model.to_bytes(format).unwrap();
+        let decoded = ActionResultModel::from_bytes(&encoded, format).unwrap();
+        assert_eq!(decoded, model);
+        assert_eq!(decoded.meta(), &meta);
+    }
+
+    let json: serde_json::Value =
+        serde_json::from_slice(&model.to_bytes(SerializeFormat::Json).unwrap()).unwrap();
+    assert_eq!(json["_meta"], serde_json::json!(meta));
+    assert!(json.get("meta").is_none());
+}
+
+#[test]
+fn test_action_result_postcondition_round_trips_json_and_msgpack() {
+    let postcondition = HashMap::from([
+        ("verified".to_string(), serde_json::json!(false)),
+        ("method".to_string(), serde_json::json!("slot_readback")),
+    ]);
+    let model = ActionResultModel::from_data_with_envelope(
+        ActionResultModelData {
+            success: true,
+            message: "Texture assignment dispatched".to_string(),
+            ..Default::default()
+        },
+        Some(postcondition.clone()),
+        HashMap::new(),
+    )
+    .unwrap();
+
+    for format in [SerializeFormat::Json, SerializeFormat::MsgPack] {
+        let encoded = model.to_bytes(format).unwrap();
+        let decoded = ActionResultModel::from_bytes(&encoded, format).unwrap();
+        assert_eq!(decoded, model);
+        assert_eq!(decoded.postcondition(), Some(&postcondition));
+    }
+
+    let json: serde_json::Value =
+        serde_json::from_slice(&model.to_bytes(SerializeFormat::Json).unwrap()).unwrap();
+    assert_eq!(json["postcondition"], serde_json::json!(postcondition));
+    assert!(
+        !ActionResultModel::from_data(ActionResultModelData::default())
+            .to_json_string()
+            .unwrap()
+            .contains("postcondition")
+    );
+}
+
+#[test]
+fn test_action_result_deserialization_rejects_non_boolean_verification() {
+    let payload = serde_json::json!({
+        "success": true,
+        "message": "done",
+        "postcondition": {"verified": "yes"},
+    });
+    let encoded = [
+        (SerializeFormat::Json, serde_json::to_vec(&payload).unwrap()),
+        (
+            SerializeFormat::MsgPack,
+            rmp_serde::to_vec_named(&payload).unwrap(),
+        ),
+    ];
+
+    for (format, bytes) in encoded {
+        let error = ActionResultModel::from_bytes(&bytes, format).unwrap_err();
+        assert!(error.contains("postcondition.verified"));
+        assert!(error.contains("boolean"));
+    }
+}
+
+#[test]
+fn test_action_result_json_string_does_not_compact_meta() {
+    let deeply_nested = serde_json::json!({
+        "level_1": {"level_2": {"level_3": {"level_4": [1, 2, 3]}}}
+    });
+    let model = ActionResultModel::from_data_with_meta(
+        ActionResultModelData {
+            message: "metadata fidelity".to_string(),
+            context: HashMap::from([("deep".to_string(), deeply_nested.clone())]),
+            ..Default::default()
+        },
+        HashMap::from([("dcc.error".to_string(), deeply_nested.clone())]),
+    );
+
+    let json: serde_json::Value = serde_json::from_str(&model.to_json_string().unwrap()).unwrap();
+    assert_eq!(json["_meta"]["dcc.error"], deeply_nested);
+    assert_ne!(json["context"]["deep"], deeply_nested);
+}
+
+// ── Context ─────────────────────────────────────────────────────────────────
+
+#[test]
+fn test_context_with_nested_values() {
+    let mut ctx = HashMap::new();
+    ctx.insert("count".to_string(), serde_json::json!(42));
+    ctx.insert("nested".to_string(), serde_json::json!({"a": 1}));
+    ctx.insert("list".to_string(), serde_json::json!([1, 2, 3]));
+
+    let data = ActionResultModelData::success("ctx test".to_string(), None, ctx.clone());
+    assert_eq!(data.context["count"], serde_json::json!(42));
+    assert_eq!(data.context["list"], serde_json::json!([1, 2, 3]));
+}
+
+// ── PartialEq / Clone ────────────────────────────────────────────────────────
+
+#[test]
+fn test_action_result_clone_eq() {
+    let data = ActionResultModelData {
+        success: true,
+        message: "ok".to_string(),
+        ..Default::default()
+    };
+    let cloned = data.clone();
+    assert_eq!(data, cloned);
+}
+
+#[test]
+fn test_action_result_model_clone_eq() {
+    let model = ActionResultModel::from_data(ActionResultModelData {
+        success: false,
+        message: "err".to_string(),
+        ..Default::default()
+    });
+    let cloned = model.clone();
+    assert_eq!(model, cloned);
+}
+
+// ── Nested adapter-job identity ─────────────────────────────────────────────
+
+#[test]
+fn test_linked_adapter_job_prefers_explicit_contract() {
+    let result = serde_json::json!({
+        "success": true,
+        "adapter_job": {"job_id": "render-adapter-42"},
+        "context": {"job_id": "legacy-context-id"}
+    });
+
+    let link = linked_adapter_job_from_result(&result, "core-uuid").expect("adapter job link");
+
+    assert_eq!(link.job_id, "render-adapter-42");
+    assert_eq!(link.source, "result.adapter_job.job_id");
+}
+
+#[test]
+fn test_linked_adapter_job_accepts_legacy_action_result_context() {
+    let result = serde_json::json!({
+        "success": true,
+        "message": "Flipbook job launched",
+        "context": {"job_id": "flipbook-f0631aa83e07"}
+    });
+
+    let link = linked_adapter_job_from_result(&result, "core-uuid").expect("adapter job link");
+
+    assert_eq!(link.job_id, "flipbook-f0631aa83e07");
+    assert_eq!(link.source, "result.context.job_id");
+}
+
+#[test]
+fn test_linked_adapter_job_rejects_core_id_and_empty_ids() {
+    for result in [
+        serde_json::json!({"context": {"job_id": "core-uuid"}}),
+        serde_json::json!({"context": {"job_id": "  "}}),
+        serde_json::json!({"context": {}}),
+    ] {
+        assert!(linked_adapter_job_from_result(&result, "core-uuid").is_none());
+    }
+}

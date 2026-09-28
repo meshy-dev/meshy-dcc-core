@@ -1,0 +1,80 @@
+"""Metadata contract tests for official and bundled skills."""
+
+from __future__ import annotations
+
+from pathlib import Path
+from types import SimpleNamespace
+
+from conftest import REPO_ROOT
+import dcc_mcp_core
+from dcc_mcp_core import skill as skill_module
+from dcc_mcp_core._server import skill_discovery
+
+SKILL_ROOTS = [
+    REPO_ROOT / "python" / "dcc_mcp_core" / "skills" / "ui-control",
+    REPO_ROOT / "python" / "dcc_mcp_core" / "skills" / "dcc-diagnostics",
+    REPO_ROOT / "python" / "dcc_mcp_core" / "skills" / "media",
+    REPO_ROOT / "python" / "dcc_mcp_core" / "skills" / "workflow",
+]
+
+
+def test_removed_app_ui_skill_is_not_bundled() -> None:
+    bundled = REPO_ROOT / "python" / "dcc_mcp_core" / "skills"
+
+    assert (bundled / "ui-control").is_dir()
+    assert not (bundled / "app-ui").exists()
+
+
+def test_ui_control_metadata_uses_current_dcc_cua_scope_variables() -> None:
+    tools_path = REPO_ROOT / "python" / "dcc_mcp_core" / "skills" / "ui-control" / "tools.yaml"
+    content = tools_path.read_text(encoding="utf-8")
+
+    assert "DCC_MCP_UI_CONTROL_PROCESS_ID" in content
+    assert "DCC_MCP_UI_CONTROL_WINDOW_HANDLE" in content
+    assert "DCC_MCP_UI_CONTROL_UIA_" not in content
+    assert "DCC_MCP_APP_UI_" not in content
+
+    agent_guidance = (REPO_ROOT / "AGENTS.md").read_text(encoding="utf-8")
+    assert "DCC_MCP_UI_CONTROL_PROCESS_ID" in agent_guidance
+    assert "DCC_MCP_UI_CONTROL_WINDOW_HANDLE" in agent_guidance
+    assert "DCC_MCP_UI_CONTROL_UIA_" not in agent_guidance
+    assert "DCC_MCP_APP_UI_" not in agent_guidance
+
+
+def test_bundled_api_keeps_root_contract_while_internal_discovery_ignores_upgrade_leftovers(
+    tmp_path, monkeypatch
+) -> None:
+    bundled = tmp_path / "skills"
+    for name in ("ui-control", "app-ui"):
+        skill_dir = bundled / name
+        skill_dir.mkdir(parents=True)
+        (skill_dir / "SKILL.md").write_text(f"---\nname: {name}\ndescription: test\n---\n", encoding="utf-8")
+    monkeypatch.setattr(skill_module, "_BUNDLED_SKILLS_DIR", bundled)
+    monkeypatch.setattr(skill_discovery, "_default_skill_paths_disabled", lambda: True)
+    monkeypatch.setattr(skill_discovery, "get_app_skill_paths_from_env", lambda _dcc_name: [])
+    monkeypatch.setattr(skill_discovery, "get_skill_paths_from_env", lambda: [])
+
+    public_paths = skill_module.get_bundled_skill_paths()
+    owner = SimpleNamespace(_builtin_skills_dir=tmp_path / "missing", _dcc_name="unity")
+    discovery_paths = skill_discovery.SkillDiscoveryController(owner).collect_skill_search_paths(
+        filter_existing=True,
+        include_admin_custom=False,
+    )
+
+    assert public_paths == [str(bundled)]
+    assert [Path(path).name for path in discovery_paths] == ["ui-control"]
+
+
+def test_core_runtime_skills_validate_clean() -> None:
+    for skill_dir in SKILL_ROOTS:
+        report = dcc_mcp_core.validate_skill(str(skill_dir))
+        assert report.is_clean, (skill_dir, [(issue.severity, issue.message) for issue in report.issues])
+
+
+def test_bundled_tool_declarations_include_execution_and_affinity() -> None:
+    for skill_dir in SKILL_ROOTS:
+        meta = dcc_mcp_core.parse_skill_md(str(skill_dir))
+        assert meta is not None, skill_dir
+        for tool in meta.tools:
+            assert tool.execution in ("sync", "async"), (skill_dir, tool.name)
+            assert tool.enforce_thread_affinity is True, (skill_dir, tool.name)

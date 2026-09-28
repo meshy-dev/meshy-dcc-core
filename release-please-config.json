@@ -1,0 +1,91 @@
+{
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+  "release-type": "python",
+  "include-v-in-tag": true,
+  "packages": {
+    ".": {
+      "package-name": "dcc-mcp-core",
+      "include-component-in-tag": false,
+      "release-type": "python",
+      "changelog-path": "CHANGELOG.md",
+      "bump-minor-pre-major": true,
+      "bump-patch-for-minor-pre-major": true,
+      "extra-files": [
+        {
+          "type": "toml",
+          "path": "Cargo.toml",
+          "jsonpath": "$.workspace.package.version"
+        },
+        {
+          "type": "toml",
+          "path": "pyproject.toml",
+          "jsonpath": "$.project.version"
+        },
+        {
+          "type": "toml",
+          "path": "pkg/dcc-mcp-server-bin/pyproject.toml",
+          "jsonpath": "$.project.version"
+        },
+        {
+          "type": "generic",
+          "path": "pkg/dcc-mcp-server-bin/python/dcc_mcp_server/__init__.py"
+        },
+        {
+          "type": "toml",
+          "path": "pkg/dcc-mcp-core-semantic/pyproject.toml",
+          "jsonpath": "$.project.version"
+        },
+        {
+          "type": "toml",
+          "path": "pkg/dcc-mcp-cli-bin/pyproject.toml",
+          "jsonpath": "$.project.version"
+        },
+        {
+          "type": "generic",
+          "path": "pkg/dcc-mcp-cli-bin/python/dcc_mcp_cli/__init__.py"
+        },
+        {
+          "type": "generic",
+          "path": "python/dcc_mcp_core/_core.pyi"
+        },
+        {
+          "type": "json",
+          "path": "admin-ui/package.json",
+          "jsonpath": "$.version"
+        },
+        {
+          "type": "generic",
+          "path": ".agents/skills/dcc-mcp-core/SKILL.md"
+        },
+        {
+          "type": "generic",
+          "path": "docs/.vitepress/config.mts"
+        },
+        {
+          "type": "generic",
+          "path": "docs/guide/what-is-dcc-mcp-core.md"
+        },
+        {
+          "type": "generic",
+          "path": "docs/zh/guide/what-is-dcc-mcp-core.md"
+        },
+        {
+          "type": "generic",
+          "path": "llms.txt"
+        }
+      ]
+    }
+  },
+  "changelog-sections": [
+    {"type": "feat", "section": "Features", "hidden": false},
+    {"type": "fix", "section": "Bug Fixes", "hidden": false},
+    {"type": "perf", "section": "Performance Improvements", "hidden": false},
+    {"type": "refactor", "section": "Code Refactoring", "hidden": false},
+    {"type": "docs", "section": "Documentation", "hidden": false},
+    {"type": "style", "section": "Styles", "hidden": true},
+    {"type": "chore", "section": "Miscellaneous Chores", "hidden": true},
+    {"type": "test", "section": "Tests", "hidden": true},
+    {"type": "ci", "section": "Continuous Integration", "hidden": true},
+    {"type": "build", "section": "Build System", "hidden": true}
+  ]
+}

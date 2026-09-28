@@ -1,0 +1,466 @@
+"""E2E regression test: gateway SSE → load_skill → tools/list_changed.
+
+CI status: this file is part of the standard ``pytest tests/`` run on every
+matrix cell (ubuntu/windows/macos x py3.8-3.13) and completes in ~10 s. Do
+**not** add it to local ``--ignore`` lists in CI workflows or shared scripts;
+the e2e SSE invariant guarded here regressed once already (#303).
+
+This test replaces the coverage gap left by the removal of
+``tests/test_e2e_gateway_skills_progressive.py`` in the
+``fix(http,transport)!: gateway lifecycle`` commit. It does **not** re-add
+every scenario of the deleted file — it targets the single invariant that
+was actually at risk from the #303 fix:
+
+    When a client subscribes to the gateway's SSE stream (``GET /mcp``)
+    and a backend's ``load_skill`` tool is invoked via the gateway's
+    ``POST /mcp``, the client MUST receive a
+    ``notifications/tools/list_changed`` push within a small deadline,
+    and a subsequent ``tools/list`` MUST surface the newly registered
+    tool.
+
+The flow covered end-to-end:
+
+1. A backend ``McpHttpServer`` is built via ``create_skill_server`` with
+   ``DCC_MCP_SKILL_PATHS`` pointing at ``examples/skills`` — so
+   ``hello-world`` is discovered as a skill stub (``__skill__hello-world``)
+   but its tool (``hello_world__greet``) is **not** active.
+2. The backend joins a gateway (first-wins election). The gateway's
+   aggregating tools watcher polls backends every 3 s and broadcasts
+   ``tools/list_changed`` when the aggregated fingerprint changes.
+3. A background thread opens ``GET /mcp`` on the gateway with
+   ``Accept: text/event-stream`` and captures every event.
+4. We ``POST /mcp`` with ``tools/call load_skill {"name": "hello-world"}``
+   routed through the gateway to the backend.
+5. We assert the SSE stream received a ``notifications/tools/list_changed``
+   and that ``tools/list`` now includes the loaded skill's tool.
+
+Why this is the right regression guard:
+
+- The #303 fix makes the gateway *reachable* — if the fix regresses, this
+  test's SSE subscription will fail to connect at step 3.
+- The aggregating watcher in ``gateway/mod.rs`` (``tools_watcher_handle``)
+  is the only code path that emits ``tools/list_changed`` on the gateway
+  facade — if *it* regresses, step 5's SSE assertion will time out even
+  though a direct backend call succeeds.
+
+Runtime budget: the watcher ticks every 3 s, so we allow up to 10 s for
+the notification to arrive.
+"""
+
+from __future__ import annotations
+
+import contextlib
+import json
+import os
+from pathlib import Path
+import queue
+import socket
+import threading
+import time
+from typing import Any
+import urllib.error
+import urllib.request
+
+import pytest
+
+from conftest import McpClient
+from conftest import allocate_gateway_port
+from conftest import wait_tcp_reachable
+from dcc_mcp_core import McpHttpConfig
+from dcc_mcp_core import McpHttpServer
+from dcc_mcp_core import ToolRegistry
+from dcc_mcp_core import create_skill_server
+
+REPO_ROOT = Path(__file__).resolve().parent.parent
+EXAMPLES_SKILLS_DIR = str(REPO_ROOT / "examples" / "skills")
+
+# The aggregating tools watcher in gateway/mod.rs ticks every 3 s; give
+# ourselves some extra slack for the self-probe, registry propagation,
+# and Windows scheduling jitter under CI.
+SSE_NOTIFICATION_BUDGET_S = 12.0
+AGGREGATOR_TICK_S = 3.0
+
+
+# ── helpers ──────────────────────────────────────────────────────────────────
+
+
+def _pick_free_port() -> int:
+    """Return a TCP port that is currently free on 127.0.0.1."""
+    return allocate_gateway_port()
+
+
+def _post_mcp(url: str, method: str, params: dict | None = None, rpc_id: int = 1) -> dict:
+    """POST a JSON-RPC 2.0 request to an MCP endpoint and return the parsed body."""
+    client = McpClient(url)
+    body: dict[str, Any] = {"jsonrpc": "2.0", "id": rpc_id, "method": method}
+    if params is not None:
+        body["params"] = params
+    _, resp = client.post(body)
+    return resp
+
+
+def _list_all_tools(url: str) -> list[dict[str, Any]]:
+    """Collect every tools/list page from a paginated MCP endpoint."""
+    tools: list[dict[str, Any]] = []
+    cursor: str | None = None
+    rpc_id = 1
+    while True:
+        params = {"cursor": cursor} if cursor is not None else None
+        resp = _post_mcp(url, "tools/list", params=params, rpc_id=rpc_id)
+        result = resp["result"]
+        tools.extend(result["tools"])
+        cursor = result.get("nextCursor")
+        if cursor is None:
+            return tools
+        rpc_id += 1
+
+
+def _wait_tcp_reachable(host: str, port: int, budget: float = 3.0) -> bool:
+    """Poll until TCP connect succeeds or budget expires."""
+    return wait_tcp_reachable(host, port, budget)
+
+
+class _SseSubscriber(threading.Thread):
+    """Background SSE consumer that parses ``data: ...`` lines into JSON events.
+
+    Runs until ``stop_event`` is set or the server closes the connection.
+    Every JSON-RPC notification that arrives on the stream is pushed into
+    ``events`` (a thread-safe queue). Test code then pops events with a
+    short timeout to check whether a specific notification was received.
+    """
+
+    def __init__(self, url: str, events: queue.Queue[dict], stop_event: threading.Event) -> None:
+        super().__init__(daemon=True)
+        self.url = url
+        self.events = events
+        self.stop_event = stop_event
+        self.error: BaseException | None = None
+        self.connected = threading.Event()
+
+    def run(self) -> None:
+        try:
+            req = urllib.request.Request(
+                self.url,
+                headers={"Accept": "text/event-stream", "Cache-Control": "no-cache"},
+                method="GET",
+            )
+            # Short connect timeout so a broken gateway fails fast; the
+            # stream itself will then be kept open by the server.
+            with urllib.request.urlopen(req, timeout=5.0) as resp:
+                self.connected.set()
+                # Read line-by-line; SSE frames are separated by blank
+                # lines, and each event has one or more ``data:`` lines.
+                pending_data: list[str] = []
+                while not self.stop_event.is_set():
+                    line = resp.readline()
+                    if not line:
+                        break
+                    try:
+                        text = line.decode("utf-8", errors="replace").rstrip("\r\n")
+                    except Exception:
+                        continue
+                    if text == "":
+                        # End of event — flush pending data lines.
+                        if pending_data:
+                            payload = "\n".join(pending_data)
+                            pending_data = []
+                            # Non-JSON SSE frames (e.g. comments) are ignored;
+                            # only JSON-RPC notifications matter for this test.
+                            with contextlib.suppress(json.JSONDecodeError):
+                                self.events.put(json.loads(payload))
+                        continue
+                    if text.startswith(":"):
+                        # SSE comment/heartbeat line — ignored.
+                        continue
+                    if text.startswith("data:"):
+                        pending_data.append(text[5:].lstrip())
+                    # Other prefixes (``event:``, ``id:``, ``retry:``) are
+                    # not significant for this test.
+        except BaseException as e:
+            self.error = e
+            self.connected.set()  # unblock waiters on failure
+
+
+def _drain_for_notification(events: queue.Queue[dict], method: str, budget: float) -> dict | None:
+    """Block up to ``budget`` seconds waiting for a notification with the given method."""
+    deadline = time.time() + budget
+    while time.time() < deadline:
+        remaining = max(0.0, deadline - time.time())
+        try:
+            ev = events.get(timeout=min(remaining, 0.5))
+        except queue.Empty:
+            continue
+        if isinstance(ev, dict) and ev.get("method") == method:
+            return ev
+    return None
+
+
+def _drain_pending_events(events: queue.Queue[dict]) -> None:
+    """Drop notifications already queued before the action under test."""
+    while True:
+        try:
+            events.get_nowait()
+        except queue.Empty:
+            return
+
+
+# ── fixture ───────────────────────────────────────────────────────────────────
+
+
+@pytest.fixture()
+def gateway_with_skill_backend(tmp_path, monkeypatch):
+    """Start one backend (with examples/skills) behind a gateway, yield URLs + handles.
+
+    The backend is built with ``create_skill_server`` so it carries the
+    full Skills-First stack (SkillCatalog, load_skill / unload_skill /
+    search_skills tools). The backend wins the gateway election because
+    it is the only server registered against the gateway port.
+    """
+    registry_dir = tmp_path / "registry"
+    registry_dir.mkdir()
+
+    # Point the skill scanner at our examples dir.  monkeypatch.setenv
+    # guarantees the env var is reset even if the test aborts mid-way.
+    monkeypatch.setenv("DCC_MCP_SKILL_PATHS", EXAMPLES_SKILLS_DIR)
+
+    handle = None
+    gw_port = 0
+    last_start_error: RuntimeError | None = None
+    for _ in range(8):
+        gw_port = allocate_gateway_port()
+
+        # Backend = gateway winner (single-backend cluster is sufficient for
+        # this invariant; multi-backend aggregation is already covered by
+        # test_gateway_facade_aggregation.py).
+        cfg = McpHttpConfig(port=0, server_name="hello-backend")
+        cfg.gateway_port = gw_port
+        cfg.registry_dir = str(registry_dir)
+        cfg.dcc_type = "python"
+        cfg.heartbeat_secs = 1
+        cfg.stale_timeout_secs = 10
+        # ``include_bundled`` would also work but we keep the test hermetic
+        # to examples/skills so a regression in bundled skills cannot mask
+        # a regression in the load-skill → SSE pipeline.
+        server = create_skill_server("python", cfg)
+        try:
+            candidate = server.start()
+        except RuntimeError as exc:
+            # ``_pick_free_port`` has an unavoidable close-then-bind gap. On
+            # Windows CI another test or the OS can grab that port before the
+            # embedded gateway binds it, surfacing as WinError 10048.
+            last_start_error = exc
+            if "Only one usage of each socket address" in str(exc) or "os error 10048" in str(exc):
+                continue
+            raise
+        if candidate.is_gateway:
+            handle = candidate
+            break
+        with contextlib.suppress(Exception):
+            candidate.shutdown()
+    if handle is None:
+        detail = f": {last_start_error}" if last_start_error is not None else ""
+        pytest.fail(f"failed to start single-backend gateway after retrying ports{detail}")
+
+    # Wait until both the instance port and the gateway port are up. The
+    # self-probe inside start() guarantees this, but on slow CI it is
+    # harmless to retry briefly.
+    assert _wait_tcp_reachable("127.0.0.1", handle.port, budget=3.0), (
+        f"instance port {handle.port} unreachable after start()"
+    )
+    if handle.is_gateway:
+        assert _wait_tcp_reachable("127.0.0.1", gw_port, budget=3.0), (
+            f"gateway port {gw_port} unreachable after start()"
+        )
+
+    try:
+        yield {
+            "handle": handle,
+            "gateway_url": f"http://127.0.0.1:{gw_port}/mcp",
+            "backend_url": handle.mcp_url(),
+            "gateway_port": gw_port,
+        }
+    finally:
+        with contextlib.suppress(Exception):
+            handle.shutdown()
+
+
+# ── tests ─────────────────────────────────────────────────────────────────────
+
+
+class TestGatewayLoadSkillSsePropagation:
+    """Gateway must emit tools/list_changed after a successful load_skill."""
+
+    def test_backend_won_gateway_election(self, gateway_with_skill_backend):
+        """Sanity check: the single backend should always be the gateway winner."""
+        handle = gateway_with_skill_backend["handle"]
+        assert handle.is_gateway, (
+            "single-backend fixture must win the gateway election; "
+            "if this fails, another process is holding the gateway port"
+        )
+
+    def test_hello_world_surfaces_as_skill_stub_before_load(self, gateway_with_skill_backend):
+        """Before ``load_skill``, hello-world is discoverable via ``search_skills``.
+
+        Per commit 747850c the gateway no longer fans out per-skill stubs —
+        ``tools/list`` exposes only the discover+dispatch surface. Clients
+        find unloaded skills through the ``search_skills`` MCP tool, which
+        returns stubs with ``loaded: false``.
+        """
+        gateway_url = gateway_with_skill_backend["gateway_url"]
+        # Use the exact skill name so the layer=example filter is bypassed
+        # (PR #1398 hides example-layer skills from partial queries; exact-name
+        # matches are always surfaced regardless of layer).
+        resp = _post_mcp(
+            gateway_url,
+            "tools/call",
+            {"name": "search_skills", "arguments": {"query": "hello-world"}},
+        )
+        assert "error" not in resp, f"search_skills errored: {resp.get('error')}"
+        content = resp["result"]["content"]
+        text = "".join(c.get("text", "") for c in content if c.get("type") == "text")
+        assert "hello-world" in text, f"expected hello-world in search_skills output before load; got: {text[:500]!r}"
+
+        # The per-action tool must NOT be in the minimal tools/list before load.
+        tools = _list_all_tools(gateway_url)
+        names = {t["name"] for t in tools}
+
+        def _is_active_greet(n: str) -> bool:
+            return n == "greet" or n.endswith(".greet") or n.endswith("__greet") or n.endswith("hello-world.greet")
+
+        assert not any(_is_active_greet(n) for n in names), (
+            f"greet must NOT be active before load_skill is called; got: {sorted(names)[:20]}"
+        )
+
+    def test_load_skill_triggers_tools_list_changed_via_sse(self, gateway_with_skill_backend):
+        """SSE subscribe → load_skill → list_changed + tool discoverable via search_tools.
+
+        Under the discover+dispatch gateway surface (commit 747850c),
+        ``tools/list`` stays bounded, but ``search_tools`` must return
+        the newly loaded skill's per-action tools, and the SSE stream
+        MUST still emit ``notifications/tools/list_changed`` when the
+        backend's aggregated fingerprint changes.
+        """
+        gateway_url = gateway_with_skill_backend["gateway_url"]
+
+        events: queue.Queue[dict] = queue.Queue()
+        stop = threading.Event()
+        subscriber = _SseSubscriber(gateway_url, events, stop)
+        subscriber.start()
+        try:
+            # Wait until the SSE request returned headers — by this point
+            # the gateway has added us to the broadcast channel.
+            assert subscriber.connected.wait(timeout=5.0), "SSE subscriber never connected"
+            if subscriber.error is not None:
+                pytest.fail(f"SSE subscription failed: {subscriber.error!r}")
+
+            # Give the gateway one aggregator tick so the baseline
+            # fingerprint is committed, then discard any startup noise.
+            # Without the drain, Windows CI can consume an initial
+            # tools/list_changed frame as if it were caused by load_skill.
+            time.sleep(AGGREGATOR_TICK_S + 0.5)
+            _drain_pending_events(events)
+
+            # Trigger the load via the gateway (routes through to the
+            # skill-enabled backend).
+            load_resp = _post_mcp(
+                gateway_url,
+                "tools/call",
+                {"name": "load_skill", "arguments": {"skill_name": "hello-world"}},
+            )
+            assert "error" not in load_resp, f"load_skill returned JSON-RPC error: {load_resp.get('error')}"
+            assert "result" in load_resp, f"load_skill missing result: {load_resp}"
+
+            # Now wait for tools/list_changed — the aggregating watcher
+            # ticks every 3 s so we budget well beyond that.
+            notif = _drain_for_notification(
+                events,
+                "notifications/tools/list_changed",
+                budget=SSE_NOTIFICATION_BUDGET_S,
+            )
+            assert notif is not None, (
+                "gateway did not push notifications/tools/list_changed within "
+                f"{SSE_NOTIFICATION_BUDGET_S}s after load_skill; "
+                "either the aggregator watcher regressed or the SSE channel is broken"
+            )
+            assert notif.get("jsonrpc") == "2.0"
+            assert notif.get("method") == "notifications/tools/list_changed"
+
+            # The loaded skill's per-action tool must now be discoverable
+            # through ``search_tools`` (the converge+dispatch contract).
+            # Allow a brief retry window because the backend's action
+            # catalog propagates to the search index within one watcher
+            # tick.
+            deadline = time.time() + SSE_NOTIFICATION_BUDGET_S
+            found = False
+            while time.time() < deadline and not found:
+                search_resp = _post_mcp(
+                    gateway_url,
+                    "tools/call",
+                    {"name": "search_tools", "arguments": {"query": "greet"}},
+                )
+                if "error" not in search_resp:
+                    content = search_resp["result"]["content"]
+                    text = "".join(c.get("text", "") for c in content if c.get("type") == "text")
+                    if "greet" in text:
+                        found = True
+                        break
+                time.sleep(0.5)
+
+            assert found, (
+                "load_skill succeeded and SSE fired, but ``greet`` is still absent from ``search_tools`` output"
+            )
+        finally:
+            stop.set()
+            # urllib doesn't expose an easy abort; the subscriber thread
+            # is daemon-flagged and will be reaped when the process exits.
+            subscriber.join(timeout=1.0)
+
+    def test_unload_skill_also_emits_tools_list_changed(self, gateway_with_skill_backend):
+        """Symmetric coverage: unload path must also propagate over SSE.
+
+        Separated from the load test so a regression in only one direction
+        is still caught. We keep the assertion minimal (the notification
+        itself) because ``tools/list`` semantics on unload are covered by
+        the skills-layer tests.
+        """
+        gateway_url = gateway_with_skill_backend["gateway_url"]
+
+        # Load first (we don't care about SSE here, only about setting up
+        # the state for the unload assertion).
+        load_resp = _post_mcp(
+            gateway_url,
+            "tools/call",
+            {"name": "load_skill", "arguments": {"skill_name": "hello-world"}},
+        )
+        assert "result" in load_resp, f"precondition load_skill failed: {load_resp}"
+
+        events: queue.Queue[dict] = queue.Queue()
+        stop = threading.Event()
+        subscriber = _SseSubscriber(gateway_url, events, stop)
+        subscriber.start()
+        try:
+            assert subscriber.connected.wait(timeout=5.0), "SSE subscriber never connected"
+            if subscriber.error is not None:
+                pytest.fail(f"SSE subscription failed: {subscriber.error!r}")
+
+            time.sleep(AGGREGATOR_TICK_S + 0.5)
+
+            unload_resp = _post_mcp(
+                gateway_url,
+                "tools/call",
+                {"name": "unload_skill", "arguments": {"skill_name": "hello-world"}},
+            )
+            assert "result" in unload_resp, f"unload_skill missing result: {unload_resp}"
+
+            notif = _drain_for_notification(
+                events,
+                "notifications/tools/list_changed",
+                budget=SSE_NOTIFICATION_BUDGET_S,
+            )
+            assert notif is not None, (
+                "gateway did not push notifications/tools/list_changed within "
+                f"{SSE_NOTIFICATION_BUDGET_S}s after unload_skill"
+            )
+        finally:
+            stop.set()
+            subscriber.join(timeout=1.0)

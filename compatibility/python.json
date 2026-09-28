@@ -1,0 +1,272 @@
+{
+  "schema_version": 2,
+  "support": {
+    "policy": "long_term_support",
+    "minimum_python": "3.7",
+    "maximum_tested_python": "3.14",
+    "tested_versions": [
+      "3.7",
+      "3.8",
+      "3.9",
+      "3.10",
+      "3.11",
+      "3.12",
+      "3.13",
+      "3.14"
+    ],
+    "deprecation": {
+      "automatic_calendar_expiry": false,
+      "requires_major_release": true,
+      "requires_accepted_adr": true,
+      "minimum_notice_days": 180
+    }
+  },
+  "build": {
+    "pyo3_series": "0.28",
+    "native_py37": {
+      "python": "3.7",
+      "wheel_profile": "native_py37",
+      "pr_matrix": [
+        {
+          "platform": "linux-x86_64",
+          "runner": "ubuntu-22.04",
+          "target": "x86_64",
+          "full_suite": true
+        },
+        {
+          "platform": "windows-x86_64",
+          "runner": "windows-2022",
+          "target": "x64",
+          "full_suite": false
+        }
+      ]
+    },
+    "lite_py37": {
+      "python": "3.7",
+      "wheel_profile": "lite_py37"
+    },
+    "abi3": {
+      "minimum_python": "3.8",
+      "feature": "abi3-py38",
+      "wheel_profile": "abi3"
+    }
+  },
+  "distributions": {
+    "dcc-mcp-core": {
+      "pyproject": "pyproject.toml",
+      "support_profile": "lts",
+      "forbidden_runtime_dependencies": [
+        {
+          "name": "typing-extensions",
+          "from_version": "0.20.22"
+        }
+      ],
+      "wheel_resources": [
+        {
+          "member": "dcc_mcp_core/schemas/adapter-install-sop-v1.schema.json",
+          "source": "python/dcc_mcp_core/schemas/adapter-install-sop-v1.schema.json",
+          "canonical_url": "https://dcc-mcp.github.io/schemas/adapter-install-sop-v1.schema.json",
+          "sha256": "2b3a8a101384a5163c7569c4a2b0de6586c672c5ee291735f94334a33b7d37a0",
+          "status": "frozen"
+        },
+        {
+          "member": "dcc_mcp_core/schemas/adapter-install-sop-v2.schema.json",
+          "source": "python/dcc_mcp_core/schemas/adapter-install-sop-v2.schema.json",
+          "canonical_url": "https://dcc-mcp.github.io/schemas/adapter-install-sop-v2.schema.json",
+          "sha256": "daa5840e07c956d7c9269e5709d6993a3988b905f986c06e7c4c02f5023e9422",
+          "status": "current"
+        }
+      ]
+    },
+    "dcc-mcp-server": {
+      "pyproject": "pkg/dcc-mcp-server-bin/pyproject.toml",
+      "support_profile": "lts"
+    },
+    "dcc-mcp-core-semantic": {
+      "pyproject": "pkg/dcc-mcp-core-semantic/pyproject.toml",
+      "support_profile": "lts"
+    },
+    "dcc-mcp-cli": {
+      "pyproject": "pkg/dcc-mcp-cli-bin/pyproject.toml",
+      "support_profile": "lts"
+    }
+  },
+  "optional_dependencies": {
+    "semantic": {
+      "owner_distribution": "dcc-mcp-core",
+      "native_dependency": "dcc-mcp-core-semantic",
+      "python_fallback_dependency": "fastembed",
+      "fallback_minimum_python": "3.8"
+    }
+  },
+  "wheel_profiles": {
+    "native_py37": {
+      "distribution": "dcc-mcp-core",
+      "wheel_tag": "cp37-cp37m",
+      "root_is_purelib": false,
+      "extension_module": "dcc_mcp_core/_core",
+      "expects_extension": true,
+      "platforms": {
+        "linux-x86_64": {
+          "allowed_platform_tags": [
+            "manylinux_2_17_x86_64",
+            "manylinux2014_x86_64"
+          ]
+        },
+        "windows-x86_64": {
+          "allowed_platform_tags": [
+            "win_amd64"
+          ]
+        }
+      }
+    },
+    "lite_py37": {
+      "distribution": "dcc-mcp-core",
+      "wheel_tag": "py3-none",
+      "root_is_purelib": true,
+      "extension_module": "dcc_mcp_core/_core",
+      "expects_extension": false,
+      "platforms": {
+        "any": {
+          "allowed_platform_tags": [
+            "any"
+          ]
+        }
+      }
+    },
+    "abi3": {
+      "distribution": "dcc-mcp-core",
+      "wheel_tag": "cp38-abi3",
+      "root_is_purelib": false,
+      "extension_module": "dcc_mcp_core/_core",
+      "expects_extension": true,
+      "platforms": {
+        "linux-x86_64": {
+          "allowed_platform_tags": [
+            "manylinux_2_17_x86_64",
+            "manylinux2014_x86_64"
+          ]
+        },
+        "windows-x86_64": {
+          "allowed_platform_tags": [
+            "win_amd64"
+          ]
+        },
+        "macos-universal2": {
+          "required_platform_tag_patterns": [
+            "macosx_*_universal2"
+          ],
+          "allowed_platform_tag_patterns": [
+            "macosx_*_universal2",
+            "macosx_*_x86_64",
+            "macosx_*_arm64"
+          ]
+        },
+        "macos-native": {
+          "allowed_platform_tag_patterns": [
+            "macosx_*_x86_64",
+            "macosx_*_arm64"
+          ]
+        }
+      }
+    },
+    "semantic_native_py37": {
+      "distribution": "dcc-mcp-core-semantic",
+      "wheel_tag": "cp37-cp37m",
+      "root_is_purelib": false,
+      "extension_module": "dcc_mcp_core_semantic/_native",
+      "expects_extension": true,
+      "platforms": {
+        "linux-x86_64": {
+          "allowed_platform_tags": [
+            "manylinux_2_28_x86_64"
+          ]
+        },
+        "windows-x86_64": {
+          "allowed_platform_tags": [
+            "win_amd64"
+          ]
+        }
+      }
+    },
+    "semantic_abi3": {
+      "distribution": "dcc-mcp-core-semantic",
+      "wheel_tag": "cp38-abi3",
+      "root_is_purelib": false,
+      "extension_module": "dcc_mcp_core_semantic/_native",
+      "expects_extension": true,
+      "platforms": {
+        "linux-x86_64": {
+          "allowed_platform_tags": [
+            "manylinux_2_28_x86_64"
+          ]
+        },
+        "windows-x86_64": {
+          "allowed_platform_tags": [
+            "win_amd64"
+          ]
+        },
+        "macos-native": {
+          "allowed_platform_tag_patterns": [
+            "macosx_*_arm64"
+          ]
+        }
+      }
+    }
+  },
+  "projections": {
+    "requires_python_globs": [
+      "*.md",
+      "AGENTS.md",
+      "AI_AGENT_GUIDE.md",
+      "CONTRIBUTING.md",
+      "llms.txt",
+      "llms-full.txt",
+      "docs/**/*.md",
+      "skills/**/SKILL.md"
+    ],
+    "requires_python_exemptions": [
+      "docs/guide/new-adapter-onboarding.md"
+    ],
+    "calendar_policy_globs": [
+      "AGENTS.md",
+      "AI_AGENT_GUIDE.md",
+      "CONTRIBUTING.md",
+      "llms.txt",
+      "llms-full.txt",
+      "docs/**/*.md",
+      "skills/**/SKILL.md",
+      ".github/workflows/*.yml"
+    ]
+  },
+  "runtime_smoke": {
+    "native_py37": [
+      "dcc_mcp_core",
+      "dcc_mcp_core._core",
+      "dcc_mcp_core.skill",
+      "dcc_mcp_core.schema",
+      "dcc_mcp_core.server_base",
+      "dcc_mcp_core.host",
+      "dcc_mcp_core._server.options",
+      "dcc_mcp_core._runtime.mcp_http_config"
+    ],
+    "lite_py37": [
+      "dcc_mcp_core",
+      "dcc_mcp_core.skill",
+      "dcc_mcp_core.schema",
+      "dcc_mcp_core.server_base",
+      "dcc_mcp_core.host",
+      "dcc_mcp_core._lite_fallback",
+      "dcc_mcp_core._runtime.mcp_http_config",
+      "dcc_mcp_core._runtime.pure_skill_catalog",
+      "dcc_mcp_core._runtime.server_factory",
+      "dcc_mcp_core._runtime.sidecar_skill_server"
+    ]
+  },
+  "test_toolchain": {
+    "jsonschema_py37": "4.17.3",
+    "pytest": "7.4.4",
+    "pytest_xdist": "3.5.0",
+    "typing_extensions": "4.7.1"
+  }
+}

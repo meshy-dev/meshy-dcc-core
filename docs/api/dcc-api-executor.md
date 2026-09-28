@@ -1,0 +1,226 @@
+# DCC API Executor — Code-Orchestration for Huge APIs
+
+> Source: [`python/dcc_mcp_core/dcc_api_executor.py`](https://github.com/dcc-mcp/dcc-mcp-core/blob/main/python/dcc_mcp_core/dcc_api_executor.py) · Issue [#411](https://github.com/dcc-mcp/dcc-mcp-core/issues/411)
+>
+> **[中文版](../zh/api/dcc-api-executor.md)**
+
+Implements the "Cloudflare pattern" for enormous DCC APIs: expose just
+**two tools** — `dcc_search` and `dcc_execute` — that together cover the
+entire DCC Python API in ~500 tokens, instead of listing each of 1500+
+commands individually.
+
+**Why this matters for DCCs**
+
+| DCC | Approximate API surface |
+|-----|-------------------------|
+| Maya | 2000+ MEL / Python commands |
+| Houdini | 1500+ `hou` methods |
+| Blender | 800+ `bpy` operators |
+| 3ds Max | 1000+ `pymxs` commands |
+
+Registering each as its own MCP tool bloats `tools/list` past agent
+context budgets. Code orchestration keeps the surface constant: **2 tools,
+any DCC, any size**.
+
+> Reference: Anthropic — *"Building agents that reach production systems with
+> MCP"* (Apr 22, 2026): "Design for code orchestration when your surface
+> is large. Cloudflare's MCP server is the reference example — two tools
+> (search and execute) cover ~2,500 endpoints in roughly 1K tokens."
+
+## Imports
+
+```python
+from dcc_mcp_core import (
+    DccApiCatalog,
+    DccApiExecutor,
+    register_dcc_api_executor,
+)
+```
+
+## `DccApiCatalog(dcc_name, commands=None, catalog_text=None)`
+
+Searchable catalog of DCC API command signatures and descriptions.
+
+**Construction sources**
+
+1. `commands` — explicit list of dicts: `[{"name": "polyCube", "signature": "polyCube(...)", "description": "Create a cube mesh."}, ...]`
+2. `catalog_text` — plain-text catalog, one command per line as `name - description`. Blank lines and `#` comments are ignored.
+3. `add_command(name, *, signature="", description="")` — append at runtime.
+
+**Search** — `search(query: str, *, limit: int = 10) -> list[dict]`
+
+- Tokenises on whitespace/punctuation
+- Drops stopwords (`the`, `a`, `an`, `in`, `for`, `of`)
+- Scores by token-overlap count across `name + description + signature`
+- Returns top-`limit` by score, then alphabetical by name
+- Never surfaces zero-score results
+
+`len(catalog)` returns the number of commands.
+
+## `DccApiExecutor(dcc_name, catalog=None, dispatcher=None)`
+
+The two-tool wrapper.
+
+| Arg | Type | Default | Notes |
+|-----|------|---------|-------|
+| `dcc_name` | `str` | — | DCC identifier |
+| `catalog` | `DccApiCatalog \| None` | new empty catalog | Used by `dcc_search` |
+| `dispatcher` | `ToolDispatcher \| None` | `None` | When provided, `dcc_execute` exposes `dispatch(name, args)` inside the script |
+| `persistent_namespace` | `bool` | `False` | Share variables between `dcc_execute` calls (see below) |
+| `script_execution_context` | `ScriptExecutionContext \| None` | compatibility context | Owns the shared namespace |
+
+### Persistent namespace (issue #2300)
+
+Consecutive `dcc_execute` calls normally start from an empty namespace, so
+expensive setup — imports, cached scene queries — is recomputed every round
+trip. Opt in with `persistent_namespace=True` on the executor, or per call
+with `"persistent_namespace": true` in the `dcc_execute` params:
+
+```python
+executor = DccApiExecutor("maya", persistent_namespace=True)
+executor.execute_params({"code": "scene = load_scene_cache()\nreturn len(scene)"})
+executor.execute_params({"code": "return scene['mesh_count']"})   # reuses `scene`
+```
+
+Only the **variable** namespace persists. `EvalContext` still rebuilds
+`dispatch`, `json`, and the restricted `__builtins__` for every run, so the
+sandbox is unchanged; `dispatch` and other reserved names are never written
+back. Names bound inside a nested `def`/`class` body stay local. Reset the
+shared state with `clear_script_namespace()`.
+
+Successful runs report the carried variables:
+
+```json
+{"context": {"persistent_namespace": {"enabled": true, "variables": ["scene"]}}}
+```
+
+### `.search(query, *, limit=10) -> dict`
+
+Handles `dcc_search` calls. Returns:
+
+```json
+{
+  "success": true,
+  "message": "Found 3 command(s) matching 'create sphere'.",
+  "results": [
+    {"name": "polySphere", "signature": "...", "description": "..."}
+  ]
+}
+```
+
+No hits → `"results": []` and a `"hint"` suggesting `search_skills`.
+
+### `.execute(code, *, timeout_secs=30) -> dict`
+
+Handles `dcc_execute` calls. Runs the snippet through
+[`EvalContext`](./batch.md) with `sandbox=True`. When a `ToolDispatcher`
+was passed to the constructor, `dispatch()` is available inside the
+script.
+
+Returns one of:
+
+- `{"success": True, "output": <script return value>, "message": "..."}`
+- `{"success": False, "error": "...", "message": "Script timed out ..."}`
+- `{"success": False, "error": "...", "message": "Script failed ..."}`
+
+`output` is the value returned by the script via a top-level `return`
+statement (the last expression is not implicitly returned).
+
+### `.execute_params({file_path, params, ...}) -> dict`
+
+For iterative work, materialize a typed script once and call its entry point
+with structured parameters:
+
+```python
+script = materialize_script(
+    "def main(scale: float, copies: int = 1):\n"
+    "    return {'value': scale * copies}\n",
+    dcc_type="maya",
+    instance_id="maya-local",
+    session_id="task-42",
+    reuse=True,
+    reuse_key="scale-assets",
+)
+executor.execute_params({"file_path": script.file_path, "params": {"scale": 2.5, "copies": 4}})
+```
+
+The materialize result exposes a statically derived `parameters_schema`.
+`execute_params` re-derives that schema from the verified script body, rejects
+a conflicting sidecar schema, validates `params`, and then invokes
+`main(**params)`. Legacy sidecars without `parameters_schema` remain valid and
+use the re-derived contract. Script entry points accept only annotations whose
+JSON values preserve their runtime meaning; fixed tuples enforce every emitted
+`prefixItems` and length constraint. A parameter is required whenever it has no
+default, independently of whether its annotation is nullable. Leading-underscore
+parameter names follow normal `main(**params)` semantics. For Python 3.8 runtime
+compatibility, parameterized containers use `typing.List`, `typing.Dict`, and
+`typing.Tuple`; PEP 585 built-in generics are not published. Parameterized and
+legacy calls share the same sandbox, dispatcher, owner thread, and timeout
+boundary. Reusing the same file with different parameters does not rewrite it and returns
+`context.materialized_script.reused=true`. Optional `sha256` verifies content
+integrity.
+
+## `register_dcc_api_executor(server, executor, *, search_tool_name="dcc_search", execute_tool_name="dcc_execute") -> None`
+
+Register both tools on a `McpHttpServer` *before* `server.start()`. Tool
+names are overridable for disambiguation in multi-DCC gateways
+(`maya_search`, `blender_search`, …).
+
+## End-to-end example
+
+```python
+from dcc_mcp_core import (
+    ToolRegistry, ToolDispatcher,
+    McpHttpServer, McpHttpConfig,
+    DccApiCatalog, DccApiExecutor, register_dcc_api_executor,
+)
+
+registry = ToolRegistry()
+dispatcher = ToolDispatcher(registry)
+
+catalog = DccApiCatalog(
+    "maya",
+    catalog_text="""
+polyCube - Create a cube polygon mesh
+polySphere - Create a sphere polygon mesh
+select - Select nodes in the scene
+render - Render the current frame
+""",
+)
+
+executor = DccApiExecutor("maya", catalog=catalog, dispatcher=dispatcher)
+
+server = McpHttpServer(registry, McpHttpConfig(port=8765))
+register_dcc_api_executor(server, executor)
+handle = server.start()
+# tools/list now contains exactly 2 entries: dcc_search, dcc_execute
+```
+
+## Agent usage pattern
+
+```text
+User  : "Create 5 spheres arranged on a line"
+Agent : dcc_search({"query": "create sphere"})         → finds polySphere
+Agent : dcc_execute({"code": "..."} )
+        for i in range(5):
+            dispatch("polySphere", {"position": [i, 0, 0]})
+        return {"created": 5}
+Server: { "output": {"created": 5}, "success": true }
+```
+
+Only the final script return value reaches the model — the 5 intermediate
+dispatches never consume tokens.
+
+## Current status
+
+Python helpers ship today. The Rust-level MCP built-in `dcc_search` /
+`dcc_execute` tools are tracked in issue
+[#411](https://github.com/dcc-mcp/dcc-mcp-core/issues/411). Until they
+land, register via `register_dcc_api_executor(server, executor)` — the
+Python handlers behave identically.
+
+## See also
+
+- [`EvalContext` / `batch_dispatch`](./batch.md) — the sandboxed executor under the hood
+- [Skills System](../guide/skills.md) — how `search-hint` populates catalog entries from SKILL.md
+- [Remote Server guide](../guide/remote-server.md)
