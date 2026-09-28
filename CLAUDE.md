@@ -37,6 +37,10 @@ each one on a real host before porting it as a Rust test.
   `UPSTREAM.md`); never add an upstream remote or merge upstream history.
 - Scope is the nine DCCs with a Meshy Send To bridge (Blender, Godot, Unity,
   Unreal, Maya, 3ds Max, Roblox, Omniverse, ZBrush). Don't add other hosts.
+- Host adapters are Meshy-owned: imported from upstream `dcc-mcp-<host>`
+  source (new for Roblox and Omniverse), each bundling this repo's core wheel.
+  The existing Send To plugins stay separate; take only their import rules
+  (PBR channels, color space, host pitfalls), not their code.
 
 ## Design constraints
 
