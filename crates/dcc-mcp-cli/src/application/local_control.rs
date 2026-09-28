@@ -135,10 +135,22 @@ fn effective_search_limit(query: Option<&str>, requested: Option<usize>) -> usiz
 
 pub async fn describe_local(registry_dir: PathBuf, tool_slug: String) -> anyhow::Result<Value> {
     let route = resolve_tool_route(&registry_dir, &tool_slug, None, None)?;
-    let gateway = HttpGateway::default();
+    let tool = describe_route_tool(&HttpGateway::default(), &route).await?;
+
+    Ok(json!({
+        "record": route.record(),
+        "tool": tool,
+        "instance": local_instance::instance_summary(&route.entry),
+        "source": "local_mcp",
+    }))
+}
+
+/// The host's REST describe resolves canonical `<skill>__<action>` names;
+/// `tools/list` may publish only the bare action name.
+async fn describe_route_tool(gateway: &HttpGateway, route: &ToolRoute) -> anyhow::Result<Value> {
     let discovery_mcp_url = local_instance::discovery_mcp_url(&route.entry);
     let endpoint = Endpoint::from_mcp_url(&discovery_mcp_url);
-    let tool = match gateway
+    Ok(match gateway
         .post_json(
             &endpoint.path("/v1/describe"),
             &json!({"tool_slug": route.backend_tool, "include_schema": true}),
@@ -152,7 +164,7 @@ pub async fn describe_local(registry_dir: PathBuf, tool_slug: String) -> anyhow:
             "annotations": described.get("annotations").cloned().unwrap_or_else(|| json!({})),
             "_meta": described.get("metadata").cloned().unwrap_or(Value::Null),
         }),
-        Err(describe_error) => list_mcp_tools(&gateway, &discovery_mcp_url)
+        Err(describe_error) => list_mcp_tools(gateway, &discovery_mcp_url)
             .await
             .with_context(|| {
                 format!(
@@ -172,14 +184,7 @@ pub async fn describe_local(registry_dir: PathBuf, tool_slug: String) -> anyhow:
                     route.backend_tool
                 )
             })?,
-    };
-
-    Ok(json!({
-        "record": route.record(),
-        "tool": tool,
-        "instance": local_instance::instance_summary(&route.entry),
-        "source": "local_mcp",
-    }))
+    })
 }
 
 pub async fn load_skill_local(registry_dir: PathBuf, body: Value) -> anyhow::Result<Value> {
@@ -562,15 +567,12 @@ async fn require_read_only_without_instance(
     gateway: &HttpGateway,
     route: &ToolRoute,
 ) -> anyhow::Result<()> {
-    let tools = list_mcp_tools(gateway, &local_instance::discovery_mcp_url(&route.entry)).await?;
-    let read_only = tools.iter().any(|tool| {
-        tool.get("name").and_then(Value::as_str) == Some(route.backend_tool.as_str())
-            && tool
-                .pointer("/annotations/readOnlyHint")
-                .and_then(Value::as_bool)
-                == Some(true)
-    });
-    if !read_only {
+    let tool = describe_route_tool(gateway, route).await?;
+    if tool
+        .pointer("/annotations/readOnlyHint")
+        .and_then(Value::as_bool)
+        != Some(true)
+    {
         anyhow::bail!(
             "{} is not marked read-only, so name its instance: call {} or pass --instance-id",
             route.backend_tool,
