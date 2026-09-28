@@ -20,7 +20,9 @@ fn official_update_manifest_url() -> Option<String> {
     } else {
         return None;
     };
-    Some(dcc_mcp_updater::meshy_release::update_manifest_url(platform))
+    Some(dcc_mcp_updater::meshy_release::update_manifest_url(
+        platform,
+    ))
 }
 
 /// Admin persistence configuration (SQLite + skill-path reload hook).

@@ -136,7 +136,8 @@ fn apply_staged_update() -> bool {
 
     // Apply any staged binary update before running commands (CLI restart
     // is the user's next invocation after `update apply`).
-    match dcc_mcp_updater::Updater::apply_staged_update(crate::application::update::CLI_BINARY_NAME) {
+    match dcc_mcp_updater::Updater::apply_staged_update(crate::application::update::CLI_BINARY_NAME)
+    {
         Ok(true) => {
             eprintln!("info: staged binary update applied; restarting");
             true

@@ -63,7 +63,10 @@ fn update_apply_requires_explicit_user_confirmation() {
     assert_eq!(update["status"], "confirmation_required");
     assert_eq!(update["error"], "confirmation_required");
     assert_eq!(update["version_status"], "update_available");
-    assert_eq!(update["current_version"], dcc_mcp_updater::meshy_release::PRODUCT_VERSION);
+    assert_eq!(
+        update["current_version"],
+        dcc_mcp_updater::meshy_release::PRODUCT_VERSION
+    );
     assert_eq!(update["latest_version"], "99.0.0");
     assert_eq!(
         update["update_policy"]["apply_command"],

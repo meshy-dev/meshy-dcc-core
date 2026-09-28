@@ -579,12 +579,25 @@ async fn local_write_without_named_instance_is_refused_before_dispatch() {
     };
     for write in ["scene__delete", "scene__save"] {
         let error = call(write).await.expect_err("write needs a named instance");
-        assert!(error.to_string().contains("not marked read-only"), "{error}");
+        assert!(
+            error.to_string().contains("not marked read-only"),
+            "{error}"
+        );
     }
-    assert!(called.lock().expect("calls").is_empty(), "no write may reach the host");
+    assert!(
+        called.lock().expect("calls").is_empty(),
+        "no write may reach the host"
+    );
 
-    call("scene__list").await.expect("read-only tool may use the only instance");
-    call(&slug).await.expect("an instance slug names the instance");
-    assert_eq!(*called.lock().expect("calls"), ["scene__list", "scene__save"]);
+    call("scene__list")
+        .await
+        .expect("read-only tool may use the only instance");
+    call(&slug)
+        .await
+        .expect("an instance slug names the instance");
+    assert_eq!(
+        *called.lock().expect("calls"),
+        ["scene__list", "scene__save"]
+    );
     server.abort();
 }

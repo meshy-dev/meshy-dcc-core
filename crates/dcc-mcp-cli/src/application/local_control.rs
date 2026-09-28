@@ -565,7 +565,10 @@ async fn require_read_only_without_instance(
     let tools = list_mcp_tools(gateway, &local_instance::discovery_mcp_url(&route.entry)).await?;
     let read_only = tools.iter().any(|tool| {
         tool.get("name").and_then(Value::as_str) == Some(route.backend_tool.as_str())
-            && tool.pointer("/annotations/readOnlyHint").and_then(Value::as_bool) == Some(true)
+            && tool
+                .pointer("/annotations/readOnlyHint")
+                .and_then(Value::as_bool)
+                == Some(true)
     });
     if !read_only {
         anyhow::bail!(

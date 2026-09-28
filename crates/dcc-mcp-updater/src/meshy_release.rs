@@ -32,8 +32,7 @@ pub fn manifest_attestation_url(url: &str) -> Option<String> {
     let (dir, file) = rest.split_once('/')?;
     let versioned = dir.strip_prefix('v').is_some_and(|v| {
         !v.is_empty()
-            && v
-                .chars()
+            && v.chars()
                 .all(|c| c.is_ascii_alphanumeric() || c == '.' || c == '-')
     });
     if dir != "latest" && !versioned {

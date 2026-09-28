@@ -13,8 +13,8 @@ pub(crate) async fn run_update_cmd(gateway_port: u16, action: UpdateAction) -> a
             current_version,
         } => {
             let binary_name = binary.unwrap_or_else(|| SERVER_BINARY_NAME.to_string());
-            let current_version =
-                current_version.unwrap_or_else(|| dcc_mcp_updater::meshy_release::PRODUCT_VERSION.to_string());
+            let current_version = current_version
+                .unwrap_or_else(|| dcc_mcp_updater::meshy_release::PRODUCT_VERSION.to_string());
             let updater =
                 dcc_mcp_updater::Updater::new(&gateway_url, &binary_name, &current_version);
             let info = updater.check_update().await?;

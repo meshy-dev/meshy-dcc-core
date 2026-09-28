@@ -286,7 +286,8 @@ mod tests {
 
     #[test]
     fn explicit_auto_uses_the_same_server_flag_surface() {
-        let parsed = Args::try_parse_from(["meshy-dcc-server", "auto", "--app", "blender"]).unwrap();
+        let parsed =
+            Args::try_parse_from(["meshy-dcc-server", "auto", "--app", "blender"]).unwrap();
 
         let Some(SubCmd::Auto(server)) = parsed.command else {
             panic!("expected auto subcommand");

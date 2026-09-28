@@ -167,8 +167,7 @@ fn marketplace_search_contract_accepts_positional_query_and_dcc_type_alias() {
 #[test]
 fn marketplace_add_repo_requires_commit_for_install_but_not_list() {
     assert!(
-        Args::try_parse_from(["meshy-dcc", "marketplace", "add-repo", "dcc-mcp/example",])
-            .is_err()
+        Args::try_parse_from(["meshy-dcc", "marketplace", "add-repo", "dcc-mcp/example",]).is_err()
     );
 
     let args = Args::try_parse_from([
