@@ -34,6 +34,13 @@ internal wire/compat version.
   signature. Until the feed is published, the CDN's 403 response counts as
   unavailable and the bundled catalog is used. The catalog cache moved to
   `meshy-dcc/`. No catalog is fetched from upstream GitHub any more.
+- The bundled catalog also includes the upstream dcc-mcp entries named in
+  `meshy-dcc-catalog.yml` under `upstream`, at upstream versions: Houdini,
+  Cinema 4D, Marmoset, Substance 3D Painter and Designer, Mari, OpenUSD,
+  Katana, MotionBuilder, SketchUp, FreeCAD, OpenSCAD, Material Maker and
+  Photoshop. Until a Meshy adapter is published, a Meshy DCC installs its
+  upstream adapter instead: Blender, Unity, Godot, Unreal, ZBrush, Maya and
+  3ds Max.
 - Install catalogs accept `type: host-package` for adapters whose payload
   is host-native. Its host commands run as argv without a shell, start with
   the operator's `--dcc-path`, and can write the start-instance launch plan.

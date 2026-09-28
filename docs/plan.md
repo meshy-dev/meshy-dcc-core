@@ -13,7 +13,13 @@
 - **改名范围**：只改产品面（二进制名、Meshy 自有状态目录与配置、Skill、文档）。
   内部 crate、Python 模块 `dcc_mcp_core`、宿主协议保持上游命名，这样上游 core 和
   adapter 的补丁都能继续套用。
-- **DCC 范围**：Meshy 已有 Send To bridge 的 9 个 DCC。Krita 等非 Meshy DCC 不在范围。
+- **DCC 范围**：
+  - Meshy 自有 adapter 覆盖 Meshy 已有 Send To bridge 的 9 个 DCC。
+  - 内置 catalog（`meshy-dcc-catalog.yml`）另外按 `upstream` 名单纳入一批上游 adapter，使用上游版本：
+    Houdini、Cinema 4D、Marmoset、Substance 3D Painter / Designer、Mari、OpenUSD、Katana、
+    MotionBuilder、SketchUp、FreeCAD、OpenSCAD、Material Maker、Photoshop。
+  - Meshy 版未发布前，9 个 DCC 里上游已有 adapter 的先用上游版。
+  - 其余上游 adapter 以后放进 Meshy marketplace，由用户自选安装，不进内置 catalog。
 - **宿主 adapter 全部由 Meshy 自有**：
   - 有上游 `dcc-mcp-<host>` 的宿主，以其源码为起点独立导入，方式与 core 相同，不带上游历史。
   - adapter 内置本仓库构建的 `dcc_mcp_core` wheel，经 Meshy 渠道发布。
@@ -117,6 +123,9 @@ ORM 打包图要按 glTF 约定取通道：G = roughness，B = metallic。现有
 | Omniverse | 无（`dcc-mcp-openusd` 为 headless USD） | 新做 Kit 扩展加载 wheel；参考 Send To 版 Kit 扩展 | 暂缓 |
 
 只有真实 OS × 宿主 × adapter 验证通过的组合才进入支持矩阵。
+
+在 Meshy 版发布之前，Blender、Unity、Godot、Unreal、ZBrush、Maya、3ds Max 用内置 catalog 里的上游条目安装，
+版本是上游 v0.20.36 catalog 锁定的版本；Roblox、Omniverse 上游没有 adapter，仍是占位。
 
 上游 core #2417 仍未修复：经 CLI 的工具返回会错位一条。每个宿主接入时都要专门测这一项，
 需要时在 core 里加 request id 关联。

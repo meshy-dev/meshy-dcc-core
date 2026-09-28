@@ -1,7 +1,6 @@
 //! Service contracts after the separate cryptographic verification boundary.
 use super::*;
 use crate::domain::install_catalog::CatalogProvenance;
-use sha2::{Digest, Sha256};
 
 fn request() -> InstallRequest {
     InstallRequest {
@@ -82,10 +81,7 @@ fn default_catalog_fallback_reports_bundled_and_cannot_bypass_freshness() {
         let provenance = service.catalog_provenance(None);
         assert_eq!(provenance.source, CatalogSource::Bundled);
         assert!(!provenance.latest_checked);
-        assert_eq!(
-            provenance.sha256,
-            Some(hex::encode(Sha256::digest(BUNDLED_CATALOG.as_bytes())))
-        );
+        assert_eq!(provenance.sha256, Some(super::catalog::bundled_sha256()));
         // The gate must hold whatever the bundled entries are, so plan an
         // upstream adapter under the fallback's provenance.
         let entries = dcc_mcp_catalog::load_from_str(UPSTREAM_CATALOG).unwrap();

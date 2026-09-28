@@ -1149,10 +1149,15 @@ pub(crate) fn spawn_local_mcp_fixture() -> LocalMcpFixture {
 pub(crate) const UPSTREAM_CATALOG: &str =
     concat!(env!("CARGO_MANIFEST_DIR"), "/../../dcc-mcp-catalog.yml");
 
-/// The Meshy catalog bundled into `meshy-dcc`; default-catalog tests derive
-/// their expectations from it rather than hard-coding its entries.
+/// The catalog bundled into `meshy-dcc` (the Meshy catalog merged with the
+/// upstream entries it names); default-catalog tests derive their
+/// expectations from it rather than hard-coding its entries.
 pub(crate) fn bundled_catalog() -> Vec<dcc_mcp_catalog::CatalogEntry> {
-    dcc_mcp_catalog::load_from_str(include_str!("../../../../meshy-dcc-catalog.yml")).unwrap()
+    dcc_mcp_catalog::load_curated(
+        include_str!("../../../../meshy-dcc-catalog.yml"),
+        include_str!("../../../../dcc-mcp-catalog.yml"),
+    )
+    .unwrap()
 }
 
 /// Sorted adapter names in the bundled catalog.

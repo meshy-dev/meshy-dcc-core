@@ -24,18 +24,27 @@ pub(super) struct ResolvedCatalog {
 impl ResolvedCatalog {
     fn bundled() -> Result<Self, dcc_mcp_catalog::CatalogError> {
         Ok(Self {
-            entries: dcc_mcp_catalog::load_from_str(super::BUNDLED_CATALOG)?,
+            entries: dcc_mcp_catalog::load_curated(
+                super::BUNDLED_CATALOG,
+                super::UPSTREAM_CATALOG,
+            )?,
             provenance: CatalogProvenance {
-                sha256: Some(
-                    Sha256::digest(super::BUNDLED_CATALOG.as_bytes())
-                        .iter()
-                        .map(|byte| format!("{byte:02x}"))
-                        .collect(),
-                ),
+                sha256: Some(bundled_sha256()),
                 ..CatalogProvenance::local(CatalogSource::Bundled)
             },
         })
     }
+}
+
+/// Digest of both bundled files, since the bundled catalog is built from both.
+pub(super) fn bundled_sha256() -> String {
+    Sha256::new()
+        .chain_update(super::BUNDLED_CATALOG.as_bytes())
+        .chain_update(super::UPSTREAM_CATALOG.as_bytes())
+        .finalize()
+        .iter()
+        .map(|byte| format!("{byte:02x}"))
+        .collect()
 }
 
 #[derive(Serialize, Deserialize)]

@@ -11,8 +11,8 @@ use crate::domain::install::{
 };
 
 const BUNDLED_CATALOG: &str = include_str!("../../../../meshy-dcc-catalog.yml");
-/// Upstream dcc-mcp catalog: its pip adapters exercise the install mechanics in tests.
-#[cfg(test)]
+/// Upstream dcc-mcp catalog; the bundled catalog takes the entries it names
+/// under `upstream` from here. Tests also use its pip adapters directly.
 const UPSTREAM_CATALOG: &str = include_str!("../../../../dcc-mcp-catalog.yml");
 
 mod adobe;
@@ -992,28 +992,41 @@ mod tests {
             service.catalog_provenance(None).source,
             CatalogSource::Bundled
         );
-        assert_eq!(
-            service.catalog_entries(None).unwrap(),
-            dcc_mcp_catalog::load_from_str(BUNDLED_CATALOG).unwrap()
-        );
-        let listing = service.dcc_types(None).unwrap();
-        let blender = listing
-            .dcc_types
-            .iter()
-            .find(|entry| entry.dcc_type == "blender")
-            .unwrap();
-        assert_eq!(blender.adapters[0].name, "meshy-dcc-blender");
-        assert!(!blender.adapters[0].catalog_install_available);
         let entries = service.catalog_entries(None).unwrap();
-        let entry = entries
+        assert_eq!(
+            entries,
+            dcc_mcp_catalog::load_curated(BUNDLED_CATALOG, UPSTREAM_CATALOG).unwrap()
+        );
+        // Every upstream entry the Meshy catalog names is bundled as it is.
+        for name in dcc_mcp_catalog::upstream_selection(BUNDLED_CATALOG).unwrap() {
+            assert!(entries.iter().any(|entry| entry.name == name), "{name}");
+        }
+
+        let listing = service.dcc_types(None).unwrap();
+        let adapter = |dcc: &str| {
+            listing
+                .dcc_types
+                .iter()
+                .find(|entry| entry.dcc_type == dcc)
+                .unwrap()
+                .adapters[0]
+                .clone()
+        };
+        // An unpublished Meshy adapter yields to the named upstream one ...
+        assert_eq!(adapter("blender").name, "dcc-mcp-blender");
+        assert!(adapter("blender").catalog_install_available);
+        // ... and stays a placeholder where upstream has none.
+        assert_eq!(adapter("roblox").name, "meshy-dcc-roblox");
+        assert!(!adapter("roblox").catalog_install_available);
+        let roblox = entries
             .iter()
-            .find(|entry| entry.name == "meshy-dcc-blender")
+            .find(|entry| entry.name == "meshy-dcc-roblox")
             .unwrap();
-        assert!(entry.policy.as_ref().unwrap().reason.is_some());
+        assert!(roblox.policy.as_ref().unwrap().reason.is_some());
 
         let error = service
             .plan(InstallRequest {
-                dcc_type: "blender".into(),
+                dcc_type: "roblox".into(),
                 version: None,
                 catalog_path: None,
                 python: None,
@@ -1024,7 +1037,7 @@ mod tests {
             .unwrap_err();
         assert!(matches!(
             error,
-            InstallError::Plan(InstallPlanError::NotAvailable(name)) if name == "meshy-dcc-blender"
+            InstallError::Plan(InstallPlanError::NotAvailable(name)) if name == "meshy-dcc-roblox"
         ));
     }
 

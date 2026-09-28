@@ -1,7 +1,8 @@
 # Meshy DCC Core install catalog, bundled into `meshy-dcc`.
 #
-# One entry per DCC that Meshy supports. A DCC joins by adding an entry: core has
-# no per-DCC code, it only runs what the entry declares.
+# Meshy-owned entries for the Meshy DCCs, plus the upstream entries named under
+# `upstream`. A DCC joins by adding an entry: core has no per-DCC code, it only
+# runs what the entry declares.
 #
 # `host-package` installs download `url`, check `sha256`, then run the `host`
 # commands (argv lists, no shell) with the executable the operator passed via
@@ -11,10 +12,40 @@
 # is published under https://cdn.meshy.ai/meshy-dcc-core/adapters/. Test
 # unpublished builds with `meshy-dcc install --catalog <file>`.
 #
-# The upstream dcc-mcp catalog (dcc-mcp-catalog.yml) stays in the repository
-# for reference and patches; meshy-dcc does not read it.
+# `upstream` names entries taken as they are from the upstream dcc-mcp catalog
+# (dcc-mcp-catalog.yml, kept in the repository and updated by patches). While a
+# Meshy entry is not_available, a named upstream entry for the same DCC is used
+# instead, so the host stays installable until the Meshy adapter is published.
+# Other upstream adapters are not bundled; they are meant to be offered as
+# opt-in packages in the Meshy marketplace.
 
 version: "1"
+
+upstream:
+  # Interim adapters for Meshy DCCs whose Meshy build is not published yet.
+  - "dcc-mcp-blender"
+  - "dcc-mcp-unity"
+  - "dcc-mcp-godot"
+  - "dcc-mcp-unreal"
+  - "dcc-mcp-zbrush"
+  - "dcc-mcp-maya"
+  - "dcc-mcp-3dsmax"
+  # Further DCCs, at upstream versions.
+  - "dcc-mcp-houdini"
+  - "dcc-mcp-cinema4d"
+  - "dcc-mcp-marmoset"
+  - "dcc-mcp-substance3d-painter"
+  - "dcc-mcp-substance3d-designer"
+  - "dcc-mcp-mari"
+  - "dcc-mcp-openusd"
+  - "dcc-mcp-katana"
+  - "dcc-mcp-mobu"
+  - "dcc-mcp-sketchup"
+  - "dcc-mcp-freecad"
+  - "dcc-mcp-openscad"
+  - "dcc-mcp-material-maker"
+  - "dcc-mcp-photoshop"
+
 entries:
   - name: "meshy-dcc-blender"
     description: "Meshy DCC adapter for Blender 4.5+: scene, import, materials and render tools"

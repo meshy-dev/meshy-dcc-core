@@ -19,9 +19,11 @@ Agents use the CLI together with the `meshy-dcc` Skill; no MCP connector has to
 be configured. Meshy generation, authentication and downloads stay in the
 published [`meshy-cli`](https://www.npmjs.com/package/meshy-cli).
 
-Scope is the DCCs with a Meshy Send To bridge: Blender, Godot, Unity, Unreal,
-Maya, 3ds Max, Roblox, Omniverse and ZBrush. See [docs/plan.md](docs/plan.md)
-for the roadmap and support status.
+Meshy-owned adapters cover the DCCs with a Meshy Send To bridge: Blender,
+Godot, Unity, Unreal, Maya, 3ds Max, Roblox, Omniverse and ZBrush. The bundled
+install catalog also offers a curated set of upstream dcc-mcp adapters (Houdini,
+Cinema 4D, Substance 3D, Photoshop and others) at upstream versions. See
+[docs/plan.md](docs/plan.md) for the roadmap and support status.
 
 ## Build
 

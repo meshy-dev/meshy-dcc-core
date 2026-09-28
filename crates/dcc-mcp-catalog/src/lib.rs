@@ -27,6 +27,8 @@ mod error;
 pub use error::{CatalogError, CatalogValidationError};
 mod validation;
 pub use validation::{validate_catalog_entries, validate_entry};
+mod curated;
+pub use curated::{load_curated, upstream_selection};
 
 // ── types ─────────────────────────────────────────────────────────────────────
 

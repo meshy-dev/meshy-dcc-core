@@ -35,8 +35,13 @@ each one on a real host before porting it as a Rust test.
   scattering edits through upstream files. Keep upstream `LICENSE` and notices.
 - Take upstream fixes as reviewed patches from a separate upstream clone (see
   `UPSTREAM.md`); never add an upstream remote or merge upstream history.
-- Scope is the nine DCCs with a Meshy Send To bridge (Blender, Godot, Unity,
-  Unreal, Maya, 3ds Max, Roblox, Omniverse, ZBrush). Don't add other hosts.
+- Meshy-owned adapters cover the nine DCCs with a Meshy Send To bridge
+  (Blender, Godot, Unity, Unreal, Maya, 3ds Max, Roblox, Omniverse, ZBrush).
+  The bundled catalog (`meshy-dcc-catalog.yml`) also takes the upstream
+  entries named under its `upstream` key, at upstream versions. A Meshy DCC
+  uses its upstream adapter until the Meshy build is published. Other
+  upstream adapters are meant for the Meshy marketplace as opt-in packages;
+  add hosts to the bundled catalog only when the user decides.
 - Host adapters are Meshy-owned: imported from upstream `dcc-mcp-<host>`
   source (new for Roblox and Omniverse), each bundling this repo's core wheel.
   The existing Send To plugins stay separate; take only their import rules
