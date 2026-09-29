@@ -6,7 +6,7 @@
 use std::path::PathBuf;
 
 use meshy_dcc_catalog::{CatalogEntry, CatalogInstall};
-use meshy_dcc_cli::domain::install::{
+use meshy_dcc::domain::install::{
     InstallPlanError, InstallPlanner, InstallRequest, InstallStepAction,
 };
 

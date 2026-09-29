@@ -1,4 +1,4 @@
-# Debug gateway + per-DCC REST/MCP using worktree-built meshy-dcc-cli / meshy-dcc-server.
+# Debug gateway + per-DCC REST/MCP using worktree-built meshy-dcc / meshy-dcc-server.
 # Usage:
 #   # A) Live Maya + gateway (default 19765) — after relinking meshy-dcc-core into Maya
 #   .\scripts\cli-gateway-debug.ps1 -Mode gateway
@@ -61,13 +61,13 @@ if (-not $RepoRoot) {
     if (-not $RepoRoot) { $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path }
 }
 
-$Cli = Join-Path $RepoRoot "target\release\meshy-dcc-cli.exe"
+$Cli = Join-Path $RepoRoot "target\release\meshy-dcc.exe"
 $Server = Join-Path $RepoRoot "target\release\meshy-dcc-server.exe"
 
 if (-not (Test-Path $Cli)) {
-    Write-Host "Building meshy-dcc-cli + meshy-dcc-server..."
+    Write-Host "Building meshy-dcc + meshy-dcc-server..."
     Push-Location $RepoRoot
-    cargo build -p meshy-dcc-cli -p meshy-dcc-server --release
+    cargo build -p meshy-dcc -p meshy-dcc-server --release
     Pop-Location
 }
 

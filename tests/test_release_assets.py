@@ -40,9 +40,9 @@ def _baseline_names(version=VERSION):
     for platform in PLATFORMS:
         suffix = ".exe" if platform == "windows-x86_64" else ""
         names.append(f"meshy-dcc-server-{platform}{suffix}")
-        names.append(f"meshy-dcc-cli-{platform}{suffix}")
+        names.append(f"meshy-dcc-{platform}{suffix}")
         names.append(f"meshy-dcc-server-{version}-{platform}.zip")
-        names.append(f"meshy-dcc-cli-{version}-{platform}.zip")
+        names.append(f"meshy-dcc-{version}-{platform}.zip")
         names.append(f"meshy-dcc-update-manifest-{platform}.json")
         names.append(f"meshy-dcc-update-manifest-{platform}.sigstore.json")
     return names

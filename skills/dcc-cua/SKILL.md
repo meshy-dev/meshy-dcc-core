@@ -14,7 +14,7 @@ metadata:
   meshy-dcc:
     dcc: python
     layer: infrastructure
-    compatibility: Cross-platform routing contract. The current DCC-CUA host is installed and verified through the official meshy-dcc-cli component manifest; exact platform capabilities remain runtime-discovered.
+    compatibility: Cross-platform routing contract. The current DCC-CUA host is installed and verified through the official meshy-dcc component manifest; exact platform capabilities remain runtime-discovered.
     version: "0.1.0"
     search-hint: "dcc-cua DCC CUA dcc cua our dcc-cua our dcc cua 我们的 dcc-cua 我们的 dcc cua project-owned UI control browser DOM exact PID HWND computer use automation"
     tags: "dcc-cua, dcc-ui-control, ui-control, browser-dom, exact-window, computer-use, infrastructure"
@@ -51,8 +51,8 @@ grants, target binding, interruption, and confirmation policy still apply.
 Use the official component contract; do not download an arbitrary executable:
 
 ```bash
-meshy-dcc-cli components status dcc-cua
-meshy-dcc-cli components ensure dcc-cua --yes
+meshy-dcc components status dcc-cua
+meshy-dcc components ensure dcc-cua --yes
 dcc-cua manifest
 dcc-cua ping
 ```
@@ -95,11 +95,11 @@ For a registered DCC instance, use the Meshy DCC UI Control tools or their CLI
 projection:
 
 ```bash
-meshy-dcc-cli load-skill ui-control --instance-id <instance-id> --output toon
-meshy-dcc-cli ui-control snapshot --instance-id <instance-id> --json '{"session_id":"ui","process_id":1234,"window_handle":5678}'
-meshy-dcc-cli ui-control act --instance-id <instance-id> --json '{"session_id":"ui","control_id":"ok","action":"click","snapshot_id":"<snapshot-id>"}'
-meshy-dcc-cli ui-control act --instance-id <instance-id> --json '{"session_id":"ui","action":"invoke_menu","menu_path":["Window","Arrange","Left"]}'
-meshy-dcc-cli ui-control stop --instance-id <instance-id> --json '{"session_id":"ui"}'
+meshy-dcc load-skill ui-control --instance-id <instance-id> --output toon
+meshy-dcc ui-control snapshot --instance-id <instance-id> --json '{"session_id":"ui","process_id":1234,"window_handle":5678}'
+meshy-dcc ui-control act --instance-id <instance-id> --json '{"session_id":"ui","control_id":"ok","action":"click","snapshot_id":"<snapshot-id>"}'
+meshy-dcc ui-control act --instance-id <instance-id> --json '{"session_id":"ui","action":"invoke_menu","menu_path":["Window","Arrange","Left"]}'
+meshy-dcc ui-control stop --instance-id <instance-id> --json '{"session_id":"ui"}'
 ```
 
 Use the same exact instance and session throughout the action chain. Do not

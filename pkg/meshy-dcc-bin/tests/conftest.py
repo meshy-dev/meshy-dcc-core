@@ -1,4 +1,4 @@
-"""Shared fixtures for the ``meshy-dcc-cli`` wrapper package tests.
+"""Shared fixtures for the ``meshy-dcc`` wrapper package tests.
 
 The wrapper is a separate distribution under ``pkg/``, so it is neither
 importable nor on ``sys.path`` by default. This conftest makes both the

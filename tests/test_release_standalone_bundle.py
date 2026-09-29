@@ -37,12 +37,12 @@ def _build_bundle(tmp_path: Path, binary_name: str, source_name: str) -> zipfile
 
 
 def test_build_bundle_packages_unsuffixed_unix_binary(tmp_path: Path) -> None:
-    with _build_bundle(tmp_path, "meshy-dcc-cli", "meshy-dcc-cli-linux-x86_64") as bundle:
-        assert bundle.namelist() == ["meshy-dcc-cli"]
-        assert bundle.read("meshy-dcc-cli") == b"meshy-dcc-cli"
+    with _build_bundle(tmp_path, "meshy-dcc", "meshy-dcc-linux-x86_64") as bundle:
+        assert bundle.namelist() == ["meshy-dcc"]
+        assert bundle.read("meshy-dcc") == b"meshy-dcc"
 
 
 def test_build_bundle_preserves_windows_exe_name(tmp_path: Path) -> None:
-    with _build_bundle(tmp_path, "meshy-dcc-cli", "meshy-dcc-cli-windows-x86_64.exe") as bundle:
-        assert bundle.namelist() == ["meshy-dcc-cli.exe"]
-        assert bundle.read("meshy-dcc-cli.exe") == b"meshy-dcc-cli"
+    with _build_bundle(tmp_path, "meshy-dcc", "meshy-dcc-windows-x86_64.exe") as bundle:
+        assert bundle.namelist() == ["meshy-dcc.exe"]
+        assert bundle.read("meshy-dcc.exe") == b"meshy-dcc"

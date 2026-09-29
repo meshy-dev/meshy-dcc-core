@@ -1,6 +1,6 @@
-"""PyPI wrapper that installs and runs the ``meshy-dcc-cli`` binary.
+"""PyPI wrapper that installs and runs the ``meshy-dcc`` binary.
 
-``pip install meshy-dcc-cli`` (or ``uvx meshy-dcc-cli``) puts a ``meshy-dcc-cli``
+``pip install meshy-dcc`` (or ``uvx meshy-dcc``) puts a ``meshy-dcc``
 command on ``PATH``. The wheel carries the compressed release archive of the
 Rust binary for the installing platform and unpacks it into the environment's
 scripts directory on first use, so the executing process is the real binary.
@@ -9,7 +9,7 @@ Most users never import this package. Programmatic callers can use
 :func:`binary_path` to spawn the binary without searching ``PATH``::
 
     import subprocess
-    from meshy_dcc_cli import binary_path
+    from meshy_dcc import binary_path
 
     subprocess.run([str(binary_path()), "--version"])
 """

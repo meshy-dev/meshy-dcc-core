@@ -7,14 +7,14 @@ INSTALL_DIR="${MESHY_DCC_INSTALL_DIR:-$HOME/.local/bin}"
 
 usage() {
     cat <<'EOF'
-Install meshy-dcc-cli from its official GitHub release manifest.
+Install meshy-dcc from its official GitHub release manifest.
 
 Usage:
   install-cli.sh [--version v0.19.63] [--install-dir ~/.local/bin]
 
 Download this script first, inspect it, then run the local file.
 The installer verifies the release-manifest URL and SHA-256 before replacing
-an existing meshy-dcc-cli binary.
+an existing meshy-dcc binary.
 
 Environment:
   MESHY_DCC_VERSION      Release version, default latest
@@ -59,11 +59,11 @@ case "$OS" in
             fail "unsupported Linux architecture: $ARCH"
         fi
         PLATFORM="linux-x86_64"
-        ASSET="meshy-dcc-cli-linux-x86_64"
+        ASSET="meshy-dcc-linux-x86_64"
         ;;
     Darwin)
         PLATFORM="macos-universal2"
-        ASSET="meshy-dcc-cli-macos-universal2"
+        ASSET="meshy-dcc-macos-universal2"
         ;;
     *)
         fail "unsupported OS: $OS"
@@ -82,7 +82,7 @@ fi
 
 mkdir -p "$INSTALL_DIR"
 MANIFEST_TMP="$(mktemp "$INSTALL_DIR/.meshy-dcc-manifest.XXXXXX")"
-BINARY_TMP="$(mktemp "$INSTALL_DIR/.meshy-dcc-cli.XXXXXX")"
+BINARY_TMP="$(mktemp "$INSTALL_DIR/.meshy-dcc.XXXXXX")"
 cleanup() {
     rm -f "$MANIFEST_TMP" "$BINARY_TMP"
 }
@@ -105,7 +105,7 @@ download_to() {
 manifest_field() {
     field="$1"
     awk -v field="$field" '
-        /^[[:space:]]*"meshy-dcc-cli"[[:space:]]*:[[:space:]]*\{[[:space:]]*$/ {
+        /^[[:space:]]*"meshy-dcc"[[:space:]]*:[[:space:]]*\{[[:space:]]*$/ {
             in_cli = 1
             next
         }
@@ -128,50 +128,50 @@ calculate_sha256() {
     elif command -v openssl >/dev/null 2>&1; then
         openssl dgst -sha256 "$path" | awk '{print $NF}'
     else
-        fail "sha256sum, shasum, or openssl is required to verify meshy-dcc-cli"
+        fail "sha256sum, shasum, or openssl is required to verify meshy-dcc"
     fi
 }
 
 download_to "$MANIFEST_URL" "$MANIFEST_TMP" \
     || fail "official release manifest download failed"
 
-ENTRY_COUNT="$(grep -Ec '^[[:space:]]*"meshy-dcc-cli"[[:space:]]*:[[:space:]]*\{' "$MANIFEST_TMP" || true)"
-[ "$ENTRY_COUNT" = "1" ] || fail "official release manifest must contain one meshy-dcc-cli entry"
+ENTRY_COUNT="$(grep -Ec '^[[:space:]]*"meshy-dcc"[[:space:]]*:[[:space:]]*\{' "$MANIFEST_TMP" || true)"
+[ "$ENTRY_COUNT" = "1" ] || fail "official release manifest must contain one meshy-dcc entry"
 
 MANIFEST_VERSION="$(manifest_field version)"
 ASSET_URL="$(manifest_field url)"
 EXPECTED_SHA256="$(manifest_field sha256)"
 printf '%s' "$MANIFEST_VERSION" \
     | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+([.+-][0-9A-Za-z.-]+)?$' \
-    || fail "official release manifest contains an invalid meshy-dcc-cli version"
+    || fail "official release manifest contains an invalid meshy-dcc version"
 if [ "$VERSION" != "latest" ] && [ "$MANIFEST_VERSION" != "$REQUESTED_VERSION" ]; then
     fail "official release manifest version does not match requested version $REQUESTED_VERSION"
 fi
 
 EXPECTED_URL="$OFFICIAL_RELEASES/download/v$MANIFEST_VERSION/$ASSET"
 [ "$ASSET_URL" = "$EXPECTED_URL" ] \
-    || fail "official release manifest contains a non-official meshy-dcc-cli URL"
+    || fail "official release manifest contains a non-official meshy-dcc URL"
 [ "${#EXPECTED_SHA256}" -eq 64 ] \
     && ! printf '%s' "$EXPECTED_SHA256" | grep -Eq '[^0-9A-Fa-f]' \
     || fail "official release manifest contains an invalid SHA-256"
 
-download_to "$ASSET_URL" "$BINARY_TMP" || fail "meshy-dcc-cli download failed"
+download_to "$ASSET_URL" "$BINARY_TMP" || fail "meshy-dcc download failed"
 ACTUAL_SHA256="$(calculate_sha256 "$BINARY_TMP")"
 [ "$(printf '%s' "$ACTUAL_SHA256" | tr 'A-F' 'a-f')" = "$(printf '%s' "$EXPECTED_SHA256" | tr 'A-F' 'a-f')" ] \
-    || fail "meshy-dcc-cli SHA-256 does not match the official release manifest"
+    || fail "meshy-dcc SHA-256 does not match the official release manifest"
 
 chmod 0755 "$BINARY_TMP"
-TARGET="$INSTALL_DIR/meshy-dcc-cli"
+TARGET="$INSTALL_DIR/meshy-dcc"
 mv -f "$BINARY_TMP" "$TARGET"
 
 # The CLI and dcc-cua are independently released. Reconcile the verified
 # companion only after the CLI replacement succeeds. This is convergent, but
 # not crash-atomic across the two independently owned executables.
 "$TARGET" components ensure dcc-cua --yes --output json \
-    || fail "meshy-dcc-cli installed, but verified dcc-cua component installation failed"
+    || fail "meshy-dcc installed, but verified dcc-cua component installation failed"
 
-echo "Installed verified meshy-dcc-cli $MANIFEST_VERSION to $TARGET"
+echo "Installed verified meshy-dcc $MANIFEST_VERSION to $TARGET"
 case ":$PATH:" in
     *":$INSTALL_DIR:"*) ;;
-    *) echo "Add $INSTALL_DIR to PATH to run meshy-dcc-cli from any shell." ;;
+    *) echo "Add $INSTALL_DIR to PATH to run meshy-dcc from any shell." ;;
 esac

@@ -41,8 +41,8 @@ See [docs/plan.md](docs/plan.md) for the roadmap and support status.
 Requires Rust 1.95.
 
 ```sh
-cargo build -p meshy-dcc-cli -p meshy-dcc-server   # produces meshy-dcc and meshy-dcc-server
-cargo test  -p meshy-dcc-cli
+cargo build -p meshy-dcc -p meshy-dcc-server   # produces meshy-dcc and meshy-dcc-server
+cargo test  -p meshy-dcc
 ```
 
 ## License

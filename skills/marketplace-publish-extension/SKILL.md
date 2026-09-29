@@ -31,7 +31,7 @@ metadata:
 ## CLI-First Control Path
 
 For marketplace and live-DCC operations, use the `meshy-dcc` skill and
-`meshy-dcc-cli` whenever shell access is available. Its consent-gated install and
+`meshy-dcc` whenever shell access is available. Its consent-gated install and
 `update check` → `update apply` contract is the single source of truth; do not
 invent a package-local CLI bootstrap path.
 
@@ -41,8 +41,8 @@ to a marketplace catalog (`marketplace.json`).
 Prefer the CLI for local and CI publishing:
 
 ```bash
-meshy-dcc-cli marketplace pack ./my-extension --out dist/
-meshy-dcc-cli marketplace publish ./my-extension \
+meshy-dcc marketplace pack ./my-extension --out dist/
+meshy-dcc marketplace publish ./my-extension \
   --catalog ./marketplace.json \
   --install-url https://github.com/<owner>/<repo>/releases/download/v0.1.0/my-extension.zip \
   --sha256 sha256:<digest> \

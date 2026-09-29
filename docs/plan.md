@@ -11,7 +11,7 @@
 - **Agent 入口**：`meshy-dcc` CLI + `skills/meshy-dcc/SKILL.md`。不向 Agent 暴露 MCP
   connector。Meshy API、认证、计费和下载仍由外部已发布的 `meshy-cli` 负责。
 - **全部 Meshy 命名**：
-  - crate：`meshy-dcc-*`；
+  - CLI：`meshy-dcc`（二进制、crate、安装脚本、release 资产、PyPI 包统一这一个名字）；其余 crate 为 `meshy-dcc-*`；
   - Python 包：`meshy_dcc_core`；
   - 环境变量：`MESHY_DCC_*`；
   - 注册表和状态目录：`meshy-dcc`；
@@ -34,7 +34,7 @@
 
 ## 2. 已有能力
 
-CLI（`crates/meshy-dcc-cli`）已具备本产品需要的主体能力：
+CLI（`crates/meshy-dcc`）已具备本产品需要的主体能力：
 
 | 能力 | 位置 |
 |---|---|
@@ -142,8 +142,8 @@ request id 关联并拒绝错位的响应。
 ## 8. 验证
 
 ```sh
-cargo build -p meshy-dcc-cli
-cargo test -p meshy-dcc-cli
+cargo build -p meshy-dcc
+cargo test -p meshy-dcc
 ```
 
 真实宿主检查只启动测试自己创建的工程和进程，不触碰用户已有项目。本地开发记录在

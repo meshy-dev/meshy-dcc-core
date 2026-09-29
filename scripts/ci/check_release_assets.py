@@ -74,9 +74,9 @@ def required_asset_groups(version: str) -> tuple:
         # Standalone server / CLI binaries, their versioned bundles, and the
         # update manifests (plus one Sigstore attestation per manifest).
         ("server-binary", rf"^meshy-dcc-server-({_PLATFORM_ALTERNATION})(\.exe)?$", 3),
-        ("cli-binary", rf"^meshy-dcc-cli-({_PLATFORM_ALTERNATION})(\.exe)?$", 3),
+        ("cli-binary", rf"^meshy-dcc-({_PLATFORM_ALTERNATION})(\.exe)?$", 3),
         ("server-bundle", _platform_pattern("meshy-dcc-server", escaped, r"\.zip"), 3),
-        ("cli-bundle", _platform_pattern("meshy-dcc-cli", escaped, r"\.zip"), 3),
+        ("cli-bundle", _platform_pattern("meshy-dcc", escaped, r"\.zip"), 3),
         ("update-manifest", _platform_pattern("meshy-dcc-update-manifest", "", r"\.json"), 3),
         (
             "update-manifest-attestation",

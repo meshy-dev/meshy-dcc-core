@@ -2954,6 +2954,48 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6b947ae49db0d222b1dbc6b113ce7248a3fc3a6ca21b696717bfc000ba4484d8"
 
 [[package]]
+name = "meshy-dcc"
+version = "0.2.0"
+dependencies = [
+ "anyhow",
+ "axum",
+ "base64 0.22.1",
+ "clap",
+ "dirs",
+ "flate2",
+ "hex",
+ "jsonschema",
+ "libc",
+ "meshy-dcc-actions",
+ "meshy-dcc-attestation",
+ "meshy-dcc-catalog",
+ "meshy-dcc-gateway-ensure",
+ "meshy-dcc-http",
+ "meshy-dcc-http-server",
+ "meshy-dcc-jsonrpc",
+ "meshy-dcc-marketplace",
+ "meshy-dcc-models",
+ "meshy-dcc-sidecar",
+ "meshy-dcc-skills",
+ "meshy-dcc-transport",
+ "meshy-dcc-updater",
+ "reqwest 0.13.4",
+ "semver",
+ "serde",
+ "serde_json",
+ "sha2 0.11.0",
+ "tar",
+ "tempfile",
+ "thiserror",
+ "tokio",
+ "toon-format",
+ "uuid",
+ "windows-sys 0.61.2",
+ "workspace-hack",
+ "zip",
+]
+
+[[package]]
 name = "meshy-dcc-actions"
 version = "0.2.0"
 dependencies = [
@@ -3033,48 +3075,6 @@ dependencies = [
  "thiserror",
  "uuid",
  "workspace-hack",
-]
-
-[[package]]
-name = "meshy-dcc-cli"
-version = "0.2.0"
-dependencies = [
- "anyhow",
- "axum",
- "base64 0.22.1",
- "clap",
- "dirs",
- "flate2",
- "hex",
- "jsonschema",
- "libc",
- "meshy-dcc-actions",
- "meshy-dcc-attestation",
- "meshy-dcc-catalog",
- "meshy-dcc-gateway-ensure",
- "meshy-dcc-http",
- "meshy-dcc-http-server",
- "meshy-dcc-jsonrpc",
- "meshy-dcc-marketplace",
- "meshy-dcc-models",
- "meshy-dcc-sidecar",
- "meshy-dcc-skills",
- "meshy-dcc-transport",
- "meshy-dcc-updater",
- "reqwest 0.13.4",
- "semver",
- "serde",
- "serde_json",
- "sha2 0.11.0",
- "tar",
- "tempfile",
- "thiserror",
- "tokio",
- "toon-format",
- "uuid",
- "windows-sys 0.61.2",
- "workspace-hack",
- "zip",
 ]
 
 [[package]]

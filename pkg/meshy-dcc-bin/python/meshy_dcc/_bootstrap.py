@@ -1,7 +1,7 @@
-r"""Unpack and execute the ``meshy-dcc-cli`` binary shipped inside this wheel.
+r"""Unpack and execute the ``meshy-dcc`` binary shipped inside this wheel.
 
 The wheel carries the same compressed release archive the GitHub Release
-publishes (``meshy-dcc-cli-<version>-<platform>.zip``) rather than the raw
+publishes (``meshy-dcc-<version>-<platform>.zip``) rather than the raw
 executable: PyPI meters a project's *total* storage (10 GB by default), and the
 deflated archive costs roughly a third of the raw binary per release.
 
@@ -10,11 +10,11 @@ scripts directory (``<venv>/bin`` or ``<venv>\\Scripts``) and then executed. Two
 properties fall out of that choice:
 
 * The running process *is* the real binary, so ``std::env::current_exe()``
-  resolves inside the scripts directory. ``meshy-dcc-cli components ensure
+  resolves inside the scripts directory. ``meshy-dcc components ensure
   dcc-cua`` installs its companion executable as a sibling of
   ``current_exe``, so a single directory keeps the component contract intact.
 * The unpacked binary is package-manager owned. A marker file next to it
-  (``meshy-dcc-cli.package-manager.json``) tells the CLI that self-update is
+  (``meshy-dcc.package-manager.json``) tells the CLI that self-update is
   disabled and that upgrades belong to the package manager.
 """
 
@@ -40,9 +40,9 @@ __all__ = [
     "resolve_binary",
 ]
 
-#: Marker written next to the unpacked binary. ``crates/meshy-dcc-cli`` reads the
+#: Marker written next to the unpacked binary. ``crates/meshy-dcc`` reads the
 #: same file name to decide whether a package manager owns the installation.
-PACKAGE_MANAGER_MARKER = "meshy-dcc-cli.package-manager.json"
+PACKAGE_MANAGER_MARKER = "meshy-dcc.package-manager.json"
 
 #: Name of the manifest the release script stages next to the archive.
 PAYLOAD_METADATA = "payload.json"
@@ -67,7 +67,7 @@ def payload_dir() -> Path:
     """Return the directory holding the bundled CLI archive.
 
     Returns:
-        Absolute path of ``meshy_dcc_cli/_payload`` inside the installation.
+        Absolute path of ``meshy_dcc/_payload`` inside the installation.
 
     Raises:
         PayloadError: if the payload directory is missing.
@@ -76,7 +76,7 @@ def payload_dir() -> Path:
     directory = Path(__file__).resolve().parent / "_payload"
     if not directory.is_dir():
         raise PayloadError(
-            f"{directory} is missing; this wheel was built without a meshy-dcc-cli payload. "
+            f"{directory} is missing; this wheel was built without a meshy-dcc payload. "
             "Build it with scripts/release/build_cli_wrapper_wheel.py."
         )
     return directory
@@ -120,16 +120,16 @@ def load_payload() -> dict:
 def _binary_names() -> tuple:
     """Return candidate file names for the unpacked binary, best first.
 
-    POSIX may reuse ``meshy-dcc-cli`` itself: replacing the console script with
+    POSIX may reuse ``meshy-dcc`` itself: replacing the console script with
     the real binary puts the native executable directly on ``PATH``. Windows
-    cannot — the pip-generated ``meshy-dcc-cli.exe`` launcher is the running
+    cannot — the pip-generated ``meshy-dcc.exe`` launcher is the running
     process image and cannot be replaced while it is mapped — so the unpacked
     binary always takes a distinct name there.
     """
     suffix = ".exe" if os.name == "nt" else ""
     if os.name == "nt":
-        return (f"meshy-dcc-cli-bin{suffix}",)
-    return (f"meshy-dcc-cli{suffix}", f"meshy-dcc-cli-bin{suffix}")
+        return (f"meshy-dcc-bin{suffix}",)
+    return (f"meshy-dcc{suffix}", f"meshy-dcc-bin{suffix}")
 
 
 def _user_fallback_dir() -> Path:
@@ -137,8 +137,8 @@ def _user_fallback_dir() -> Path:
     if os.name == "nt":
         appdata = os.environ.get("LOCALAPPDATA")
         base = Path(appdata) if appdata else Path.home() / "AppData" / "Local"
-        return base / "meshy-dcc-cli" / "bin"
-    return Path.home() / ".local" / "share" / "meshy-dcc-cli" / "bin"
+        return base / "meshy-dcc" / "bin"
+    return Path.home() / ".local" / "share" / "meshy-dcc" / "bin"
 
 
 def candidate_dirs() -> list:
@@ -297,7 +297,7 @@ def _write_marker(directory: Path, payload: dict, binary_name: str) -> None:
     """
     marker = {
         "schema_version": _PAYLOAD_SCHEMA_VERSION,
-        "distribution": payload.get("distribution", "meshy-dcc-cli"),
+        "distribution": payload.get("distribution", "meshy-dcc"),
         "manager": PACKAGE_MANAGER_NAME,
         "version": payload["version"],
         "platform": payload["platform"],
@@ -365,13 +365,13 @@ def install_binary(payload: dict) -> Path:
                 failures.append(f"{marker_path(directory)}: {exc}")
                 continue
             print(
-                f"info: unpacked meshy-dcc-cli {payload['version']} ({payload['platform']}) to {destination}",
+                f"info: unpacked meshy-dcc {payload['version']} ({payload['platform']}) to {destination}",
                 file=sys.stderr,
             )
             return destination
 
     raise PayloadError(
-        "could not unpack the meshy-dcc-cli binary into any candidate directory:\n  " + "\n  ".join(failures)
+        "could not unpack the meshy-dcc binary into any candidate directory:\n  " + "\n  ".join(failures)
     )
 
 
@@ -391,7 +391,7 @@ def resolve_binary() -> Path:
 
 
 def binary_path() -> Path:
-    """Return the filesystem path of the bundled ``meshy-dcc-cli`` binary.
+    """Return the filesystem path of the bundled ``meshy-dcc`` binary.
 
     Resolution order:
 
@@ -443,7 +443,7 @@ def _execute(binary: Path, argv: list) -> int:
 
 
 def main(argv: list | None = None) -> int:
-    """Unpack (if needed) and run the bundled ``meshy-dcc-cli`` binary.
+    """Unpack (if needed) and run the bundled ``meshy-dcc`` binary.
 
     Args:
         argv: Arguments forwarded to the CLI. Defaults to ``sys.argv[1:]``.

@@ -1,5 +1,5 @@
 [package]
-name = "meshy-dcc-cli"
+name = "meshy-dcc"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

@@ -96,7 +96,7 @@ def main() -> int:
 
     assets = {
         "meshy-dcc-server": args.server_bin,
-        "meshy-dcc-cli": args.cli_bin,
+        "meshy-dcc": args.cli_bin,
     }
     try:
         manifest_path = generate_manifest(

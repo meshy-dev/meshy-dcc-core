@@ -1,8 +1,8 @@
-"""Tests for the release script that builds the ``meshy-dcc-cli`` wrapper wheels.
+"""Tests for the release script that builds the ``meshy-dcc`` wrapper wheels.
 
 Run with the wrapper package importable::
 
-    PYTHONPATH=pkg/meshy-dcc-cli-bin/python pytest pkg/meshy-dcc-cli-bin/tests
+    PYTHONPATH=pkg/meshy-dcc-bin/python pytest pkg/meshy-dcc-bin/tests
 
 These tests build real wheels with hatchling from synthetic release archives:
 the release workflow builds one wheel per platform on a single runner, and a
@@ -50,7 +50,7 @@ PACKAGE_ROOT = Path(__file__).resolve().parent.parent
 @pytest.fixture
 def project_dir(tmp_path):
     """Return a writable copy of the wrapper package to stage payloads into."""
-    target = tmp_path / "meshy-dcc-cli-bin"
+    target = tmp_path / "meshy-dcc-bin"
     shutil.copytree(
         PACKAGE_ROOT,
         target,
@@ -66,8 +66,8 @@ def archives(tmp_path):
     directory.mkdir()
     version = "9.9.9"
     for platform in RELEASE_PLATFORMS:
-        member = "meshy-dcc-cli.exe" if platform == "windows-x86_64" else "meshy-dcc-cli"
-        archive = directory / f"meshy-dcc-cli-{version}-{platform}.zip"
+        member = "meshy-dcc.exe" if platform == "windows-x86_64" else "meshy-dcc"
+        archive = directory / f"meshy-dcc-{version}-{platform}.zip"
         with zipfile.ZipFile(archive, "w", zipfile.ZIP_DEFLATED) as archive_file:
             archive_file.writestr(member, SYNTHETIC_BINARY)
     return directory
@@ -144,7 +144,7 @@ def _loop(scripts, *, version, archives, work, project_dir, per_platform_dir):
             builder,
             version=version,
             platform=platform,
-            archive=archives / f"meshy-dcc-cli-{version}-{platform}.zip",
+            archive=archives / f"meshy-dcc-{version}-{platform}.zip",
             out_dir=out_dir,
             project_dir=project_dir,
         )
@@ -163,7 +163,7 @@ def test_shared_output_directory_cannot_hold_every_platform(scripts, archives, t
     """Every build is named ``py3-none-any``, so a shared directory collides.
 
     Guards the *reason* the workflow gives each platform its own directory:
-    hatchling always emits ``meshy_dcc_cli-<version>-py3-none-any.whl``, so the
+    hatchling always emits ``meshy_dcc-<version>-py3-none-any.whl``, so the
     second platform's build overwrites the first and ``build_wheel()`` finds
     no new file. Without this test the loop below could silently regress to
     the shared-directory shape again.

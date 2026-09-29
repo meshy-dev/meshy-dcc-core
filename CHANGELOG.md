@@ -13,7 +13,8 @@ and is not runtime-compatible with it. Attribution stays in `LICENSE` and
 ### Changed
 
 - Everything is Meshy-named:
-  - crates are `meshy-dcc-*`;
+  - the CLI is `meshy-dcc` everywhere (binary, crate, install scripts, release
+    assets and the PyPI wrapper); the other crates are `meshy-dcc-*`;
   - the Python package is `meshy_dcc_core`;
   - environment variables are `MESHY_DCC_*`;
   - registry and state directories are `meshy-dcc`;

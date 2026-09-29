@@ -184,7 +184,7 @@ Use record-replay only when the user wants a repeated workflow learned from a
 demonstration. It is a semantic compiler, not raw timing playback:
 
 1. Start with `POST /v1/recordings/start` (or
-   `meshy-dcc-cli record-replay start`) and a bounded
+   `meshy-dcc record-replay start`) and a bounded
    `x-meshy-dcc-agent-session-id` / `--agent-session-id`.
 2. Demonstrate through normal `search` -> `describe` -> `call`; use scoped UI
    Control only when structured tools cannot reach the semantic UI.

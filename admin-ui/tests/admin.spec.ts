@@ -95,21 +95,21 @@ test.describe('Admin Page', () => {
     await expect(page.locator('.setup-panel')).toContainText('Copied Agent prompt');
     await page.getByRole('tab', { name: /Agent CLI/ }).click();
     await expect(page.getByRole('tab', { name: /Agent CLI/ })).toHaveAttribute('aria-selected', 'true');
-    await expect(page.locator('.setup-panel')).toContainText('meshy-dcc-cli list');
-    await expect(page.locator('.setup-panel')).toContainText('meshy-dcc-cli search --query "create sphere" --dcc-type <dcc_type> --limit 20');
-    await expect(page.locator('.setup-panel')).toContainText('meshy-dcc-cli describe <tool_slug>');
-    await expect(page.locator('.setup-panel')).toContainText('meshy-dcc-cli call <tool_slug> --json');
-    await expect(page.locator('.setup-panel')).toContainText('meshy-dcc-cli load-skill <skill_name>');
-    await expect(page.locator('.setup-panel')).not.toContainText('meshy-dcc-cli update apply');
+    await expect(page.locator('.setup-panel')).toContainText('meshy-dcc list');
+    await expect(page.locator('.setup-panel')).toContainText('meshy-dcc search --query "create sphere" --dcc-type <dcc_type> --limit 20');
+    await expect(page.locator('.setup-panel')).toContainText('meshy-dcc describe <tool_slug>');
+    await expect(page.locator('.setup-panel')).toContainText('meshy-dcc call <tool_slug> --json');
+    await expect(page.locator('.setup-panel')).toContainText('meshy-dcc load-skill <skill_name>');
+    await expect(page.locator('.setup-panel')).not.toContainText('meshy-dcc update apply');
     await page.getByRole('tab', { name: /Human CLI/ }).click();
     await expect(page.getByRole('tab', { name: /Human CLI/ })).toHaveAttribute('aria-selected', 'true');
-    await expect(page.locator('.setup-panel')).toContainText('meshy-dcc-cli list');
-    await expect(page.locator('.setup-panel')).not.toContainText('meshy-dcc-cli gateway ensure');
-    await expect(page.locator('.setup-panel')).not.toContainText('meshy-dcc-cli call <tool_slug> --json');
-    await expect(page.locator('.setup-panel')).toContainText('meshy-dcc-cli marketplace search --query "rigging" --dcc maya --limit 20');
-    await expect(page.locator('.setup-panel')).toContainText('meshy-dcc-cli marketplace install <package_name> --dcc maya');
-    await expect(page.locator('.setup-panel')).toContainText('meshy-dcc-cli marketplace update <package_name> --dcc maya');
-    await expect(page.locator('.setup-panel')).toContainText('meshy-dcc-cli update check --binary meshy-dcc-server --current-version <server_version>');
+    await expect(page.locator('.setup-panel')).toContainText('meshy-dcc list');
+    await expect(page.locator('.setup-panel')).not.toContainText('meshy-dcc gateway ensure');
+    await expect(page.locator('.setup-panel')).not.toContainText('meshy-dcc call <tool_slug> --json');
+    await expect(page.locator('.setup-panel')).toContainText('meshy-dcc marketplace search --query "rigging" --dcc maya --limit 20');
+    await expect(page.locator('.setup-panel')).toContainText('meshy-dcc marketplace install <package_name> --dcc maya');
+    await expect(page.locator('.setup-panel')).toContainText('meshy-dcc marketplace update <package_name> --dcc maya');
+    await expect(page.locator('.setup-panel')).toContainText('meshy-dcc update check --binary meshy-dcc-server --current-version <server_version>');
     await expect(page.locator('.command-aside-action')).toHaveCount(2);
     await expect(page.locator('.command-aside-action').first()).toContainText('Manage loaded skills');
     await expect(page.locator('.command-aside-action').last()).toContainText('Install and update skill packages');
@@ -262,7 +262,7 @@ test.describe('Admin Page', () => {
 
     await page.getByRole('tab', { name: /Human CLI/ }).click();
     await expect(page.getByRole('tab', { name: /Human CLI/ })).toHaveAttribute('aria-selected', 'true');
-    await expect(page.locator('.setup-panel')).toContainText('meshy-dcc-cli marketplace update <package_name> --dcc maya');
+    await expect(page.locator('.setup-panel')).toContainText('meshy-dcc marketplace update <package_name> --dcc maya');
 
     const cliLayout = await page.locator('.command-center-layout').evaluate((layout) => {
       const rows = Array.from(layout.querySelectorAll('.cli-command-row')) as HTMLElement[];
@@ -463,7 +463,7 @@ test.describe('Admin Page', () => {
     expect(parseFloat(updateChrome.metaRadius)).toBeGreaterThanOrEqual(20);
     expect(updateChrome.linkBlockBorderWidth).toBe('1px');
     expect(parseFloat(updateChrome.linkBlockRadius)).toBeGreaterThanOrEqual(4);
-    await expect(mayaRow).not.toContainText('meshy-dcc-cli update check');
+    await expect(mayaRow).not.toContainText('meshy-dcc update check');
     const mayaUpdateRequest = page.waitForRequest((request) =>
       request.method() === 'POST'
       && request.url().includes('/instances/maya-1234567890/update')

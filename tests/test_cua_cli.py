@@ -147,7 +147,7 @@ def test_configured_binary_must_be_absolute(tmp_path: Path) -> None:
 
 
 def test_cli_sibling_precedes_an_unrelated_path_cua(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    cli = tmp_path / ("meshy-dcc-cli.exe" if os.name == "nt" else "meshy-dcc-cli")
+    cli = tmp_path / ("meshy-dcc.exe" if os.name == "nt" else "meshy-dcc")
     sibling = tmp_path / ("dcc-cua.exe" if os.name == "nt" else "dcc-cua")
     other = tmp_path / "other" / ("dcc-cua.exe" if os.name == "nt" else "dcc-cua")
     other.parent.mkdir()
@@ -155,7 +155,7 @@ def test_cli_sibling_precedes_an_unrelated_path_cua(tmp_path: Path, monkeypatch:
         path.write_bytes(b"test")
 
     def fake_which(name: str) -> str | None:
-        return str(cli) if name == "meshy-dcc-cli" else str(other)
+        return str(cli) if name == "meshy-dcc" else str(other)
 
     monkeypatch.setattr("meshy_dcc_core.cua_cli.shutil.which", fake_which)
     assert resolve_cua_command() == [str(sibling.resolve())]

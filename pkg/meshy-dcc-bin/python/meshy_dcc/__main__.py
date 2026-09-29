@@ -1,4 +1,4 @@
-"""Allow ``python -m meshy_dcc_cli`` to run the bundled CLI."""
+"""Allow ``python -m meshy_dcc`` to run the bundled CLI."""
 
 from __future__ import annotations
 

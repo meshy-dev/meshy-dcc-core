@@ -101,7 +101,7 @@ def test_build_finding_v1_autofills_runtime_identity_and_keeps_custom_dcc() -> N
 @pytest.mark.parametrize(
     "update",
     [
-        {"repro": {"argv": ["meshy-dcc-cli"], "steps": ["Call the tool"]}},
+        {"repro": {"argv": ["meshy-dcc"], "steps": ["Call the tool"]}},
         {"repro": {"steps": []}},
         {"tool_slug": None, "evidence": {}},
         {"severity": "critical"},

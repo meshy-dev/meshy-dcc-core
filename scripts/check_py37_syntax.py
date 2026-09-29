@@ -31,7 +31,7 @@ _SCAN_ROOTS = (
     _REPO_ROOT / "examples",
     _REPO_ROOT / "scripts",
     # Sources shipped inside the auxiliary PyPI distributions (meshy-dcc-server,
-    # meshy-dcc-core-semantic, meshy-dcc-cli). Each declares Requires-Python >=3.7,
+    # meshy-dcc-core-semantic, meshy-dcc). Each declares Requires-Python >=3.7,
     # so a Maya 2022 host can install the wheel and import these modules.
     _REPO_ROOT / "pkg",
 )

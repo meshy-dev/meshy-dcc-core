@@ -96,8 +96,8 @@ def resolve_cua_command(configured: Optional[str] = None) -> List[str]:
 
 
 def _resolve_cli_sibling() -> Optional[str]:
-    """Prefer the component installed beside the official ``meshy-dcc-cli``."""
-    cli = shutil.which("meshy-dcc-cli")
+    """Prefer the component installed beside the official ``meshy-dcc``."""
+    cli = shutil.which("meshy-dcc")
     if not cli:
         return None
     file_name = "dcc-cua.exe" if os.name == "nt" else "dcc-cua"

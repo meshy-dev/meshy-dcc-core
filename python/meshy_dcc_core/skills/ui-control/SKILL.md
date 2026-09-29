@@ -42,8 +42,8 @@ interruption, authentication, and desktop unavailability are stop conditions.
 
 Core does not package an automation Host in its own release assets. The official
 CLI installer reconciles the independently released `dcc-cua` companion; verify
-it with `meshy-dcc-cli components status dcc-cua` or repair it with
-`meshy-dcc-cli components ensure dcc-cua --yes`. For custom layouts, install
+it with `meshy-dcc components status dcc-cua` or repair it with
+`meshy-dcc components ensure dcc-cua --yes`. For custom layouts, install
 `dcc-cua` 0.4.0 or newer separately. Core probes the configured
 `MESHY_DCC_INSTALL_DIR`, the platform's standard meshy-dcc bin directory,
 versioned standalone installs, and then `PATH`; set `MESHY_DCC_CUA_BINARY` to an

@@ -4,7 +4,7 @@ Validates the complete Maya adapter lifecycle:
   zero-instance → install → gateway ensure → search → call
 
 Test phases:
-  1. install plan — ``meshy-dcc-cli install --dcc-type maya`` produces a valid plan
+  1. install plan — ``meshy-dcc install --dcc-type maya`` produces a valid plan
   2. Gateway with Maya skills — ``create_skill_server("maya", ...)`` starts a
      Maya-compatible backend with gateway election
   3. Gateway canonical flow — search → describe → load_skill → call via gateway
@@ -49,13 +49,13 @@ MAYA_SKILLS = ("maya-geometry", "maya-pipeline")
 # Env-var gate for P1-4 install --execute (blocking dependency).
 P1_4_AVAILABLE = os.environ.get("P1_4_INSTALL_EXECUTE") or os.environ.get("MESHY_DCC_P1_4_READY")
 
-# Resolve the meshy-dcc-cli binary (Rust CLI, not the Python package).
+# Resolve the meshy-dcc binary (Rust CLI, not the Python package).
 _MESHY_DCC_CLI_BIN: str | None = None
 _cli_candidates = [
     os.environ.get("MESHY_DCC_CLI_BIN"),
     os.environ.get("MESHY_DCC_CLI"),
-    shutil.which("meshy-dcc-cli"),
-    shutil.which("meshy-dcc-cli.exe"),
+    shutil.which("meshy-dcc"),
+    shutil.which("meshy-dcc.exe"),
 ]
 for _candidate in _cli_candidates:
     if _candidate:
@@ -147,7 +147,7 @@ requires_p1_4 = pytest.mark.skipif(
 
 requires_cli = pytest.mark.skipif(
     not MESHY_DCC_CLI_AVAILABLE,
-    reason="meshy-dcc-cli binary not found in PATH. Build with `cargo build --release -p meshy-dcc-cli`.",
+    reason="meshy-dcc binary not found in PATH. Build with `cargo build --release -p meshy-dcc`.",
 )
 
 
@@ -165,7 +165,7 @@ class TestMayaInstallPlan:
         )
 
     def test_install_plan_has_maya_entry(self) -> None:
-        """meshy-dcc-cli install --dcc-type maya must produce a valid InstallPlan."""
+        """meshy-dcc install --dcc-type maya must produce a valid InstallPlan."""
         result = self._run_install("--dcc-type", "maya")
         assert result.returncode == 0, f"CLI returned {result.returncode}: {result.stderr[:500]}"
 
@@ -673,7 +673,7 @@ class TestMayaFullFlowWithInstall:
 
     def test_p1_4_install_execute_available(self) -> None:
         """Verify the P1-4 install --execute tool is reachable."""
-        install_cmd = os.environ.get("P1_4_INSTALL_EXECUTE", "meshy-dcc-cli")
+        install_cmd = os.environ.get("P1_4_INSTALL_EXECUTE", "meshy-dcc")
         try:
             result = subprocess.run(
                 [install_cmd, "--version"],
@@ -687,7 +687,7 @@ class TestMayaFullFlowWithInstall:
 
     def test_install_maya_adapter_then_gateway_ensure(self, maya_gateway) -> None:
         """After install, gateway ensure must detect or start the Maya gateway."""
-        install_cmd = os.environ.get("P1_4_INSTALL_EXECUTE", "meshy-dcc-cli")
+        install_cmd = os.environ.get("P1_4_INSTALL_EXECUTE", "meshy-dcc")
         try:
             install_result = subprocess.run(
                 [install_cmd, "install", "--dcc-type", "maya", "--execute"],

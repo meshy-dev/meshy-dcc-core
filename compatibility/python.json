@@ -86,8 +86,8 @@
       "pyproject": "pkg/meshy-dcc-core-semantic/pyproject.toml",
       "support_profile": "lts"
     },
-    "meshy-dcc-cli": {
-      "pyproject": "pkg/meshy-dcc-cli-bin/pyproject.toml",
+    "meshy-dcc": {
+      "pyproject": "pkg/meshy-dcc-bin/pyproject.toml",
       "support_profile": "lts"
     }
   },

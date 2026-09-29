@@ -70,8 +70,8 @@ Keep them inside tool functions so metadata parsing works without the host.
 To publish your extension to a marketplace catalog, prefer the CLI:
 
 ```bash
-meshy-dcc-cli marketplace pack ./my-extension --out dist/
-meshy-dcc-cli marketplace publish ./my-extension \
+meshy-dcc marketplace pack ./my-extension --out dist/
+meshy-dcc marketplace publish ./my-extension \
   --catalog ./marketplace.json \
   --install-url https://github.com/user/my-extension/releases/download/v0.1.0/my-extension.zip \
   --sha256 sha256:<digest>

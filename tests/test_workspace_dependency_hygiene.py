@@ -6,8 +6,9 @@ from pathlib import Path
 import re
 
 _ROOT = Path(__file__).resolve().parents[1]
-_INTERNAL_NAME = re.compile(r'^name\s*=\s*"(meshy-dcc-[^"]+)"', re.MULTILINE)
-_DEPENDENCY_LINE = re.compile(r"^(meshy-dcc-[a-z0-9-]+)\s*=\s*\{([^\n]+)\}", re.MULTILINE)
+# The CLI crate is plain `meshy-dcc`; every other internal crate is `meshy-dcc-*`.
+_INTERNAL_NAME = re.compile(r'^name\s*=\s*"(meshy-dcc(?:-[^"]+)?)"', re.MULTILINE)
+_DEPENDENCY_LINE = re.compile(r"^(meshy-dcc(?:-[a-z0-9-]+)?)\s*=\s*\{([^\n]+)\}", re.MULTILINE)
 _SHARED_THIRD_PARTY = {
     "axum",
     "futures",
@@ -19,7 +20,7 @@ _SHARED_THIRD_PARTY = {
     "tower-http",
 }
 _DEFAULT_FEATURE_EXCEPTIONS = {
-    ("meshy-dcc-cli", "meshy-dcc-sidecar"),
+    ("meshy-dcc", "meshy-dcc-sidecar"),
     ("meshy-dcc-gateway", "meshy-dcc-db"),
     ("meshy-dcc-gateway", "meshy-dcc-skills"),
     ("meshy-dcc-gateway-admin", "meshy-dcc-db"),
@@ -31,13 +32,13 @@ _DEFAULT_FEATURE_EXCEPTIONS = {
 def _workspace_dependency_names() -> set[str]:
     root_manifest = (_ROOT / "Cargo.toml").read_text(encoding="utf-8")
     section = root_manifest.split("[workspace.dependencies]", 1)[1].split("[workspace.lints", 1)[0]
-    return {match.group(1) for match in re.finditer(r"^(meshy-dcc-[a-z0-9-]+)\s*=", section, re.MULTILINE)}
+    return {match.group(1) for match in re.finditer(r"^(meshy-dcc(?:-[a-z0-9-]+)?)\s*=", section, re.MULTILINE)}
 
 
 def test_every_internal_crate_has_a_workspace_dependency() -> None:
     workspace_dependencies = _workspace_dependency_names()
     crate_names = set()
-    for manifest in (_ROOT / "crates").glob("meshy-dcc-*/Cargo.toml"):
+    for manifest in (_ROOT / "crates").glob("meshy-dcc*/Cargo.toml"):
         match = _INTERNAL_NAME.search(manifest.read_text(encoding="utf-8"))
         assert match is not None, manifest
         crate_names.add(match.group(1))
@@ -46,7 +47,7 @@ def test_every_internal_crate_has_a_workspace_dependency() -> None:
 
 def test_internal_paths_are_only_used_to_disable_workspace_defaults() -> None:
     exceptions = set()
-    for manifest in (_ROOT / "crates").glob("meshy-dcc-*/Cargo.toml"):
+    for manifest in (_ROOT / "crates").glob("meshy-dcc*/Cargo.toml"):
         crate_name = _INTERNAL_NAME.search(manifest.read_text(encoding="utf-8")).group(1)
         text = manifest.read_text(encoding="utf-8")
         for match in _DEPENDENCY_LINE.finditer(text):
@@ -60,7 +61,7 @@ def test_internal_paths_are_only_used_to_disable_workspace_defaults() -> None:
 
 def test_shared_third_party_dependencies_are_inherited() -> None:
     direct = []
-    for manifest in (_ROOT / "crates").glob("meshy-dcc-*/Cargo.toml"):
+    for manifest in (_ROOT / "crates").glob("meshy-dcc*/Cargo.toml"):
         text = manifest.read_text(encoding="utf-8")
         for name in _SHARED_THIRD_PARTY:
             match = re.search(rf"^{re.escape(name)}\s*=\s*(.+)$", text, re.MULTILINE)

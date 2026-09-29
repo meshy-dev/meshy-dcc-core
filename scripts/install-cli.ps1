@@ -7,7 +7,7 @@ $ErrorActionPreference = "Stop"
 $ProgressPreference = "SilentlyContinue"
 $officialReleases = "https://github.com/meshy-dev/meshy-dcc-core/releases"
 $platform = "windows-x86_64"
-$asset = "meshy-dcc-cli-windows-x86_64.exe"
+$asset = "meshy-dcc-windows-x86_64.exe"
 
 if ([string]::IsNullOrWhiteSpace($Version)) {
     $Version = "latest"
@@ -28,33 +28,33 @@ if ($Version -eq "latest") {
 }
 
 New-Item -ItemType Directory -Force -Path $InstallDir | Out-Null
-$target = Join-Path $InstallDir "meshy-dcc-cli.exe"
+$target = Join-Path $InstallDir "meshy-dcc.exe"
 $manifestTmp = Join-Path $InstallDir (".meshy-dcc-manifest-" + [System.Guid]::NewGuid() + ".json")
-$binaryTmp = Join-Path $InstallDir (".meshy-dcc-cli-" + [System.Guid]::NewGuid() + ".exe")
+$binaryTmp = Join-Path $InstallDir (".meshy-dcc-" + [System.Guid]::NewGuid() + ".exe")
 
 try {
     Write-Host "Downloading $manifestUrl"
     Invoke-WebRequest -Uri $manifestUrl -OutFile $manifestTmp
 
     $manifestText = Get-Content -LiteralPath $manifestTmp -Raw
-    if ([regex]::Matches($manifestText, '"meshy-dcc-cli"\s*:').Count -ne 1) {
-        throw "Official release manifest must contain one meshy-dcc-cli entry"
+    if ([regex]::Matches($manifestText, '"meshy-dcc"\s*:').Count -ne 1) {
+        throw "Official release manifest must contain one meshy-dcc entry"
     }
     try {
         $manifest = $manifestText | ConvertFrom-Json
     } catch {
         throw "Official release manifest is not valid JSON: $($_.Exception.Message)"
     }
-    $entry = $manifest.'meshy-dcc-cli'
+    $entry = $manifest.'meshy-dcc'
     if ($null -eq $entry) {
-        throw "Official release manifest is missing meshy-dcc-cli"
+        throw "Official release manifest is missing meshy-dcc"
     }
 
     $manifestVersion = [string] $entry.version
     $assetUrl = [string] $entry.url
     $expectedSha256 = [string] $entry.sha256
     if ($manifestVersion -notmatch '^[0-9]+\.[0-9]+\.[0-9]+([.+-][0-9A-Za-z.-]+)?$') {
-        throw "Official release manifest contains an invalid meshy-dcc-cli version"
+        throw "Official release manifest contains an invalid meshy-dcc version"
     }
     if ($Version -ne "latest" -and $manifestVersion -ne $requestedVersion) {
         throw "Official release manifest version does not match requested version $requestedVersion"
@@ -62,7 +62,7 @@ try {
 
     $expectedUrl = "$officialReleases/download/v$manifestVersion/$asset"
     if ($assetUrl -cne $expectedUrl) {
-        throw "Official release manifest contains a non-official meshy-dcc-cli URL"
+        throw "Official release manifest contains a non-official meshy-dcc URL"
     }
     if ($expectedSha256 -notmatch '^[0-9A-Fa-f]{64}$') {
         throw "Official release manifest contains an invalid SHA-256"
@@ -72,7 +72,7 @@ try {
     Invoke-WebRequest -Uri $assetUrl -OutFile $binaryTmp
     $actualSha256 = (Get-FileHash -LiteralPath $binaryTmp -Algorithm SHA256).Hash
     if ($actualSha256 -ine $expectedSha256) {
-        throw "meshy-dcc-cli SHA-256 does not match the official release manifest"
+        throw "meshy-dcc SHA-256 does not match the official release manifest"
     }
 
     if (Test-Path -LiteralPath $target) {
@@ -88,7 +88,7 @@ try {
         "components", "ensure", "dcc-cua", "--yes", "--output", "json"
     ) -Wait -PassThru -NoNewWindow
     if ($componentInstall.ExitCode -ne 0) {
-        throw "meshy-dcc-cli installed, but verified dcc-cua component installation failed"
+        throw "meshy-dcc installed, but verified dcc-cua component installation failed"
     }
 } finally {
     foreach ($path in @($manifestTmp, $binaryTmp)) {
@@ -98,7 +98,7 @@ try {
     }
 }
 
-Write-Host "Installed verified meshy-dcc-cli $manifestVersion to $target"
+Write-Host "Installed verified meshy-dcc $manifestVersion to $target"
 
 $userPath = [Environment]::GetEnvironmentVariable("Path", "User")
 $pathParts = @()
@@ -108,5 +108,5 @@ if ($userPath) {
 if ($pathParts -notcontains $InstallDir) {
     $newPath = if ($userPath) { "$userPath;$InstallDir" } else { $InstallDir }
     [Environment]::SetEnvironmentVariable("Path", $newPath, "User")
-    Write-Host "Added $InstallDir to the user PATH. Open a new terminal before running meshy-dcc-cli."
+    Write-Host "Added $InstallDir to the user PATH. Open a new terminal before running meshy-dcc."
 }

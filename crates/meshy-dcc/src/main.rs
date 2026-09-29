@@ -1,8 +1,8 @@
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
-use meshy_dcc_cli::presentation::cli;
-use meshy_dcc_cli::presentation::output::{ErrorEnvelope, ExitCode, OutputWriter};
+use meshy_dcc::presentation::cli;
+use meshy_dcc::presentation::output::{ErrorEnvelope, ExitCode, OutputWriter};
 
 #[tokio::main]
 async fn main() {
@@ -14,7 +14,7 @@ async fn main() {
         tokio::signal::ctrl_c().await.ok();
         cancelled_clone.store(true, Ordering::SeqCst);
         // Write cancellation error to stderr and exit immediately.
-        let writer = OutputWriter::new(meshy_dcc_cli::presentation::output::OutputFormat::Human);
+        let writer = OutputWriter::new(meshy_dcc::presentation::output::OutputFormat::Human);
         let envelope = ErrorEnvelope::new(
             "CANCELLED",
             "operation cancelled by signal (SIGINT)",
@@ -36,7 +36,7 @@ async fn main() {
         Err(e) => {
             // Error already handled in run_with_args; fallback for uncaught errors.
             let writer =
-                OutputWriter::new(meshy_dcc_cli::presentation::output::OutputFormat::Human);
+                OutputWriter::new(meshy_dcc::presentation::output::OutputFormat::Human);
             let envelope =
                 ErrorEnvelope::new("INTERNAL_ERROR", format!("{e:#}"), ExitCode::GeneralError);
             let _ = writer.write_error(&envelope);

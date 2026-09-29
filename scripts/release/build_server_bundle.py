@@ -25,9 +25,9 @@ def _validate_filename_part(name: str, *, label: str) -> str:
     return name
 
 
-def _archive_binary_name(kind: str, source: Path) -> str:
+def _archive_binary_name(name: str, source: Path) -> str:
     suffix = ".exe" if source.suffix.lower() == ".exe" else ""
-    return f"meshy-dcc-{kind}{suffix}"
+    return f"{name}{suffix}"
 
 
 def _write_binary(zf: ZipFile, source: Path, archive_name: str) -> None:
@@ -56,8 +56,8 @@ def build_bundle(
     bundle_path = out_dir / f"meshy-dcc-server-{version}-{platform}.zip"
 
     with ZipFile(bundle_path, "w", ZIP_DEFLATED) as zf:
-        _write_binary(zf, server_bin, _archive_binary_name("server", server_bin))
-        _write_binary(zf, cli_bin, _archive_binary_name("cli", cli_bin))
+        _write_binary(zf, server_bin, _archive_binary_name("meshy-dcc-server", server_bin))
+        _write_binary(zf, cli_bin, _archive_binary_name("meshy-dcc", cli_bin))
 
     return bundle_path
 

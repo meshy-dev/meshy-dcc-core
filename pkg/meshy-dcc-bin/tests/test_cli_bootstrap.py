@@ -1,11 +1,11 @@
-"""Unit tests for the ``meshy-dcc-cli`` PyPI wrapper bootstrap.
+"""Unit tests for the ``meshy-dcc`` PyPI wrapper bootstrap.
 
 Run with the wrapper package importable::
 
-    PYTHONPATH=pkg/meshy-dcc-cli-bin/python pytest pkg/meshy-dcc-cli-bin/tests
+    PYTHONPATH=pkg/meshy-dcc-bin/python pytest pkg/meshy-dcc-bin/tests
 
 The tests never execute a real binary: the "executable" inside the synthetic
-payload archive is a text file, and :func:`meshy_dcc_cli._bootstrap._execute` is
+payload archive is a text file, and :func:`meshy_dcc._bootstrap._execute` is
 stubbed where the tests care about the process boundary.
 """
 
@@ -16,7 +16,7 @@ import json
 import os
 import zipfile
 
-from meshy_dcc_cli import _bootstrap
+from meshy_dcc import _bootstrap
 import pytest
 
 #: Stand-in for the released binary. Deliberately NOT a shebang script:
@@ -36,17 +36,17 @@ def payload(payload_dir_path, monkeypatch):
     """Stage a synthetic payload and point the bootstrap at it."""
     payload_dir = payload_dir_path
     payload_dir.mkdir(exist_ok=True)
-    archive = payload_dir / "meshy-dcc-cli-9.9.9-linux-x86_64.zip"
+    archive = payload_dir / "meshy-dcc-9.9.9-linux-x86_64.zip"
     with zipfile.ZipFile(archive, "w", zipfile.ZIP_DEFLATED) as archive_file:
-        archive_file.writestr("meshy-dcc-cli", NATIVE_BINARY)
+        archive_file.writestr("meshy-dcc", NATIVE_BINARY)
     metadata = {
         "schema_version": 1,
-        "distribution": "meshy-dcc-cli",
+        "distribution": "meshy-dcc",
         "version": "9.9.9",
         "platform": "linux-x86_64",
         "archive": archive.name,
         "archive_sha256": hashlib.sha256(archive.read_bytes()).hexdigest(),
-        "member": "meshy-dcc-cli",
+        "member": "meshy-dcc",
         "wheel_platform_tag": "manylinux_2_17_x86_64",
     }
     (payload_dir / "payload.json").write_text(json.dumps(metadata), encoding="utf-8")
@@ -103,7 +103,7 @@ def test_marker_is_written_next_to_the_binary(payload, bin_dir):
 
     marker = json.loads(_bootstrap.marker_path(binary.parent).read_text(encoding="utf-8"))
     assert marker["schema_version"] == 1
-    assert marker["distribution"] == "meshy-dcc-cli"
+    assert marker["distribution"] == "meshy-dcc"
     assert marker["manager"] == _bootstrap.PACKAGE_MANAGER_NAME
     assert marker["version"] == "9.9.9"
     assert marker["platform"] == "linux-x86_64"
@@ -137,7 +137,7 @@ def test_version_bump_forces_a_reunpack(payload, payload_dir_path, bin_dir):
 def test_reinstalled_console_launcher_forces_a_reunpack(payload, bin_dir, monkeypatch):
     """Reinstalling the same version must not leave a launcher in place.
 
-    `pip install --force-reinstall meshy-dcc-cli==X` rewrites the console
+    `pip install --force-reinstall meshy-dcc==X` rewrites the console
     script over the unpacked binary. The marker is not in the distribution
     RECORD, so it survives and still names the right version: only the
     launcher fingerprint can tell the two files apart. Trusting the marker
@@ -147,7 +147,7 @@ def test_reinstalled_console_launcher_forces_a_reunpack(payload, bin_dir, monkey
     # The collision only exists on POSIX, where the unpack may reuse the
     # console script's own name. Pin that name so the test covers the fix on
     # every platform instead of skipping on Windows.
-    monkeypatch.setattr(_bootstrap, "_binary_names", lambda: ("meshy-dcc-cli", "meshy-dcc-cli-bin"))
+    monkeypatch.setattr(_bootstrap, "_binary_names", lambda: ("meshy-dcc", "meshy-dcc-bin"))
 
     first = _bootstrap.resolve_binary()
     marker = json.loads(_bootstrap.marker_path(bin_dir).read_text(encoding="utf-8"))
@@ -164,7 +164,7 @@ def test_reinstalled_console_launcher_forces_a_reunpack(payload, bin_dir, monkey
 
 def test_binary_replaced_by_a_different_file_forces_a_reunpack(payload, bin_dir, monkeypatch):
     """A binary whose size no longer matches the marker is re-unpacked."""
-    monkeypatch.setattr(_bootstrap, "_binary_names", lambda: ("meshy-dcc-cli", "meshy-dcc-cli-bin"))
+    monkeypatch.setattr(_bootstrap, "_binary_names", lambda: ("meshy-dcc", "meshy-dcc-bin"))
 
     first = _bootstrap.resolve_binary()
     first.write_text("not the binary at all", encoding="utf-8")
@@ -175,7 +175,7 @@ def test_binary_replaced_by_a_different_file_forces_a_reunpack(payload, bin_dir,
 
 def test_marker_without_a_size_fingerprint_still_rejects_launchers(payload, bin_dir, monkeypatch):
     """A marker written before the fingerprint existed is still checked."""
-    monkeypatch.setattr(_bootstrap, "_binary_names", lambda: ("meshy-dcc-cli", "meshy-dcc-cli-bin"))
+    monkeypatch.setattr(_bootstrap, "_binary_names", lambda: ("meshy-dcc", "meshy-dcc-bin"))
 
     first = _bootstrap.resolve_binary()
     marker_path = _bootstrap.marker_path(bin_dir)
@@ -213,14 +213,14 @@ def test_archive_digest_mismatch_is_rejected(payload, payload_dir_path, bin_dir)
 
 def test_missing_archive_member_is_reported(payload, payload_dir_path, bin_dir):
     """An archive without the expected member fails with a clear error."""
-    payload["member"] = "meshy-dcc-cli-missing"
+    payload["member"] = "meshy-dcc-missing"
     rewrite_payload(payload_dir_path, payload)
 
     with pytest.raises(_bootstrap.PayloadError, match="does not contain"):
         _bootstrap.resolve_binary()
 
 
-def test_meshy_dcc_cli_bin_override_wins(payload, bin_dir, tmp_path, monkeypatch):
+def test_meshy_dcc_bin_override_wins(payload, bin_dir, tmp_path, monkeypatch):
     """``MESHY_DCC_CLI_BIN`` pins an existing binary and skips the payload."""
     pinned = tmp_path / "pinned-cli"
     pinned.write_text("pinned", encoding="utf-8")
@@ -232,22 +232,22 @@ def test_meshy_dcc_cli_bin_override_wins(payload, bin_dir, tmp_path, monkeypatch
 def test_windows_never_replaces_the_console_launcher(payload, bin_dir, monkeypatch):
     """On Windows the unpacked binary uses a distinct name.
 
-    The pip-generated ``meshy-dcc-cli.exe`` launcher is the running process image
+    The pip-generated ``meshy-dcc.exe`` launcher is the running process image
     and cannot be replaced while mapped, so the unpack must target another name.
     """
     monkeypatch.setattr(_bootstrap.os, "name", "nt")
 
     names = _bootstrap._binary_names()
 
-    assert names == ("meshy-dcc-cli-bin.exe",)
-    assert "meshy-dcc-cli.exe" not in names
+    assert names == ("meshy-dcc-bin.exe",)
+    assert "meshy-dcc.exe" not in names
 
 
 def test_posix_prefers_the_canonical_name(payload, bin_dir, monkeypatch):
-    """On POSIX the binary may take the canonical ``meshy-dcc-cli`` name."""
+    """On POSIX the binary may take the canonical ``meshy-dcc`` name."""
     monkeypatch.setattr(_bootstrap.os, "name", "posix")
 
-    assert _bootstrap._binary_names() == ("meshy-dcc-cli", "meshy-dcc-cli-bin")
+    assert _bootstrap._binary_names() == ("meshy-dcc", "meshy-dcc-bin")
 
 
 def test_binary_path_override_missing_file_falls_back(payload, bin_dir, tmp_path, monkeypatch):
@@ -320,7 +320,7 @@ def test_payload_missing_archive_is_reported(tmp_path, monkeypatch):
                 "version": "9.9.9",
                 "platform": "linux-x86_64",
                 "archive": "absent.zip",
-                "member": "meshy-dcc-cli",
+                "member": "meshy-dcc",
             }
         ),
         encoding="utf-8",
@@ -339,10 +339,10 @@ def test_execute_flushes_before_handing_over(payload, bin_dir, monkeypatch):
 
     if os.name == "nt":
         monkeypatch.setattr(_bootstrap.subprocess, "run", lambda command: _Result(0))
-        _bootstrap._execute(bin_dir / "meshy-dcc-cli", ["--version"])
+        _bootstrap._execute(bin_dir / "meshy-dcc", ["--version"])
     else:
         monkeypatch.setattr(_bootstrap.os, "execv", lambda path, argv: None)
-        _bootstrap._execute(bin_dir / "meshy-dcc-cli", ["--version"])
+        _bootstrap._execute(bin_dir / "meshy-dcc", ["--version"])
 
     assert flushed == ["stdout", "stderr"]
 
@@ -359,7 +359,7 @@ def test_execute_returns_the_child_exit_code_on_windows(payload, bin_dir, monkey
     monkeypatch.setattr(_bootstrap.os, "name", "nt")
     monkeypatch.setattr(_bootstrap.subprocess, "run", lambda command: _Result(3))
 
-    assert _bootstrap._execute(bin_dir / "meshy-dcc-cli-bin.exe", []) == 3
+    assert _bootstrap._execute(bin_dir / "meshy-dcc-bin.exe", []) == 3
 
 
 def test_execute_maps_ctrl_c_to_130_on_windows(payload, bin_dir, monkeypatch):
@@ -371,4 +371,4 @@ def test_execute_maps_ctrl_c_to_130_on_windows(payload, bin_dir, monkeypatch):
     monkeypatch.setattr(_bootstrap.os, "name", "nt")
     monkeypatch.setattr(_bootstrap.subprocess, "run", interrupt)
 
-    assert _bootstrap._execute(bin_dir / "meshy-dcc-cli-bin.exe", []) == 130
+    assert _bootstrap._execute(bin_dir / "meshy-dcc-bin.exe", []) == 130

@@ -11,7 +11,7 @@ set shell := ["sh", "-cu"]
 # and every recipe below — as well as CI workflows invoking `just build-*` —
 # will pick them up automatically.
 OPT_FEATURES := "workflow,scheduler,prometheus,job-persist-sqlite,admin,mcp-2026-07-28"
-CLI_BIN := if os_family() == "windows" { ".\\target\\release\\meshy-dcc-cli.exe" } else { "./target/release/meshy-dcc-cli" }
+CLI_BIN := if os_family() == "windows" { ".\\target\\release\\meshy-dcc.exe" } else { "./target/release/meshy-dcc" }
 
 # Feature set for `maturin develop` (no abi3, extension-module linkage)
 DEV_FEATURES := "python-bindings,ext-module," + OPT_FEATURES
@@ -149,22 +149,22 @@ hakari-verify:
 
 # ── Standalone binaries ─────────────────────────────────────────────────────
 
-# Build meshy-dcc-cli for the current platform
+# Build meshy-dcc for the current platform
 build-cli:
-    cargo build --release -p meshy-dcc-cli
+    cargo build --release -p meshy-dcc
 
-# Build meshy-dcc-cli universal2 binary for macOS (requires both targets installed)
+# Build meshy-dcc universal2 binary for macOS (requires both targets installed)
 [unix]
 build-cli-universal:
     #!/usr/bin/env sh
     set -eu
     rustup target add x86_64-apple-darwin aarch64-apple-darwin 2>/dev/null || true
-    cargo build --release -p meshy-dcc-cli --target x86_64-apple-darwin
-    cargo build --release -p meshy-dcc-cli --target aarch64-apple-darwin
-    lipo -create -output meshy-dcc-cli-macos-universal2 \
-        target/x86_64-apple-darwin/release/meshy-dcc-cli \
-        target/aarch64-apple-darwin/release/meshy-dcc-cli
-    echo "Built: meshy-dcc-cli-macos-universal2"
+    cargo build --release -p meshy-dcc --target x86_64-apple-darwin
+    cargo build --release -p meshy-dcc --target aarch64-apple-darwin
+    lipo -create -output meshy-dcc-macos-universal2 \
+        target/x86_64-apple-darwin/release/meshy-dcc \
+        target/aarch64-apple-darwin/release/meshy-dcc
+    echo "Built: meshy-dcc-macos-universal2"
 
 # Build meshy-dcc-server for the current platform
 build-server:

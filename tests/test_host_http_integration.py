@@ -71,7 +71,7 @@ def _rest_call(
     tool_slug: str,
     arguments: dict[str, Any] | None = None,
 ) -> tuple[int, dict[str, Any]]:
-    """POST ``/v1/call`` — same path the gateway and ``meshy-dcc-cli call`` use."""
+    """POST ``/v1/call`` — same path the gateway and ``meshy-dcc call`` use."""
     payload = json.dumps(
         {"tool_slug": tool_slug, "arguments": arguments or {}},
     ).encode("utf-8")
@@ -506,7 +506,7 @@ def test_v1_call_reports_validation_skipped_for_empty_schema() -> None:
 def test_v1_call_routes_through_dispatcher() -> None:
     """REST ``POST /v1/call`` must honour ``thread_affinity=main`` like MCP ``tools/call``.
 
-    Gateway and ``meshy-dcc-cli call`` fan out through per-DCC ``/v1/call``. Without
+    Gateway and ``meshy-dcc call`` fan out through per-DCC ``/v1/call``. Without
     :class:`~meshy_dcc_http_server.ThreadRoutedInvoker`, handlers run on a Tokio
     worker and ``enforce_thread_affinity`` rejects the call with HTTP 409.
     """

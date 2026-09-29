@@ -30,7 +30,7 @@ metadata:
 ## CLI-First Control Path
 
 For marketplace and live-DCC operations, use the `meshy-dcc` skill and
-`meshy-dcc-cli` whenever shell access is available. Its consent-gated install and
+`meshy-dcc` whenever shell access is available. Its consent-gated install and
 `update check` → `update apply` contract is the single source of truth; do not
 invent a package-local CLI bootstrap path.
 

@@ -17,7 +17,7 @@ DCC scope and phases.
 Start new work by inspecting context and stating the intended change and checks.
 A planning request authorizes a plan; implement when the user requests it.
 
-The agent-facing entry is the `meshy-dcc` CLI (built from `crates/meshy-dcc-cli`)
+The agent-facing entry is the `meshy-dcc` CLI (built from `crates/meshy-dcc`)
 plus `skills/meshy-dcc/SKILL.md`. No MCP connector is exposed to the agent.
 Meshy API calls, authentication, billing, polling and downloads belong to the
 published `meshy-cli`; core only consumes its machine-output contract.
@@ -29,7 +29,8 @@ each one on a real host before porting it as a Rust test.
 
 ## Naming and scope
 
-- Everything is Meshy-named: crates `meshy-dcc-*`, Python package
+- Everything is Meshy-named: the CLI crate `meshy-dcc` and the other crates
+  `meshy-dcc-*`, Python package
   `meshy_dcc_core`, environment variables `MESHY_DCC_*`, registry and state
   under `meshy-dcc`, gateway port 19765.
 - Host adapters are Meshy-owned, one repository per host, each built against
@@ -61,8 +62,8 @@ each one on a real host before porting it as a Rust test.
 Toolchain: Rust `1.95.0` (edition 2024). Focused checks:
 
 ```sh
-cargo build -p meshy-dcc-cli
-cargo test -p meshy-dcc-cli
+cargo build -p meshy-dcc
+cargo test -p meshy-dcc
 ```
 
 Real-host checks start only test-owned projects and processes and never touch an

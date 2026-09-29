@@ -26,7 +26,7 @@ MCP service listening at http://127.0.0.1:8765/mcp
 Validate the bundled Skill before starting:
 
 ```bash
-meshy-dcc-cli lint skills
+meshy-dcc lint skills
 ```
 
 ## Run In The Open Dev Container
@@ -81,10 +81,10 @@ The response message is `Hello, Agent! (from the internal MCP service)`.
 Agents can exercise the same registered service without guessing tool slugs:
 
 ```bash
-meshy-dcc-cli list --output toon
-meshy-dcc-cli load-skill hello-world --dcc-type studio-service --output toon
-meshy-dcc-cli describe <tool-slug-returned-by-load> --output toon
-meshy-dcc-cli call <tool-slug-returned-by-load> --json '{"name":"Agent"}' --wait --output toon
+meshy-dcc list --output toon
+meshy-dcc load-skill hello-world --dcc-type studio-service --output toon
+meshy-dcc describe <tool-slug-returned-by-load> --output toon
+meshy-dcc call <tool-slug-returned-by-load> --json '{"name":"Agent"}' --wait --output toon
 ```
 
 Follow the returned `next_step`; do not guess the instance-qualified tool slug.

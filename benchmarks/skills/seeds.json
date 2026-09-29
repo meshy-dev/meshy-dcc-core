@@ -333,7 +333,7 @@
         },
         "meshy-dcc.dcc": "python",
         "meshy-dcc.layer": "infrastructure",
-        "meshy-dcc.compatibility": "Cross-platform routing contract. The current DCC-CUA host is installed and verified through the official meshy-dcc-cli component manifest; exact platform capabilities remain runtime-discovered.",
+        "meshy-dcc.compatibility": "Cross-platform routing contract. The current DCC-CUA host is installed and verified through the official meshy-dcc component manifest; exact platform capabilities remain runtime-discovered.",
         "meshy-dcc.version": "0.1.0",
         "meshy-dcc.search-hint": "dcc-cua DCC CUA dcc cua our dcc-cua our dcc cua 我们的 dcc-cua 我们的 dcc cua project-owned UI control browser DOM exact PID HWND computer use automation",
         "meshy-dcc.tags": "dcc-cua, dcc-ui-control, ui-control, browser-dom, exact-window, computer-use, infrastructure"

@@ -205,7 +205,7 @@ def test_fetch_pypi_files_treats_404_as_unpublished(monkeypatch, capsys) -> None
     """
     monkeypatch.setattr("urllib.request.urlopen", lambda url, timeout=None: (_ for _ in ()).throw(_http_error(404)))
 
-    assert fetch_pypi_files("meshy-dcc-cli", "https://pypi.org/pypi/{package}/json") == {}
+    assert fetch_pypi_files("meshy-dcc", "https://pypi.org/pypi/{package}/json") == {}
     assert "404" in capsys.readouterr().err
 
 
@@ -213,8 +213,8 @@ def test_fetch_pypi_files_still_fails_on_other_statuses(monkeypatch) -> None:
     """Any status other than 404 is a real failure, not an empty project."""
     monkeypatch.setattr("urllib.request.urlopen", lambda url, timeout=None: (_ for _ in ()).throw(_http_error(503)))
 
-    with pytest.raises(RuntimeError, match="meshy-dcc-cli"):
-        fetch_pypi_files("meshy-dcc-cli", "https://pypi.org/pypi/{package}/json")
+    with pytest.raises(RuntimeError, match="meshy-dcc"):
+        fetch_pypi_files("meshy-dcc", "https://pypi.org/pypi/{package}/json")
 
 
 def test_fetch_pypi_files_still_fails_on_transport_errors(monkeypatch) -> None:
@@ -224,16 +224,16 @@ def test_fetch_pypi_files_still_fails_on_transport_errors(monkeypatch) -> None:
     )
 
     with pytest.raises(RuntimeError, match="no route to host"):
-        fetch_pypi_files("meshy-dcc-cli", "https://pypi.org/pypi/{package}/json")
+        fetch_pypi_files("meshy-dcc", "https://pypi.org/pypi/{package}/json")
 
 
 def test_unpublished_project_fits_the_budget(tmp_path: Path) -> None:
     """The gate a first release has to pass: 0 current bytes, all files new."""
-    wheel = tmp_path / "meshy_dcc_cli-0.1.0-py3-none-manylinux_2_17_x86_64.whl"
+    wheel = tmp_path / "meshy_dcc-0.1.0-py3-none-manylinux_2_17_x86_64.whl"
     wheel.write_bytes(b"x" * 100)
 
     report = build_report(
-        package="meshy-dcc-cli",
+        package="meshy-dcc",
         pypi_files={},
         artifacts=collect_dist_artifacts(tmp_path),
         limit_bytes=10 * GIB,
