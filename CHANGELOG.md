@@ -57,6 +57,9 @@ and is not runtime-compatible with it. Attribution stays in `LICENSE` and
   out of the report, because those errors can carry credentials.
 - `MESHY_DCC_DATA_DIR` overrides the data directory that holds extracted
   adapter packages.
+- Meshy Unity adapter 0.1.0 in the bundled catalog (still `not_available`):
+  it installs per project, and the Skill covers it
+  (`skills/meshy-dcc/references/unity.md`).
 - `stop-instance --discard-unsaved` tells the host it may close even though
   work might be unsaved. Send it only after the user has agreed.
 - `meshy_dcc_core.host.safe_stop.serve_safe_stop` serves a loopback endpoint that

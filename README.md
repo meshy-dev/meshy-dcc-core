@@ -4,10 +4,15 @@ One local entry point for agents to work across a creator's DCC applications
 and game engines: install adapters once, discover running instances, load
 capabilities on demand, and route every call to the right scene or project.
 
-**Status: 0.2.0, early development.** Verified so far: macOS arm64 with
-Blender 5.0.1: list, search, load-skill, describe, call and readback, plus
-host-package install, start-instance and consent-gated stop. Other hosts are
-not in the support matrix yet.
+**Status: 0.2.0, early development.** Verified so far on macOS arm64:
+
+- Blender 5.0.1: list, search, load-skill, describe, call and readback, plus
+  host-package install, start-instance and consent-gated stop.
+- Unity 6000.4.10f1: per-project install, start-instance, FBX import and
+  instantiate with readback, save and reopen, and stop (refused while scenes
+  are unsaved unless the user agrees to discard them).
+
+Other hosts are not in the support matrix yet.
 
 ## Components
 

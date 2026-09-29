@@ -27,7 +27,7 @@ entries:
     install:
       type: host-package
       url: "https://cdn.meshy.ai/meshy-dcc-core/adapters/blender/0.1.0/meshy_dcc_blender_addon_macos_v0.1.0.zip"
-      sha256: "193e1e5a8c3b8148a5f54ddf2b63ac3120549ab5809df755ad14c747ea553dc7"
+      sha256: "f5ef96d19de941b87e82dafc329b627bda6625bed660f82025560b41b97a77f8"
       host:
         uninstall:
           - ["{dcc_path}", "--command", "extension", "remove", "user_default.meshy_dcc_blender"]
@@ -36,14 +36,24 @@ entries:
         launch: ["{executable}"]
 
   - name: "meshy-dcc-unity"
-    description: "Meshy DCC adapter for Unity (planned)"
+    description: "Meshy DCC adapter for the Unity Editor 2018.4+: project, scene, model import, PBR materials and build tools"
     dcc: ["unity"]
     url: "https://www.meshy.ai"
     tags: ["adapter", "meshy", "unity"]
+    version: "0.1.0"
     maintainer: "Meshy"
     policy:
       installation: not_available
-      reason: "The Meshy Unity adapter is in development."
+      reason: "The Meshy Unity adapter build is not published yet."
+    # Installs per project: `meshy-dcc install --dcc-type unity --project <root>`.
+    install:
+      type: host-package
+      url: "https://cdn.meshy.ai/meshy-dcc-core/adapters/unity/0.1.0/meshy_dcc_unity_macos_arm64_v0.1.0.zip"
+      sha256: "90f1758e8117ce4e65901a2d570078302d878fab9faab8b8c746b100712db681"
+      host:
+        extract: true
+        project_steps:
+          - ["{package_dir}/bin/meshy-dcc-unity-sidecar", "install", "--project", "{project}", "--sidecar", "{package_dir}/bin/meshy-dcc-unity-sidecar", "--files-only", "--yes", "--json"]
 
   - name: "meshy-dcc-godot"
     description: "Meshy DCC adapter for Godot (planned)"
