@@ -16,6 +16,11 @@ capabilities on demand, and route every call to the right scene or project.
   Meshy GLB with mesh and PBR material readback, save and reopen, and stop
   (refused while scenes or scripts are unsaved unless the user agrees to
   discard them).
+- Unreal Engine 5.7.2: per-project install of a Python-only plugin,
+  start-instance, import of a Meshy GLB and of a Meshy FBX whose texture set
+  becomes a PBR material, readback, save and reopen, a rendered capture, and
+  stop (refused while maps or assets are unsaved unless the user agrees to
+  discard them). The editor needs Xcode and its Metal toolchain on macOS.
 
 Other hosts are not in the support matrix yet.
 

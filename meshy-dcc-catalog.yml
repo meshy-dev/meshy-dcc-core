@@ -76,14 +76,24 @@ entries:
           - ["{package_dir}/bin/meshy-dcc-godot-sidecar", "install", "{project}", "--sidecar", "{package_dir}/bin/meshy-dcc-godot-sidecar", "--files-only", "--yes", "--json"]
 
   - name: "meshy-dcc-unreal"
-    description: "Meshy DCC adapter for Unreal Engine (planned)"
+    description: "Meshy DCC adapter for the Unreal Editor 5.0+: Meshy GLB/FBX import with PBR materials, levels, actors, assets and materials"
     dcc: ["unreal"]
     url: "https://www.meshy.ai"
     tags: ["adapter", "meshy", "unreal"]
+    version: "0.1.0"
     maintainer: "Meshy"
     policy:
       installation: not_available
-      reason: "The Meshy Unreal adapter is planned."
+      reason: "The Meshy Unreal adapter build is not published yet."
+    # Installs per project: `meshy-dcc install --dcc-type unreal --project <root>`.
+    install:
+      type: host-package
+      url: "https://cdn.meshy.ai/meshy-dcc-core/adapters/unreal/0.1.0/meshy_dcc_unreal_macos_arm64_v0.1.0.zip"
+      sha256: "c13b496e4e1dbcc9f1e5a4074c2be0280fbb85513cc488fa34a7adc699e5234a"
+      host:
+        extract: true
+        project_steps:
+          - ["{package_dir}/bin/meshy-dcc-unreal", "install", "{project}", "--yes", "--json"]
 
   - name: "meshy-dcc-zbrush"
     description: "Meshy DCC adapter for ZBrush 2026.1+ (planned)"

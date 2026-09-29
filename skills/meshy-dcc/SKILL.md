@@ -1,6 +1,6 @@
 ---
 name: meshy-dcc
-description: Work inside a creator's running DCC application through the local meshy-dcc CLI - find the live instance, discover and load its tools, call them, and read the scene back. Use for scene edits and for importing Meshy-generated models into a DCC project. Supported today - Blender, Unity and Godot.
+description: Work inside a creator's running DCC application through the local meshy-dcc CLI - find the live instance, discover and load its tools, call them, and read the scene back. Use for scene edits and for importing Meshy-generated models into a DCC project. Supported today - Blender, Unity, Godot and Unreal.
 ---
 
 # Meshy DCC
@@ -14,6 +14,7 @@ you choose. No MCP connector is involved.
 - Blender 5.0. Read [the Blender reference](references/blender.md) before Blender work.
 - Unity 6 (6000.4). Read [the Unity reference](references/unity.md) before Unity work.
 - Godot 4.7. Read [the Godot reference](references/godot.md) before Godot work.
+- Unreal Engine 5.7. Read [the Unreal reference](references/unreal.md) before Unreal work.
 
 For any other host, tell the user it is not supported yet instead of improvising.
 
@@ -61,9 +62,9 @@ meshy-dcc dcc-types --dcc-type blender --project /absolute/project
   launch plan. With the user's go-ahead to open the application, run
   `meshy-dcc start-instance --dcc-type blender --project /absolute/project --wait-ready --yes`.
   Then use the instance it reports.
-- Unity and Godot install into each project. If such a project has no launch
-  plan yet, see the host reference ([Unity](references/unity.md#set-up-a-project),
-  [Godot](references/godot.md#set-up-a-project)).
+- Unity, Godot and Unreal install into each project. If such a project has no
+  launch plan yet, see the host reference ([Unity](references/unity.md#set-up-a-project),
+  [Godot](references/godot.md#set-up-a-project), [Unreal](references/unreal.md#set-up-a-project)).
 - Otherwise, ask the user to open the host with the Meshy adapter enabled.
 
 Name that instance explicitly in every later command:
@@ -129,7 +130,7 @@ never kill a host process.
 meshy-dcc stop-instance --operation-id OPERATION_ID
 ```
 
-A host with unsaved scenes refuses with `unsaved_changes` (Unity, Godot). A host that
+A host with unsaved scenes refuses with `unsaved_changes` (Unity, Godot, Unreal). A host that
 cannot tell whether work is unsaved, such as Blender, refuses with
 `unsaved_state_unknown`. When either happens:
 
@@ -146,8 +147,8 @@ it.
    download. If a wait fails, recover the same task ID rather than submitting a new paid
    task.
 2. Download a format the host imports well (GLB for Blender; FBX or OBJ for Unity, below
-   the project's `Assets/`; GLB for Godot, below `assets/meshy/`) into the user's project
-   or a folder they named.
+   the project's `Assets/`; GLB for Godot, below `assets/meshy/`; GLB, or FBX with its
+   PNGs, for Unreal, anywhere on disk) into the user's project or a folder they named.
 3. Import it with the host's import tool, using the absolute path.
 4. Read back what arrived (object names, count, materials) and tell the user where it is.
    Save only when asked.
