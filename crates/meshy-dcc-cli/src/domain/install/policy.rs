@@ -74,6 +74,7 @@ mod tests {
                         dcc_path: None,
                         plugin_source: None,
                         adobe_debug_root: None,
+                        project: None,
                     },
                 );
                 let expected = if installation == "not_available" {

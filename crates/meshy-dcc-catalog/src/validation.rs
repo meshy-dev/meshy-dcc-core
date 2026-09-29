@@ -147,10 +147,11 @@ const MARKETPLACE_V2_SCHEMA_JSON: &str = r##"{
             },
             "host": {
               "type": "object",
-              "required": ["steps"],
               "properties": {
-                "steps": { "type": "array", "minItems": 1, "items": { "type": "array", "minItems": 1, "prefixItems": [{ "const": "{dcc_path}" }], "items": { "type": "string" } } },
-                "uninstall": { "type": "array", "items": { "type": "array", "minItems": 1, "prefixItems": [{ "const": "{dcc_path}" }], "items": { "type": "string" } } },
+                "extract": { "type": "boolean" },
+                "steps": { "type": "array", "items": { "type": "array", "minItems": 1, "prefixItems": [{ "type": "string", "pattern": "^(\\{dcc_path\\}|\\{package_dir\\}/.+)$" }], "items": { "type": "string" } } },
+                "project_steps": { "type": "array", "items": { "type": "array", "minItems": 1, "prefixItems": [{ "type": "string", "pattern": "^(\\{dcc_path\\}|\\{package_dir\\}/.+)$" }], "items": { "type": "string" } } },
+                "uninstall": { "type": "array", "items": { "type": "array", "minItems": 1, "prefixItems": [{ "type": "string", "pattern": "^(\\{dcc_path\\}|\\{package_dir\\}/.+)$" }], "items": { "type": "string" } } },
                 "launch": {
                   "type": "array",
                   "minItems": 1,
@@ -324,6 +325,14 @@ mod host_package_schema_tests {
         let good = "        steps: [[\"{dcc_path}\", \"-e\", \"{package}\"]]\n        launch: [\"{executable}\"]\n";
         validate_catalog_entries(&entries(good)).unwrap();
         let bad = "        steps: [[\"/bin/sh\", \"-c\", \"echo\"]]\n";
+        assert!(validate_catalog_entries(&entries(bad)).is_err());
+    }
+
+    #[test]
+    fn host_package_entries_accept_package_dir_programs_and_project_steps() {
+        let good = "        extract: true\n        project_steps: [[\"{package_dir}/bin/setup\", \"{project}\"]]\n";
+        validate_catalog_entries(&entries(good)).unwrap();
+        let bad = "        project_steps: [[\"{project}/evil\"]]\n";
         assert!(validate_catalog_entries(&entries(bad)).is_err());
     }
 }

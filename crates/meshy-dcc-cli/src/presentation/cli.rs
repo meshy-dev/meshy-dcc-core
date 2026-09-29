@@ -660,6 +660,7 @@ async fn run_with_args(args: Args) -> anyhow::Result<()> {
             dcc_path,
             plugin_source,
             adobe_debug_root,
+            project,
             execute,
             json,
         } => {
@@ -676,6 +677,7 @@ async fn run_with_args(args: Args) -> anyhow::Result<()> {
                 dcc_path,
                 plugin_source,
                 adobe_debug_root,
+                project,
             };
             if execute {
                 // `--execute` is the mutation opt-in; JSON mode must never add

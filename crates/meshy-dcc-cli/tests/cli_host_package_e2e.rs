@@ -201,3 +201,122 @@ fn host_package_refuses_remote_plain_http_and_missing_dcc_path() {
     );
     assert!(!temp.path().join("host.log").exists());
 }
+
+/// A package whose `bin/setup` logs its argv, optionally with a symlink entry.
+fn extract_package(temp: &TempDir, symlink: bool) -> Vec<u8> {
+    let dest = temp.path().join("extract-pkg.zip");
+    let mut zip = zip::ZipWriter::new(std::fs::File::create(&dest).unwrap());
+    let options = zip::write::SimpleFileOptions::default().unix_permissions(0o755);
+    zip.start_file("bin/setup", options).unwrap();
+    zip.write_all(b"#!/bin/sh\necho \"$*\" >> \"$HOST_LOG\"\n")
+        .unwrap();
+    if symlink {
+        zip.add_symlink("bin/escape", "/etc", options).unwrap();
+    }
+    zip.finish().unwrap();
+    std::fs::read(dest).unwrap()
+}
+
+fn extract_catalog(temp: &TempDir, url: &str, sha: &str) -> PathBuf {
+    let path = temp.path().join("extract-catalog.yml");
+    std::fs::write(
+        &path,
+        format!(
+            r#"version: "1"
+entries:
+  - name: "meshy-dcc-testhost"
+    description: "test host adapter"
+    dcc: ["testhost"]
+    tags: ["adapter"]
+    version: "0.1.0"
+    install:
+      type: host-package
+      url: "{url}"
+      sha256: "{sha}"
+      host:
+        extract: true
+        project_steps: [["{{package_dir}}/bin/setup", "--project", "{{project}}"]]
+"#
+        ),
+    )
+    .unwrap();
+    path
+}
+
+fn install_project(temp: &TempDir, catalog: &Path, project: Option<&Path>) -> Output {
+    let mut command = cli_command();
+    command
+        .args(["install", "--dcc-type", "testhost", "--catalog"])
+        .arg(catalog)
+        .args(["--execute", "--json"]);
+    if let Some(project) = project {
+        command.arg("--project").arg(project);
+    }
+    command
+        .env_remove("MESHY_DCC_INSTALL_DISABLED")
+        .env("MESHY_DCC_REGISTRY_DIR", temp.path().join("registry"))
+        .env("MESHY_DCC_DATA_DIR", temp.path().join("data"))
+        .env("HOST_LOG", temp.path().join("host.log"))
+        .output()
+        .unwrap()
+}
+
+#[test]
+fn host_package_extracts_once_and_runs_project_steps_from_the_package() {
+    let temp = TempDir::new().unwrap();
+    let bytes = extract_package(&temp, false);
+    let catalog = extract_catalog(&temp, &serve(bytes.clone()), &sha256_hex(&bytes));
+    let project = temp.path().join("project");
+    std::fs::create_dir(&project).unwrap();
+    let package_dir = temp
+        .path()
+        .join("data/adapters/meshy-dcc-testhost/meshy_dcc_testhost");
+
+    for _ in 0..2 {
+        let output = install_project(&temp, &catalog, Some(&project));
+        assert_eq!(
+            output.status.code(),
+            Some(0),
+            "stdout={} stderr={}",
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
+    let log = std::fs::read_to_string(temp.path().join("host.log")).unwrap();
+    let expected = format!("--project {}", project.display());
+    assert_eq!(log.lines().collect::<Vec<_>>(), [&expected, &expected]);
+    assert!(package_dir.join("bin/setup").is_file());
+    assert_eq!(
+        std::fs::read_to_string(package_dir.join(".meshy-dcc-package.sha256")).unwrap(),
+        sha256_hex(&bytes)
+    );
+}
+
+#[test]
+fn host_package_project_steps_need_a_project_and_no_symlinks() {
+    let temp = TempDir::new().unwrap();
+    let bytes = extract_package(&temp, false);
+    let catalog = extract_catalog(&temp, &serve(bytes.clone()), &sha256_hex(&bytes));
+    let output = install_project(&temp, &catalog, None);
+    assert_eq!(
+        output.status.code(),
+        Some(10),
+        "{}",
+        String::from_utf8_lossy(&output.stdout)
+    );
+
+    let bytes = extract_package(&temp, true);
+    let catalog = extract_catalog(&temp, &serve(bytes.clone()), &sha256_hex(&bytes));
+    let project = temp.path().join("project");
+    std::fs::create_dir(&project).unwrap();
+    let output = install_project(&temp, &catalog, Some(&project));
+    assert_eq!(output.status.code(), Some(30));
+    assert!(String::from_utf8_lossy(&output.stdout).contains("symlink"));
+    assert!(!temp.path().join("host.log").exists());
+    assert!(
+        !temp
+            .path()
+            .join("data/adapters/meshy-dcc-testhost/meshy_dcc_testhost")
+            .exists()
+    );
+}

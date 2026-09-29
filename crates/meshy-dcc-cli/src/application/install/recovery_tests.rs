@@ -15,6 +15,7 @@ fn actual_planner_never_reports_manual_registration_as_ok() {
             dcc_path: None,
             plugin_source: None,
             adobe_debug_root: None,
+            project: None,
         })
         .unwrap();
     let register_index = plan

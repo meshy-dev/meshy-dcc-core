@@ -28,6 +28,9 @@ pub struct InstallStepReport {
     pub id: String,
     pub status: String,
     pub rollback: InstallStepRollbackReport,
+    /// Why the step failed, for the operator or agent to act on.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub message: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
@@ -84,6 +87,7 @@ pub(super) fn execution_report_for_plan(plan: &InstallPlan) -> InstallExecutionR
                 attempted: false,
                 status: "not_attempted".into(),
             },
+            message: None,
         })
         .collect();
     InstallExecutionReport {

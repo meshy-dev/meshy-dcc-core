@@ -42,6 +42,16 @@ and is not runtime-compatible with it. Attribution stays in `LICENSE` and
 - `type: host-package` install catalog entries for adapters whose payload is
   host-native. Their host commands run as argv without a shell, start with
   the operator's `--dcc-path`, and can write the start-instance launch plan.
+- `host-package` entries can set `host.extract` to unpack the zip into the
+  Meshy DCC data directory (`{package_dir}`). Commands may then run a file
+  inside the package as `{package_dir}/<relative path>`.
+- `host.project_steps` and `install --project <root>` set up one project, for
+  hosts whose plugins live in each project. The steps may use `{project}`.
+- A failed `host-package` step now reports why it failed in the JSON report
+  (`steps[].message`) and on stderr. Other step types still keep their errors
+  out of the report, because those errors can carry credentials.
+- `MESHY_DCC_DATA_DIR` overrides the data directory that holds extracted
+  adapter packages.
 - `stop-instance --discard-unsaved` tells the host it may close even though
   work might be unsaved. Send it only after the user has agreed.
 - `meshy_dcc_core.host.safe_stop.serve_safe_stop` serves a loopback endpoint that

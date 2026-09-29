@@ -264,15 +264,26 @@ pub struct CatalogInstall {
 
 /// Host-side commands for a `host-package` install.
 ///
-/// Each command is an argv list run without a shell. `steps` and `uninstall`
-/// must start with `{dcc_path}` (the host executable the operator supplied)
-/// and may use `{package}` (the downloaded, SHA-256 verified file). `launch`
-/// is the start-instance argv template and must start with `{executable}`.
+/// Each command is an argv list run without a shell. A command's program is
+/// `{dcc_path}` (the host executable the operator supplied) or, when
+/// `extract` is set, `{package_dir}/<relative path>` (a file inside the
+/// extracted package). Arguments may use `{dcc_path}`, `{package}` (the
+/// downloaded, SHA-256 verified file) and `{package_dir}`; `project_steps`
+/// may also use `{project}`. `launch` is the start-instance argv template and
+/// must start with `{executable}`.
 #[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
 pub struct CatalogHostInstall {
+    /// Extract the package (a zip) into the Meshy DCC adapters directory and
+    /// expose it as `{package_dir}`.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub extract: bool,
     /// Commands that install the package, run in order after `uninstall`.
     #[serde(default)]
     pub steps: Vec<Vec<String>>,
+    /// Commands run only for `install --project`, after `steps`, to set up
+    /// one project (for hosts whose plugins live in the project).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub project_steps: Vec<Vec<String>>,
     /// Commands that remove a previous install. Install runs them first and
     /// ignores their exit status, so a reinstall starts clean.
     #[serde(default)]

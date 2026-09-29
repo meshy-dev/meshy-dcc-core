@@ -267,8 +267,17 @@ impl InstallService {
                     report.steps[*step_index].rollback.status = "not_available".into();
                     has_deferred_steps = true;
                 }
-                Err(_) => {
-                    eprintln!("FAILED");
+                Err(error) => {
+                    // Other steps' errors can carry credentials (pip index URLs, tokens),
+                    // so only the Meshy adapter installer's own output is echoed.
+                    // ponytail: first 2000 chars; the host's own log holds the rest.
+                    if matches!(action, InstallStepAction::HostPackage { .. }) {
+                        let message: String = error.to_string().chars().take(2000).collect();
+                        eprintln!("FAILED: {message}");
+                        report.steps[*step_index].message = Some(message);
+                    } else {
+                        eprintln!("FAILED");
+                    }
                     report.steps[*step_index].status = "failed".into();
                     report.steps[*step_index].rollback.status = "not_available".into();
                     let (failure_stage, failure_exit, failure_code) = action_failure(action);
@@ -373,10 +382,24 @@ fn execute_action(action: &InstallStepAction) -> Result<StepExecution, InstallEr
             url,
             sha256,
             dcc_path,
+            extract_to,
             uninstall,
             steps,
-        } => execute_host_package(url, sha256, dcc_path, uninstall, steps)
-            .map(StepExecution::Completed),
+            project,
+            project_steps,
+        } => execute_host_package(
+            url,
+            sha256,
+            HostTargets {
+                dcc_path: dcc_path.as_deref(),
+                extract_to: extract_to.as_deref(),
+                project: project.as_deref(),
+            },
+            uninstall,
+            steps,
+            project_steps,
+        )
+        .map(StepExecution::Completed),
         InstallStepAction::WriteLaunchPlan {
             dcc_type,
             executable,
@@ -661,36 +684,114 @@ fn download_verified(url: &str, expected: &str) -> Result<Vec<u8>, InstallError>
     Ok(bytes.to_vec())
 }
 
-/// Replace `{dcc_path}` and `{package}` inside each argv token. Tokens are
-/// never re-split, and the program is always the operator's `dcc_path`.
-fn host_command(dcc_path: &Path, argv: &[String], package: &Path) -> Command {
-    let mut command = Command::new(dcc_path);
-    for token in argv.iter().skip(1) {
-        command.arg(
-            token
-                .replace("{dcc_path}", &dcc_path.to_string_lossy())
-                .replace("{package}", &package.to_string_lossy()),
-        );
+/// Operator-supplied paths a host-package install may use.
+#[derive(Clone, Copy)]
+struct HostTargets<'a> {
+    dcc_path: Option<&'a Path>,
+    extract_to: Option<&'a Path>,
+    project: Option<&'a Path>,
+}
+
+/// Values for the `{dcc_path}`, `{package}`, `{package_dir}` and `{project}`
+/// placeholders of host-package commands.
+struct HostPlaceholders<'a> {
+    targets: HostTargets<'a>,
+    package: &'a Path,
+}
+
+impl HostPlaceholders<'_> {
+    /// Expand every placeholder in `token`; a placeholder without a value is an error.
+    fn expand(&self, token: &str) -> Result<String, String> {
+        let values = [
+            ("{dcc_path}", self.targets.dcc_path),
+            ("{package_dir}", self.targets.extract_to),
+            ("{package}", Some(self.package)),
+            ("{project}", self.targets.project),
+        ];
+        let mut expanded = token.to_string();
+        for (placeholder, value) in values {
+            if expanded.contains(placeholder) {
+                let value = value.ok_or_else(|| format!("{placeholder} has no value"))?;
+                expanded = expanded.replace(placeholder, &value.to_string_lossy());
+            }
+        }
+        Ok(expanded)
     }
-    command.stdout(Stdio::null()).stderr(Stdio::null());
-    command
+
+    /// Build argv as a process without a shell; tokens are never re-split.
+    fn command(&self, argv: &[String]) -> Result<Command, String> {
+        let (program, args) = argv.split_first().ok_or("empty host command")?;
+        let mut command = Command::new(self.expand(program)?);
+        for token in args {
+            command.arg(self.expand(token)?);
+        }
+        command.stdin(Stdio::null()).stdout(Stdio::null());
+        Ok(command)
+    }
+}
+
+/// Extract a verified zip into `dest` through a sibling staging directory.
+/// A matching checksum marker means the same package is already there.
+/// Returns whether `dest` was (re)created.
+fn extract_host_package(bytes: &[u8], sha256: &str, dest: &Path) -> Result<bool, String> {
+    const MARKER: &str = ".meshy-dcc-package.sha256";
+    let marker = dest.join(MARKER);
+    if fs::read_to_string(&marker).is_ok_and(|value| value.trim().eq_ignore_ascii_case(sha256)) {
+        return Ok(false);
+    }
+    let parent = dest
+        .parent()
+        .ok_or_else(|| format!("no parent for {}", dest.display()))?;
+    fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    let mut archive = zip::ZipArchive::new(std::io::Cursor::new(bytes))
+        .map_err(|e| format!("failed to open zip archive: {e}"))?;
+    for index in 0..archive.len() {
+        let entry = archive.by_index(index).map_err(|e| e.to_string())?;
+        if entry.is_symlink() {
+            return Err(format!("package contains a symlink: {}", entry.name()));
+        }
+    }
+    let staging = tempfile::Builder::new()
+        .prefix(".extract-")
+        .tempdir_in(parent)
+        .map_err(|e| e.to_string())?;
+    archive
+        .extract(staging.path())
+        .map_err(|e| format!("failed to extract package: {e}"))?;
+    fs::write(staging.path().join(MARKER), sha256).map_err(|e| e.to_string())?;
+    if dest.exists() {
+        fs::remove_dir_all(dest).map_err(|e| e.to_string())?;
+    }
+    fs::rename(staging.keep(), dest).map_err(|e| e.to_string())?;
+    Ok(true)
 }
 
 fn execute_host_package(
     url: &str,
     sha256: &str,
-    dcc_path: &Path,
+    targets: HostTargets<'_>,
     uninstall: &[Vec<String>],
     steps: &[Vec<String>],
+    project_steps: &[Vec<String>],
 ) -> Result<Option<StepRollback>, InstallError> {
     let fail = |message: String| InstallError::StepFailed {
         step: "install-host-package".into(),
         message,
     };
-    if !dcc_path.is_absolute() || !dcc_path.is_file() {
+    if let Some(dcc_path) = targets.dcc_path
+        && (!dcc_path.is_absolute() || !dcc_path.is_file())
+    {
         return Err(fail(format!(
             "--dcc-path must be an absolute path to the host executable: {}",
             dcc_path.display()
+        )));
+    }
+    if let Some(project) = targets.project
+        && (!project.is_absolute() || !project.is_dir())
+    {
+        return Err(fail(format!(
+            "--project must be an absolute path to an existing directory: {}",
+            project.display()
         )));
     }
     let name = crate::domain::install::host_package_file_name(url)
@@ -699,31 +800,61 @@ fn execute_host_package(
     let bytes = download_verified(url, &expected)?;
     let download_dir = tempfile::tempdir()?;
     let package = download_dir.path().join(name);
-    fs::write(&package, bytes)?;
+    fs::write(&package, &bytes)?;
+    let extracted = match targets.extract_to {
+        Some(dest) => extract_host_package(&bytes, &expected, dest).map_err(fail)?,
+        None => false,
+    };
+    let values = HostPlaceholders {
+        targets,
+        package: &package,
+    };
 
     // A failed uninstall only means nothing was installed yet.
     for argv in uninstall {
-        let _ = host_command(dcc_path, argv, &package).status();
+        if let Ok(mut command) = values.command(argv) {
+            let _ = command.stderr(Stdio::null()).status();
+        }
     }
-    for argv in steps {
-        let status = host_command(dcc_path, argv, &package)
-            .status()
-            .map_err(|e| fail(format!("failed to launch {}: {e}", dcc_path.display())))?;
-        if !status.success() {
+    for argv in steps.iter().chain(project_steps) {
+        let output = values
+            .command(argv)
+            .map_err(&fail)?
+            .stderr(Stdio::piped())
+            .output()
+            .map_err(|e| fail(format!("failed to launch {:?}: {e}", argv[0])))?;
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            let tail: String = stderr
+                .chars()
+                .rev()
+                .take(2000)
+                .collect::<Vec<_>>()
+                .into_iter()
+                .rev()
+                .collect();
             return Err(fail(format!(
-                "host command {:?} exited with {status}",
-                argv
+                "host command {argv:?} exited with {}: {}",
+                output.status,
+                tail.trim()
             )));
         }
     }
-    Ok(uninstall.first().map(|argv| StepRollback::Command {
-        program: dcc_path.to_string_lossy().into_owned(),
-        args: argv
-            .iter()
-            .skip(1)
-            .map(|token| token.replace("{dcc_path}", &dcc_path.to_string_lossy()))
-            .collect(),
-    }))
+    if let Some(argv) = uninstall.first()
+        && let Ok(program) = values.expand(&argv[0])
+    {
+        return Ok(Some(StepRollback::Command {
+            program,
+            args: argv[1..]
+                .iter()
+                .filter_map(|token| values.expand(token).ok())
+                .collect(),
+        }));
+    }
+    Ok(targets
+        .extract_to
+        .filter(|_| extracted)
+        .map(|dest| StepRollback::RemovePath(dest.to_path_buf())))
 }
 
 fn launch_plan_path(dcc_type: &str) -> PathBuf {
@@ -841,6 +972,10 @@ fn execute_verify(plan: &InstallPlan) -> Result<Option<StepRollback>, InstallErr
             InstallStepAction::WriteLaunchPlan { dcc_type, .. } => {
                 verify_installed_path(&launch_plan_path(dcc_type))?
             }
+            InstallStepAction::HostPackage {
+                extract_to: Some(dest),
+                ..
+            } => verify_installed_path(dest)?,
             InstallStepAction::HostPackage { .. }
             | InstallStepAction::RegisterDcc { .. }
             | InstallStepAction::Verify => {}
@@ -1020,6 +1155,7 @@ mod tests {
                 dcc_path: None,
                 plugin_source: None,
                 adobe_debug_root: None,
+                project: None,
             })
             .unwrap_err();
         assert!(matches!(
@@ -1042,6 +1178,7 @@ mod tests {
                     dcc_path: None,
                     plugin_source: None,
                     adobe_debug_root: None,
+                    project: None,
                 },
             );
             let published = entry
@@ -1072,6 +1209,7 @@ mod tests {
                 dcc_path: None,
                 plugin_source: None,
                 adobe_debug_root: None,
+                project: None,
             })
             .unwrap();
 
@@ -1161,6 +1299,7 @@ mod tests {
                 dcc_path: None,
                 plugin_source: None,
                 adobe_debug_root: None,
+                project: None,
             })
             .unwrap();
 
@@ -1189,6 +1328,7 @@ mod tests {
                 dcc_path: None,
                 plugin_source: None,
                 adobe_debug_root: None,
+                project: None,
             },
             true,
         );

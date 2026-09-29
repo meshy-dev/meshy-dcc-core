@@ -303,6 +303,9 @@ pub(crate) enum Command {
         /// Adobe UXP/CEP debug root. Use a studio-owned path in Internal deployments.
         #[arg(long, env = "MESHY_DCC_ADOBE_DEBUG_ROOT")]
         adobe_debug_root: Option<PathBuf>,
+        /// Absolute project root to set up, for adapters that install into each project.
+        #[arg(long)]
+        project: Option<PathBuf>,
         /// Execute the install plan with consent gating.
         #[arg(long, short = 'x')]
         execute: bool,

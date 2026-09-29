@@ -49,6 +49,7 @@ fn planner_selects_matching_dcc_case_insensitively() {
             dcc_path: None,
             plugin_source: None,
             adobe_debug_root: None,
+            project: None,
         },
     )
     .unwrap();
@@ -74,6 +75,7 @@ fn planner_keeps_custom_dcc_path_in_plan_and_next_steps() {
             dcc_path: Some(dcc_path.clone()),
             plugin_source: None,
             adobe_debug_root: None,
+            project: None,
         },
     )
     .unwrap();
@@ -103,6 +105,7 @@ fn planner_rejects_unknown_dcc() {
             dcc_path: None,
             plugin_source: None,
             adobe_debug_root: None,
+            project: None,
         },
     )
     .unwrap_err();
@@ -142,6 +145,7 @@ fn planner_generates_executable_steps_for_pip_install() {
             dcc_path: None,
             plugin_source: None,
             adobe_debug_root: None,
+            project: None,
         },
     )
     .unwrap();
@@ -205,6 +209,7 @@ fn planner_emits_cli_next_steps_for_live_control_and_skill_install() {
             dcc_path: None,
             plugin_source: None,
             adobe_debug_root: None,
+            project: None,
         },
     )
     .unwrap();
@@ -294,6 +299,7 @@ fn planner_derives_agent_install_instructions_from_adapter_repo_url() {
             dcc_path: None,
             plugin_source: None,
             adobe_debug_root: None,
+            project: None,
         },
     )
     .unwrap();
@@ -339,6 +345,7 @@ fn planner_prefers_catalog_install_instructions_url() {
             dcc_path: None,
             plugin_source: None,
             adobe_debug_root: None,
+            project: None,
         },
     )
     .unwrap();
@@ -382,6 +389,7 @@ fn planner_generates_executable_steps_for_git_install() {
             dcc_path: None,
             plugin_source: None,
             adobe_debug_root: None,
+            project: None,
         },
     )
     .unwrap();
@@ -420,6 +428,7 @@ fn planner_rejects_mutable_git_and_unverified_zip_installs() {
         dcc_path: None,
         plugin_source: None,
         adobe_debug_root: None,
+        project: None,
     };
 
     let error = InstallPlanner::plan(
@@ -483,6 +492,7 @@ fn planner_rejects_unpinned_pip_artifacts_and_version_overrides() {
         dcc_path: None,
         plugin_source: None,
         adobe_debug_root: None,
+        project: None,
     };
 
     let error = InstallPlanner::plan(&[entry(install.clone())], request(None)).unwrap_err();
@@ -540,6 +550,7 @@ fn planner_missing_install_metadata_uses_info_steps() {
             dcc_path: None,
             plugin_source: None,
             adobe_debug_root: None,
+            project: None,
         },
     )
     .unwrap();
@@ -580,6 +591,7 @@ fn planner_prefers_requested_python_for_pip_install() {
             dcc_path: None,
             plugin_source: None,
             adobe_debug_root: None,
+            project: None,
         },
     )
     .unwrap();
@@ -634,6 +646,7 @@ fn planner_builds_adobe_debug_link_from_operator_paths() {
             dcc_path: None,
             plugin_source: Some("F:/internal/meshy-dcc-premiere".into()),
             adobe_debug_root: Some("F:/internal/adobe-debug".into()),
+            project: None,
         },
     )
     .unwrap();
@@ -691,6 +704,7 @@ fn planner_prefers_adapter_entry_over_skill_pack() {
             dcc_path: None,
             plugin_source: None,
             adobe_debug_root: None,
+            project: None,
         },
     )
     .unwrap();
@@ -715,6 +729,7 @@ fn planner_accepts_normalized_dcc_aliases() {
             dcc_path: None,
             plugin_source: None,
             adobe_debug_root: None,
+            project: None,
         },
     )
     .unwrap();

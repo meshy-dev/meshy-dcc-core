@@ -18,12 +18,15 @@ pub struct InstallRequest {
     pub plugin_source: Option<PathBuf>,
     /// Adobe UXP/CEP debug root supplied by the operator or studio profile.
     pub adobe_debug_root: Option<PathBuf>,
+    /// Project to set up with the adapter's `project_steps`.
+    pub project: Option<PathBuf>,
 }
 
 #[derive(Debug, Clone, Default)]
 struct InstallOperatorPaths {
     plugin_source: Option<PathBuf>,
     adobe_debug_root: Option<PathBuf>,
+    project: Option<PathBuf>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -156,12 +159,24 @@ pub enum InstallStepAction {
         url: String,
         /// Required SHA-256 of the artifact.
         sha256: String,
-        /// Host executable every command runs; commands never go through a shell.
-        dcc_path: PathBuf,
+        /// Host executable the operator supplied (`{dcc_path}`). Commands never
+        /// go through a shell.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        dcc_path: Option<PathBuf>,
+        /// Where the zip package is extracted (`{package_dir}`), when the
+        /// catalog asks for extraction.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        extract_to: Option<PathBuf>,
         /// argv templates run first, exit status ignored, so a reinstall starts clean.
         uninstall: Vec<Vec<String>>,
         /// argv templates that install `{package}`, run in order.
         steps: Vec<Vec<String>>,
+        /// Project set up by `project_steps` (`{project}`).
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        project: Option<PathBuf>,
+        /// argv templates run after `steps` when a project is given.
+        #[serde(default, skip_serializing_if = "Vec::is_empty")]
+        project_steps: Vec<Vec<String>>,
     },
     /// Write the start-instance launch plan for this host.
     WriteLaunchPlan {
@@ -226,6 +241,9 @@ pub fn default_adapter_dir() -> PathBuf {
 }
 
 fn dirs_data_dir() -> PathBuf {
+    if let Some(dir) = std::env::var_os("MESHY_DCC_DATA_DIR").filter(|dir| !dir.is_empty()) {
+        return PathBuf::from(dir);
+    }
     dirs::data_dir()
         .map(|p| p.join("meshy-dcc"))
         .unwrap_or_else(|| PathBuf::from("~/.local/share/meshy-dcc"))
@@ -346,17 +364,31 @@ fn validate_host_package(install: &CatalogInstall) -> Result<(), InstallPlanErro
         .ok_or(InstallPlanError::InvalidHostPackage(
             "missing host commands",
         ))?;
-    if host.steps.is_empty() {
-        return Err(InstallPlanError::InvalidHostPackage("host.steps is empty"));
+    if host.steps.is_empty() && host.project_steps.is_empty() && !host.extract {
+        return Err(InstallPlanError::InvalidHostPackage(
+            "host has no steps, project_steps or extract",
+        ));
     }
-    if !host
+    let commands = || {
+        host.steps
+            .iter()
+            .chain(&host.uninstall)
+            .chain(&host.project_steps)
+    };
+    if !commands().all(|argv| host_program_is_allowed(argv.first(), host.extract)) {
+        return Err(InstallPlanError::InvalidHostPackage(
+            "every host command must start with {dcc_path}, or {package_dir}/<relative path> when extract is set",
+        ));
+    }
+    if host
         .steps
         .iter()
         .chain(&host.uninstall)
-        .all(|argv| argv.first().map(String::as_str) == Some("{dcc_path}"))
+        .flatten()
+        .any(|token| token.contains("{project}"))
     {
         return Err(InstallPlanError::InvalidHostPackage(
-            "every host command must start with {dcc_path}",
+            "{project} is only available in project_steps",
         ));
     }
     if host
@@ -369,6 +401,21 @@ fn validate_host_package(install: &CatalogInstall) -> Result<(), InstallPlanErro
         ));
     }
     Ok(())
+}
+
+/// A host command runs the operator's `{dcc_path}` or, for an extracted
+/// package, a file named by a plain relative path inside `{package_dir}`.
+fn host_program_is_allowed(program: Option<&String>, extract: bool) -> bool {
+    match program.map(String::as_str) {
+        Some("{dcc_path}") => true,
+        Some(program) if extract => program.strip_prefix("{package_dir}/").is_some_and(|rest| {
+            !rest.contains(['\\', '{', '}'])
+                && rest
+                    .split('/')
+                    .all(|part| !part.is_empty() && part != "." && part != "..")
+        }),
+        _ => false,
+    }
 }
 
 /// File name of an allowed host-package URL: https anywhere, plain http only
@@ -432,6 +479,7 @@ impl InstallPlanner {
                 InstallOperatorPaths {
                     plugin_source: request.plugin_source.clone(),
                     adobe_debug_root: request.adobe_debug_root.clone(),
+                    project: request.project.clone(),
                 },
             ),
             None => Self::build_info_steps(),
@@ -508,7 +556,13 @@ impl InstallPlanner {
                 }
             }
             "host-package" => {
-                return Self::build_host_package_steps(entry, install, dcc_type, dcc_path);
+                return Self::build_host_package_steps(
+                    entry,
+                    install,
+                    dcc_type,
+                    dcc_path,
+                    operator_paths.project,
+                );
             }
             other => {
                 // Unknown install type — produce an info step instead.
@@ -567,9 +621,18 @@ impl InstallPlanner {
         install: &CatalogInstall,
         dcc_type: &str,
         dcc_path: Option<PathBuf>,
+        project: Option<PathBuf>,
     ) -> Vec<InstallStep> {
         let host = install.host.clone().unwrap_or_default();
-        let Some(dcc_path) = dcc_path else {
+        let needs_dcc_path = host.launch.is_some()
+            || host
+                .steps
+                .iter()
+                .chain(&host.uninstall)
+                .chain(&host.project_steps)
+                .flatten()
+                .any(|token| token.contains("{dcc_path}"));
+        if needs_dcc_path && dcc_path.is_none() {
             return vec![InstallStep {
                 name: "install-host-package".into(),
                 description: format!(
@@ -577,7 +640,24 @@ impl InstallPlanner {
                 ),
                 action: None,
             }];
-        };
+        }
+        if !host.project_steps.is_empty() && project.is_none() {
+            return vec![InstallStep {
+                name: "install-host-package".into(),
+                description: format!(
+                    "Provide --project with the {dcc_type} project to set up; this adapter installs into each project."
+                ),
+                action: None,
+            }];
+        }
+        // Each package version gets its own directory, so a host still running
+        // an older version keeps its files.
+        let extract_to = host.extract.then(|| {
+            let url = install.url.as_deref().unwrap_or_default();
+            let name = host_package_file_name(url).unwrap_or_default();
+            let stem = name.strip_suffix(".zip").unwrap_or(&name).to_string();
+            default_adapter_dir().join(&entry.name).join(stem)
+        });
         // The catalog's own spelling names the launch plan, so start-instance
         // finds it under the same DCC type.
         let plan_dcc = entry
@@ -592,11 +672,14 @@ impl InstallPlanner {
                 url: install.url.clone().unwrap_or_default(),
                 sha256: install.sha256.clone().unwrap_or_default(),
                 dcc_path: dcc_path.clone(),
+                extract_to,
                 uninstall: host.uninstall,
                 steps: host.steps,
+                project: project.clone(),
+                project_steps: host.project_steps,
             }),
         }];
-        if let Some(argv) = host.launch {
+        if let (Some(argv), Some(dcc_path)) = (host.launch, dcc_path.clone()) {
             steps.push(InstallStep {
                 name: "write-launch-plan".into(),
                 description: format!("Record how start-instance launches {dcc_type}"),
@@ -614,7 +697,7 @@ impl InstallPlanner {
             action: Some(InstallStepAction::RegisterDcc {
                 dcc_type: dcc_type.to_string(),
                 entry_point: None,
-                dcc_path: Some(dcc_path),
+                dcc_path,
             }),
         });
         steps.push(InstallStep {
