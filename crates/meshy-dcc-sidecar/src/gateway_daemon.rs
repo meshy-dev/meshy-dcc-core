@@ -73,7 +73,7 @@ pub struct GatewayArgs {
     pub remote_host: String,
 
     /// Remote/LAN gateway port. 0 disables the remote listener.
-    #[arg(long, env = "MESHY_DCC_GATEWAY_REMOTE_PORT", default_value = "59765")]
+    #[arg(long, env = "MESHY_DCC_GATEWAY_REMOTE_PORT", default_value = "0")]
     pub remote_port: u16,
 
     /// Directory for the shared FileRegistry.

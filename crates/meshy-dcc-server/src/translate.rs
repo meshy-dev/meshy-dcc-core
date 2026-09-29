@@ -227,7 +227,7 @@ pub struct TranslateArgs {
     pub gateway_remote_host: String,
 
     /// Remote/LAN gateway port. 0 disables the remote listener.
-    #[arg(long, env = "MESHY_DCC_GATEWAY_REMOTE_PORT", default_value = "59765")]
+    #[arg(long, env = "MESHY_DCC_GATEWAY_REMOTE_PORT", default_value = "0")]
     pub gateway_remote_port: u16,
 
     /// Disable the Admin UI on the elected gateway.

@@ -29,6 +29,11 @@ and is not runtime-compatible with it. Attribution stays in `LICENSE` and
   counts as unavailable and the bundled catalog is used.
 - The marketplace's default source is
   `cdn.meshy.ai/meshy-dcc-core/marketplace/`.
+- The gateway no longer opens its remote (LAN) listener by default. Adapter
+  processes used to bind `0.0.0.0:59765` with no authentication, so anyone on
+  the network could list instances and call DCC tools. Set
+  `MESHY_DCC_GATEWAY_REMOTE_PORT` (and `MESHY_DCC_GATEWAY_REMOTE_HOST`) to
+  enable it; only loopback `127.0.0.1:19765` is served otherwise.
 - A local `call` must name its instance, either with an instance slug or
   with `--instance-id`, even when only one instance is live. The only
   exception is a tool the host marks `readOnlyHint: true`. The CLI rejects

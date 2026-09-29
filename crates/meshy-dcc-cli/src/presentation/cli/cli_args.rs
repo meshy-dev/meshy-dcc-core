@@ -410,7 +410,8 @@ pub(crate) struct GatewayStartArgs {
     pub(crate) registry_dir: Option<PathBuf>,
     #[arg(long, default_value = "127.0.0.1")]
     pub(crate) remote_host: String,
-    #[arg(long, default_value = "59765")]
+    /// Remote/LAN gateway port; 0 (the default) disables it.
+    #[arg(long, default_value = "0")]
     pub(crate) remote_port: u16,
     #[arg(long, default_value = "0")]
     pub(crate) gateway_idle_timeout_secs: u64,

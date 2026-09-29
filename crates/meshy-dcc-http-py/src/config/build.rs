@@ -3,6 +3,21 @@ use meshy_dcc_http_types::config::{McpHttpConfig, ServerSpawnMode};
 const DEFAULT_GATEWAY_PORT: u16 = 19765;
 const GATEWAY_PORT_ENV: &str = "MESHY_DCC_GATEWAY_PORT";
 
+/// The remote (LAN) gateway listener is off unless the operator sets
+/// `MESHY_DCC_GATEWAY_REMOTE_PORT`: it has no authentication, so binding it by
+/// default would let anyone on the network call DCC tools.
+fn remote_gateway_from_env() -> (Option<String>, u16) {
+    let port = std::env::var("MESHY_DCC_GATEWAY_REMOTE_PORT")
+        .ok()
+        .and_then(|value| value.parse().ok())
+        .unwrap_or(0);
+    let host = std::env::var("MESHY_DCC_GATEWAY_REMOTE_HOST")
+        .ok()
+        .filter(|value| !value.is_empty())
+        .unwrap_or_else(|| "127.0.0.1".to_string());
+    (Some(host), port)
+}
+
 fn gateway_port_from_env() -> u16 {
     std::env::var(GATEWAY_PORT_ENV)
         .ok()
@@ -38,8 +53,7 @@ pub(crate) fn build_config(
     cfg.server.enable_cors = enable_cors;
     cfg.server.request_timeout_ms = request_timeout_ms;
     cfg.gateway.gateway_port = gateway_port_from_env();
-    cfg.gateway.remote_host = Some("0.0.0.0".to_string());
-    cfg.gateway.remote_gateway_port = 59765;
+    (cfg.gateway.remote_host, cfg.gateway.remote_gateway_port) = remote_gateway_from_env();
     cfg.gateway.backend_timeout_ms = backend_timeout_ms;
     cfg.telemetry.enable_prometheus = enable_prometheus;
     cfg.telemetry.prometheus_basic_auth = prometheus_basic_auth;

@@ -143,7 +143,7 @@ pub(crate) struct ServerArgs {
     pub(crate) gateway_remote_host: String,
 
     /// Remote/LAN gateway port. 0 disables the remote listener.
-    #[arg(long, env = "MESHY_DCC_GATEWAY_REMOTE_PORT", default_value = "59765")]
+    #[arg(long, env = "MESHY_DCC_GATEWAY_REMOTE_PORT", default_value = "0")]
     pub(crate) gateway_remote_port: u16,
 
     /// Disable the Admin UI on the elected gateway.
@@ -293,7 +293,7 @@ mod tests {
         assert_eq!(parsed.server.app, "maya");
         assert_eq!(parsed.server.gateway_port, 19765);
         assert_eq!(parsed.server.gateway_remote_host, "127.0.0.1");
-        assert_eq!(parsed.server.gateway_remote_port, 59765);
+        assert_eq!(parsed.server.gateway_remote_port, 0);
     }
 
     #[test]

@@ -1285,7 +1285,7 @@ fn gateway_daemon_start_defaults_to_persistent_daemon() {
 
     assert_eq!(start.gateway_idle_timeout_secs, 0);
     assert_eq!(start.remote_host, "127.0.0.1");
-    assert_eq!(start.remote_port, 59765);
+    assert_eq!(start.remote_port, 0);
 }
 
 #[test]

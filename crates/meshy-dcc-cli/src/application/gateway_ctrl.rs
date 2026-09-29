@@ -276,7 +276,7 @@ pub async fn ensure_local_gateway_for_endpoint(
         registry_dir,
         remote_host: env_string("MESHY_DCC_GATEWAY_REMOTE_HOST")
             .unwrap_or_else(|| "127.0.0.1".to_string()),
-        remote_port: env_u16("MESHY_DCC_GATEWAY_REMOTE_PORT").unwrap_or(59765),
+        remote_port: env_u16("MESHY_DCC_GATEWAY_REMOTE_PORT").unwrap_or(0),
         gateway_idle_timeout_secs: env_u64("MESHY_DCC_GATEWAY_IDLE_TIMEOUT_SECS").unwrap_or(30),
         gateway_bin,
         wait_timeout_secs,
