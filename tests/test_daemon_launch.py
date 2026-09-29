@@ -41,7 +41,7 @@ class TestDetachedPopenKwargs:
 
 class TestLaunchDetached:
     def test_launch_echo_succeeds(self):
-        cmd = ["python", "-c", "exit(0)"] if sys.platform != "win32" else ["cmd", "/c", "exit 0"]
+        cmd = [sys.executable, "-c", "exit(0)"] if sys.platform != "win32" else ["cmd", "/c", "exit 0"]
         result = launch_detached(cmd)
         assert result.get("ok") is True
         assert "pid" in result
@@ -54,7 +54,7 @@ class TestLaunchDetached:
     @pytest.mark.skipif(sys.platform == "win32", reason="Unix start_new_session test")
     def test_launch_detached_uses_new_session_on_unix(self):
         """Child process group differs from parent when detached=True."""
-        cmd = ["python", "-c", "import time; time.sleep(2)"]
+        cmd = [sys.executable, "-c", "import time; time.sleep(2)"]
         result = launch_detached(cmd, detached=True)
         assert result.get("ok") is True
         child_pid = result["pid"]

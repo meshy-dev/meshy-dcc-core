@@ -21,13 +21,17 @@ fn fake_pip(temp: &TempDir, version: &str) -> std::path::PathBuf {
 
 #[test]
 fn install_execute_json_reports_manual_registration_as_deferred() {
+    let Some(python) = real_python() else {
+        eprintln!("skipping: no Python interpreter on PATH");
+        return;
+    };
     let temp = TempDir::new().unwrap();
     let plan = run_json(&[
         "install",
         "--dcc-type",
         "maya",
         "--python",
-        "python",
+        &python,
         "--catalog",
         FIXTURE_CATALOG,
     ]);
@@ -40,7 +44,7 @@ fn install_execute_json_reports_manual_registration_as_deferred() {
             "--dcc-type",
             "maya",
             "--python",
-            "python",
+            &python,
             "--execute",
             "--json",
         ])

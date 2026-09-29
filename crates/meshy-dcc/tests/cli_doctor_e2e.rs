@@ -60,38 +60,6 @@ fn doctor_adapter_imports_skip_without_an_interpreter() {
     assert_eq!(doctor["status"], "ok");
 }
 
-/// Locate a real interpreter, so the test can skip cleanly when none exists.
-fn real_python() -> Option<String> {
-    for var in ["PYTHON", "PYTHON3"] {
-        if let Some(path) = std::env::var(var)
-            .ok()
-            .filter(|path| !path.trim().is_empty())
-        {
-            return Some(path);
-        }
-    }
-    for candidate in ["python3", "python"] {
-        // `continue`, not `?`: a candidate that cannot be spawned at all (no
-        // such file) must not prevent trying the remaining candidates.
-        let Ok(probe) = std::process::Command::new(candidate)
-            .arg("-c")
-            .arg("import sys; sys.stdout.write(sys.executable)")
-            .stdout(std::process::Stdio::piped())
-            .stderr(std::process::Stdio::null())
-            .output()
-        else {
-            continue;
-        };
-        if probe.status.success() {
-            let path = String::from_utf8_lossy(&probe.stdout).trim().to_string();
-            if !path.is_empty() {
-                return Some(path);
-            }
-        }
-    }
-    None
-}
-
 /// The headline capability of PIP-3530, on a real interpreter: distribution
 /// metadata present but the module gone (an editable install whose source
 /// checkout was deleted) must be graded `unimportable`, not silently `ok`.

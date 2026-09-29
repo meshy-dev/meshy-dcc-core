@@ -1362,3 +1362,35 @@ pub(crate) fn sha256_hex(bytes: &[u8]) -> String {
     use sha2::{Digest, Sha256};
     hex::encode(Sha256::digest(bytes))
 }
+
+/// Locate a real interpreter, so the test can skip cleanly when none exists.
+pub(crate) fn real_python() -> Option<String> {
+    for var in ["PYTHON", "PYTHON3"] {
+        if let Some(path) = std::env::var(var)
+            .ok()
+            .filter(|path| !path.trim().is_empty())
+        {
+            return Some(path);
+        }
+    }
+    for candidate in ["python3", "python"] {
+        // `continue`, not `?`: a candidate that cannot be spawned at all (no
+        // such file) must not prevent trying the remaining candidates.
+        let Ok(probe) = std::process::Command::new(candidate)
+            .arg("-c")
+            .arg("import sys; sys.stdout.write(sys.executable)")
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::null())
+            .output()
+        else {
+            continue;
+        };
+        if probe.status.success() {
+            let path = String::from_utf8_lossy(&probe.stdout).trim().to_string();
+            if !path.is_empty() {
+                return Some(path);
+            }
+        }
+    }
+    None
+}
