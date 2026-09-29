@@ -19,15 +19,15 @@ entries:
     dcc: ["blender"]
     url: "https://www.meshy.ai"
     tags: ["adapter", "meshy", "blender"]
-    version: "0.2.11"
+    version: "0.1.0"
     maintainer: "Meshy"
     policy:
       installation: not_available
       reason: "The Meshy Blender adapter build is not published yet."
     install:
       type: host-package
-      url: "https://cdn.meshy.ai/meshy-dcc-core/adapters/blender/0.2.11/meshy_dcc_blender_addon_macos_v0.2.11.zip"
-      sha256: "b91a136be5af9a13b6dc8d6d3c914de997a135748b6a70200ef388f5de0c937b"
+      url: "https://cdn.meshy.ai/meshy-dcc-core/adapters/blender/0.1.0/meshy_dcc_blender_addon_macos_v0.1.0.zip"
+      sha256: "193e1e5a8c3b8148a5f54ddf2b63ac3120549ab5809df755ad14c747ea553dc7"
       host:
         uninstall:
           - ["{dcc_path}", "--command", "extension", "remove", "user_default.meshy_dcc_blender"]
