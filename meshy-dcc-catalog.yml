@@ -89,7 +89,7 @@ entries:
     install:
       type: host-package
       url: "https://cdn.meshy.ai/meshy-dcc-core/adapters/unreal/0.1.0/meshy_dcc_unreal_macos_arm64_v0.1.0.zip"
-      sha256: "c13b496e4e1dbcc9f1e5a4074c2be0280fbb85513cc488fa34a7adc699e5234a"
+      sha256: "a2690a4f91001eeddf3a7c00c28d9d28ee8d84c1037c6fd0e899953f170d4e72"
       host:
         extract: true
         project_steps:

@@ -2,8 +2,8 @@
 
 Verified on Unreal Engine 5.7.2, macOS arm64, with adapter `meshy-dcc-unreal` 0.1.0.
 
-- The adapter is a Python-only project plugin, `Plugins/MeshyDccUnreal`, that runs inside
-  the editor on the editor's own Python. `list` shows the editor's PID as the instance `pid`.
+- The adapter is a project plugin, `Plugins/MeshyDccUnreal`: a C++ editor module plus a
+  Python layer on the editor's own Python. `list` shows the editor's PID as the instance `pid`.
 - On macOS the editor needs Xcode with its license accepted and the Metal toolchain; without
   them it quits at startup with "Xcode Not Found". Tell the user; installing Xcode needs
   their Apple ID and an administrator password.
@@ -11,7 +11,8 @@ Verified on Unreal Engine 5.7.2, macOS arm64, with adapter `meshy-dcc-unreal` 0.
 
 ## Set up a project
 
-Installing copies the plugin into the project and writes `.meshy-dcc/` (launch plan,
+Installing copies the plugin into the project, builds its C++ module with the engine's
+build script (a few seconds to minutes), and writes `.meshy-dcc/` (launch plan, build log,
 receipt) next to the `.uproject`; the `.uproject` itself is not changed. The engine comes
 from the project's `EngineAssociation` (for example `5.7`) and the Epic Games Launcher's
 install list; for a source build or another location, set `MESHY_DCC_UNREAL_ENGINE` to the
@@ -23,6 +24,10 @@ meshy-dcc install --dcc-type unreal --project /absolute/project --execute --json
 
 A failed step explains itself in `steps[].message`. The installer refuses, and changes
 nothing, while `Plugins/MeshyDccUnreal` holds files it did not write; pass the message on.
+When the module does not build (installer exit 20), the message quotes the build log: the
+machine needs Visual Studio on Windows, or on macOS an Xcode inside the engine's range
+(Unreal 5.7 accepts up to 26.9 and refuses Xcode 27). Tell the user what is missing; do not
+edit the engine's configuration to get around it.
 
 ## Tools used most
 

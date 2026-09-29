@@ -65,8 +65,8 @@ and is not runtime-compatible with it. Attribution stays in `LICENSE` and
   it installs per project, and the Skill covers it
   (`skills/meshy-dcc/references/godot.md`).
 - Meshy Unreal adapter 0.1.0 in the bundled catalog (still `not_available`):
-  a Python-only plugin installed per project, covered by the Skill
-  (`skills/meshy-dcc/references/unreal.md`).
+  it installs per project and builds its C++ editor module there, and the
+  Skill covers it (`skills/meshy-dcc/references/unreal.md`).
 - `stop-instance --discard-unsaved` tells the host it may close even though
   work might be unsaved. Send it only after the user has agreed.
 - `meshy_dcc_core.host.safe_stop.serve_safe_stop` serves a loopback endpoint that
