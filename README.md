@@ -12,6 +12,10 @@ capabilities on demand, and route every call to the right scene or project.
   instantiate with readback, a PBR material built from a Meshy texture set
   (Built-in Standard), save and reopen, and stop (refused while scenes are
   unsaved unless the user agrees to discard them).
+- Godot 4.7.2: per-project install, start-instance, import of a textured
+  Meshy GLB with mesh and PBR material readback, save and reopen, and stop
+  (refused while scenes or scripts are unsaved unless the user agrees to
+  discard them).
 
 Other hosts are not in the support matrix yet.
 

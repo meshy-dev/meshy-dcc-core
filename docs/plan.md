@@ -110,7 +110,7 @@ ORM 打包图要按 glTF 约定取通道：G = roughness，B = metallic。现有
 |---|---|---|---|
 | Blender | `meshy-dcc-blender`，本地已建，真机验证过 | 基于 0.2.0 core 重建；Meshy 导入/PBR、3D 打印 skill | R1 首个 |
 | Unity | `meshy-dcc-unity`，本地已建，真机验证过（6000.4.10f1） | 按工程安装、自带 Python 的 sidecar；Meshy 模型导入/PBR 材质 skill | R1 |
-| Godot | 待建 | 补外部 glb/fbx 导入与导入就绪 | R1 |
+| Godot | `meshy-dcc-godot`，本地已建，真机验证过（4.7.2） | 按工程安装、自带 Python 的 sidecar；Meshy GLB 导入与导入就绪、PBR 读回 | R1 |
 | ZBrush | 待建（需 2026.1+） | 补导入格式与保存 | R2 |
 | Unreal | 待建 | macOS 本地编译插件；Meshy PBR 材质 | R2 |
 | Roblox | 新做 | Studio 插件 + core 桥接（传输方式待验证）；资产走 Open Cloud | R2 |

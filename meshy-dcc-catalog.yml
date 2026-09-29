@@ -27,7 +27,7 @@ entries:
     install:
       type: host-package
       url: "https://cdn.meshy.ai/meshy-dcc-core/adapters/blender/0.1.0/meshy_dcc_blender_addon_macos_v0.1.0.zip"
-      sha256: "f5ef96d19de941b87e82dafc329b627bda6625bed660f82025560b41b97a77f8"
+      sha256: "56adb77f8ec61e275b8a8e90b0e73e91c89f4c181ddf2bdcb14c04260953b50f"
       host:
         uninstall:
           - ["{dcc_path}", "--command", "extension", "remove", "user_default.meshy_dcc_blender"]
@@ -49,21 +49,31 @@ entries:
     install:
       type: host-package
       url: "https://cdn.meshy.ai/meshy-dcc-core/adapters/unity/0.1.0/meshy_dcc_unity_macos_arm64_v0.1.0.zip"
-      sha256: "90f1758e8117ce4e65901a2d570078302d878fab9faab8b8c746b100712db681"
+      sha256: "162087d3ad749ab7c9975f054c6b4c9308f3ebf7b16bd392be0091c60c6c0151"
       host:
         extract: true
         project_steps:
           - ["{package_dir}/bin/meshy-dcc-unity-sidecar", "install", "--project", "{project}", "--sidecar", "{package_dir}/bin/meshy-dcc-unity-sidecar", "--files-only", "--yes", "--json"]
 
   - name: "meshy-dcc-godot"
-    description: "Meshy DCC adapter for Godot (planned)"
+    description: "Meshy DCC adapter for Godot 4.4+: project, scene, GLB import, PBR readback and game-authoring tools"
     dcc: ["godot"]
     url: "https://www.meshy.ai"
     tags: ["adapter", "meshy", "godot"]
+    version: "0.1.0"
     maintainer: "Meshy"
     policy:
       installation: not_available
-      reason: "The Meshy Godot adapter is in development."
+      reason: "The Meshy Godot adapter build is not published yet."
+    # Installs per project: `meshy-dcc install --dcc-type godot --project <root>`.
+    install:
+      type: host-package
+      url: "https://cdn.meshy.ai/meshy-dcc-core/adapters/godot/0.1.0/meshy_dcc_godot_macos_arm64_v0.1.0.zip"
+      sha256: "88f5feba6b9c5d07ab1ad3436ed9f6dedf87943df8342f6d955ae2de77570858"
+      host:
+        extract: true
+        project_steps:
+          - ["{package_dir}/bin/meshy-dcc-godot-sidecar", "install", "{project}", "--sidecar", "{package_dir}/bin/meshy-dcc-godot-sidecar", "--files-only", "--yes", "--json"]
 
   - name: "meshy-dcc-unreal"
     description: "Meshy DCC adapter for Unreal Engine (planned)"
