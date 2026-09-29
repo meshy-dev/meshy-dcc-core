@@ -69,7 +69,7 @@ entries:
     install:
       type: host-package
       url: "https://cdn.meshy.ai/meshy-dcc-core/adapters/godot/0.1.0/meshy_dcc_godot_macos_arm64_v0.1.0.zip"
-      sha256: "88f5feba6b9c5d07ab1ad3436ed9f6dedf87943df8342f6d955ae2de77570858"
+      sha256: "bfaa85f2dfcbc1e22b77db2df58c5c7ba28fa34d114a845a88b8b2ec536d7184"
       host:
         extract: true
         project_steps:
