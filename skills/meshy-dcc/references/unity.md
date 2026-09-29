@@ -45,6 +45,30 @@ recommends `start_instance`.
 Unity's `dirty` flag is reliable. `open_scene` refuses while a scene is dirty, and so does
 `stop-instance`, with `unsaved_changes`, unless the user agreed to `--discard-unsaved`.
 
-A keyed texture set (`material_textures` with each PNG's `bytes` and `sha256`, all in the
-FBX's folder) maps to one Standard (Built-in) or Lit (URP) material. The tool does not
-install URP or switch pipelines.
+## Materials from a Meshy texture set
+
+A keyed texture set maps to one Standard (Built-in) or Lit (URP) material. The tool does
+not install URP or switch pipelines. Put the FBX and its PNGs in the same new folder below
+`Assets/` and pass that folder as `material_root`.
+
+A Meshy "FBX with textures" download holds `<name>.fbx` and these PNGs:
+
+| File | Role and key (set 0) |
+|---|---|
+| `<name>.png` | `base_color`, `texture_0_base_color` |
+| `<name>_normal.png` | `normal`, `texture_0_normal` |
+| `<name>_metallic.png` | `metallic`, `texture_0_metallic` |
+| `<name>_roughness.png` | `roughness`, `texture_0_roughness` |
+
+Each entry of `material_textures` needs `key`, `path` (`Assets/...`), `bytes` and `sha256`
+of the file as copied; the tool re-checks them. It writes `MeshyMaterials/` next to the
+FBX: sRGB base color, a NormalMap, and one linear map with metallic in red and
+1 − roughness in alpha. `material_delivery.status` is `verified` only after readback.
+
+## Looking at the result
+
+`unity_diagnostics__capture_game_view` needs Play Mode and a rendering Game View. An
+Editor in the background does not render, and the capture times out, unless the project
+has Run In Background on (`session.run_in_background`). Ask the user to bring Unity to
+the front or to enable that setting; do not change project settings yourself. Meshy
+characters face +Z, so Unity's default camera sees their back.

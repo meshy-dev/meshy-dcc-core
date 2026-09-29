@@ -9,8 +9,9 @@ capabilities on demand, and route every call to the right scene or project.
 - Blender 5.0.1: list, search, load-skill, describe, call and readback, plus
   host-package install, start-instance and consent-gated stop.
 - Unity 6000.4.10f1: per-project install, start-instance, FBX import and
-  instantiate with readback, save and reopen, and stop (refused while scenes
-  are unsaved unless the user agrees to discard them).
+  instantiate with readback, a PBR material built from a Meshy texture set
+  (Built-in Standard), save and reopen, and stop (refused while scenes are
+  unsaved unless the user agrees to discard them).
 
 Other hosts are not in the support matrix yet.
 
