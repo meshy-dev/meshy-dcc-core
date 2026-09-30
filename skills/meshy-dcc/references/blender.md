@@ -29,20 +29,6 @@ returns each object's name, type, location and visibility.
 - `new_scene` and `open_scene` replace the current scene. Before calling either, save the
   scene or get the user's OK to discard it.
 
-## Tools with an empty schema
-
-Some tools, `save_scene` among them, publish only `{"type": "object"}`. Their arguments
-are the keyword parameters of the tool's script, which lives inside the extension:
-
-```text
-<Blender user resources>/extensions/user_default/meshy_dcc_blender/skills/<skill>/tools.yaml
-<Blender user resources>/extensions/user_default/meshy_dcc_blender/skills/<skill>/scripts/<tool>.py
-```
-
-On macOS the user resources directory is `~/Library/Application Support/Blender/<major.minor>/`
-unless `BLENDER_USER_RESOURCES` is set. Read the script only to learn its arguments; call
-the tool through `meshy-dcc`, never by running the script.
-
 ## Render settings
 
 Blender 5.0 names the EEVEE engine `BLENDER_EEVEE`, not `BLENDER_EEVEE_NEXT`. After

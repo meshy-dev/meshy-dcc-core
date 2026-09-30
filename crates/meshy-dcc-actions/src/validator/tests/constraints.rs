@@ -132,3 +132,34 @@ fn test_enum_fails() {
     let v = ToolValidator::new(&meta);
     assert!(!v.validate_input(&json!("extreme")).is_valid());
 }
+
+// ── pattern ───────────────────────────────────────────────────────────────
+
+#[test]
+fn test_pattern_rejects_a_non_uuid_request_id() {
+    let meta = make_meta_with_schema(json!({
+        "type": "object",
+        "properties": {"request_id": {
+            "type": "string",
+            "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+        }}
+    }));
+    let v = ToolValidator::new(&meta);
+    assert!(
+        v.validate_input(&json!({"request_id": "3f2b8c1e-9a4d-4e7b-8c2a-1d5e6f7a8b9c"}))
+            .is_valid()
+    );
+    let result = v.validate_input(&json!({"request_id": "refresh-1"}));
+    assert!(!result.is_valid());
+    assert!(result.errors[0].message.contains("does not match pattern"));
+}
+
+#[test]
+fn test_pattern_that_does_not_compile_is_skipped() {
+    let meta = make_meta_with_schema(json!({"type": "string", "pattern": "(?<=a)b"}));
+    assert!(
+        ToolValidator::new(&meta)
+            .validate_input(&json!("b"))
+            .is_valid()
+    );
+}

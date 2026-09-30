@@ -99,9 +99,6 @@ meshy-dcc load-skill SKILL_NAME --instance-id ID
 - **Building the call slug:** it is `<dcc_type>.<instance_short>.<tools[].name>`, for
   example `blender.1a2b3c4d.blender_interchange__import_file`. Use names from this
   result, not the slug a search showed before loading.
-- **Empty schemas:** some tools publish only `{"type": "object"}`, and `describe` cannot
-  fill in the arguments. Find them as the host reference explains; don't guess argument
-  names.
 - **Loaded tools:** `search --instance-id ID` without a query lists what is already
   loaded.
 

@@ -3007,6 +3007,7 @@ dependencies = [
  "pyo3",
  "pyo3-stub-gen",
  "pyo3-stub-gen-derive",
+ "regex",
  "serde",
  "serde_json",
  "tracing",

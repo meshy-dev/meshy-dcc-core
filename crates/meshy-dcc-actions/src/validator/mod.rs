@@ -12,6 +12,7 @@
 //! | `properties` (nested type + enum check) | yes |
 //! | `enum` (top-level) | yes |
 //! | `minLength` / `maxLength` | yes |
+//! | `pattern` (Rust regex syntax; a pattern that does not compile is skipped) | yes |
 //! | `minimum` / `maximum` | yes |
 //! | `minItems` / `maxItems` | yes |
 //! | `additionalProperties: false` | yes |
@@ -198,6 +199,15 @@ pub(crate) fn validate_value(
                     "string length {} is less than minLength {min}",
                     s.chars().count()
                 ),
+            });
+        }
+        if let Some(pattern) = schema_obj.get("pattern").and_then(Value::as_str)
+            && let Ok(regex) = regex::Regex::new(pattern)
+            && !regex.is_match(s)
+        {
+            errors.push(ValidationError {
+                path: path.to_string(),
+                message: format!("string does not match pattern {pattern}"),
             });
         }
     }
