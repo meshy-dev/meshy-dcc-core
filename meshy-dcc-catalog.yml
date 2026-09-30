@@ -27,7 +27,7 @@ entries:
     install:
       type: host-package
       url: "https://cdn.meshy.ai/meshy-dcc-core/adapters/blender/0.1.0/meshy_dcc_blender_addon_macos_v0.1.0.zip"
-      sha256: "0e14d5153564510884add90d10d85d7389f40564b66494cf1f629fbd02e67189"
+      sha256: "dc8462e6317dba5ee6b22458b56dab7e404e0ed1089c94033232b879c5529a20"
       host:
         uninstall:
           - ["{dcc_path}", "--command", "extension", "remove", "user_default.meshy_dcc_blender"]
