@@ -84,12 +84,16 @@ pub async fn search_local(registry_dir: PathBuf, request: SearchRequest) -> anyh
         extend_skill_hits(&mut skill_hits, entry, &payload);
         let payload_returned = tool_hits.len() + skill_hits.len();
         for (list, list_hits) in [(2 * index, tool_hits), (2 * index + 1, skill_hits)] {
-            ranked.extend(
-                list_hits
-                    .into_iter()
-                    .enumerate()
-                    .map(|(rank, hit)| (rank, list, hit)),
-            );
+            ranked.extend(list_hits.into_iter().enumerate().map(|(rank, hit)| {
+                // A tool matching only part of a word (`materialize_script`
+                // for `material`) goes after every skill to load.
+                let partial = hit.get("exact_match") == Some(&Value::Bool(false));
+                (
+                    rank + if partial { PARTIAL_MATCH_RANK } else { 0 },
+                    list,
+                    hit,
+                )
+            }));
         }
         let payload_matches = payload
             .get("total_matches")
@@ -143,6 +147,8 @@ pub async fn search_local(registry_dir: PathBuf, request: SearchRequest) -> anyh
         "query": request.query,
     }))
 }
+
+const PARTIAL_MATCH_RANK: usize = 1_000;
 
 fn effective_search_limit(query: Option<&str>, requested: Option<usize>) -> usize {
     match requested {
@@ -1204,6 +1210,7 @@ fn extend_tool_hits(hits: &mut Vec<Value>, entry: &ServiceEntry, payload: &Value
             "annotations": annotations,
             "metadata": tool.get("metadata").cloned().unwrap_or(Value::Null),
             "loaded": true,
+            "exact_match": tool.get("exact_match").cloned().unwrap_or(Value::Null),
             "next_step": next_step,
             "scope": "local",
             "source": "local_mcp",

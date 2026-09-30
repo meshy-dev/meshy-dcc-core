@@ -49,34 +49,59 @@ fn matches_phrase(haystack: &str, query: &str, query_words: &[&str]) -> bool {
     }
 }
 
-/// Rank a matched tool: the whole query in its name first, then each query word
-/// found in the name, the skill name, or anywhere else in `haystack`.
-fn tool_score(name: &str, skill: &str, haystack: &str, query: &str, query_words: &[&str]) -> u32 {
+/// Rank a matched tool: the whole query ending its name first, then each
+/// query word as a whole word of the name, inside the name, in the skill name,
+/// or anywhere else in `haystack`. Also reports whether every query word is a
+/// whole word of the tool or skill name, which separates `import_gltf` from
+/// `reimport_all` or `materialize_script` for the query `material`.
+fn tool_score(
+    name: &str,
+    skill: &str,
+    haystack: &str,
+    query: &str,
+    query_words: &[&str],
+) -> (u32, bool) {
     let name = name.to_lowercase();
     let skill = skill.to_lowercase();
-    let words = if query_words.is_empty() {
+    let words_of = |text: &str| -> Vec<String> {
+        text.split(|c: char| !c.is_ascii_alphanumeric())
+            .filter(|word| !word.is_empty())
+            .map(str::to_string)
+            .collect()
+    };
+    let name_words = words_of(&name);
+    let skill_words = words_of(&skill);
+    let words: Vec<&str> = if query_words.is_empty() {
         vec![query]
     } else {
         query_words.to_vec()
     };
-    let phrase = words.join("_");
-    let mut score = if name.ends_with(&phrase) {
+    let ends_with_query = name_words
+        .len()
+        .checked_sub(words.len())
+        .is_some_and(|start| name_words[start..].iter().zip(&words).all(|(a, b)| a == b));
+    let mut score = if ends_with_query {
         20
-    } else if name.contains(&phrase) {
+    } else if name.contains(&words.join("_")) {
         10
     } else {
         0
     };
+    let mut exact = true;
     for word in &words {
-        score += if name.contains(word) {
-            4
+        let whole = name_words.iter().any(|w| w == word);
+        exact &= whole || skill_words.iter().any(|w| w == word);
+        score += if whole {
+            6
+        } else if name.contains(word) {
+            3
         } else if skill.contains(word) {
             2
         } else {
             u32::from(haystack.contains(word))
         };
     }
-    score
+    (score, exact)
 }
 
 pub(in crate::rmcp_tool_call_dispatch) fn handle_search_tools(
@@ -195,7 +220,8 @@ pub(in crate::rmcp_tool_call_dispatch) fn handle_search_tools(
             }
         });
         let skill = meta.skill_name.as_deref().unwrap_or_default();
-        let score = tool_score(&meta.name, skill, &haystack, &query, &query_words);
+        let (score, exact) = tool_score(&meta.name, skill, &haystack, &query, &query_words);
+        hit["exact_match"] = Value::Bool(exact);
         tool_hits.push((score, hit));
     }
 
@@ -219,8 +245,9 @@ pub(in crate::rmcp_tool_call_dispatch) fn handle_search_tools(
                 continue;
             }
             let name = format!("__skill__{}", summary.name);
-            let score = tool_score(&name, &summary.name, &haystack, &query, &query_words);
+            let (score, exact) = tool_score(&name, &summary.name, &haystack, &query, &query_words);
             tool_hits.push((score, json!({
+                "exact_match": exact,
                 "kind": "tool",
                 "name": name,
                 "description": format!(
@@ -249,8 +276,9 @@ pub(in crate::rmcp_tool_call_dispatch) fn handle_search_tools(
             if !matches_phrase(&haystack, &query, &query_words) {
                 continue;
             }
-            let score = tool_score(&stub_name, &skill, &haystack, &query, &query_words);
+            let (score, exact) = tool_score(&stub_name, &skill, &haystack, &query, &query_words);
             tool_hits.push((score, json!({
+                "exact_match": exact,
                 "kind": "tool",
                 "name": stub_name,
                 "description": format!(
@@ -463,6 +491,29 @@ mod tests {
                 "blender_scene__list_objects",
             ]
         );
+    }
+
+    #[test]
+    fn tool_score_prefers_whole_words() {
+        let (score, exact) = tool_score(
+            "blender_interchange__import_gltf",
+            "",
+            "",
+            "import gltf",
+            &["import", "gltf"],
+        );
+        assert!(exact);
+        assert_eq!(score, 32);
+        let (partial, exact) = tool_score("materialize_script", "", "", "material", &[]);
+        assert!(!exact);
+        let (whole, _) = tool_score(
+            "blender_materials__create_material",
+            "blender-materials",
+            "",
+            "material",
+            &[],
+        );
+        assert!(whole > partial, "{whole} vs {partial}");
     }
 
     #[test]
