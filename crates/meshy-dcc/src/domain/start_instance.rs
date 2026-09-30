@@ -182,45 +182,54 @@ impl BlockingState {
     }
 
     /// Machine-readable next action. `command` is copy-pasteable and always
-    /// non-interactive so an agent can execute it verbatim.
+    /// non-interactive; a retried start-instance keeps the caller's flags.
+    /// The CLI adds its own global flags (`--gateway local`, …) on output.
     #[must_use]
     pub fn next_action(
         self,
         dcc_type: &str,
         project: Option<&Path>,
         operation_id: Option<&str>,
+        invocation: &Invocation,
     ) -> Value {
-        let project_args = |extra: &[&str]| -> Vec<String> {
-            let mut command = vec![
-                "meshy-dcc".to_string(),
-                "--output".to_string(),
-                "json".to_string(),
-                "--non-interactive".to_string(),
-                "start-instance".to_string(),
-                "--dcc-type".to_string(),
-                dcc_type.to_string(),
-            ];
-            if let Some(project) = project {
-                command.push("--project".to_string());
-                command.push(project.display().to_string());
-            }
-            command.extend(extra.iter().map(|flag| (*flag).to_string()));
-            command.push("--yes".to_string());
+        let command = |args: &[&str]| -> Vec<String> {
+            let mut command = ["meshy-dcc", "--non-interactive", "--output", "json"]
+                .map(str::to_string)
+                .to_vec();
+            command.extend(args.iter().map(|arg| (*arg).to_string()));
             command
         };
-        let stop_command = |operation: Option<&str>| -> Vec<String> {
-            let mut command = vec![
-                "meshy-dcc".to_string(),
-                "--output".to_string(),
-                "json".to_string(),
-                "--non-interactive".to_string(),
-                "stop-instance".to_string(),
-            ];
-            if let Some(operation) = operation {
-                command.push("--operation-id".to_string());
-                command.push(operation.to_string());
+        let project_args = |replace: &[&str]| -> Vec<String> {
+            let mut args = command(&["start-instance", "--dcc-type", dcc_type]);
+            if let Some(project) = project {
+                args.push("--project".to_string());
+                args.push(project.display().to_string());
             }
-            command
+            args.extend(invocation.start_flags_without(replace));
+            args.extend(replace.iter().map(|flag| (*flag).to_string()));
+            args.push("--yes".to_string());
+            args
+        };
+        let stop_command = |operation: Option<&str>| -> Vec<String> {
+            let mut args = command(&["stop-instance"]);
+            if let Some(operation) = operation {
+                args.push("--operation-id".to_string());
+                args.push(operation.to_string());
+            }
+            args
+        };
+        let install_command = || command(&["install", "--dcc-type", dcc_type]);
+        let fix_project_command = || {
+            let mut args = command(&[
+                "start-instance",
+                "--dcc-type",
+                dcc_type,
+                "--project",
+                "<absolute-project-path>",
+            ]);
+            args.extend(invocation.start_flags_without(&[]));
+            args.push("--yes".to_string());
+            args
         };
 
         match self {
@@ -228,14 +237,7 @@ impl BlockingState {
                 "id": "call_instance",
                 "summary": "Instance is ready; continue with search/describe/call on the returned instance.",
                 "requires_consent": false,
-                "command": vec![
-                    "meshy-dcc".to_string(),
-                    "--output".to_string(),
-                    "json".to_string(),
-                    "search".to_string(),
-                    "--dcc-type".to_string(),
-                    dcc_type.to_string(),
-                ],
+                "command": command(&["search", "--dcc-type", dcc_type]),
             }),
             Self::RestartRequired => json!({
                 "id": "restart_host",
@@ -265,26 +267,13 @@ impl BlockingState {
                 "id": "inspect_adapter_bootstrap",
                 "summary": "The host is running but the adapter/sidecar never registered. Inspect the instance diagnostics, then retry.",
                 "requires_consent": false,
-                "command": vec![
-                    "meshy-dcc".to_string(),
-                    "--output".to_string(),
-                    "json".to_string(),
-                    "doctor".to_string(),
-                ],
+                "command": command(&["doctor"]),
             }),
             Self::MissingExecutable => json!({
                 "id": "reinstall_adapter",
                 "summary": "The recorded DCC executable is missing. Re-run the adapter install so the receipt points at a real executable.",
                 "requires_consent": false,
-                "command": vec![
-                    "meshy-dcc".to_string(),
-                    "--output".to_string(),
-                    "json".to_string(),
-                    "--non-interactive".to_string(),
-                    "install".to_string(),
-                    "--dcc-type".to_string(),
-                    dcc_type.to_string(),
-                ],
+                "command": install_command(),
             }),
             Self::VersionMismatch => json!({
                 "id": "pin_matching_version",
@@ -296,26 +285,13 @@ impl BlockingState {
                 "id": "select_exact_instance",
                 "summary": "Several live instances claim this project. Stop the extra instance or pass --instance-id to target one exactly.",
                 "requires_consent": true,
-                "command": vec![
-                    "meshy-dcc".to_string(),
-                    "--output".to_string(),
-                    "json".to_string(),
-                    "list".to_string(),
-                ],
+                "command": command(&["list"]),
             }),
             Self::LaunchPlanMissing => json!({
                 "id": "install_adapter",
                 "summary": "No launch plan is published for this DCC type and project. Install the adapter so it writes a validated launch plan.",
                 "requires_consent": false,
-                "command": vec![
-                    "meshy-dcc".to_string(),
-                    "--output".to_string(),
-                    "json".to_string(),
-                    "--non-interactive".to_string(),
-                    "install".to_string(),
-                    "--dcc-type".to_string(),
-                    dcc_type.to_string(),
-                ],
+                "command": install_command(),
             }),
             Self::AuthorizationRequired => json!({
                 "id": "authorize_launch",
@@ -339,43 +315,19 @@ impl BlockingState {
                 "id": "repair_launch_plan",
                 "summary": "The launch plan is malformed or unsafe. Re-install the adapter so it republishes a validated launch plan.",
                 "requires_consent": false,
-                "command": vec![
-                    "meshy-dcc".to_string(),
-                    "--output".to_string(),
-                    "json".to_string(),
-                    "--non-interactive".to_string(),
-                    "install".to_string(),
-                    "--dcc-type".to_string(),
-                    dcc_type.to_string(),
-                ],
+                "command": install_command(),
             }),
             Self::ProjectNotFound => json!({
                 "id": "fix_project_path",
                 "summary": "The project path does not exist or is not a directory. Pass the exact absolute project root.",
                 "requires_consent": true,
-                "command": vec![
-                    "meshy-dcc".to_string(),
-                    "--output".to_string(),
-                    "json".to_string(),
-                    "--non-interactive".to_string(),
-                    "start-instance".to_string(),
-                    "--dcc-type".to_string(),
-                    dcc_type.to_string(),
-                    "--project".to_string(),
-                    "<absolute-project-path>".to_string(),
-                    "--yes".to_string(),
-                ],
+                "command": fix_project_command(),
             }),
             Self::ProjectMarkerMissing => json!({
                 "id": "verify_project_binding",
                 "summary": "The project is missing the adapter's binding markers, so it may not be the project this adapter was installed for.",
                 "requires_consent": false,
-                "command": vec![
-                    "meshy-dcc".to_string(),
-                    "--output".to_string(),
-                    "json".to_string(),
-                    "doctor".to_string(),
-                ],
+                "command": command(&["doctor"]),
             }),
             Self::LaunchFailed => json!({
                 "id": "inspect_launch_failure",
@@ -384,6 +336,39 @@ impl BlockingState {
                 "command": project_args(&[]),
             }),
         }
+    }
+}
+
+/// How start-instance was invoked, so a retry in `next_action.command`
+/// repeats it.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct Invocation {
+    /// start-instance flags other than `--dcc-type`, `--project` and `--yes`,
+    /// for example `--launch-plan <path>` or `--wait-ready`.
+    pub start: Vec<String>,
+}
+
+impl Invocation {
+    /// The start-instance flags, minus any flag (with its value) that
+    /// `replace` sets again.
+    fn start_flags_without(&self, replace: &[&str]) -> Vec<String> {
+        let mut flags = Vec::new();
+        let mut skip_value = false;
+        for (index, flag) in self.start.iter().enumerate() {
+            if skip_value {
+                skip_value = false;
+                continue;
+            }
+            if replace.contains(&flag.as_str()) {
+                skip_value = self
+                    .start
+                    .get(index + 1)
+                    .is_some_and(|next| !next.starts_with("--"));
+                continue;
+            }
+            flags.push(flag.clone());
+        }
+        flags
     }
 }
 
@@ -692,6 +677,8 @@ pub struct StartInstanceRequest {
     pub registry_dir: PathBuf,
     /// Reuse only this exact instance when converging.
     pub instance_id: Option<String>,
+    /// Repeated in `next_action.command`.
+    pub invocation: Invocation,
 }
 
 /// Classify a live instance's advertised failure/blocking metadata into a safe
@@ -1037,6 +1024,7 @@ mod tests {
             "unity",
             Some(Path::new("/work/MyProject")),
             None,
+            &Invocation::default(),
         )["summary"]
             .as_str()
             .unwrap()
@@ -1053,12 +1041,48 @@ mod tests {
             "unity",
             Some(Path::new("/work/MyProject")),
             Some("op-1"),
+            &Invocation::default(),
         );
         let command = action["command"].as_array().unwrap();
 
         assert_eq!(action["id"], "release_project_lock");
         assert!(command.iter().any(|flag| flag == "--non-interactive"));
         assert!(command.iter().any(|flag| flag == "start-instance"));
+    }
+
+    #[test]
+    fn next_actions_repeat_the_start_flags() {
+        let invocation = Invocation {
+            start: vec![
+                "--launch-plan".into(),
+                "/work/plan.json".into(),
+                "--timeout-secs".into(),
+                "60".into(),
+                "--wait-ready".into(),
+            ],
+        };
+        let command = |state: BlockingState| -> Vec<String> {
+            serde_json::from_value(
+                state.next_action(
+                    "unity",
+                    Some(Path::new("/work/MyProject")),
+                    Some("op-1"),
+                    &invocation,
+                )["command"]
+                    .clone(),
+            )
+            .unwrap()
+        };
+
+        assert_eq!(
+            command(BlockingState::Timeout).join(" "),
+            "meshy-dcc --non-interactive --output json start-instance --dcc-type unity --project /work/MyProject \
+             --launch-plan /work/plan.json --wait-ready --timeout-secs 300 --yes"
+        );
+        assert_eq!(
+            command(BlockingState::RestartRequired).join(" "),
+            "meshy-dcc --non-interactive --output json stop-instance --operation-id op-1"
+        );
     }
 
     #[test]
@@ -1122,8 +1146,12 @@ mod tests {
             BlockingState::LaunchFailed,
         ];
         for state in states {
-            let action =
-                state.next_action("unity", Some(Path::new("/work/MyProject")), Some("op-1"));
+            let action = state.next_action(
+                "unity",
+                Some(Path::new("/work/MyProject")),
+                Some("op-1"),
+                &Invocation::default(),
+            );
             let command = action["command"].as_array().unwrap();
             let carries_yes = command.iter().any(|flag| flag == "--yes");
             if carries_yes {

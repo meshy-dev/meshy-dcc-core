@@ -1112,6 +1112,23 @@ pub(crate) fn spawn_local_mcp_fixture() -> LocalMcpFixture {
                 }))
             }),
         )
+        .route(
+            "/safe-stop-dirty",
+            post(|Json(body): Json<Value>| async move {
+                if body.get("discard_unsaved") == Some(&Value::Bool(true)) {
+                    return (StatusCode::ACCEPTED, Json(json!({"stopping": true})));
+                }
+                (
+                    StatusCode::CONFLICT,
+                    Json(json!({
+                        "stopping": false,
+                        "reason": "unsaved_changes",
+                        "unsaved": ["/Game/Maps/Lookdev"],
+                        "detail": "The host has unsaved maps."
+                    })),
+                )
+            }),
+        )
         .with_state((
             tools_list_calls.clone(),
             activate_group_calls.clone(),

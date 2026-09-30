@@ -207,8 +207,14 @@ pub enum InstallPlanError {
     UnsupportedDcc(String),
     #[error("no install metadata found in catalog entry for '{0}'")]
     MissingInstallMetadata(String),
-    #[error("catalog entry '{0}' is not available for installation")]
-    NotAvailable(String),
+    #[error(
+        "catalog entry '{name}' is not available for installation{}",
+        reason.as_deref().map(|reason| format!(": {reason}")).unwrap_or_default()
+    )]
+    NotAvailable {
+        name: String,
+        reason: Option<String>,
+    },
     #[error("catalog entry '{name}' has unsupported installation policy '{installation}'")]
     InvalidInstallationPolicy { name: String, installation: String },
     #[error("catalog entry '{name}' has invalid min_core_version '{required}'")]

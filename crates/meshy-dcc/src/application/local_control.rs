@@ -13,6 +13,7 @@ use meshy_dcc_transport::discovery::types::ServiceEntry;
 use serde_json::{Map, Value, json};
 
 use crate::application::local_instance;
+use crate::domain::refusal::{Refusal, RefusalKind};
 use crate::domain::rest::{
     Endpoint, ReloadSkillsRequest, SearchRequest, StopInstanceRequest, WaitReadyRequest,
 };
@@ -29,7 +30,8 @@ pub async fn search_local(registry_dir: PathBuf, request: SearchRequest) -> anyh
         request.instance_id.as_deref(),
     )?;
     let gateway = HttpGateway::default();
-    let mut hits = Vec::new();
+    // (rank within its host list, list index, hit)
+    let mut ranked: Vec<(usize, usize, Value)> = Vec::new();
     let mut total_matches = 0_usize;
     let mut truncated = false;
     let query = request
@@ -40,7 +42,7 @@ pub async fn search_local(registry_dir: PathBuf, request: SearchRequest) -> anyh
         .map(str::to_string);
     let limit = effective_search_limit(query.as_deref(), request.limit);
 
-    for entry in &entries {
+    for (index, entry) in entries.iter().enumerate() {
         let discovery_mcp_url = local_instance::discovery_mcp_url(entry);
         let payload = if let Some(query) = query.as_deref() {
             let search_result = mcp_call_tool(
@@ -76,10 +78,19 @@ pub async fn search_local(registry_dir: PathBuf, request: SearchRequest) -> anyh
                 })?;
             json!({ "tools": tools })
         };
-        let previous = hits.len();
-        extend_tool_hits(&mut hits, entry, &payload);
-        extend_skill_hits(&mut hits, entry, &payload);
-        let payload_returned = hits.len() - previous;
+        let mut tool_hits = Vec::new();
+        extend_tool_hits(&mut tool_hits, entry, &payload);
+        let mut skill_hits = Vec::new();
+        extend_skill_hits(&mut skill_hits, entry, &payload);
+        let payload_returned = tool_hits.len() + skill_hits.len();
+        for (list, list_hits) in [(2 * index, tool_hits), (2 * index + 1, skill_hits)] {
+            ranked.extend(
+                list_hits
+                    .into_iter()
+                    .enumerate()
+                    .map(|(rank, hit)| (rank, list, hit)),
+            );
+        }
         let payload_matches = payload
             .get("total_matches")
             .or_else(|| payload.get("total"))
@@ -92,21 +103,29 @@ pub async fn search_local(registry_dir: PathBuf, request: SearchRequest) -> anyh
             || payload_returned < payload_matches;
     }
 
-    hits.sort_by(|left, right| {
-        let left_key = left
-            .get("slug")
-            .and_then(Value::as_str)
-            .or_else(|| left.get("skill_name").and_then(Value::as_str));
-        let right_key = right
-            .get("slug")
-            .and_then(Value::as_str)
-            .or_else(|| right.get("skill_name").and_then(Value::as_str));
-        left_key.cmp(&right_key).then_with(|| {
-            left.get("instance_id")
+    if query.is_some() {
+        // Each host returns its tools and its skill candidates best match
+        // first; interleave the lists by rank so every list's best hit leads.
+        ranked.sort_by_key(|(rank, list, _)| (*rank, *list));
+    }
+    let mut hits: Vec<Value> = ranked.into_iter().map(|(_, _, hit)| hit).collect();
+    if query.is_none() {
+        hits.sort_by(|left, right| {
+            let left_key = left
+                .get("slug")
                 .and_then(Value::as_str)
-                .cmp(&right.get("instance_id").and_then(Value::as_str))
-        })
-    });
+                .or_else(|| left.get("skill_name").and_then(Value::as_str));
+            let right_key = right
+                .get("slug")
+                .and_then(Value::as_str)
+                .or_else(|| right.get("skill_name").and_then(Value::as_str));
+            left_key.cmp(&right_key).then_with(|| {
+                left.get("instance_id")
+                    .and_then(Value::as_str)
+                    .cmp(&right.get("instance_id").and_then(Value::as_str))
+            })
+        });
+    }
     if hits.len() > limit {
         hits.truncate(limit);
         truncated = true;
@@ -573,11 +592,15 @@ async fn require_read_only_without_instance(
         .and_then(Value::as_bool)
         != Some(true)
     {
-        anyhow::bail!(
-            "{} is not marked read-only, so name its instance: call {} or pass --instance-id",
-            route.backend_tool,
-            route.tool_slug
-        );
+        return Err(Refusal::new(
+            RefusalKind::InvalidInput,
+            "instance_required",
+            format!(
+                "{} is not marked read-only, so name its instance: call {} or pass --instance-id",
+                route.backend_tool, route.tool_slug
+            ),
+        )
+        .into());
     }
     Ok(())
 }
@@ -789,6 +812,21 @@ fn call_result_succeeded_inner(value: &Value, depth: u8) -> bool {
         }
 }
 
+/// Longer than an adapter's heartbeat (5 s), which publishes `safe_stop_url`.
+const SAFE_STOP_PUBLISH_WAIT: Duration = Duration::from_secs(10);
+
+fn safe_stop_url(entry: &ServiceEntry) -> Option<&str> {
+    metadata_value(
+        entry,
+        &[
+            "safe_stop_url",
+            "meshy_dcc_safe_stop_url",
+            "meshy_dcc.safe_stop_url",
+            "stop_url",
+        ],
+    )
+}
+
 pub async fn stop_instance_local(
     registry_dir: PathBuf,
     request: StopInstanceRequest,
@@ -802,11 +840,24 @@ pub async fn stop_instance_local(
         Some(&request.instance_id),
         request.operation_id.as_deref(),
     )?;
-    let entry = local_instance::select_one_entry(
+    let mut entry = local_instance::select_one_entry(
         &registry_dir,
         Some(&request.dcc_type),
         Some(&request.instance_id),
     )?;
+    // An adapter publishes its stop hook on the heartbeat after it starts, so a
+    // stop right after start-instance can see the row without it yet.
+    if owned_operation.is_some() {
+        let deadline = std::time::Instant::now() + SAFE_STOP_PUBLISH_WAIT;
+        while safe_stop_url(&entry).is_none() && std::time::Instant::now() < deadline {
+            tokio::time::sleep(Duration::from_millis(500)).await;
+            entry = local_instance::select_one_entry(
+                &registry_dir,
+                Some(&request.dcc_type),
+                Some(&request.instance_id),
+            )?;
+        }
+    }
     guard_metadata(
         &entry,
         "owner",
@@ -832,16 +883,13 @@ pub async fn stop_instance_local(
         ],
     )?;
 
-    let Some(stop_url) = metadata_value(
-        &entry,
-        &[
-            "safe_stop_url",
-            "meshy_dcc_safe_stop_url",
-            "meshy_dcc.safe_stop_url",
-            "stop_url",
-        ],
-    ) else {
-        anyhow::bail!("instance does not advertise safe_stop_url metadata; refusing to stop it");
+    let Some(stop_url) = safe_stop_url(&entry) else {
+        return Err(Refusal::new(
+            RefusalKind::Conflict,
+            "safe_stop_unavailable",
+            "instance does not advertise safe_stop_url metadata; refusing to stop it",
+        )
+        .into());
     };
     let method = metadata_value(
         &entry,

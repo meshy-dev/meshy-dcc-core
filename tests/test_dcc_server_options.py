@@ -221,6 +221,14 @@ class TestResolvedServerConfig:
         assert config.instance_metadata["meshy_dcc_server_version"] == "9.9.9"
         assert config.instance_metadata["meshy_dcc_instance_type"] == "gui"
 
+    def test_server_version_metadata_is_cores_not_the_adapters(self, tmp_path):
+        opts = DccServerOptions.from_env("unreal", tmp_path, port=0, server_version="0.1.0")
+
+        config = build_mcp_http_config(opts, package_version="0.2.0", version_provider=lambda: "5.7")
+
+        assert config.server_version == "0.1.0"
+        assert config.instance_metadata["meshy_dcc_server_version"] == "0.2.0"
+
     def test_build_mcp_http_config_propagates_standalone_main_thread(self, tmp_path):
         opts = DccServerOptions.from_env(
             "maya",

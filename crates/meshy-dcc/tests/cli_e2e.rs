@@ -777,6 +777,88 @@ fn local_profile_controls_registered_instance_through_direct_mcp() {
 }
 
 #[test]
+fn local_stop_reports_the_hosts_refusal_and_its_reason() {
+    let fixture = spawn_local_mcp_fixture();
+    let registry = TempDir::new().unwrap();
+    let file_registry = FileRegistry::new(registry.path()).unwrap();
+    let mut entry = ServiceEntry::new("maya", "127.0.0.1", 0);
+    entry
+        .metadata
+        .insert("mcp_url".to_string(), fixture.mcp_url());
+    entry.metadata.insert(
+        "safe_stop_url".to_string(),
+        format!("{}/safe-stop-dirty", fixture.base_url),
+    );
+    let instance_short = entry.instance_id.simple().to_string()[..8].to_string();
+    file_registry.register(entry).unwrap();
+    let registry_s = registry.path().to_string_lossy().to_string();
+    let profiles = registry.path().join("gateway-profiles.json");
+    let profiles_s = profiles.to_string_lossy().to_string();
+    let envs = [
+        ("MESHY_DCC_REGISTRY_DIR", registry_s.as_str()),
+        ("MESHY_DCC_GATEWAY_PROFILES_FILE", profiles_s.as_str()),
+        ("MESHY_DCC_GATEWAY_PROFILE", "local"),
+        ("MESHY_DCC_BASE_URL", ""),
+        ("MESHY_DCC_CLI_NO_AUTO_GATEWAY", "true"),
+    ];
+    let error = |args: &[&str]| -> (Option<i32>, Value) {
+        let output = cli_command()
+            .args(["--output", "json"])
+            .args(args)
+            .envs(envs)
+            .output()
+            .unwrap();
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        let last = stderr.lines().last().unwrap_or_default();
+        (
+            output.status.code(),
+            serde_json::from_str(last).unwrap_or_else(|_| panic!("stderr: {stderr}")),
+        )
+    };
+
+    let (code, refused) = error(&[
+        "stop-instance",
+        "--dcc-type",
+        "maya",
+        "--instance-id",
+        &instance_short,
+    ]);
+    assert_eq!(code, Some(7), "{refused}");
+    assert_eq!(refused["error"]["code"], "CONFLICT");
+    assert_eq!(refused["error"]["message"], "The host has unsaved maps.");
+    assert_eq!(refused["error"]["details"]["reason"], "unsaved_changes");
+    assert_eq!(
+        refused["error"]["details"]["unsaved"][0],
+        "/Game/Maps/Lookdev"
+    );
+
+    let (code, missing) = error(&[
+        "stop-instance",
+        "--dcc-type",
+        "maya",
+        "--instance-id",
+        "deadbeef",
+    ]);
+    assert_eq!(code, Some(2), "{missing}");
+    assert_eq!(missing["error"]["code"], "NOT_FOUND");
+    assert_eq!(missing["error"]["details"]["reason"], "instance_not_found");
+
+    let stop = run_json_with_env(
+        &[
+            "stop-instance",
+            "--dcc-type",
+            "maya",
+            "--instance-id",
+            &instance_short,
+            "--discard-unsaved",
+        ],
+        &envs,
+    );
+    assert_eq!(stop["ok"], true);
+    assert_eq!(stop["response"]["stopping"], true);
+}
+
+#[test]
 fn local_call_requires_owner_metadata_for_leased_instance() {
     let fixture = spawn_local_mcp_fixture();
     let registry = TempDir::new().unwrap();

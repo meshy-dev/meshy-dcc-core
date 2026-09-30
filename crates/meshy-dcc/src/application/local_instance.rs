@@ -7,6 +7,7 @@
 use std::path::Path;
 use std::time::SystemTime;
 
+use crate::domain::refusal::{Refusal, RefusalKind};
 use anyhow::Context;
 use meshy_dcc_transport::discovery::file_registry::FileRegistry;
 use meshy_dcc_transport::discovery::types::{
@@ -87,16 +88,45 @@ pub(crate) fn select_routable_entries(
         .cloned()
         .collect();
     if routable_matches.is_empty() && !live_matches.is_empty() {
-        anyhow::bail!(
+        return Err(not_ready(format!(
             "local DCC instance matched the request but is not dispatch-ready. candidates: {}",
             live_matches
                 .iter()
                 .map(instance_readiness_summary)
                 .collect::<Vec<_>>()
                 .join(", ")
-        );
+        )));
     }
     Ok(routable_matches)
+}
+
+fn no_instance_matched() -> anyhow::Error {
+    Refusal::new(
+        RefusalKind::NotFound,
+        "instance_not_found",
+        "no live local DCC instance matched the request",
+    )
+    .into()
+}
+
+fn not_ready(message: String) -> anyhow::Error {
+    Refusal::new(RefusalKind::Unavailable, "instance_not_ready", message).into()
+}
+
+fn ambiguous(candidates: &[ServiceEntry]) -> anyhow::Error {
+    Refusal::new(
+        RefusalKind::InvalidInput,
+        "ambiguous_instance",
+        format!(
+            "local instance selection is ambiguous; provide --dcc-type and --instance-id. candidates: {}",
+            candidates
+                .iter()
+                .map(|entry| format!("{}:{}", entry.dcc_type, instance_short(entry)))
+                .collect::<Vec<_>>()
+                .join(", ")
+        ),
+    )
+    .into()
 }
 
 pub(crate) fn select_one_entry(
@@ -106,15 +136,9 @@ pub(crate) fn select_one_entry(
 ) -> anyhow::Result<ServiceEntry> {
     let matches = select_entries(registry_dir, dcc_type, instance_hint)?;
     match matches.as_slice() {
-        [] => anyhow::bail!("no live local DCC instance matched the request"),
+        [] => Err(no_instance_matched()),
         [entry] => Ok(entry.clone()),
-        many => anyhow::bail!(
-            "local instance selection is ambiguous; provide --dcc-type and --instance-id. candidates: {}",
-            many.iter()
-                .map(|entry| format!("{}:{}", entry.dcc_type, instance_short(entry)))
-                .collect::<Vec<_>>()
-                .join(", ")
-        ),
+        many => Err(ambiguous(many)),
     }
 }
 
@@ -130,25 +154,17 @@ pub(crate) fn select_one_routable_entry(
         .cloned()
         .collect();
     match routable_matches.as_slice() {
-        [] if live_matches.is_empty() => {
-            anyhow::bail!("no live local DCC instance matched the request")
-        }
-        [] => anyhow::bail!(
+        [] if live_matches.is_empty() => Err(no_instance_matched()),
+        [] => Err(not_ready(format!(
             "local DCC instance matched the request but is not ready for direct local CLI control. candidates: {}",
             live_matches
                 .iter()
                 .map(instance_readiness_summary)
                 .collect::<Vec<_>>()
                 .join(", ")
-        ),
+        ))),
         [entry] => Ok(entry.clone()),
-        many => anyhow::bail!(
-            "local instance selection is ambiguous; provide --dcc-type and --instance-id. candidates: {}",
-            many.iter()
-                .map(|entry| format!("{}:{}", entry.dcc_type, instance_short(entry)))
-                .collect::<Vec<_>>()
-                .join(", ")
-        ),
+        many => Err(ambiguous(many)),
     }
 }
 
@@ -353,7 +369,12 @@ fn normalize_instance_hint(instance_hint: Option<&str>) -> anyhow::Result<Option
         return Ok(None);
     };
     if hint.len() < 4 {
-        anyhow::bail!("instance-id prefix must be at least 4 characters");
+        return Err(Refusal::new(
+            RefusalKind::InvalidInput,
+            "instance_prefix_too_short",
+            "instance-id prefix must be at least 4 characters",
+        )
+        .into());
     }
     Ok(Some(hint.to_ascii_lowercase()))
 }

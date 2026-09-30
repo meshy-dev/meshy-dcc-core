@@ -1370,3 +1370,47 @@ fn default_gateway_daemon_args() -> meshy_dcc_sidecar::gateway_daemon::GatewayAr
         restart: false,
     }
 }
+
+#[test]
+fn suggested_commands_repeat_the_global_flags_they_lack() {
+    let flags = vec![
+        vec!["--gateway".to_string(), "local".to_string()],
+        vec!["--no-auto-gateway".to_string()],
+    ];
+    let mut value = serde_json::json!({
+        "next_action": {"command": ["meshy-dcc", "--output", "json", "stop-instance"]},
+        "next_steps": [
+            {"command": ["meshy-dcc", "--gateway", "remote", "doctor"]},
+            {"command": ["open", "-a", "Blender"]}
+        ]
+    });
+
+    repeat_global_flags(&mut value, &flags);
+
+    assert_eq!(
+        value["next_action"]["command"],
+        serde_json::json!([
+            "meshy-dcc",
+            "--gateway",
+            "local",
+            "--no-auto-gateway",
+            "--output",
+            "json",
+            "stop-instance"
+        ])
+    );
+    assert_eq!(
+        value["next_steps"][0]["command"],
+        serde_json::json!([
+            "meshy-dcc",
+            "--no-auto-gateway",
+            "--gateway",
+            "remote",
+            "doctor"
+        ])
+    );
+    assert_eq!(
+        value["next_steps"][1]["command"],
+        serde_json::json!(["open", "-a", "Blender"])
+    );
+}

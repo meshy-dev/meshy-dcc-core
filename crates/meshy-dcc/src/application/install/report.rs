@@ -68,6 +68,10 @@ pub struct InstallExecutionError {
     pub exit_code: i32,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub primary_code: Option<String>,
+    /// Why planning failed. Only catalog-derived plan errors carry one; step
+    /// output never does, since it can hold credentials.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub message: Option<String>,
 }
 
 pub(super) fn execution_report_for_plan(plan: &InstallPlan) -> InstallExecutionReport {
@@ -170,6 +174,7 @@ pub(super) fn failed_report(
         stage: stage.into(),
         exit_code,
         primary_code: primary_code.map(Into::into),
+        message: None,
     });
     report
 }
@@ -185,7 +190,11 @@ pub(super) fn plan_failure_report(
     } else {
         "INSTALL_PLAN_FAILED"
     };
-    failed_report(report, "preflight", 10, code, None)
+    let mut report = failed_report(report, "preflight", 10, code, None);
+    if let (super::InstallError::Plan(plan_error), Some(error)) = (error, report.error.as_mut()) {
+        error.message = Some(plan_error.to_string());
+    }
+    report
 }
 
 pub(super) fn safe_report_identifier(value: &str, fallback: &str) -> String {

@@ -69,6 +69,7 @@ fn request(project: &Path, registry: &Path, timeout_ms: u64) -> StartInstanceReq
         dry_run: false,
         registry_dir: registry.to_path_buf(),
         instance_id: None,
+        invocation: Default::default(),
     }
 }
 

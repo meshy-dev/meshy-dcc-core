@@ -4,5 +4,6 @@ pub mod feedback_file;
 pub mod install;
 pub mod install_catalog;
 pub mod marketplace;
+pub mod refusal;
 pub mod rest;
 pub mod start_instance;

@@ -19,6 +19,9 @@ pub struct StopInstanceBody {
     expected_owner: Option<String>,
     expected_session: Option<String>,
     operation_id: Option<String>,
+    /// Forwarded to the host, which quits despite unsaved work only when set.
+    #[serde(default)]
+    discard_unsaved: bool,
 }
 
 /// `POST /v1/dcc/{dcc_type}/instances/{instance_id}/stop` — request a safe
@@ -197,6 +200,7 @@ pub async fn handle_v1_dcc_instance_stop(
         "dcc_type": entry.dcc_type.clone(),
         "owner": owner,
         "session": session,
+        "discard_unsaved": body.discard_unsaved,
     });
     let stop_client = match reqwest::Client::builder()
         .redirect(reqwest::redirect::Policy::none())
@@ -235,6 +239,10 @@ pub async fn handle_v1_dcc_instance_stop(
                     })),
                 )
                     .into_response()
+            } else if status == reqwest::StatusCode::CONFLICT && backend_response.is_object() {
+                // The host refused in its current state (unsaved work, say):
+                // pass its reason through rather than calling it a failure.
+                (StatusCode::CONFLICT, Json(backend_response)).into_response()
             } else {
                 (
                     StatusCode::BAD_GATEWAY,

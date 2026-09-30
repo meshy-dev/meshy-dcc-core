@@ -25,8 +25,8 @@ use crate::application::local_control;
 use crate::application::local_instance;
 use crate::domain::rest::WaitReadyRequest;
 use crate::domain::start_instance::{
-    BlockingState, DCC_TYPE_ENV, LIFECYCLE_OPERATION_SCHEMA_VERSION, LaunchPlan, LaunchStage,
-    LifecycleOperation, OPERATION_ID_ENV, OPERATION_METADATA_KEYS, PROJECT_ENV,
+    BlockingState, DCC_TYPE_ENV, Invocation, LIFECYCLE_OPERATION_SCHEMA_VERSION, LaunchPlan,
+    LaunchStage, LifecycleOperation, OPERATION_ID_ENV, OPERATION_METADATA_KEYS, PROJECT_ENV,
     PROJECT_METADATA_KEYS, START_INSTANCE_REPORT_SCHEMA_VERSION, StartInstanceRequest,
     classify_blocking_state,
 };
@@ -82,6 +82,7 @@ pub async fn start_instance(request: StartInstanceRequest) -> anyhow::Result<Val
         started,
         dry_run: request.dry_run,
         authorized: request.authorized,
+        invocation: &request.invocation,
     };
 
     // ── Stage: project binding ──────────────────────────────────────────────
@@ -641,6 +642,7 @@ struct ReportContext<'a> {
     started: Instant,
     dry_run: bool,
     authorized: bool,
+    invocation: &'a Invocation,
 }
 
 impl<'a> ReportContext<'a> {
@@ -696,8 +698,12 @@ impl<'a> ReportContext<'a> {
         value["dispatch_state"] = Value::Null;
         value["converged_on_operation_id"] = Value::Null;
         value["diagnostics"] = diagnostics;
-        value["next_action"] =
-            blocking.next_action(self.dcc_type, Some(self.project()), Some(self.operation_id));
+        value["next_action"] = blocking.next_action(
+            self.dcc_type,
+            Some(self.project()),
+            Some(self.operation_id),
+            self.invocation,
+        );
         value
     }
 
@@ -720,6 +726,7 @@ impl<'a> ReportContext<'a> {
             self.dcc_type,
             Some(self.project()),
             Some(self.operation_id),
+            self.invocation,
         );
         value
     }
@@ -821,8 +828,12 @@ impl<'a> ReportContext<'a> {
         }
         value["blocking_state"] = Value::String(blocking.as_str().to_string());
         value["retryable"] = Value::Bool(blocking.retryable());
-        value["next_action"] =
-            blocking.next_action(self.dcc_type, Some(self.project()), Some(self.operation_id));
+        value["next_action"] = blocking.next_action(
+            self.dcc_type,
+            Some(self.project()),
+            Some(self.operation_id),
+            self.invocation,
+        );
         value
     }
 }

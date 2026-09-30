@@ -288,7 +288,15 @@ impl InstallService {
                 entry.install.is_some() && crate::domain::install::policy::validate(entry).is_ok()
             })
         {
-            install_plan_action(&canonical_dcc, instructions_url)
+            // A host whose plugin lives in the project installs per project.
+            let per_project = adapter
+                .and_then(|entry| entry.install.as_ref()?.host.as_ref())
+                .is_some_and(|host| !host.project_steps.is_empty());
+            install_plan_action(
+                &canonical_dcc,
+                project.filter(|_| per_project),
+                instructions_url,
+            )
         } else {
             inspect_catalog_action()
         };
@@ -432,18 +440,27 @@ fn failure_decision(
     }
 }
 
-fn install_plan_action(dcc_type: &str, instructions_url: Option<String>) -> DiscoveryNextAction {
+fn install_plan_action(
+    dcc_type: &str,
+    project: Option<&std::path::Path>,
+    instructions_url: Option<String>,
+) -> DiscoveryNextAction {
+    let mut command = vec![
+        "meshy-dcc".to_string(),
+        "--output".to_string(),
+        "json".to_string(),
+        "--non-interactive".to_string(),
+        "install".to_string(),
+        "--dcc-type".to_string(),
+        dcc_type.to_string(),
+    ];
+    if let Some(project) = project {
+        command.push("--project".to_string());
+        command.push(project.display().to_string());
+    }
     DiscoveryNextAction {
         id: "plan_install".to_string(),
-        command: vec![
-            "meshy-dcc".to_string(),
-            "--output".to_string(),
-            "json".to_string(),
-            "--non-interactive".to_string(),
-            "install".to_string(),
-            "--dcc-type".to_string(),
-            dcc_type.to_string(),
-        ],
+        command,
         requires_consent: false,
         instructions_url,
     }

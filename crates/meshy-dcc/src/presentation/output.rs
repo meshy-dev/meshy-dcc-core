@@ -170,6 +170,78 @@ impl ErrorEnvelope {
     }
 }
 
+/// Classify an error that ended a command: a known refusal, an HTTP status
+/// with the peer's own `reason` (a host refusing to stop, say), or an
+/// unreachable peer. Anything else is `GENERAL_ERROR`.
+pub fn error_envelope(error: &anyhow::Error) -> ErrorEnvelope {
+    use crate::application::client::ClientError;
+    use crate::domain::refusal::{Refusal, RefusalKind};
+    use crate::infra::http::HttpError;
+
+    let message = format!("{error:#}");
+    if let Some(refusal) = error
+        .chain()
+        .find_map(|cause| cause.downcast_ref::<Refusal>())
+    {
+        let (code, exit_code) = match refusal.kind {
+            RefusalKind::InvalidInput => ("INVALID_INPUT", ExitCode::InvalidInput),
+            RefusalKind::NotFound => ("NOT_FOUND", ExitCode::InvalidInput),
+            RefusalKind::Unavailable => ("UNAVAILABLE", ExitCode::Unavailable),
+            RefusalKind::Conflict => ("CONFLICT", ExitCode::Conflict),
+        };
+        let mut details = match &refusal.details {
+            Some(Value::Object(map)) => map.clone(),
+            _ => Map::new(),
+        };
+        details.insert("reason".into(), Value::String(refusal.reason.into()));
+        return ErrorEnvelope::new(code, message, exit_code)
+            .with_retryable(refusal.kind == RefusalKind::Unavailable)
+            .with_details(Value::Object(details));
+    }
+
+    let http = error.chain().find_map(|cause| {
+        cause.downcast_ref::<HttpError>().or_else(|| {
+            cause
+                .downcast_ref::<ClientError>()
+                .and_then(|client| match client {
+                    ClientError::Http(http) => Some(http),
+                    ClientError::Protocol(_) => None,
+                })
+        })
+    });
+    match http {
+        Some(HttpError::Status { status, body }) => {
+            let exit_code = ExitCode::from_http_status(status.as_u16());
+            let mut details = match serde_json::from_str::<Value>(body) {
+                Ok(Value::Object(map)) => map,
+                _ => Map::new(),
+            };
+            let peer_message = ["detail", "message"]
+                .iter()
+                .find_map(|key| details.get(*key).and_then(Value::as_str))
+                .map(str::to_string);
+            details.insert("http_status".into(), Value::from(status.as_u16()));
+            ErrorEnvelope::new(
+                exit_code_to_error_code(exit_code),
+                peer_message.unwrap_or(message),
+                exit_code,
+            )
+            .with_retryable(matches!(
+                exit_code,
+                ExitCode::Unavailable | ExitCode::Timeout
+            ))
+            .with_details(Value::Object(details))
+        }
+        Some(HttpError::Request(request)) if request.is_timeout() => {
+            ErrorEnvelope::new("TIMEOUT", message, ExitCode::Timeout).with_retryable(true)
+        }
+        Some(HttpError::Request(request)) if request.is_connect() => {
+            ErrorEnvelope::new("UNAVAILABLE", message, ExitCode::Unavailable).with_retryable(true)
+        }
+        _ => ErrorEnvelope::new("GENERAL_ERROR", message, ExitCode::GeneralError),
+    }
+}
+
 pub(crate) fn failure_envelope(value: &Value, exit_code: ExitCode) -> ErrorEnvelope {
     let payload = [
         value.pointer("/result/structuredContent"),

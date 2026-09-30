@@ -272,6 +272,7 @@ impl MeshyDccClient {
             "expected_owner": request.expected_owner,
             "expected_session": request.expected_session,
             "operation_id": request.operation_id,
+            "discard_unsaved": request.discard_unsaved,
         });
         let path = format!(
             "/v1/dcc/{}/instances/{}/stop",

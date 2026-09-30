@@ -33,7 +33,13 @@ It is shortened to `meshy-dcc <command>` below. In this mode the CLI reads the l
 registry and calls hosts directly, so no gateway daemon is needed.
 
 - Read the JSON on stdout and the exit status.
-- Errors go to stderr with a `[CODE]`, and the exit status is non-zero.
+- Errors go to stderr as `{"error": {"code", "message", "exit_code", "retryable",
+  "details"}}`, and the exit status is non-zero. `details.reason` names the cause, for
+  example `instance_not_found`, `instance_required`, `instance_not_ready` or a host's
+  `unsaved_changes`. Codes: `INVALID_INPUT` and `NOT_FOUND` (exit 2, change the
+  request), `UNAVAILABLE` (exit 3, may work later), `TIMEOUT` (exit 4), `CONFLICT`
+  (exit 7, the target refuses in its current state), `GENERAL_ERROR` (exit 1).
+- A `next_action.command` in a result is complete; run it as it is.
 - If `meshy-dcc` is not on PATH, stop and tell the user.
 
 ## 1. Choose the instance
@@ -85,8 +91,8 @@ meshy-dcc search --instance-id ID --query "import gltf" --limit 20
 meshy-dcc load-skill SKILL_NAME --instance-id ID
 ```
 
-- **Search ranking is weak**, and the right hit is often last. Read all `hits`, and prefer
-  one whose `slug` or `target_tool_slug` is set. `requires_load_skill: true` means you
+- **Hits come best match first**, loaded tools and skills to load interleaved. Prefer a
+  hit whose `slug` or `target_tool_slug` is set. `requires_load_skill: true` means you
   must load its `skill_name` first.
 - **What load-skill returns:** `tools` lists every tool in the skill with its name,
   `inputSchema` and `annotations`, and `compact_schema` summarizes the best match.
@@ -130,8 +136,9 @@ never kill a host process.
 meshy-dcc stop-instance --operation-id OPERATION_ID
 ```
 
-A host with unsaved scenes refuses with `unsaved_changes` (Unity, Godot, Unreal). A host that
-cannot tell whether work is unsaved, such as Blender, refuses with
+A host with unsaved scenes refuses with `CONFLICT` and `details.reason`
+`unsaved_changes` (Unity, Godot, Unreal; Unreal lists them in `details.unsaved`). A host
+that cannot tell whether work is unsaved, such as Blender, refuses with
 `unsaved_state_unknown`. When either happens:
 
 1. Save what the user wants kept.

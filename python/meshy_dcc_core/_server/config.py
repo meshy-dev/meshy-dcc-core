@@ -247,7 +247,8 @@ def build_mcp_http_config(
     config.host_pid = options.diagnostics.dcc_pid
     execution = resolve_execution_binding(options.execution.mode)
     instance_metadata = collect_context_metadata_from_env(options.dcc_name)
-    instance_metadata["meshy_dcc_server_version"] = str(config.server_version)
+    # The server binary is core's; an adapter's own version stays in serverInfo.
+    instance_metadata["meshy_dcc_server_version"] = str(package_version)
     # Runtime lifetime and execution/threading are separate contracts. Keep the
     # legacy inference only when an adapter has not declared its runtime shape.
     legacy_instance_type = "standalone" if execution.standalone_main_thread else "gui"

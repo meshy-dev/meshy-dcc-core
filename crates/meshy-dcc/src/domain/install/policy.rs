@@ -8,7 +8,12 @@ pub(crate) fn validate(entry: &CatalogEntry) -> Result<(), InstallPlanError> {
     if let Some(policy) = &entry.policy {
         match policy.installation.as_str() {
             "available" => {}
-            "not_available" => return Err(InstallPlanError::NotAvailable(entry.name.clone())),
+            "not_available" => {
+                return Err(InstallPlanError::NotAvailable {
+                    name: entry.name.clone(),
+                    reason: policy.reason.clone(),
+                });
+            }
             installation => {
                 return Err(InstallPlanError::InvalidInstallationPolicy {
                     name: entry.name.clone(),
@@ -78,7 +83,10 @@ mod tests {
                     },
                 );
                 let expected = if installation == "not_available" {
-                    InstallPlanError::NotAvailable(format!("meshy-dcc-{dcc}"))
+                    InstallPlanError::NotAvailable {
+                        name: format!("meshy-dcc-{dcc}"),
+                        reason: None,
+                    }
                 } else {
                     InstallPlanError::InvalidInstallationPolicy {
                         name: format!("meshy-dcc-{dcc}"),

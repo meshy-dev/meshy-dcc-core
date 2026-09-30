@@ -87,6 +87,7 @@ pub fn resolvable(dcc_type: &str, project: &Path, registry_dir: &Path) -> bool {
         dry_run: true,
         registry_dir: registry_dir.to_path_buf(),
         instance_id: None,
+        invocation: Default::default(),
     };
     matches!(resolve(&request, project), PlanResolution::Resolved(_))
 }
@@ -182,6 +183,7 @@ mod tests {
             dry_run: false,
             registry_dir: registry.to_path_buf(),
             instance_id: None,
+            invocation: Default::default(),
         }
     }
 

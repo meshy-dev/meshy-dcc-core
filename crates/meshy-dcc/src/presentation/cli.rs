@@ -6,7 +6,9 @@ use anyhow::{Context, anyhow};
 use clap::Parser;
 use serde_json::Value;
 
-use super::output::{ExitCode, OutputFormat, OutputWriter, failure_envelope, to_json};
+use super::output::{
+    ExitCode, OutputFormat, OutputWriter, error_envelope, failure_envelope, to_json,
+};
 
 use crate::application::adapter_import;
 use crate::application::call_attribution::{
@@ -25,7 +27,7 @@ use crate::domain::rest::{
     Endpoint, ReloadSkillsRequest, SearchRequest, StatsRequest, StopInstanceRequest,
     WaitReadyRequest,
 };
-use crate::domain::start_instance::StartInstanceRequest;
+use crate::domain::start_instance::{Invocation, StartInstanceRequest};
 use crate::infra::http::HttpGateway;
 
 mod cli_args;
@@ -123,7 +125,23 @@ pub async fn run() -> anyhow::Result<()> {
     if apply_staged_update() {
         return restart_after_update();
     }
-    run_with_args(Args::parse()).await
+    let args = Args::parse();
+    let format = output_format(&args.command, args.output);
+    if let Err(error) = run_with_args(args).await {
+        let envelope = error_envelope(&error);
+        let exit_code = envelope.error.exit_code;
+        OutputWriter::new(format.unwrap_or(OutputFormat::Human)).write_error(&envelope)?;
+        std::process::exit(exit_code);
+    }
+    Ok(())
+}
+
+fn output_format(command: &Command, output: Option<OutputFormat>) -> Result<OutputFormat, String> {
+    match command {
+        Command::Feedback(args) => args.resolve_output(output),
+        Command::Install { json: true, .. } => Ok(OutputFormat::Json),
+        _ => Ok(output.unwrap_or_else(OutputFormat::auto_detect)),
+    }
 }
 
 fn apply_staged_update() -> bool {
@@ -196,12 +214,21 @@ async fn run_with_args(args: Args) -> anyhow::Result<()> {
     } = args;
 
     let transport = transport_args.transport;
-    let output = match &command {
-        Command::Feedback(args) => args.resolve_output(output),
-        Command::Install { json: true, .. } => Ok(OutputFormat::Json),
-        _ => Ok(output.unwrap_or_else(OutputFormat::auto_detect)),
-    };
-    let writer = OutputWriter::new(output.map_err(anyhow::Error::msg)?);
+    // Repeated in suggested commands so they run the way this one did.
+    let mut global_flags: Vec<Vec<String>> = Vec::new();
+    if let Some(gateway) = gateway.as_deref().filter(|value| !value.is_empty()) {
+        global_flags.push(vec!["--gateway".to_string(), gateway.to_string()]);
+    }
+    if let Some(base_url) = base_url.as_deref().filter(|value| !value.is_empty()) {
+        global_flags.push(vec!["--base-url".to_string(), base_url.to_string()]);
+    }
+    if no_auto_gateway {
+        global_flags.push(vec!["--no-auto-gateway".to_string()]);
+    }
+    if require_gateway {
+        global_flags.push(vec!["--require-gateway".to_string()]);
+    }
+    let writer = OutputWriter::new(output_format(&command, output).map_err(anyhow::Error::msg)?);
     let explicit_update_command = matches!(&command, Command::Update { .. });
     let marketplace_update_check = (!crate::application::update::is_background_refresh())
         .then(|| tokio::spawn(check_marketplace_updates()));
@@ -618,6 +645,36 @@ async fn run_with_args(args: Args) -> anyhow::Result<()> {
             let effective_timeout = global_timeout_secs
                 .or(timeout_secs)
                 .unwrap_or(DEFAULT_START_INSTANCE_TIMEOUT_SECS);
+            let mut start_flags = Vec::new();
+            for (flag, value) in [
+                ("--instance-id", instance_id.clone()),
+                (
+                    "--launch-plan",
+                    launch_plan.as_ref().map(|path| path.display().to_string()),
+                ),
+                ("--version", version.clone()),
+                (
+                    "--require",
+                    (!require.is_empty()).then(|| require.join(",")),
+                ),
+                (
+                    "--timeout-secs",
+                    global_timeout_secs
+                        .or(timeout_secs)
+                        .map(|secs| secs.to_string()),
+                ),
+                (
+                    "--interval-secs",
+                    (interval_secs != 1).then(|| interval_secs.to_string()),
+                ),
+            ] {
+                if let Some(value) = value {
+                    start_flags.extend([flag.to_string(), value]);
+                }
+            }
+            if wait_ready {
+                start_flags.push("--wait-ready".to_string());
+            }
             let request = StartInstanceRequest {
                 dcc_type,
                 project,
@@ -631,6 +688,7 @@ async fn run_with_args(args: Args) -> anyhow::Result<()> {
                 dry_run,
                 registry_dir: gateway_ensure::default_registry_dir(),
                 instance_id,
+                invocation: Invocation { start: start_flags },
             };
             let result = crate::application::instance_launch::start_instance(request).await?;
             if !result.get("ok").and_then(Value::as_bool).unwrap_or(false) {
@@ -910,6 +968,7 @@ async fn run_with_args(args: Args) -> anyhow::Result<()> {
         !explicit_update_command,
     )?;
 
+    repeat_global_flags(&mut value, &global_flags);
     writer.write_data(&value)?;
     if let Some(code) = explicit_exit_code
         && code != 0
@@ -922,6 +981,40 @@ async fn run_with_args(args: Args) -> anyhow::Result<()> {
         std::process::exit(exit_code.as_i32());
     }
     Ok(())
+}
+
+/// Give each suggested `meshy-dcc` command this invocation's global flags
+/// (`--gateway local`, …) it lacks, so running it verbatim takes the same path.
+fn repeat_global_flags(value: &mut Value, flags: &[Vec<String>]) {
+    let insert = |command: &mut Value| {
+        let Some(args) = command.as_array_mut() else {
+            return;
+        };
+        if args.first().and_then(Value::as_str) != Some("meshy-dcc") {
+            return;
+        }
+        let mut at = 1;
+        for group in flags {
+            if args
+                .iter()
+                .any(|arg| arg.as_str() == Some(group[0].as_str()))
+            {
+                continue;
+            }
+            for token in group {
+                args.insert(at, Value::String(token.clone()));
+                at += 1;
+            }
+        }
+    };
+    if let Some(command) = value.pointer_mut("/next_action/command") {
+        insert(command);
+    }
+    if let Some(steps) = value.get_mut("next_steps").and_then(Value::as_array_mut) {
+        for command in steps.iter_mut().filter_map(|step| step.get_mut("command")) {
+            insert(command);
+        }
+    }
 }
 
 #[cfg(test)]

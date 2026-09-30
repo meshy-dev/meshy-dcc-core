@@ -24,7 +24,9 @@ pub(crate) async fn start_gateway_runner(
         heartbeat_secs: config.gateway.heartbeat_secs,
         server_name: config.server.server_name.clone(),
         gateway_name: config.gateway.gateway_name.clone(),
-        server_version: config.server.server_version.clone(),
+        // The election compares gateway code, which is core's; an adapter's
+        // own version is `adapter_version` and the MCP serverInfo.
+        server_version: env!("CARGO_PKG_VERSION").to_string(),
         registry_dir: config.gateway.registry_dir.clone(),
         // The embedded HTTP server owns no pidfile; recovery from a
         // service-dead port holder (#2405) still works through the

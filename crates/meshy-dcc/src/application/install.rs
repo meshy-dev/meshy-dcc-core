@@ -1160,7 +1160,8 @@ mod tests {
             .unwrap_err();
         assert!(matches!(
             error,
-            InstallError::Plan(InstallPlanError::NotAvailable(name)) if name == "meshy-dcc-blender"
+            InstallError::Plan(InstallPlanError::NotAvailable { name, reason: Some(_) })
+                if name == "meshy-dcc-blender"
         ));
     }
 
@@ -1187,7 +1188,7 @@ mod tests {
                 .is_none_or(|policy| policy.installation == "available");
             match result {
                 Ok(_) => assert!(published, "{}", entry.name),
-                Err(InstallPlanError::NotAvailable(name)) => {
+                Err(InstallPlanError::NotAvailable { name, .. }) => {
                     assert!(!published && name == entry.name, "{}", entry.name)
                 }
                 Err(error) => panic!("{}: {error}", entry.name),

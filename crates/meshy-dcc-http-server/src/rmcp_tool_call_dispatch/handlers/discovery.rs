@@ -49,6 +49,36 @@ fn matches_phrase(haystack: &str, query: &str, query_words: &[&str]) -> bool {
     }
 }
 
+/// Rank a matched tool: the whole query in its name first, then each query word
+/// found in the name, the skill name, or anywhere else in `haystack`.
+fn tool_score(name: &str, skill: &str, haystack: &str, query: &str, query_words: &[&str]) -> u32 {
+    let name = name.to_lowercase();
+    let skill = skill.to_lowercase();
+    let words = if query_words.is_empty() {
+        vec![query]
+    } else {
+        query_words.to_vec()
+    };
+    let phrase = words.join("_");
+    let mut score = if name.ends_with(&phrase) {
+        20
+    } else if name.contains(&phrase) {
+        10
+    } else {
+        0
+    };
+    for word in &words {
+        score += if name.contains(word) {
+            4
+        } else if skill.contains(word) {
+            2
+        } else {
+            u32::from(haystack.contains(word))
+        };
+    }
+    score
+}
+
 pub(in crate::rmcp_tool_call_dispatch) fn handle_search_tools(
     state: &ServerState,
     arguments: &Value,
@@ -106,7 +136,7 @@ pub(in crate::rmcp_tool_call_dispatch) fn handle_search_tools(
         })
         .collect();
 
-    let mut tool_hits: Vec<Value> = Vec::new();
+    let mut tool_hits: Vec<(u32, Value)> = Vec::new();
     for meta in state.registry.list_actions(dcc) {
         if !include_disabled && !meta.enabled {
             continue;
@@ -164,7 +194,9 @@ pub(in crate::rmcp_tool_call_dispatch) fn handle_search_tools(
                 "enforceThreadAffinity": meta.enforce_thread_affinity,
             }
         });
-        tool_hits.push(hit);
+        let skill = meta.skill_name.as_deref().unwrap_or_default();
+        let score = tool_score(&meta.name, skill, &haystack, &query, &query_words);
+        tool_hits.push((score, hit));
     }
 
     if include_stubs {
@@ -186,9 +218,11 @@ pub(in crate::rmcp_tool_call_dispatch) fn handle_search_tools(
             if !matches_phrase(&haystack, &query, &query_words) {
                 continue;
             }
-            tool_hits.push(json!({
+            let name = format!("__skill__{}", summary.name);
+            let score = tool_score(&name, &summary.name, &haystack, &query, &query_words);
+            tool_hits.push((score, json!({
                 "kind": "tool",
-                "name": format!("__skill__{}", summary.name),
+                "name": name,
                 "description": format!(
                     "[stub] unloaded skill `{}` — call load_skill(\"{}\") to expose its {} tool(s)",
                     summary.name, summary.name, summary.tool_count,
@@ -198,7 +232,7 @@ pub(in crate::rmcp_tool_call_dispatch) fn handle_search_tools(
                 "enabled": false,
                 "dcc": summary.dcc,
                 "skill_name": summary.name,
-            }));
+            })));
         }
 
         let mut seen_groups: std::collections::HashSet<(String, String)> =
@@ -215,7 +249,8 @@ pub(in crate::rmcp_tool_call_dispatch) fn handle_search_tools(
             if !matches_phrase(&haystack, &query, &query_words) {
                 continue;
             }
-            tool_hits.push(json!({
+            let score = tool_score(&stub_name, &skill, &haystack, &query, &query_words);
+            tool_hits.push((score, json!({
                 "kind": "tool",
                 "name": stub_name,
                 "description": format!(
@@ -226,17 +261,24 @@ pub(in crate::rmcp_tool_call_dispatch) fn handle_search_tools(
                 "enabled": false,
                 "dcc": "",
                 "skill_name": skill,
-            }));
+            })));
         }
     }
 
-    tool_hits.sort_by(|left, right| {
-        left.get("name")
-            .and_then(Value::as_str)
-            .cmp(&right.get("name").and_then(Value::as_str))
+    // Best match first; equal scores stay in a stable name order.
+    tool_hits.sort_by(|(left_score, left), (right_score, right)| {
+        right_score.cmp(left_score).then_with(|| {
+            left.get("name")
+                .and_then(Value::as_str)
+                .cmp(&right.get("name").and_then(Value::as_str))
+        })
     });
     let total_tool_matches = tool_hits.len();
-    tool_hits.truncate(limit);
+    let tool_hits: Vec<Value> = tool_hits
+        .into_iter()
+        .take(limit)
+        .map(|(_, hit)| hit)
+        .collect();
 
     let mut skill_candidates: Vec<Value> = Vec::new();
     if include_unloaded_skills {
@@ -296,11 +338,7 @@ pub(in crate::rmcp_tool_call_dispatch) fn handle_search_tools(
         }
     }
 
-    skill_candidates.sort_by(|left, right| {
-        left.get("skill_name")
-            .and_then(Value::as_str)
-            .cmp(&right.get("skill_name").and_then(Value::as_str))
-    });
+    // `search_skills` already returns them best match first.
     let total_skill_matches = skill_candidates.len();
     skill_candidates.truncate(limit);
 
@@ -376,6 +414,55 @@ mod tests {
         assert_eq!(first["total_matches"], 3);
         assert_eq!(first["returned"], 2);
         assert_eq!(first["truncated"], true);
+    }
+
+    #[test]
+    fn search_tools_puts_the_named_tool_first() {
+        let registry = Arc::new(ToolRegistry::new());
+        for (name, description) in [
+            (
+                "blender_scene__list_objects",
+                "List objects; import gltf files first",
+            ),
+            (
+                "blender_interchange__export_gltf",
+                "Export the scene to glTF for import",
+            ),
+            (
+                "blender_interchange__import_gltf",
+                "Read a file into the scene",
+            ),
+        ] {
+            registry.register_action(ToolMeta {
+                name: name.to_string(),
+                description: description.to_string(),
+                dcc: "blender".to_string(),
+                ..Default::default()
+            });
+        }
+        let dispatcher = Arc::new(ToolDispatcher::new((*registry).clone()));
+        let catalog = Arc::new(SkillCatalog::new_with_dispatcher(
+            Arc::clone(&registry),
+            Arc::clone(&dispatcher),
+        ));
+        let state = ServerState::builder(registry, dispatcher, catalog).build();
+        let arguments = json!({"query": "import gltf", "include_unloaded_skills": false});
+
+        let result = result_text_json(&handle_search_tools(&state, &arguments));
+
+        assert_eq!(
+            result["tools"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|tool| tool["name"].as_str().unwrap())
+                .collect::<Vec<_>>(),
+            vec![
+                "blender_interchange__import_gltf",
+                "blender_interchange__export_gltf",
+                "blender_scene__list_objects",
+            ]
+        );
     }
 
     #[test]
