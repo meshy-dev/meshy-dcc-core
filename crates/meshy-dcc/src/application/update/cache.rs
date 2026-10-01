@@ -94,6 +94,8 @@ pub fn spawn_cli_update_refresh(base_url: &str) -> bool {
             "check",
         ])
         .env(BACKGROUND_ENV, "1")
+        // An unseen background check never starts the machine gateway.
+        .env("MESHY_DCC_CLI_NO_AUTO_GATEWAY", "true")
         .stdin(Stdio::null())
         .stdout(Stdio::null())
         .stderr(Stdio::null());
