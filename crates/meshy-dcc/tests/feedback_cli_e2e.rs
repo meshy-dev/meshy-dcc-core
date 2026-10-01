@@ -11,6 +11,7 @@ use support::*;
 fn feedback_is_disabled() {
     let output = cli_command()
         .args(["feedback", "list"])
+        .env("MESHY_DCC_CLI_NO_AUTO_GATEWAY", "true")
         .output()
         .expect("run meshy-dcc feedback");
     assert!(!output.status.success());

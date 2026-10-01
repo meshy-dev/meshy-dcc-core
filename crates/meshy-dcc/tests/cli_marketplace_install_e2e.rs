@@ -1115,6 +1115,8 @@ fn marketplace_installs_and_uninstalls_cua_profile_through_exact_cli() {
         ("MESHY_DCC_MARKETPLACE_INSTALL_ROOT", root.to_str().unwrap()),
         ("MESHY_DCC_CUA_BINARY", fake.to_str().unwrap()),
         ("DCC_CUA_TEST_LOG", log.to_str().unwrap()),
+        // `--reload` would start a gateway on the machine's default port.
+        ("MESHY_DCC_CLI_NO_AUTO_GATEWAY", "true"),
     ];
     let source = catalog.to_str().unwrap();
     let installed = run_json_with_env(
