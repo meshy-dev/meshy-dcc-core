@@ -792,11 +792,30 @@ pub async fn call_service(
                 )
                 .await;
             }
-            Err(ServiceError::new(
-                kind,
-                format!("backend call failed during {}: {e}", record.callable_id),
-            )
-            .with_backend(backend_attachment))
+            // A host's own refusal (bad arguments, skill not loaded) keeps its
+            // kind, message and hint: the caller has to change the request,
+            // and a 502 "backend error" would read as worth retrying.
+            let refusal = backend_body
+                .as_ref()
+                .filter(|_| is_host_refusal_kind(kind))
+                .and_then(|body| body.get("message").and_then(Value::as_str));
+            let mut error = match refusal {
+                Some(message) => {
+                    let mut error = ServiceError::new(kind, message);
+                    error.retryable = Some(false);
+                    error.recommended_next_action = backend_body
+                        .as_ref()
+                        .and_then(|body| body.get("hint").and_then(Value::as_str))
+                        .map(str::to_string);
+                    error
+                }
+                None => ServiceError::new(
+                    kind,
+                    format!("backend call failed during {}: {e}", record.callable_id),
+                ),
+            };
+            error = error.with_backend(backend_attachment);
+            Err(error)
         }
     }
 }
@@ -1532,6 +1551,16 @@ fn backend_failure_kind(message: &str, backend_body: Option<&Value>) -> &'static
             "host-busy" => return "host-busy",
             "host-died" => return "host-died",
             "thread-affinity-violation" => return "thread-affinity-violation",
+            "invalid-params" => return "invalid-params",
+            "bad-request" => return "bad-request",
+            "skill-not-loaded" => return "skill-not-loaded",
+            "unknown-slug" => return "unknown-slug",
+            "ambiguous" => return "ambiguous",
+            "affinity-violation" => return "affinity-violation",
+            "not-ready" => return "not-ready",
+            "not-found" => return "not-found",
+            "unauthorized" => return "unauthorized",
+            "policy-denied" => return "policy-denied",
             _ => {}
         }
     }
@@ -1542,6 +1571,24 @@ fn backend_failure_kind(message: &str, backend_body: Option<&Value>) -> &'static
     } else {
         "backend-error"
     }
+}
+
+/// Kinds a host returns when it refuses the request itself, as opposed to
+/// failing to run it.
+fn is_host_refusal_kind(kind: &str) -> bool {
+    matches!(
+        kind,
+        "invalid-params"
+            | "bad-request"
+            | "skill-not-loaded"
+            | "unknown-slug"
+            | "ambiguous"
+            | "affinity-violation"
+            | "thread-affinity-violation"
+            | "not-found"
+            | "unauthorized"
+            | "policy-denied"
+    )
 }
 
 fn is_host_busy_backend_error(message: &str) -> bool {
@@ -2184,6 +2231,19 @@ mod unit_tests {
             .is_empty(),
             "host-died instance must be removed from the gateway capability index"
         );
+    }
+
+    #[test]
+    fn backend_failure_kind_keeps_host_refusals() {
+        for kind in ["invalid-params", "skill-not-loaded"] {
+            assert_eq!(
+                backend_failure_kind("HTTP 4xx", Some(&json!({"kind": kind}))),
+                kind
+            );
+            assert!(is_host_refusal_kind(kind));
+        }
+        assert!(!is_host_refusal_kind("backend-error"));
+        assert!(!is_host_refusal_kind("not-ready"));
     }
 
     #[test]

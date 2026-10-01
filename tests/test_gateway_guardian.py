@@ -1284,7 +1284,7 @@ def test_embedded_fallback_metadata_includes_daemon_status():
 
     meta = ctrl._gateway_runtime_metadata()
     assert meta["gateway_runtime_mode"] == "embedded-fallback"
-    assert meta["gateway_recovery_driver"] == "embedded_election"
+    assert meta["gateway_recovery_driver"] == "none"
     assert meta["gateway_daemon_status"] == "spawn_failed"
     assert meta["gateway_daemon_error"] == "connection refused"
 

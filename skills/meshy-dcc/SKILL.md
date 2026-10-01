@@ -26,21 +26,24 @@ its `meshy-3d-generation` skill. This Skill takes over once the model file is on
 Run every command in this form:
 
 ```sh
-meshy-dcc --gateway local --no-auto-gateway --non-interactive --output json <command> ...
+meshy-dcc --require-gateway --non-interactive --output json <command> ...
 ```
 
-It is shortened to `meshy-dcc <command>` below. In this mode the CLI reads the local
-registry and calls hosts directly, so no gateway daemon is needed.
+It is shortened to `meshy-dcc <command>` below. Every command goes through the local
+Meshy gateway, which routes each call to the instance you name; the CLI starts the gateway
+when it is not running (it says so on stderr). `start-instance`, `stop-instance`,
+`install` and `dcc-types` manage the local machine and run without it.
 
 - Read the JSON on stdout and the exit status.
 - Errors go to stderr as `{"error": {"code", "message", "exit_code", "retryable",
   "details"}}`, and the exit status is non-zero. `details.reason` names the cause, for
-  example `instance_not_found`, `instance_required`, `instance_not_ready` or a host's
-  `unsaved_changes`. Codes: `INVALID_INPUT` and `NOT_FOUND` (exit 2, change the
-  request), `UNAVAILABLE` (exit 3, may work later), `TIMEOUT` (exit 4), `CONFLICT`
-  (exit 7, the target refuses in its current state), `GENERAL_ERROR` (exit 1).
+  example `skill_not_loaded`, `invalid_params`, `unknown_slug`, `instance_offline`,
+  `instance_not_found` or a host's `unsaved_changes`. Codes: `INVALID_INPUT` and
+  `NOT_FOUND` (exit 2, change the request), `UNAVAILABLE` (exit 3, may work later),
+  `TIMEOUT` (exit 4), `CONFLICT` (exit 7, the target refuses in its current state, for
+  example a skill that is not loaded yet), `GENERAL_ERROR` (exit 1).
 - A `next_action.command` in a result is complete; run it as it is.
-- If `meshy-dcc` is not on PATH, stop and tell the user.
+- If `meshy-dcc` is not on PATH, or the gateway cannot start, stop and tell the user.
 
 ## 1. Choose the instance
 
@@ -51,8 +54,9 @@ meshy-dcc list
 Each entry in `instances` has:
 
 - `dcc_type`, `instance_id`, `instance_short`, `pid` and host `version`;
-- `scene`, which can be `null` (the host reference says how to read the open file);
-- `direct_control.ready`.
+- `scene`, which can be `null` (the host reference says how to read the open file), and
+  `metadata.meshy_dcc_project` for a host started for a project;
+- `status`, `available` when the instance takes calls.
 
 Choose by host, scene or project, and PID. If more than one fits, ask the user. Never take
 the first entry.
@@ -76,10 +80,8 @@ meshy-dcc dcc-types --dcc-type blender --project /absolute/project
 Name that instance explicitly in every later command:
 
 - search and load-skill take `--instance-id <instance_id>`;
-- call and describe take a slug that contains its `instance_short`.
-
-A call that doesn't name its instance is refused unless the host marks the tool read-only,
-even when only one instance is live.
+- call and describe take the full slug `<dcc_type>.<instance_short>.<tool>`. The gateway
+  refuses a bare tool name.
 
 A restarted host gets a new ID and new slugs. Run `list` again, load the skills again and
 use the new slugs. Never reroute a call to another instance.
@@ -91,16 +93,14 @@ meshy-dcc search --instance-id ID --query "import gltf" --limit 20
 meshy-dcc load-skill SKILL_NAME --instance-id ID
 ```
 
-- **Hits come best match first**, loaded tools and skills to load interleaved. Prefer a
-  hit whose `slug` or `target_tool_slug` is set. `requires_load_skill: true` means you
-  must load its `skill_name` first.
-- **What load-skill returns:** `tools` lists every tool in the skill with its name,
-  `inputSchema` and `annotations`, and `compact_schema` summarizes the best match.
-- **Building the call slug:** it is `<dcc_type>.<instance_short>.<tools[].name>`, for
-  example `blender.1a2b3c4d.blender_interchange__import_file`. Use names from this
-  result, not the slug a search showed before loading.
-- **Loaded tools:** `search --instance-id ID` without a query lists what is already
-  loaded.
+- **Hits come best match first.** Each hit has `tool_slug`, `skill_name`, `summary` and
+  `loaded`. When `loaded` is false, `next_step.action` is `load_skill`: load that
+  `skill_name` on the same instance before calling the tool.
+- **What load-skill returns:** `tools` lists every tool in the skill with its `name`,
+  `inputSchema` and `annotations`. The call slug is
+  `<dcc_type>.<instance_short>.<tools[].name>`, for example
+  `blender.1a2b3c4d.blender_interchange__import_file`.
+- **One tool's schema:** `meshy-dcc describe SLUG`.
 
 ## 3. Call, then read back
 
@@ -109,9 +109,9 @@ meshy-dcc call SLUG --json '{"path": "/absolute/model.glb"}'
 meshy-dcc call SLUG --json-file args.json
 ```
 
-- **Where the outcome is:** `result.structuredContent` has `success`, `message`, `error`
-  and `context` (for example `imported_object_names`). Also check `result.isError`. The
-  top-level `success` only means the call was delivered.
+- **Where the outcome is:** `output` has the tool's `success`, `message`, `error` and
+  `context` (for example `imported_object_names`). A tool that reports failure also
+  exits non-zero.
 - **Delivered is not changed:** after a write, read the scene back with a read-only tool
   and compare it with what you intended.
 - **Unknown outcomes:** keep `request_id`. If a call times out, is interrupted or returns
@@ -119,6 +119,27 @@ meshy-dcc call SLUG --json-file args.json
   write.
 - **Long and async tools:** raise `--timeout-secs` for long sync tools. An async tool
   returns a job; `--wait` polls that same job until it finishes, so don't resubmit it.
+  With `--wait`, `structuredContent.status` is the job's final state and
+  `structuredContent.result` holds the tool's `success`, `message`, `error` and `context`.
+- **Many similar edits:** send up to 25 calls in one batch instead of one command each.
+  The calls run in order; each result says whether it succeeded, and a failed call does not
+  stop the rest unless `stop_on_error` is true.
+
+  ```sh
+  meshy-dcc call --batch --json-file batch.json
+  ```
+
+  ```json
+  {"calls": [
+    {"tool_slug": "blender.1a2b3c4d.blender_objects__move_object",
+     "arguments": {"object_name": "Tree.001", "location": [4, 0, 0]}},
+    {"tool_slug": "blender.1a2b3c4d.blender_objects__move_object",
+     "arguments": {"object_name": "Tree.002", "location": [8, 0, 0]}}
+  ]}
+  ```
+
+  `results[]` holds `index`, `ok`, and `result.output` or `error` for each call. Check
+  every entry, and read the scene back once at the end.
 - **Paths:** use absolute paths, and save only where the user asked.
 - **Prefer typed tools.** Use script-execution tools (`execute_python`,
   `dcc_introspect__eval` and similar) only when the user asked for scripting.

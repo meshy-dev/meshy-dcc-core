@@ -27,7 +27,7 @@ entries:
     install:
       type: host-package
       url: "https://cdn.meshy.ai/meshy-dcc-core/adapters/blender/0.1.0/meshy_dcc_blender_addon_macos_v0.1.0.zip"
-      sha256: "dc8462e6317dba5ee6b22458b56dab7e404e0ed1089c94033232b879c5529a20"
+      sha256: "702053d1e498bebcca65bd40af733522a4a549b46be79673724ce1f4b4aa85f0"
       host:
         uninstall:
           - ["{dcc_path}", "--command", "extension", "remove", "user_default.meshy_dcc_blender"]
@@ -49,7 +49,7 @@ entries:
     install:
       type: host-package
       url: "https://cdn.meshy.ai/meshy-dcc-core/adapters/unity/0.1.0/meshy_dcc_unity_macos_arm64_v0.1.0.zip"
-      sha256: "17148b515ac589b7b29d86e360073f7073fb135abbf6ca60bce68363fe0fb622"
+      sha256: "5a7dbf3a16dd52396340cc5930724f59418c84da0c4809f0846d5d0ed09e7c70"
       host:
         extract: true
         project_steps:
@@ -69,7 +69,7 @@ entries:
     install:
       type: host-package
       url: "https://cdn.meshy.ai/meshy-dcc-core/adapters/godot/0.1.0/meshy_dcc_godot_macos_arm64_v0.1.0.zip"
-      sha256: "76df3208c2cd904f6f65f6aacb948ce7ff207f18f3c078946f362ae126828b03"
+      sha256: "43ffc0a4bbd1922827401fe3f783effbc047c619211c984ed62b19a20aaaf9d1"
       host:
         extract: true
         project_steps:
@@ -89,7 +89,7 @@ entries:
     install:
       type: host-package
       url: "https://cdn.meshy.ai/meshy-dcc-core/adapters/unreal/0.1.0/meshy_dcc_unreal_macos_arm64_v0.1.0.zip"
-      sha256: "1935b33ba00eda975e59c8ef97e91468ae098224f610589022566454d5c4b96c"
+      sha256: "a5896d96d85d915aa1d5333f05ec261ad4722cc970366bbb67320bccc4c33424"
       host:
         extract: true
         project_steps:

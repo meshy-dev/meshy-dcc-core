@@ -127,7 +127,6 @@ class LifecycleController:
             owner._handle.mcp_url(),
         )
         self._runtime_ctrl().start_gateway_guardian_if_needed()
-        self._runtime_ctrl().start_gateway_election_if_needed()
 
         return owner._handle
 
@@ -166,8 +165,6 @@ class LifecycleController:
         gateway_recovery_driver = "none"
         if guardian_running:
             gateway_recovery_driver = "daemon_guardian"
-        elif runtime_mode == "embedded-fallback":
-            gateway_recovery_driver = "embedded_election"
 
         daemon_status = dict(getattr(owner, "_gateway_daemon_status", {}) or {})
         metadata = {

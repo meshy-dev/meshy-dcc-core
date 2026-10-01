@@ -110,6 +110,19 @@ async fn wait_for_gateway_yield(mut yield_rx: watch::Receiver<bool>) {
     }
 }
 
+/// How long a gateway waits for its first host. `start-instance` starts the
+/// gateway before the host, and a host can take minutes to open a project; a
+/// gateway that leaves first makes that host serve as the gateway itself.
+const FIRST_BACKEND_GRACE: Duration = Duration::from_secs(600);
+
+fn idle_grace(grace: Duration, seen_backend: bool) -> Duration {
+    if seen_backend {
+        grace
+    } else {
+        grace.max(FIRST_BACKEND_GRACE)
+    }
+}
+
 fn spawn_gateway_idle_shutdown_task(
     registry: Arc<FileRegistry>,
     gw_state: GatewayState,
@@ -119,6 +132,7 @@ fn spawn_gateway_idle_shutdown_task(
     tokio::spawn(async move {
         let poll = Duration::from_secs(5);
         let mut idle_since: Option<std::time::Instant> = None;
+        let mut seen_backend = false;
 
         loop {
             tokio::time::sleep(poll).await;
@@ -128,6 +142,7 @@ fn spawn_gateway_idle_shutdown_task(
             };
 
             if live_count > 0 {
+                seen_backend = true;
                 if idle_since.take().is_some() {
                     tracing::info!(
                         live_backends = live_count,
@@ -139,6 +154,7 @@ fn spawn_gateway_idle_shutdown_task(
 
             let since = *idle_since.get_or_insert_with(std::time::Instant::now);
             let elapsed = since.elapsed();
+            let grace = idle_grace(grace, seen_backend);
             tracing::debug!(
                 elapsed_secs = elapsed.as_secs(),
                 grace_period_secs = grace.as_secs(),
@@ -1356,6 +1372,15 @@ mod tests {
     use super::*;
     use axum::{Router, response::Redirect, routing::get};
     use std::sync::atomic::{AtomicUsize, Ordering};
+
+    #[test]
+    fn idle_gateway_waits_longer_for_its_first_host() {
+        let grace = Duration::from_secs(30);
+        assert_eq!(idle_grace(grace, false), FIRST_BACKEND_GRACE);
+        assert_eq!(idle_grace(grace, true), grace);
+        let long = Duration::from_secs(3600);
+        assert_eq!(idle_grace(long, false), long);
+    }
 
     fn membership(dcc_type: &str, instance_id: &str) -> (String, InstanceMembership) {
         (

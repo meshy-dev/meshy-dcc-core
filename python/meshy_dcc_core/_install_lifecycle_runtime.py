@@ -25,7 +25,6 @@ DISPATCH_STATUS_BOOTING = "booting"
 DISPATCH_STATUS_READY = "ready"
 DISPATCH_STATUS_UNAVAILABLE = "unavailable"
 GATEWAY_RECOVERY_DRIVER_DAEMON_GUARDIAN = "daemon_guardian"
-GATEWAY_RECOVERY_DRIVER_EMBEDDED_ELECTION = "embedded_election"
 GATEWAY_RECOVERY_DRIVER_NONE = "none"
 REGISTRATION_REFRESH_MODE_FILE_REGISTRY_HEARTBEAT = "file_registry_heartbeat"
 REGISTRY_ENV = ENV_REGISTRY_DIR
@@ -229,10 +228,9 @@ def _gateway_recovery_driver(
     text = _optional_text(raw)
     if text is not None:
         return text
+    _ = runtime_mode
     if guardian_enabled:
         return GATEWAY_RECOVERY_DRIVER_DAEMON_GUARDIAN
-    if runtime_mode == "embedded-fallback":
-        return GATEWAY_RECOVERY_DRIVER_EMBEDDED_ELECTION
     return GATEWAY_RECOVERY_DRIVER_NONE
 
 

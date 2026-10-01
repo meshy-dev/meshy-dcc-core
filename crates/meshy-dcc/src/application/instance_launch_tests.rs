@@ -713,6 +713,53 @@ fn owned_operation_resolution_yields_the_registered_instance_id() {
     );
 }
 
+/// R3 R05: the host re-registered under a new id with the same operation id,
+/// and the stop could no longer find the recorded instance.
+#[test]
+fn owned_operation_follows_a_reregistered_instance() {
+    let dir = tempfile::tempdir().unwrap();
+    let registry = dir.path().join("registry");
+    let store = LifecycleStore::new(&registry);
+    let mut operation = LifecycleOperation::new(
+        "op-owned",
+        "unity",
+        &dir.path().join("MyProject"),
+        std::path::Path::new("/opt/unity/Editor/Unity"),
+        None,
+    );
+    operation.launched = true;
+    operation.owned = true;
+    operation.instance_id = Some("11111111-2222-3333-4444-555555555555".to_string());
+    store.save(&operation).unwrap();
+    let _other = register(
+        &registry,
+        "unity",
+        18081,
+        &[("meshy_dcc_operation_id", "op-2")],
+    );
+    let current = register(
+        &registry,
+        "unity",
+        18080,
+        &[("meshy_dcc_operation_id", "op-owned")],
+    );
+
+    let resolved = resolve_owned_operation(&registry, Some("unity"), None, Some("op-owned"))
+        .unwrap()
+        .unwrap();
+    let current_id = current.instance_id.to_string();
+    assert_eq!(resolved.instance_id.as_deref(), Some(current_id.as_str()));
+    assert_eq!(
+        store
+            .load("op-owned")
+            .unwrap()
+            .unwrap()
+            .instance_id
+            .as_deref(),
+        Some(current_id.as_str())
+    );
+}
+
 #[test]
 fn operation_summary_is_redacted_and_stable() {
     let operation = LifecycleOperation::new(

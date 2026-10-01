@@ -557,7 +557,10 @@ impl DccControlPlane {
     }
 
     pub async fn stop_instance(&self, request: StopInstanceRequest) -> anyhow::Result<Value> {
-        if self.uses_direct_local() {
+        // Stopping a local host is a lifecycle action, like start-instance:
+        // ownership lives in the local operation record, which the gateway
+        // never sees, so it stays local even when calls must use the gateway.
+        if self.target.is_local() {
             local_control::stop_instance_local(self.registry_dir.clone(), request).await
         } else {
             self.gateway_client()

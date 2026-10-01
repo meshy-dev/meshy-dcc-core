@@ -29,7 +29,30 @@ recommends `start_instance`.
 |---|---|
 | `meshy-unity` | `session`, `inspect_object`, `inspect_renderers` (read-only); `inspect_model`, `instantiate_model`, `save_scene_as`, `open_scene` |
 | `unity-scene` | `inspect_scene` (read-only); `create_game_object`, `set_transform`, `save_scene` |
-| `unity-project` | `inspect_project`, `refresh_assets`, `refresh_and_compile` |
+| `unity-project` | `inspect_project`, `read_text_asset` (read-only); `refresh_assets`, `upsert_text_asset`, `refresh_and_compile`, `set_play_mode` |
+
+The scene tools create empty GameObjects and set transforms. No tool adds components,
+creates primitives or deletes objects; that needs scripts (below).
+
+## Scripts and other source files
+
+Writing C# and other text assets below `Assets/` is off unless the operator started Unity
+with `MESHY_DCC_UNITY_ALLOW_SOURCE_WRITES=1`; tool arguments cannot turn it on.
+`meshy_unity__session` reports it as `source_writes`. If it is `false` and the task needs
+scripts, ask the user to restart Unity with the setting, or report that the scene has no
+scripts. Don't put files into `Assets/` some other way to get around it.
+
+When it is on:
+
+1. `unity_project__upsert_text_asset` writes one file: a new UUID `request_id`, an
+   `Assets/...` path ending in `.cs`, `.json`, `.txt`, `.shader`, `.cginc`, `.asmdef`,
+   `.xml`, `.uss` or `.uxml`, at most 256 KiB of UTF-8, and `expected_sha256` `absent` for a
+   new file or the digest from `read_text_asset` to replace one. It is an async job; call it
+   with `--wait`.
+2. `unity_project__refresh_and_compile` (async, `--wait`) imports and compiles, and fails
+   with the compile errors; `unity_diagnostics__read_console` shows them in full.
+3. Use current Unity 6 APIs. An obsolete API can make Unity stop and ask to update the
+   scripts, which blocks the Editor until someone answers.
 
 ## Import a Meshy model
 

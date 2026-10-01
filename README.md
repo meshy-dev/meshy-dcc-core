@@ -30,7 +30,7 @@ Other hosts are not in the support matrix yet.
 | Component | Role |
 |---|---|
 | `meshy-dcc` | Agent-facing CLI: instances, capability search, calls, adapter install, marketplace |
-| `meshy-dcc-server` | Local gateway/sidecar daemon that routes to host instances |
+| `meshy-dcc-server` | Local gateway daemon that routes every agent call to the named host instance; `meshy-dcc` starts it on demand, or runs the same gateway itself when it is not installed alongside |
 | `meshy_dcc_core` | Python wheel that Meshy host adapters embed |
 
 Agents use the CLI together with the `meshy-dcc` Skill; no MCP connector has to

@@ -705,53 +705,30 @@ class TestDccServerBase:
         assert calls[0][1]["gateway_port"] == 19765
         assert calls[0][1]["instance_id_provider"]() is None
 
-    def test_start_enables_gateway_election_through_runtime_controller(self, tmp_path, monkeypatch):
+    def test_start_without_daemon_never_starts_a_promoting_election(self, tmp_path, monkeypatch):
+        # Promotion restarted the server under a new instance id (R3 R05), so a
+        # host without the machine gateway stays a plain instance.
         server = self._make_server(tmp_path)
         server._enable_gateway_failover = True
         server._config.gateway_port = 19765
-        starts = []
-
-        class _FakeElection:
-            def __init__(self, *, dcc_name, server, gateway_port):
-                self.dcc_name = dcc_name
-                self.server = server
-                self.gateway_port = gateway_port
-
-            def start(self):
-                starts.append((self.dcc_name, self.server, self.gateway_port))
-
-            def stop(self):
-                pass
-
-        monkeypatch.setattr("meshy_dcc_core._server.runtime.DccGatewayElection", _FakeElection)
         monkeypatch.setattr(
             "meshy_dcc_core._server.runtime.ensure_gateway_daemon",
             lambda **_kwargs: {"ok": False, "reason": "spawn_failed"},
         )
+        monkeypatch.setattr("meshy_dcc_core._server.runtime.time.sleep", lambda _secs: None)
 
         server.start()
 
-        assert starts == [(server._dcc_name, server, 19765)]
-        assert isinstance(server._gateway_election, _FakeElection)
+        assert server._gateway_election is None
+        assert server.get_gateway_election_status()["gateway_runtime_mode"] == "embedded-fallback"
+        assert server._config.instance_metadata["gateway_recovery_driver"] == "none"
 
     def test_start_skips_embedded_election_when_daemon_backed(self, tmp_path, monkeypatch):
         server = self._make_server(tmp_path)
         server._enable_gateway_failover = True
         server._config.gateway_port = 19765
-        started = {"election": 0}
         guardians = []
 
-        class _FakeElection:
-            def __init__(self, *, dcc_name, server, gateway_port):
-                _ = (dcc_name, server, gateway_port)
-
-            def start(self):
-                started["election"] += 1
-
-            def stop(self):
-                pass
-
-        monkeypatch.setattr("meshy_dcc_core._server.runtime.DccGatewayElection", _FakeElection)
         monkeypatch.setattr(
             "meshy_dcc_core._server.runtime.ensure_gateway_daemon",
             lambda **_kwargs: {"ok": True, "reason": "already_healthy"},
@@ -779,7 +756,7 @@ class TestDccServerBase:
 
         server.start()
 
-        assert started["election"] == 0
+        assert server._gateway_election is None
         assert server.get_gateway_election_status()["gateway_runtime_mode"] == "daemon-backed"
         assert server._config.instance_metadata["gateway_runtime_mode"] == "daemon-backed"
         assert server._config.instance_metadata["gateway_guardian_enabled"] == "true"
@@ -800,24 +777,6 @@ class TestDccServerBase:
         assert server._config.instance_metadata["gateway_recovery_driver"] == "none"
         assert server._server._handle.gateway_metadata_updates[-1]["gateway_guardian_enabled"] == "false"
         assert server._server._handle.gateway_metadata_updates[-1]["gateway_recovery_driver"] == "none"
-
-    def test_gateway_election_start_failure_clears_runtime_state(self, tmp_path, monkeypatch):
-        server = self._make_server(tmp_path)
-        server._enable_gateway_failover = True
-        server._config.gateway_port = 19765
-
-        class _BrokenElection:
-            def __init__(self, *, dcc_name, server, gateway_port):
-                pass
-
-            def start(self):
-                raise RuntimeError("boom")
-
-        monkeypatch.setattr("meshy_dcc_core._server.runtime.DccGatewayElection", _BrokenElection)
-
-        server.start()
-
-        assert server._gateway_election is None
 
     def test_stop_uses_runtime_controller_to_shutdown_gateway_and_handle(self, tmp_path):
         server = self._make_server(tmp_path)

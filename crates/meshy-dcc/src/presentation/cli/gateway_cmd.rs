@@ -29,11 +29,19 @@ pub(crate) async fn ensure_gateway_for_command(
     let Some(endpoint) = gateway_endpoint_for_command(base_url, command, gateway_target) else {
         return Ok(());
     };
-    let Some(result) =
+    let ensured =
         gateway_ctrl::ensure_local_gateway_for_endpoint(&endpoint, gateway_bin, wait_timeout_secs)
-            .await?
-    else {
-        return Ok(());
+            .await;
+    let result = match ensured {
+        Ok(Some(result)) => result,
+        Ok(None) => return Ok(()),
+        // The host can still start and register without a gateway; agent
+        // commands bring it up later.
+        Err(error) if matches!(command, Command::StartInstance { .. }) => {
+            eprintln!("warning: gateway not started before the host: {error:#}");
+            return Ok(());
+        }
+        Err(error) => return Err(error),
     };
 
     if !result.already_running {
@@ -90,9 +98,11 @@ pub(crate) fn gateway_endpoint_for_command(
         | Command::Lint(_)
         | Command::Components { .. }
         | Command::Gateway { .. }
-        // `start-instance` owns the local lifecycle: it resolves a launch plan
-        // and talks to the FileRegistry directly, never through the gateway.
-        | Command::StartInstance { .. } => None,
+        | Command::StartInstance { dry_run: true, .. } => None,
+        // `start-instance` owns the local lifecycle and never routes through
+        // the gateway, but it brings the gateway up first so the host it
+        // launches registers behind it instead of hosting one itself.
+        Command::StartInstance { .. } => Some(Endpoint::new(base_url)),
     }
 }
 

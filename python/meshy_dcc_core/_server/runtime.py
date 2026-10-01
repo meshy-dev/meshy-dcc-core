@@ -12,7 +12,6 @@ from meshy_dcc_core._server.gateway_guardian import GatewayDaemonGuardian
 from meshy_dcc_core._server.gateway_guardian import ensure_gateway_daemon
 from meshy_dcc_core.constants import ENV_GUARDIAN_WATCHDOG_INTERVAL
 from meshy_dcc_core.constants import ENV_STRICT_GATEWAY
-from meshy_dcc_core.gateway_election import DccGatewayElection
 
 logger = logging.getLogger(__name__)
 
@@ -122,15 +121,17 @@ class ServerRuntimeController:
                 f"1 + {_RETRY_COUNT} attempts "
                 f"(reason: {last_result.get('reason', 'unknown')}). "
                 f"Strict gateway mode is enabled (MESHY_DCC_STRICT_GATEWAY=1); "
-                f"refusing to fall back to embedded election."
+                f"refusing to run without the machine gateway."
             )
 
-        # Fallback to embedded election with enriched metadata
+        # Run as a plain instance. The CLI starts the machine gateway when an
+        # agent needs it; this host never promotes itself later, because
+        # promotion restarts the server and changes the instance id.
         owner._gateway_runtime_mode = "embedded-fallback"
         owner._gateway_daemon_status = dict(last_result)
         logger.warning(
             "[%s] Gateway daemon ensure failed after 1 + %d attempts "
-            "(reason: %s, error: %s). Falling back to embedded election "
+            "(reason: %s, error: %s). Running without a gateway guardian "
             "(gateway_runtime_mode=embedded-fallback).",
             dcc_name,
             _RETRY_COUNT,
@@ -175,29 +176,6 @@ class ServerRuntimeController:
             owner._publish_gateway_runtime_metadata()
             logger.info("[%s] Gateway daemon guardian enabled", owner._dcc_name)
             self._start_guardian_watchdog()
-
-    def start_gateway_election_if_needed(self) -> None:
-        owner = self._owner
-        gateway_port = getattr(owner._config, "gateway_port", 0)
-        if not (owner._enable_gateway_failover and gateway_port and gateway_port > 0):
-            return
-        if getattr(owner, "_gateway_runtime_mode", "") == "daemon-backed":
-            return
-        if owner._gateway_election is not None:
-            return
-        election = None
-        try:
-            election = DccGatewayElection(
-                dcc_name=owner._dcc_name,
-                server=owner,
-                gateway_port=gateway_port,
-            )
-            election.start()
-            owner._gateway_election = election
-            logger.info("[%s] Gateway failover election enabled", owner._dcc_name)
-        except Exception as exc:
-            owner._gateway_election = None
-            logger.warning("[%s] Failed to start gateway election: %s", owner._dcc_name, exc)
 
     def stop_gateway_election(self) -> None:
         owner = self._owner

@@ -364,7 +364,7 @@ pub fn resolve_owned_operation(
         return Ok(None);
     };
     let store = LifecycleStore::new(registry_dir);
-    let Some(operation) = store.load(operation_id)? else {
+    let Some(mut operation) = store.load(operation_id)? else {
         anyhow::bail!("no lifecycle operation '{operation_id}' is recorded locally");
     };
     if !operation.owned {
@@ -382,6 +382,7 @@ pub fn resolve_owned_operation(
             "operation '{operation_id}' has not registered an instance yet; refusing to stop an unknown instance"
         ),
     }
+    follow_reregistered_instance(registry_dir, &store, &mut operation)?;
     if let Some(dcc_type) = dcc_type
         && !operation.dcc_type.eq_ignore_ascii_case(dcc_type)
     {
@@ -400,6 +401,35 @@ pub fn resolve_owned_operation(
         );
     }
     Ok(Some(operation))
+}
+
+/// A launched host can register again under a new instance id (its server
+/// restarted in place) while its row still carries the operation id it was
+/// launched with. Follow that one row instead of losing the instance.
+fn follow_reregistered_instance(
+    registry_dir: &Path,
+    store: &LifecycleStore,
+    operation: &mut LifecycleOperation,
+) -> anyhow::Result<()> {
+    let entries = local_instance::select_entries(registry_dir, Some(&operation.dcc_type), None)?;
+    let recorded = operation.instance_id.as_deref().unwrap_or_default();
+    if entries
+        .iter()
+        .any(|entry| entry.instance_id.to_string() == recorded)
+    {
+        return Ok(());
+    }
+    let bound: Vec<&ServiceEntry> = entries
+        .iter()
+        .filter(|entry| {
+            entry_metadata(entry, OPERATION_METADATA_KEYS) == Some(operation.operation_id.as_str())
+        })
+        .collect();
+    if let [entry] = bound.as_slice() {
+        operation.instance_id = Some(entry.instance_id.to_string());
+        store.save(operation)?;
+    }
+    Ok(())
 }
 
 fn instance_matches_operation(instance_id: &str, operation: &LifecycleOperation) -> bool {

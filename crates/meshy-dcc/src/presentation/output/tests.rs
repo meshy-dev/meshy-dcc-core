@@ -137,6 +137,46 @@ fn error_envelope_serialization() {
 }
 
 #[test]
+fn failed_job_envelope_reads_the_waited_result() {
+    let value = json!({
+        "isError": false,
+        "structuredContent": {
+            "status": "completed",
+            "error": null,
+            "result": {
+                "success": false,
+                "message": "Unity refresh and compile job state returned: failed.",
+                "error": "Unity script compilation failed; inspect the Unity Console."
+            }
+        }
+    });
+    let envelope = failure_envelope(&value, ExitCode::GeneralError);
+    assert_eq!(
+        envelope.error.message,
+        "Unity refresh and compile job state returned: failed."
+    );
+    let details = envelope.error.details.expect("details");
+    assert_eq!(
+        details["error"],
+        "Unity script compilation failed; inspect the Unity Console."
+    );
+}
+
+#[test]
+fn gateway_error_body_supplies_message_and_reason() {
+    let error = anyhow::Error::new(crate::infra::http::HttpError::Status {
+        status: reqwest::StatusCode::CONFLICT,
+        body: json!({"error": {"kind": "skill-not-loaded", "message": "skill 'x' is not loaded"}})
+            .to_string(),
+    });
+    let env = serde_json::to_value(error_envelope(&error)).unwrap();
+    assert_eq!(env["error"]["code"], "CONFLICT");
+    assert_eq!(env["error"]["message"], "skill 'x' is not loaded");
+    assert_eq!(env["error"]["details"]["reason"], "skill_not_loaded");
+    assert_eq!(env["error"]["details"]["http_status"], 409);
+}
+
+#[test]
 fn error_envelope_with_details() {
     let env = ErrorEnvelope::new(
         "INVALID_INPUT",

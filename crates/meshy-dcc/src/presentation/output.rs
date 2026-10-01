@@ -216,10 +216,25 @@ pub fn error_envelope(error: &anyhow::Error) -> ErrorEnvelope {
                 Ok(Value::Object(map)) => map,
                 _ => Map::new(),
             };
-            let peer_message = ["detail", "message"]
-                .iter()
-                .find_map(|key| details.get(*key).and_then(Value::as_str))
+            // The gateway nests its errors as {"error": {"kind", "message", ...}}.
+            let nested = details.get("error").and_then(Value::as_object).cloned();
+            let peer_message = nested
+                .as_ref()
+                .and_then(|error| error.get("message").and_then(Value::as_str))
+                .or_else(|| {
+                    ["detail", "message"]
+                        .iter()
+                        .find_map(|key| details.get(*key).and_then(Value::as_str))
+                })
                 .map(str::to_string);
+            if let Some(kind) = nested
+                .as_ref()
+                .and_then(|error| error.get("kind").and_then(Value::as_str))
+            {
+                details
+                    .entry("reason")
+                    .or_insert_with(|| Value::String(kind.replace('-', "_")));
+            }
             details.insert("http_status".into(), Value::from(status.as_u16()));
             ErrorEnvelope::new(
                 exit_code_to_error_code(exit_code),
@@ -245,6 +260,8 @@ pub fn error_envelope(error: &anyhow::Error) -> ErrorEnvelope {
 pub(crate) fn failure_envelope(value: &Value, exit_code: ExitCode) -> ErrorEnvelope {
     let payload = [
         value.pointer("/result/structuredContent"),
+        // `call --wait`: the job's terminal result.
+        value.pointer("/structuredContent/result"),
         value.get("output"),
         value.get("structuredContent"),
         value.get("result"),
@@ -270,6 +287,7 @@ pub(crate) fn failure_envelope(value: &Value, exit_code: ExitCode) -> ErrorEnvel
     let mut details = Map::new();
     details.insert("reason".to_string(), Value::String(reason));
     for (name, pointers) in [
+        ("error", &["/error"][..]),
         (
             "error_type",
             &[

@@ -392,7 +392,15 @@ pub(super) fn now_ns() -> u64 {
 pub(super) fn service_error_status(err: &ServiceError) -> StatusCode {
     match err.kind.as_str() {
         "unknown-slug" => StatusCode::NOT_FOUND,
-        "ambiguous" | "instance-leased" | "lease-owner-mismatch" => StatusCode::CONFLICT,
+        "ambiguous"
+        | "instance-leased"
+        | "lease-owner-mismatch"
+        | "skill-not-loaded"
+        | "affinity-violation"
+        | "thread-affinity-violation" => StatusCode::CONFLICT,
+        "not-found" => StatusCode::NOT_FOUND,
+        "unauthorized" => StatusCode::UNAUTHORIZED,
+        "not-ready" => StatusCode::SERVICE_UNAVAILABLE,
         "instance-offline" => match err.previous_status.as_deref() {
             Some("exited" | "deregistered" | "host-died" | "heartbeat-timeout") => StatusCode::GONE,
             Some("never-registered") => StatusCode::NOT_FOUND,

@@ -446,8 +446,6 @@ def _handle_gateway_failover_status(
     if not gateway_recovery_driver:
         if _metadata_truthy(raw.get("gateway_guardian_enabled")):
             gateway_recovery_driver = "daemon_guardian"
-        elif gateway_runtime_mode == "embedded-fallback":
-            gateway_recovery_driver = "embedded_election"
         else:
             gateway_recovery_driver = "none"
     registration_refresh_mode = str(

@@ -163,7 +163,7 @@ def test_runtime_mode_reason_takes_priority(dcc_name, runtime_mode) -> None:
     assert payload["gateway_runtime_mode"] == runtime_mode
     assert payload["registration_refresh_mode"] == "file_registry_heartbeat"
     assert payload["gateway_recovery_driver"] == (
-        "embedded_election" if runtime_mode == "embedded-fallback" else "daemon_guardian"
+        "none" if runtime_mode == "embedded-fallback" else "daemon_guardian"
     )
     assert payload["reason"] == runtime_mode
 
@@ -239,56 +239,8 @@ class _FakeHandle:
         self.shutdown_calls += 1
 
 
-def test_gateway_exit_triggers_promotion_or_explains_why_not(monkeypatch) -> None:
-    """End-to-end regression for #1355.
-
-    Simulates the scenario described in the issue: a standalone gateway
-    process exits, the embedded adapter's election thread observes the
-    health probe failing, and either promotes the adapter to gateway or
-    surfaces a structured reason why promotion was skipped.
-
-    The test stays within a single process by replacing
-    ``DccGatewayElection`` with a fake that we drive manually, so it
-    runs in CI without a Rust runtime.
-    """
-    from meshy_dcc_core._server import runtime as runtime_mod
-
-    promotion_calls: list[int] = []
-    election_started: list[Any] = []
-
-    class _FakeElection:
-        def __init__(self, *, dcc_name: str, server: Any, gateway_port: int) -> None:
-            self.dcc_name = dcc_name
-            self.server = server
-            self.gateway_port = gateway_port
-            self._running = False
-            self._consecutive_failures = 0
-
-        def start(self) -> None:
-            self._running = True
-            election_started.append((self.dcc_name, self.gateway_port))
-
-        def stop(self) -> None:
-            self._running = False
-
-        def get_status(self) -> dict[str, Any]:
-            return {
-                "running": self._running,
-                "consecutive_failures": self._consecutive_failures,
-                "gateway_host": "127.0.0.1",
-                "gateway_port": self.gateway_port,
-            }
-
-        def trigger_promotion(self) -> bool:
-            self._consecutive_failures = 3
-            result = self.server._upgrade_to_gateway()
-            if result:
-                self._consecutive_failures = 0
-            promotion_calls.append(result)
-            return result
-
-    monkeypatch.setattr(runtime_mod, "DccGatewayElection", _FakeElection)
-
+def test_failover_diagnostics_report_an_active_election() -> None:
+    """The diagnostics tool reports what its resolver says about an election."""
     server = create_skill_server("blender", McpHttpConfig(port=0))
     register_diagnostic_mcp_tools(
         server,
