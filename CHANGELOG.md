@@ -39,6 +39,37 @@ and is not runtime-compatible with it. Attribution stays in `LICENSE` and
   with `--instance-id`, even when only one instance is live. The only
   exception is a tool the host marks `readOnlyHint: true`. The CLI rejects
   the call before sending anything to the host.
+- Agents reach hosts through the gateway. The Skill runs every command with
+  `--require-gateway`, and the gateway routes each call to the instance the
+  agent names. The gateway is one resident process that the CLI starts on
+  demand: `meshy-dcc-server` when it is installed next to the CLI, otherwise
+  the CLI's own `meshy-dcc gateway`. `start-instance` starts it before it
+  launches a host, so the host registers behind it. The CLI's direct-to-host
+  local mode stays for diagnostics.
+- Hosts no longer promote themselves to gateway after they start. The
+  embedded election did that by restarting the host's server, which
+  registered a new instance id and cut off the launch operation.
+  `DccGatewayElection` is still importable; core no longer starts it.
+- A gateway that has not seen a host yet waits 10 minutes before it leaves;
+  once its last host is gone it still leaves after 30 seconds.
+- Errors carry a code and `details.reason` instead of `INTERNAL_ERROR`:
+  `NOT_FOUND`, `INVALID_INPUT`, `UNAVAILABLE` or `CONFLICT`, with reasons such
+  as `instance_not_found`, `instance_required`, `skill_not_loaded` or
+  `invalid_params`. The error envelope follows `--output`. The gateway passes
+  a host's own refusal (bad arguments, skill not loaded) through with its kind,
+  message and status instead of a 502 backend error, and the CLI reads the
+  gateway's nested error into the envelope.
+- Search returns the best match first: hosts score whole-word tool matches
+  and mark exact ones, and the CLI keeps their order.
+- A `next_action` command repeats the caller's global flags, and a retried
+  `start-instance` keeps its `--launch-plan` and other options.
+- `stop-instance` on a local host always uses the local lifecycle path, where
+  the launch operation records ownership. It waits up to 10 seconds for a
+  just-started host to publish its stop hook, and follows a host that
+  registered again under the same launch operation.
+- `meshy_dcc_server_version` and gateway election use the core version
+  rather than the adapter's.
+- Background update checks never start the gateway.
 
 ### Added
 
@@ -71,6 +102,11 @@ and is not runtime-compatible with it. Attribution stays in `LICENSE` and
   work might be unsaved. Send it only after the user has agreed.
 - `meshy_dcc_core.host.safe_stop.serve_safe_stop` serves a loopback endpoint that
   an adapter can advertise as `safe_stop_url`. It accepts JSON bodies only.
+- The Skill covers `call --batch` (up to 25 calls in order, one result each),
+  the gateway's result shapes, waited job results and the Unity source-write
+  gate.
+- Tool arguments are checked against JSON Schema `pattern`.
+- A `not_available` catalog entry's error carries the catalog's reason.
 
 ### Fixed
 
