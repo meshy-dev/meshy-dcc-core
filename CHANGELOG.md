@@ -123,6 +123,11 @@ and is not runtime-compatible with it. Attribution stays in `LICENSE` and
   installs (`curl … | bash`, `irm … | iex`).
   `scripts/release/generate_update_manifest.py` writes the matching manifest
   and the binaries under their published names.
+- A platform build in the catalog can list `mirrors`: URLs serving the same
+  bytes, tried in order when a download fails. A download whose bytes fail
+  the SHA-256 check stops the install instead. The bundled catalog points
+  each adapter build at its CDN copy (CDN names, version dirs) with the
+  adapter repository's GitHub Release as the mirror.
 - Catalog `host-package` entries can list one build per platform under
   `install.platforms` (`macos-arm64`, `windows-x86_64`); `meshy-dcc` uses the
   running machine's build, and an entry with none for it is reported as

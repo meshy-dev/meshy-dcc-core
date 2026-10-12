@@ -380,6 +380,7 @@ fn execute_action(action: &InstallStepAction) -> Result<StepExecution, InstallEr
             .map(StepExecution::Completed),
         InstallStepAction::HostPackage {
             url,
+            mirrors,
             sha256,
             dcc_path,
             extract_to,
@@ -389,6 +390,7 @@ fn execute_action(action: &InstallStepAction) -> Result<StepExecution, InstallEr
             project_steps,
         } => execute_host_package(
             url,
+            mirrors,
             sha256,
             HostTargets {
                 dcc_path: dcc_path.as_deref(),
@@ -662,6 +664,29 @@ fn execute_zip_extract(
 }
 
 /// Download `url` and return its bytes only if they match `expected` (lowercase hex).
+/// Download from `url`, or from each mirror in turn when a download fails.
+/// Bytes that fail the SHA-256 check stop the install: another source is not
+/// a way around a failed check.
+fn download_first_verified(
+    url: &str,
+    mirrors: &[String],
+    expected: &str,
+) -> Result<Vec<u8>, InstallError> {
+    let mut failures = Vec::new();
+    for source in std::iter::once(url).chain(mirrors.iter().map(String::as_str)) {
+        match download_verified(source, expected) {
+            Err(InstallError::StepFailed { step, message }) if step == "download" => {
+                failures.push(message);
+            }
+            other => return other,
+        }
+    }
+    Err(InstallError::StepFailed {
+        step: "download".into(),
+        message: failures.join("; "),
+    })
+}
+
 fn download_verified(url: &str, expected: &str) -> Result<Vec<u8>, InstallError> {
     let bytes = reqwest::blocking::get(url)
         .and_then(reqwest::blocking::Response::error_for_status)
@@ -768,6 +793,7 @@ fn extract_host_package(bytes: &[u8], sha256: &str, dest: &Path) -> Result<bool,
 
 fn execute_host_package(
     url: &str,
+    mirrors: &[String],
     sha256: &str,
     targets: HostTargets<'_>,
     uninstall: &[Vec<String>],
@@ -797,7 +823,11 @@ fn execute_host_package(
     let name = crate::domain::install::host_package_file_name(url)
         .ok_or_else(|| fail(format!("refusing package URL {url}")))?;
     let expected = required_archive_sha256(Some(sha256))?;
-    let bytes = download_verified(url, &expected)?;
+    for mirror in mirrors {
+        crate::domain::install::host_package_file_name(mirror)
+            .ok_or_else(|| fail(format!("refusing package mirror {mirror}")))?;
+    }
+    let bytes = download_first_verified(url, mirrors, &expected)?;
     let download_dir = tempfile::tempdir()?;
     let package = download_dir.path().join(name);
     fs::write(&package, &bytes)?;

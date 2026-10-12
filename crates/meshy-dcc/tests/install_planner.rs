@@ -134,6 +134,7 @@ fn planner_generates_executable_steps_for_pip_install() {
         sop_version: None,
         sop_schema_digest: None,
         platforms: Default::default(),
+        mirrors: Default::default(),
     };
     let entries = vec![catalog_entry("meshy-dcc-maya", &["maya"], Some(install))];
     let plan = InstallPlanner::plan(
@@ -334,6 +335,7 @@ fn planner_prefers_catalog_install_instructions_url() {
         sop_version: None,
         sop_schema_digest: None,
         platforms: Default::default(),
+        mirrors: Default::default(),
     };
     let mut entry = catalog_entry("meshy-dcc-maya", &["maya"], Some(install));
     entry.url = Some("https://github.com/meshy-dev/meshy-dcc-maya".into());
@@ -376,6 +378,7 @@ fn planner_generates_executable_steps_for_git_install() {
         sop_version: None,
         sop_schema_digest: None,
         platforms: Default::default(),
+        mirrors: Default::default(),
     };
     let entries = vec![catalog_entry(
         "meshy-dcc-maya-mgear",
@@ -423,6 +426,7 @@ fn planner_rejects_mutable_git_and_unverified_zip_installs() {
         sop_version: None,
         sop_schema_digest: None,
         platforms: Default::default(),
+        mirrors: Default::default(),
     };
     let request = || InstallRequest {
         dcc_type: "maya".into(),
@@ -487,6 +491,7 @@ fn planner_rejects_unpinned_pip_artifacts_and_version_overrides() {
         sop_version: None,
         sop_schema_digest: None,
         platforms: Default::default(),
+        mirrors: Default::default(),
     };
     let entry = |install| catalog_entry("meshy-dcc-maya", &["maya"], Some(install));
     let request = |version: Option<&str>| InstallRequest {
@@ -585,6 +590,7 @@ fn planner_prefers_requested_python_for_pip_install() {
         sop_version: None,
         sop_schema_digest: None,
         platforms: Default::default(),
+        mirrors: Default::default(),
     };
     let entries = vec![catalog_entry("meshy-dcc-maya", &["maya"], Some(install))];
     let plan = InstallPlanner::plan(
@@ -638,6 +644,7 @@ fn planner_builds_adobe_debug_link_from_operator_paths() {
         sop_version: None,
         sop_schema_digest: None,
         platforms: Default::default(),
+        mirrors: Default::default(),
     };
     let plan = InstallPlanner::plan(
         &[catalog_entry(
@@ -696,6 +703,7 @@ fn planner_prefers_adapter_entry_over_skill_pack() {
         sop_version: None,
         sop_schema_digest: None,
         platforms: Default::default(),
+        mirrors: Default::default(),
     };
     let mut skill_pack = catalog_entry("meshy-dcc-photoshop-skills", &["photoshop"], None);
     skill_pack.tags = vec!["skills".into(), "official".into()];

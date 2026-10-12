@@ -157,6 +157,9 @@ pub enum InstallStepAction {
     HostPackage {
         /// Artifact URL declared by the catalog.
         url: String,
+        /// Other URLs for the same artifact, tried in order when a download fails.
+        #[serde(default, skip_serializing_if = "Vec::is_empty")]
+        mirrors: Vec<String>,
         /// Required SHA-256 of the artifact.
         sha256: String,
         /// Host executable the operator supplied (`{dcc_path}`). Commands never
@@ -676,6 +679,7 @@ impl InstallPlanner {
             description: format!("Install the {dcc_type} adapter package with the host"),
             action: Some(InstallStepAction::HostPackage {
                 url: install.url.clone().unwrap_or_default(),
+                mirrors: install.mirrors.clone(),
                 sha256: install.sha256.clone().unwrap_or_default(),
                 dcc_path: dcc_path.clone(),
                 extract_to,

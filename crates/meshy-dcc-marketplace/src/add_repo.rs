@@ -308,6 +308,7 @@ pub fn install_from_repo_at_commit(
         sop_version: None,
         sop_schema_digest: None,
         platforms: Default::default(),
+        mirrors: Default::default(),
     };
     required_git_commit(&install)?;
 

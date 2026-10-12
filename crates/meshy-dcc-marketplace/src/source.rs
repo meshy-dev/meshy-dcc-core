@@ -156,6 +156,7 @@ mod tests {
             sop_version: None,
             sop_schema_digest: None,
             platforms: Default::default(),
+            mirrors: Default::default(),
         }
     }
 

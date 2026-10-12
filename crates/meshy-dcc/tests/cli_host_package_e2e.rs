@@ -345,3 +345,89 @@ fn host_package_project_steps_need_a_project_and_no_symlinks() {
             .exists()
     );
 }
+
+/// A catalog whose build for this platform lists `url` then `mirrors`.
+fn mirrored_catalog(temp: &TempDir, url: &str, mirrors: &[String], sha: &str) -> PathBuf {
+    let platform = meshy_dcc_updater::meshy_release::current_platform().unwrap();
+    let mirrors = mirrors
+        .iter()
+        .map(|mirror| format!("\"{mirror}\""))
+        .collect::<Vec<_>>()
+        .join(", ");
+    let path = temp.path().join("mirrored.yml");
+    std::fs::write(
+        &path,
+        format!(
+            r#"version: "1"
+entries:
+  - name: "meshy-dcc-testhost"
+    description: "test host adapter"
+    dcc: ["testhost"]
+    tags: ["adapter"]
+    version: "0.1.0"
+    install:
+      type: host-package
+      platforms:
+        {platform}:
+          url: "{url}"
+          sha256: "{sha}"
+          mirrors: [{mirrors}]
+      host:
+        steps: [["{{dcc_path}}", "install", "-e", "{{package}}"]]
+        launch: ["{{executable}}"]
+"#
+        ),
+    )
+    .unwrap();
+    path
+}
+
+fn closed_port_url() -> String {
+    let port = std::net::TcpListener::bind("127.0.0.1:0")
+        .unwrap()
+        .local_addr()
+        .unwrap()
+        .port();
+    format!("http://127.0.0.1:{port}/meshy_dcc_testhost.zip")
+}
+
+#[test]
+fn host_package_falls_back_to_a_mirror_when_the_first_url_is_unreachable() {
+    let temp = TempDir::new().unwrap();
+    let bytes = package(&temp);
+    let sha = sha256_hex(&bytes);
+    let catalog = mirrored_catalog(&temp, &closed_port_url(), &[serve(bytes)], &sha);
+
+    let output = install(&temp, &catalog, Some(&fake_host(&temp)));
+
+    assert!(
+        output.status.success(),
+        "stdout={} stderr={}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(
+        temp.path().join("host-copy.zip").exists(),
+        "the host received the package"
+    );
+}
+
+#[test]
+fn host_package_does_not_try_a_mirror_after_a_failed_checksum() {
+    let temp = TempDir::new().unwrap();
+    let bytes = package(&temp);
+    let sha = sha256_hex(&bytes);
+    let tampered = serve(b"not the package".to_vec());
+    let catalog = mirrored_catalog(&temp, &tampered, &[serve(bytes)], &sha);
+
+    let output = install(&temp, &catalog, Some(&fake_host(&temp)));
+
+    assert!(!output.status.success());
+    let text = format!(
+        "{}{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(text.contains("SHA-256 mismatch"), "{text}");
+    assert!(!temp.path().join("host-copy.zip").exists());
+}

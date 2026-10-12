@@ -265,6 +265,10 @@ pub struct CatalogInstall {
     /// `windows-x86_64`); see [`CatalogInstall::select_platform`].
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub platforms: BTreeMap<String, CatalogArtifact>,
+    /// Other URLs serving the same bytes as `url`, tried in order when a
+    /// download fails (set from the selected platform's build).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub mirrors: Vec<String>,
 }
 
 /// One platform's build of a package.
@@ -272,6 +276,10 @@ pub struct CatalogInstall {
 pub struct CatalogArtifact {
     pub url: String,
     pub sha256: String,
+    /// Other URLs serving the same bytes, tried in order when `url` cannot be
+    /// downloaded (for example the GitHub Release where the CDN is blocked).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub mirrors: Vec<String>,
     /// Host commands for this platform, when they differ from the entry's
     /// (for example a `.cmd` launcher on Windows).
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -295,6 +303,7 @@ impl CatalogInstall {
         };
         self.url = Some(build.url.clone());
         self.sha256 = Some(build.sha256.clone());
+        self.mirrors = build.mirrors.clone();
         if let Some(host) = &build.host {
             self.host = Some(host.clone());
         }
@@ -1014,6 +1023,7 @@ entries:
                 sop_version: None,
                 sop_schema_digest: None,
                 platforms: Default::default(),
+                mirrors: Default::default(),
             }),
             icon: None,
             showcase: None,
@@ -1040,6 +1050,7 @@ entries:
             sop_version: None,
             sop_schema_digest: None,
             platforms: Default::default(),
+            mirrors: Default::default(),
         });
 
         assert!(validate_entry(&entry).is_err());
@@ -1066,6 +1077,7 @@ entries:
             sop_version: None,
             sop_schema_digest: None,
             platforms: Default::default(),
+            mirrors: Default::default(),
         });
 
         assert!(validate_entry(&entry).is_err());
@@ -1108,6 +1120,7 @@ entries:
                 sop_version: None,
                 sop_schema_digest: None,
                 platforms: Default::default(),
+                mirrors: Default::default(),
             }),
             icon: None,
             showcase: None,
@@ -1201,6 +1214,7 @@ entries:
                 sop_version: None,
                 sop_schema_digest: None,
                 platforms: Default::default(),
+                mirrors: Default::default(),
             }),
             icon: None,
             showcase: None,

@@ -191,6 +191,7 @@ pub fn publish_marketplace_package(
             sop_version: None,
             sop_schema_digest: None,
             platforms: Default::default(),
+            mirrors: Default::default(),
         }),
         package,
         maintainer: options.maintainer.or_else(|| {

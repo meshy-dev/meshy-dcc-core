@@ -58,6 +58,7 @@ fn sop_entry(version: Option<u32>, digest: Option<&str>) -> CatalogEntry {
             adobe: None,
             host: None,
             platforms: Default::default(),
+            mirrors: Default::default(),
         }),
         icon: None,
         showcase: None,
