@@ -1128,6 +1128,14 @@ mod tests {
         service
     }
 
+    /// The signed remote catalog is checked against the entry schema; the
+    /// bundled copy has to pass the same check.
+    #[test]
+    fn bundled_catalog_passes_the_entry_schema() {
+        let entries = meshy_dcc_catalog::load_from_str(BUNDLED_CATALOG).unwrap();
+        meshy_dcc_catalog::validate_catalog_entries(&entries).unwrap();
+    }
+
     #[test]
     fn service_uses_bundled_catalog_when_default_path_is_missing() {
         let service = InstallService::new(PathBuf::from("__missing_meshy_dcc_catalog__.yml"));

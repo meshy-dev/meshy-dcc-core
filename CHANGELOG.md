@@ -121,8 +121,9 @@ and is not runtime-compatible with it. Attribution stays in `LICENSE` and
   `install.platforms` (`macos-arm64`, `windows-x86_64`); `meshy-dcc` uses the
   running machine's build, and an entry with none for it is reported as
   `not_available` with the platforms it does have. The bundled catalog does
-  this for the four adapters: Blender for macOS and Windows, Unity, Godot
-  and Unreal for macOS so far.
+  this for the four adapters, each for macOS and Windows; a platform's build
+  can bring its own host commands (the Windows launchers are `.cmd` files,
+  and Godot's installer runs the package's Python directly).
 - npm packaging: `meshy-dcc` holds a small launcher and lists one binary
   package per platform (`@meshy-ai/meshy-dcc-darwin-arm64`,
   `@meshy-ai/meshy-dcc-win32-x64`) as optional dependencies, so npm installs

@@ -57,7 +57,14 @@ entries:
       platforms:
         macos-arm64:
           url: "https://cdn.meshy.ai/meshy-dcc-core/adapters/unity/0.1.0/meshy_dcc_unity_macos_arm64_v0.1.0.zip"
-          sha256: "1f271536336d7d0ca587a005acb3896c1ba1bfd8296fabbf0a1c19c2f65d602e"
+          sha256: "06dac258c8af391cc50d4b447144f231dc0125a40f7197fb80f9f358ee89954a"
+        windows-x86_64:
+          url: "https://cdn.meshy.ai/meshy-dcc-core/adapters/unity/0.1.0/meshy_dcc_unity_windows_x86_64_v0.1.0.zip"
+          sha256: "4448f3c6cf4d2857549d17edd056bfb35392c648b002e6d4e4b6bbeabe3a070c"
+          host:
+            extract: true
+            project_steps:
+              - ["{package_dir}/bin/meshy-dcc-unity-sidecar.cmd", "install", "--project", "{project}", "--sidecar", "{package_dir}/bin/meshy-dcc-unity-sidecar.cmd", "--files-only", "--yes", "--json"]
       host:
         extract: true
         project_steps:
@@ -79,7 +86,14 @@ entries:
       platforms:
         macos-arm64:
           url: "https://cdn.meshy.ai/meshy-dcc-core/adapters/godot/0.1.0/meshy_dcc_godot_macos_arm64_v0.1.0.zip"
-          sha256: "8469877311f8b1a986fbda6feb1d61e3e6252df9628e6cbab6e28c2508bd03fe"
+          sha256: "ba7fc0fa8cdfd539f654dabfa91468d51486580cf08bc5140221ec85babf73d9"
+        windows-x86_64:
+          url: "https://cdn.meshy.ai/meshy-dcc-core/adapters/godot/0.1.0/meshy_dcc_godot_windows_x86_64_v0.1.0.zip"
+          sha256: "9c9be24f7b3b42fd659e60eece028e22404ff274a8f5860d6382064058cbaf7b"
+          host:
+            extract: true
+            project_steps:
+              - ["{package_dir}/python/python.exe", "-m", "meshy_dcc_godot", "install", "{project}", "--sidecar", "{package_dir}/bin/meshy-dcc-godot-sidecar.cmd", "--files-only", "--yes", "--json"]
       host:
         extract: true
         project_steps:
@@ -101,7 +115,14 @@ entries:
       platforms:
         macos-arm64:
           url: "https://cdn.meshy.ai/meshy-dcc-core/adapters/unreal/0.1.0/meshy_dcc_unreal_macos_arm64_v0.1.0.zip"
-          sha256: "163fedbd8f76e4f6f277a87c0c966bab7ae61dc8427523e60fdcbf5db2f04791"
+          sha256: "979acdb8c0db0261aa70354f12108de14f48aca8b868e0d967ac10fa3783b0f3"
+        windows-x86_64:
+          url: "https://cdn.meshy.ai/meshy-dcc-core/adapters/unreal/0.1.0/meshy_dcc_unreal_windows_x86_64_v0.1.0.zip"
+          sha256: "e7c486c9a13c32a9a4f56a0d5ea72dad9cce32c3a8e401e71c47df2d393dfc73"
+          host:
+            extract: true
+            project_steps:
+              - ["{package_dir}/bin/meshy-dcc-unreal.cmd", "install", "{project}", "--yes", "--json"]
       host:
         extract: true
         project_steps:
