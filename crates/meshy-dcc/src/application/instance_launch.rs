@@ -901,6 +901,18 @@ pub fn same_path(left: &Path, right: &Path) -> bool {
             .eq_ignore_ascii_case(&right.display().to_string())
 }
 
+/// Whether `start-instance` on this machine launched the process behind `entry`:
+/// its row names a launch operation that is recorded locally as owned.
+pub fn launched_here(registry_dir: &Path, entry: &ServiceEntry) -> bool {
+    entry_metadata(entry, OPERATION_METADATA_KEYS).is_some_and(|operation_id| {
+        LifecycleStore::new(registry_dir)
+            .load(operation_id)
+            .ok()
+            .flatten()
+            .is_some_and(|operation| operation.owned)
+    })
+}
+
 pub fn entry_metadata<'a>(entry: &'a ServiceEntry, keys: &[&str]) -> Option<&'a str> {
     keys.iter().find_map(|key| {
         entry

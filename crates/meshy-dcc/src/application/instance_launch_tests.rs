@@ -882,3 +882,51 @@ fn same_path_compares_canonicalized_paths() {
     assert!(same_path(&project, &canonical));
     assert!(!same_path(&project, &dir.path().join("Other")));
 }
+
+/// dcc-cua evaluation: a stop by instance id right after start-instance did not
+/// wait for the stop hook, because only an explicit --operation-id did.
+#[test]
+fn launched_here_follows_the_operation_named_on_the_row() {
+    let dir = tempfile::tempdir().unwrap();
+    let registry = dir.path().join("registry");
+    let store = LifecycleStore::new(&registry);
+    let mut operation = LifecycleOperation::new(
+        "op-owned",
+        "blender",
+        &dir.path().join("Project"),
+        std::path::Path::new("/opt/blender/blender"),
+        None,
+    );
+    operation.launched = true;
+    operation.owned = true;
+    store.save(&operation).unwrap();
+    let mut unowned = operation.clone();
+    unowned.operation_id = "op-adopted".to_string();
+    unowned.owned = false;
+    store.save(&unowned).unwrap();
+
+    let owned = register(
+        &registry,
+        "blender",
+        18090,
+        &[("meshy_dcc_operation_id", "op-owned")],
+    );
+    let adopted = register(
+        &registry,
+        "blender",
+        18091,
+        &[("meshy_dcc_operation_id", "op-adopted")],
+    );
+    let unknown = register(
+        &registry,
+        "blender",
+        18092,
+        &[("meshy_dcc_operation_id", "op-elsewhere")],
+    );
+    let plain = register(&registry, "blender", 18093, &[]);
+
+    assert!(launched_here(&registry, &owned));
+    assert!(!launched_here(&registry, &adopted));
+    assert!(!launched_here(&registry, &unknown));
+    assert!(!launched_here(&registry, &plain));
+}

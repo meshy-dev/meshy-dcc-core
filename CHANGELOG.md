@@ -147,6 +147,9 @@ and is not runtime-compatible with it. Attribution stays in `LICENSE` and
 - When a `tools.yaml` entry sets `read_only`, `destructive` or `idempotent` to
   `true` and declares no `*_hint` key, the matching MCP annotation is now
   published.
+- `stop-instance --instance-id` right after `start-instance` waits for the
+  host to publish its stop hook, as `--operation-id` already did; it used to
+  refuse with `safe_stop_unavailable` when the host had not published it yet.
 - When an adapter installer fails, `install` reports what it said: its
   stderr, or its JSON report on stdout when stderr is empty. The installer's
   stdout used to be discarded, so a Godot `ownership_conflict` showed only as

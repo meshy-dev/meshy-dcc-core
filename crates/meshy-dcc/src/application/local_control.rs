@@ -852,8 +852,11 @@ pub async fn stop_instance_local(
         Some(&request.instance_id),
     )?;
     // An adapter publishes its stop hook on the heartbeat after it starts, so a
-    // stop right after start-instance can see the row without it yet.
-    if owned_operation.is_some() {
+    // stop right after start-instance can see the row without it yet, whether
+    // the stop names the launch operation or only the instance.
+    if owned_operation.is_some()
+        || crate::application::instance_launch::launched_here(&registry_dir, &entry)
+    {
         let deadline = std::time::Instant::now() + SAFE_STOP_PUBLISH_WAIT;
         while safe_stop_url(&entry).is_none() && std::time::Instant::now() < deadline {
             tokio::time::sleep(Duration::from_millis(500)).await;
