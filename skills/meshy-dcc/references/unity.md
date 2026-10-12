@@ -54,6 +54,12 @@ When it is on:
 3. Use current Unity 6 APIs. An obsolete API can make Unity stop and ask to update the
    scripts, which blocks the Editor until someone answers.
 
+If a Unity job ends with `context.reason: host_unresponsive`, the Editor's main thread
+stopped answering for longer than the threshold (default 120 s): Unity may be showing a
+dialog or be stuck in a long import. Do not submit the job again. Tell the user, and once
+`unity_diagnostics__ping` succeeds, call `unity_diagnostics__inspect_job` with the same
+`request_id`: the job may have finished.
+
 ## Import a Meshy model
 
 1. Copy the FBX or OBJ to a new folder below `Assets/`. Unity cannot import GLB.
