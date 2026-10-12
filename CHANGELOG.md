@@ -128,6 +128,10 @@ and is not runtime-compatible with it. Attribution stays in `LICENSE` and
 - The inherited documentation site, agent guides, release tooling
   configuration and patch workflow.
 - The `asset-source` demo skill, which returned placeholder assets.
+- The CLI no longer downloads `meshy-dcc-server` from the release channel or
+  runs a cached copy: it ran that binary without verifying it. With no
+  `meshy-dcc-server` beside it, the CLI runs the gateway itself, as it already
+  did whenever the download failed.
 
 ## 0.1.0 (2026-09-28)
 

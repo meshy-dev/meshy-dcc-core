@@ -1,10 +1,11 @@
-//! Gateway binary discovery — three-layer strategy.
+//! Gateway binary discovery.
 //!
-//! 1. Same-directory lookup (alongside current executable)
-//! 2. GitHub Releases download (with local cache)
-//! 3. Sub-command fallback (current executable)
+//! 1. An explicit path from the caller
+//! 2. `meshy-dcc-server` beside the current executable (the installer puts it there)
+//! 3. The current executable, which runs the same gateway as `meshy-dcc gateway`
 //!
-//! The discovery chain stops at the first successful resolution.
+//! Nothing is downloaded: a binary fetched at run time and executed without
+//! verification is not worth the start-up it saves.
 
 use std::path::PathBuf;
 
@@ -19,22 +20,10 @@ const GATEWAY_BINARY_NAME_WITH_EXT: &str = "meshy-dcc-server.exe";
 #[cfg(not(windows))]
 const GATEWAY_BINARY_NAME_WITH_EXT: &str = GATEWAY_BINARY_NAME;
 
-/// Environment variable to override the release download base URL.
-const ENV_GITHUB_RELEASE_BASE: &str = "MESHY_DCC_GATEWAY_DOWNLOAD_BASE";
-
-/// Default base URL for gateway binary downloads: the Meshy release channel.
-const DEFAULT_GITHUB_RELEASE_BASE: &str = meshy_dcc_updater::meshy_release::BASE_URL;
-
-/// Resolve the gateway binary using the full discovery chain:
+/// Resolve the gateway binary: the explicit path, then `meshy-dcc-server`
+/// beside the CLI, then the CLI itself.
 ///
-/// 1. Explicit path (if provided by the caller)
-/// 2. Same-directory lookup alongside the current executable
-/// 3. Cached download from a previous GitHub Releases fetch
-/// 4. GitHub Releases download (matching the current CLI version)
-/// 5. Sub-command fallback (current executable)
-///
-/// Returns an error only when the explicit path is missing; all other
-/// failures fall through to the next layer.
+/// Returns an error only when the explicit path is missing.
 pub async fn resolve_gateway_bin(gateway_bin: Option<&PathBuf>) -> anyhow::Result<PathBuf> {
     // Layer 0: Explicit path provided by caller
     if let Some(explicit) = gateway_bin {
@@ -49,18 +38,7 @@ pub async fn resolve_gateway_bin(gateway_bin: Option<&PathBuf>) -> anyhow::Resul
         return Ok(found);
     }
 
-    // Layer 2: Cached binary from a previous download
-    if let Some(cached) = find_cached_binary() {
-        return Ok(cached);
-    }
-
-    // Layer 3: GitHub Releases download
-    let version = meshy_dcc_updater::meshy_release::PRODUCT_VERSION;
-    if let Ok(downloaded) = download_from_github_releases(version).await {
-        return Ok(downloaded);
-    }
-
-    // Layer 4: Sub-command fallback (current executable)
+    // Layer 2: Sub-command fallback (current executable)
     let current =
         std::env::current_exe().context("resolving current executable for sub-command fallback")?;
     Ok(current)
@@ -74,14 +52,13 @@ pub struct GatewayBinaryDiagnostic {
     pub path: Option<PathBuf>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub configured_path: Option<PathBuf>,
-    pub would_download_if_started: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub version: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub error: Option<String>,
 }
 
-/// Diagnose the gateway/server binary path without downloading or launching it.
+/// Diagnose which gateway binary auto-start would launch, without launching it.
 pub fn diagnose_gateway_bin(gateway_bin: Option<&PathBuf>) -> GatewayBinaryDiagnostic {
     if let Some(explicit) = gateway_bin {
         if explicit.exists() {
@@ -90,7 +67,6 @@ pub fn diagnose_gateway_bin(gateway_bin: Option<&PathBuf>) -> GatewayBinaryDiagn
                 "explicit",
                 Some(explicit.clone()),
                 Some(explicit.clone()),
-                false,
             );
         }
         return GatewayBinaryDiagnostic {
@@ -98,7 +74,6 @@ pub fn diagnose_gateway_bin(gateway_bin: Option<&PathBuf>) -> GatewayBinaryDiagn
             source: "explicit",
             path: None,
             configured_path: Some(explicit.clone()),
-            would_download_if_started: false,
             version: None,
             error: Some(format!(
                 "explicit gateway binary not found: {}",
@@ -108,24 +83,11 @@ pub fn diagnose_gateway_bin(gateway_bin: Option<&PathBuf>) -> GatewayBinaryDiagn
     }
 
     if let Some(found) = find_in_same_dir() {
-        return binary_diagnostic("ok", "same_dir", Some(found), None, false);
+        return binary_diagnostic("ok", "same_dir", Some(found), None);
     }
 
-    if let Some(cached) = find_cached_binary() {
-        return binary_diagnostic("ok", "cache", Some(cached), None, false);
-    }
-
-    GatewayBinaryDiagnostic {
-        status: "missing",
-        source: "download_on_start",
-        path: None,
-        configured_path: None,
-        would_download_if_started: true,
-        version: None,
-        error: Some(format!(
-            "{GATEWAY_BINARY_NAME_WITH_EXT} was not found beside the CLI or in the gateway cache"
-        )),
-    }
+    // The CLI runs the gateway itself.
+    binary_diagnostic("ok", "cli", std::env::current_exe().ok(), None)
 }
 
 fn binary_diagnostic(
@@ -133,7 +95,6 @@ fn binary_diagnostic(
     source: &'static str,
     path: Option<PathBuf>,
     configured_path: Option<PathBuf>,
-    would_download_if_started: bool,
 ) -> GatewayBinaryDiagnostic {
     let (version, error) = match path.as_ref() {
         Some(path) => probe_binary_version(path),
@@ -144,7 +105,6 @@ fn binary_diagnostic(
         source,
         path,
         configured_path,
-        would_download_if_started,
         version,
         error,
     }
@@ -194,160 +154,9 @@ fn find_in_same_dir() -> Option<PathBuf> {
     }
 }
 
-// ── Layer 2: Cached binary ──────────────────────────────────────────────
-
-/// Look for a previously downloaded gateway binary in the cache directory.
-fn find_cached_binary() -> Option<PathBuf> {
-    let cache_dir = gateway_cache_dir()?;
-    let version = meshy_dcc_updater::meshy_release::PRODUCT_VERSION;
-    let cached = cache_dir.join(version).join(GATEWAY_BINARY_NAME_WITH_EXT);
-    if cached.is_file() { Some(cached) } else { None }
-}
-
-// ── Layer 3: GitHub Releases download ───────────────────────────────────
-
-/// Download the gateway binary from GitHub Releases for the given version.
-///
-/// Writes to a temporary file first, then atomically renames to the final
-/// cache location to avoid leaving a partial binary behind on crash/kill.
-async fn download_from_github_releases(version: &str) -> anyhow::Result<PathBuf> {
-    let target = build_release_target();
-    let filename = if cfg!(windows) {
-        format!("meshy-dcc-server-{target}.exe")
-    } else {
-        format!("meshy-dcc-server-{target}")
-    };
-
-    let base = std::env::var(ENV_GITHUB_RELEASE_BASE)
-        .ok()
-        .filter(|v| !v.trim().is_empty())
-        .unwrap_or_else(|| DEFAULT_GITHUB_RELEASE_BASE.to_string());
-    let url = format!("{base}/v{version}/{filename}");
-
-    let cache_dir =
-        gateway_cache_dir().context("cannot determine cache directory for gateway binary")?;
-    let version_dir = cache_dir.join(version);
-    std::fs::create_dir_all(&version_dir)
-        .with_context(|| format!("creating cache directory {}", version_dir.display()))?;
-
-    let dest = version_dir.join(GATEWAY_BINARY_NAME_WITH_EXT);
-
-    // Download
-    let client = reqwest::Client::builder()
-        .timeout(std::time::Duration::from_secs(120))
-        .build()
-        .context("building HTTP client for gateway download")?;
-
-    let response = client
-        .get(&url)
-        .send()
-        .await
-        .with_context(|| format!("downloading gateway binary from {url}"))?;
-
-    let status = response.status();
-    if !status.is_success() {
-        anyhow::bail!("release download returned HTTP {status} for {url}");
-    }
-
-    let bytes = response
-        .bytes()
-        .await
-        .with_context(|| format!("reading response body from {url}"))?;
-
-    if bytes.is_empty() {
-        anyhow::bail!("downloaded gateway binary from {url} is empty");
-    }
-
-    // Write to a temp file first, then rename atomically.
-    let tmp = version_dir.join(format!(".{GATEWAY_BINARY_NAME}.tmp"));
-    std::fs::write(&tmp, &bytes)
-        .with_context(|| format!("writing downloaded binary to {}", tmp.display()))?;
-
-    // Set executable permissions on Unix.
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt;
-        let mut perms = std::fs::metadata(&tmp)
-            .with_context(|| format!("reading metadata of {}", tmp.display()))?
-            .permissions();
-        perms.set_mode(0o755);
-        std::fs::set_permissions(&tmp, perms)
-            .with_context(|| format!("setting permissions on {}", tmp.display()))?;
-    }
-
-    std::fs::rename(&tmp, &dest)
-        .with_context(|| format!("renaming {} to {}", tmp.display(), dest.display()))?;
-
-    Ok(dest)
-}
-
-/// Build the Rust target triple for GitHub release asset naming.
-///
-/// Matches the naming convention used by the project's release workflow.
-fn build_release_target() -> String {
-    let arch = if cfg!(target_arch = "x86_64") {
-        "x86_64"
-    } else if cfg!(target_arch = "aarch64") {
-        "aarch64"
-    } else {
-        std::env::consts::ARCH
-    };
-
-    let os = if cfg!(target_os = "windows") {
-        "pc-windows-msvc"
-    } else if cfg!(target_os = "macos") {
-        "apple-darwin"
-    } else if cfg!(target_os = "linux") {
-        "unknown-linux-gnu"
-    } else {
-        // Best-effort: use the compile-time OS string directly.
-        std::env::consts::OS
-    };
-
-    format!("{arch}-{os}")
-}
-
-// ── Cache directory ─────────────────────────────────────────────────────
-
-/// Return the cache directory for downloaded gateway binaries.
-///
-/// Uses the platform-standard cache directory:
-/// - Windows: `%LOCALAPPDATA%\meshy-dcc\gateway`
-/// - macOS:   `~/Library/Caches/meshy-dcc/gateway`
-/// - Linux:   `~/.cache/meshy-dcc/gateway` (respects `$XDG_CACHE_HOME`)
-fn gateway_cache_dir() -> Option<PathBuf> {
-    dirs::cache_dir().map(|d| d.join("meshy-dcc").join("gateway"))
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_gateway_cache_dir_is_absolute() {
-        if let Some(dir) = gateway_cache_dir() {
-            assert!(
-                dir.is_absolute() || dir.to_string_lossy().starts_with('/'),
-                "cache dir should be absolute: {}",
-                dir.display()
-            );
-            assert!(
-                dir.ends_with("gateway"),
-                "cache dir should end with 'gateway': {}",
-                dir.display()
-            );
-        }
-    }
-
-    #[test]
-    fn test_build_release_target_is_non_empty() {
-        let target = build_release_target();
-        assert!(!target.is_empty());
-        assert!(
-            target.contains('-'),
-            "target should contain a dash: {target}"
-        );
-    }
 
     #[test]
     fn test_find_in_same_dir_returns_none_when_binary_missing() {

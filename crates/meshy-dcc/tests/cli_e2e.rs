@@ -1584,7 +1584,6 @@ fn doctor_reports_local_defaults_without_starting_gateway() {
     assert_eq!(doctor["server_binary"]["status"], "ok");
     assert_eq!(doctor["server_binary"]["source"], "explicit");
     assert_eq!(doctor["server_binary"]["path"], cli_bin);
-    assert_eq!(doctor["server_binary"]["would_download_if_started"], false);
     assert!(
         doctor["server_binary"]["version"]
             .as_str()

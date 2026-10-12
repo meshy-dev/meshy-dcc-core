@@ -1,7 +1,7 @@
 //! Meshy release channel for the `meshy-dcc` binaries.
 //!
-//! The gateway self-update and the CLI's gateway download both resolve their
-//! files here, so the CDN layout lives in one place. Until the Meshy release
+//! The gateway self-update and the install catalog resolve their files here,
+//! so the CDN layout lives in one place. Until the Meshy release
 //! pipeline publishes these files, requests fail closed.
 
 /// Meshy DCC Core product version; crates, wheels and releases share it.
