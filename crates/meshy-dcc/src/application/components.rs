@@ -14,7 +14,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use tempfile::TempDir;
 
-const OFFICIAL_RELEASES: &str = "https://github.com/meshy-dev/dcc-cua/releases";
+// dcc-cua is an independent upstream project; Meshy uses its releases as published.
+const OFFICIAL_RELEASES: &str = "https://github.com/dcc-mcp/dcc-cua/releases";
 const COMPONENT_NAME: &str = "dcc-cua";
 const MANIFEST_SCHEMA_VERSION: u64 = 1;
 const MAX_MANIFEST_BYTES: usize = 256 * 1024;

@@ -119,6 +119,9 @@ and is not runtime-compatible with it. Attribution stays in `LICENSE` and
 - When a `tools.yaml` entry sets `read_only`, `destructive` or `idempotent` to
   `true` and declares no `*_hint` key, the matching MCP annotation is now
   published.
+- `components ensure dcc-cua` downloads from the upstream `dcc-mcp/dcc-cua`
+  releases again; the rename had pointed it at a repository that does not
+  exist.
 
 ### Removed
 
