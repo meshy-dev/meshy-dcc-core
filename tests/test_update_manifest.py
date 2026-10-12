@@ -13,7 +13,7 @@ import pytest
 SCRIPT = Path(__file__).resolve().parents[1] / "scripts" / "release" / "generate_update_manifest.py"
 
 
-def _run(tmp_path: Path, platform: str) -> subprocess.CompletedProcess[str]:
+def _run(tmp_path: Path, platform: str, *extra: str) -> subprocess.CompletedProcess[str]:
     (tmp_path / "cli").write_bytes(b"cli")
     (tmp_path / "server").write_bytes(b"server")
     command = [
@@ -29,6 +29,7 @@ def _run(tmp_path: Path, platform: str) -> subprocess.CompletedProcess[str]:
         str(tmp_path / "server"),
         "--out-dir",
         str(tmp_path / "dist"),
+        *extra,
     ]
     return subprocess.run(command, capture_output=True, text=True, check=False)
 
@@ -50,3 +51,12 @@ def test_manifest_names_cdn_assets_that_sit_beside_it(tmp_path: Path, platform: 
 def test_unpublished_platforms_are_refused(tmp_path: Path) -> None:
     result = _run(tmp_path, "macos-universal2")
     assert result.returncode != 0
+
+
+def test_github_manifest_points_at_the_github_release(tmp_path: Path) -> None:
+    result = _run(tmp_path, "macos-arm64", "--source", "github")
+    assert result.returncode == 0, result.stderr
+    manifest = json.loads((tmp_path / "dist" / "meshy-dcc-update-manifest-macos-arm64.json").read_text())
+    assert manifest["meshy-dcc"]["url"] == (
+        "https://github.com/meshy-dev/meshy-dcc-core/releases/download/v1.2.3/meshy-dcc-macos-arm64"
+    )

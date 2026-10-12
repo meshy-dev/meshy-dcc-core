@@ -1,13 +1,18 @@
 #!/usr/bin/env sh
 set -eu
 
-OFFICIAL_RELEASES="https://cdn.meshy.ai/meshy-dcc-core"
+# Tried in order: the Meshy CDN, then the GitHub Release (meshy.ai is not
+# reachable everywhere). A download that fails moves on to the next source; a
+# manifest or file that fails its checks stops the install.
+CDN="https://cdn.meshy.ai/meshy-dcc-core"
+GITHUB="https://github.com/meshy-dev/meshy-dcc-core/releases"
 VERSION="${MESHY_DCC_VERSION:-latest}"
 INSTALL_DIR="${MESHY_DCC_INSTALL_DIR:-$HOME/.local/bin}"
 
 usage() {
     cat <<'EOF'
-Install meshy-dcc and its gateway from the Meshy release channel.
+Install meshy-dcc and its gateway from the Meshy CDN, or from the GitHub
+Release when the CDN cannot be reached.
 
 Usage:
   install-cli.sh [--version 0.2.0] [--install-dir ~/.local/bin]
@@ -61,14 +66,28 @@ case "$OS/$ARCH" in
 esac
 
 REQUESTED_VERSION="${VERSION#v}"
-if [ "$VERSION" = "latest" ]; then
-    MANIFEST_URL="$OFFICIAL_RELEASES/latest/meshy-dcc-update-manifest-$PLATFORM.json"
-else
+if [ "$VERSION" != "latest" ]; then
     printf '%s' "$REQUESTED_VERSION" \
         | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+([.+-][0-9A-Za-z.-]+)?$' \
         || fail "invalid release version: $VERSION"
-    MANIFEST_URL="$OFFICIAL_RELEASES/v$REQUESTED_VERSION/meshy-dcc-update-manifest-$PLATFORM.json"
 fi
+MANIFEST_NAME="meshy-dcc-update-manifest-$PLATFORM.json"
+
+# manifest_url <source>, asset_dir <source> <version>
+manifest_url() {
+    case "$1/$VERSION" in
+        cdn/latest) echo "$CDN/latest/$MANIFEST_NAME" ;;
+        cdn/*) echo "$CDN/v$REQUESTED_VERSION/$MANIFEST_NAME" ;;
+        github/latest) echo "$GITHUB/latest/download/$MANIFEST_NAME" ;;
+        github/*) echo "$GITHUB/download/v$REQUESTED_VERSION/$MANIFEST_NAME" ;;
+    esac
+}
+asset_dir() {
+    case "$1" in
+        cdn) echo "$CDN/v$2" ;;
+        github) echo "$GITHUB/download/v$2" ;;
+    esac
+}
 
 mkdir -p "$INSTALL_DIR"
 MANIFEST_TMP="$(mktemp "$INSTALL_DIR/.meshy-dcc-manifest.XXXXXX")"
@@ -85,9 +104,9 @@ download_to() {
     output="$2"
     echo "Downloading $url"
     if command -v curl >/dev/null 2>&1; then
-        curl -fsSL "$url" -o "$output"
+        curl -fsSL --connect-timeout 15 "$url" -o "$output"
     elif command -v wget >/dev/null 2>&1; then
-        wget -q -O "$output" "$url"
+        wget -q -T 15 -O "$output" "$url"
     else
         fail "curl or wget is required to download release assets"
     fi
@@ -123,14 +142,13 @@ calculate_sha256() {
     fi
 }
 
-download_to "$MANIFEST_URL" "$MANIFEST_TMP" \
-    || fail "official release manifest download failed"
-
-# fetch_verified <binary> <output>: download one binary the manifest names and
-# check its version, URL and SHA-256. Sets MANIFEST_VERSION.
+# fetch_verified <source> <binary> <output>: download one binary the manifest
+# names and check its version, URL and SHA-256. Sets MANIFEST_VERSION. Returns 1
+# when the download fails; exits when a check fails.
 fetch_verified() {
-    binary="$1"
-    output="$2"
+    source="$1"
+    binary="$2"
+    output="$3"
     count="$(grep -Ec "^[[:space:]]*\"$binary\"[[:space:]]*:[[:space:]]*\\{" "$MANIFEST_TMP" || true)"
     [ "$count" = "1" ] || fail "official release manifest must contain one $binary entry"
 
@@ -143,13 +161,13 @@ fetch_verified() {
     if [ "$VERSION" != "latest" ] && [ "$version" != "$REQUESTED_VERSION" ]; then
         fail "official release manifest version does not match requested version $REQUESTED_VERSION"
     fi
-    [ "$url" = "$OFFICIAL_RELEASES/v$version/$binary-$PLATFORM" ] \
+    [ "$url" = "$(asset_dir "$source" "$version")/$binary-$PLATFORM" ] \
         || fail "official release manifest contains a non-official $binary URL"
     [ "${#expected}" -eq 64 ] \
         && ! printf '%s' "$expected" | grep -Eq '[^0-9A-Fa-f]' \
         || fail "official release manifest contains an invalid SHA-256"
 
-    download_to "$url" "$output" || fail "$binary download failed"
+    download_to "$url" "$output" || return 1
     actual="$(calculate_sha256 "$output")"
     [ "$(printf '%s' "$actual" | tr 'A-F' 'a-f')" = "$(printf '%s' "$expected" | tr 'A-F' 'a-f')" ] \
         || fail "$binary SHA-256 does not match the official release manifest"
@@ -158,8 +176,17 @@ fetch_verified() {
 }
 
 # Both are verified before either replaces an installed file.
-fetch_verified meshy-dcc "$CLI_TMP"
-fetch_verified meshy-dcc-server "$SERVER_TMP"
+FETCHED=""
+for SOURCE in cdn github; do
+    if download_to "$(manifest_url "$SOURCE")" "$MANIFEST_TMP" \
+        && fetch_verified "$SOURCE" meshy-dcc "$CLI_TMP" \
+        && fetch_verified "$SOURCE" meshy-dcc-server "$SERVER_TMP"; then
+        FETCHED="$SOURCE"
+        break
+    fi
+    echo "Could not download from $SOURCE; trying the next source." >&2
+done
+[ -n "$FETCHED" ] || fail "meshy-dcc could not be downloaded from the Meshy CDN or GitHub"
 mv -f "$SERVER_TMP" "$INSTALL_DIR/meshy-dcc-server"
 TARGET="$INSTALL_DIR/meshy-dcc"
 mv -f "$CLI_TMP" "$TARGET"

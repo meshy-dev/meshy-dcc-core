@@ -3,13 +3,18 @@ param(
     [string] $InstallDir = $env:MESHY_DCC_INSTALL_DIR
 )
 
-# Installs meshy-dcc and its gateway from the Meshy release channel: checks the
-# release manifest's URLs and SHA-256 digests before replacing an existing
-# meshy-dcc, then installs the meshy-dcc Skill for the agents it finds.
+# Installs meshy-dcc and its gateway from the Meshy CDN, or from the GitHub
+# Release when the CDN cannot be reached (meshy.ai is not reachable everywhere):
+# checks the release manifest's URLs and SHA-256 digests before replacing an
+# existing meshy-dcc, then installs the meshy-dcc Skill for the agents it finds.
+# A download that fails moves on to the next source; a failed check stops.
 
 $ErrorActionPreference = "Stop"
 $ProgressPreference = "SilentlyContinue"
-$officialReleases = "https://cdn.meshy.ai/meshy-dcc-core"
+$sources = [ordered]@{
+    cdn = "https://cdn.meshy.ai/meshy-dcc-core"
+    github = "https://github.com/meshy-dev/meshy-dcc-core/releases"
+}
 $platform = "windows-x86_64"
 
 if ([string]::IsNullOrWhiteSpace($Version)) {
@@ -19,15 +24,41 @@ if ([string]::IsNullOrWhiteSpace($InstallDir)) {
     $InstallDir = Join-Path $HOME ".local\bin"
 }
 
-if ($Version -eq "latest") {
-    $requestedVersion = $null
-    $manifestUrl = "$officialReleases/latest/meshy-dcc-update-manifest-$platform.json"
-} else {
+$requestedVersion = $null
+if ($Version -ne "latest") {
     if ($Version -notmatch '^v?([0-9]+\.[0-9]+\.[0-9]+([.+-][0-9A-Za-z.-]+)?)$') {
         throw "Invalid release version: $Version"
     }
     $requestedVersion = $Matches[1]
-    $manifestUrl = "$officialReleases/v$requestedVersion/meshy-dcc-update-manifest-$platform.json"
+}
+$manifestName = "meshy-dcc-update-manifest-$platform.json"
+
+function Get-ManifestUrl([string] $source) {
+    $base = $sources[$source]
+    if ($source -eq "cdn") {
+        if ($requestedVersion) { return "$base/v$requestedVersion/$manifestName" }
+        return "$base/latest/$manifestName"
+    }
+    if ($requestedVersion) { return "$base/download/v$requestedVersion/$manifestName" }
+    return "$base/latest/download/$manifestName"
+}
+
+function Get-AssetDir([string] $source, [string] $version) {
+    if ($source -eq "cdn") { return "$($sources[$source])/v$version" }
+    return "$($sources[$source])/download/v$version"
+}
+
+# A failed download is a NetworkFailure, so the caller tries the next source.
+class NetworkFailure : System.Exception {
+    NetworkFailure([string] $message) : base($message) {}
+}
+function Get-File([string] $uri, [string] $outFile) {
+    Write-Host "Downloading $uri"
+    try {
+        Invoke-WebRequest -Uri $uri -OutFile $outFile -TimeoutSec 60
+    } catch {
+        throw [NetworkFailure]::new("download failed: $uri")
+    }
 }
 
 New-Item -ItemType Directory -Force -Path $InstallDir | Out-Null
@@ -38,9 +69,8 @@ foreach ($binary in $binaries) {
     $downloads[$binary] = Join-Path $InstallDir (".$binary-" + [System.Guid]::NewGuid() + ".exe")
 }
 
-try {
-    Write-Host "Downloading $manifestUrl"
-    Invoke-WebRequest -Uri $manifestUrl -OutFile $manifestTmp
+function Get-VerifiedBinaries([string] $source) {
+    Get-File (Get-ManifestUrl $source) $manifestTmp
     $manifestText = Get-Content -LiteralPath $manifestTmp -Raw
     try {
         $manifest = $manifestText | ConvertFrom-Json
@@ -48,7 +78,6 @@ try {
         throw "Official release manifest is not valid JSON: $($_.Exception.Message)"
     }
 
-    # Both are verified before either replaces an installed file.
     foreach ($binary in $binaries) {
         if ([regex]::Matches($manifestText, '"' + $binary + '"\s*:').Count -ne 1) {
             throw "Official release manifest must contain one $binary entry"
@@ -63,7 +92,7 @@ try {
         if ($Version -ne "latest" -and $manifestVersion -ne $requestedVersion) {
             throw "Official release manifest version does not match requested version $requestedVersion"
         }
-        $expectedUrl = "$officialReleases/v$manifestVersion/$binary-$platform.exe"
+        $expectedUrl = "$(Get-AssetDir $source $manifestVersion)/$binary-$platform.exe"
         if ($assetUrl -cne $expectedUrl) {
             throw "Official release manifest contains a non-official $binary URL"
         }
@@ -71,12 +100,28 @@ try {
             throw "Official release manifest contains an invalid SHA-256"
         }
 
-        Write-Host "Downloading $assetUrl"
-        Invoke-WebRequest -Uri $assetUrl -OutFile $downloads[$binary]
+        Get-File $assetUrl $downloads[$binary]
         $actualSha256 = (Get-FileHash -LiteralPath $downloads[$binary] -Algorithm SHA256).Hash
         if ($actualSha256 -ine $expectedSha256) {
             throw "$binary SHA-256 does not match the official release manifest"
         }
+    }
+    return $manifestVersion
+}
+
+try {
+    # Both are verified before either replaces an installed file.
+    $manifestVersion = $null
+    foreach ($source in $sources.Keys) {
+        try {
+            $manifestVersion = Get-VerifiedBinaries $source
+            break
+        } catch [NetworkFailure] {
+            Write-Warning "Could not download from $source; trying the next source."
+        }
+    }
+    if (-not $manifestVersion) {
+        throw "meshy-dcc could not be downloaded from the Meshy CDN or GitHub"
     }
 
     foreach ($binary in @("meshy-dcc-server", "meshy-dcc")) {

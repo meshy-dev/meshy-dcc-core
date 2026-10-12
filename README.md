@@ -25,6 +25,34 @@ capabilities on demand, and route every call to the right scene or project.
 
 Other hosts are not in the support matrix yet.
 
+## Install
+
+macOS (Apple Silicon):
+
+```sh
+curl -fsSL https://cdn.meshy.ai/meshy-dcc-core/install.sh | bash
+```
+
+Windows (PowerShell):
+
+```powershell
+irm https://cdn.meshy.ai/meshy-dcc-core/install.ps1 | iex
+```
+
+Where meshy.ai cannot be reached, use the copies on the GitHub Release:
+`https://github.com/meshy-dev/meshy-dcc-core/releases/latest/download/install.sh`
+and `…/install.ps1`. The installers themselves fall back to the GitHub Release
+when the CDN is unreachable, check every file against the release manifest's
+SHA-256, install `meshy-dcc` and `meshy-dcc-server` into `~/.local/bin`, and
+then show and install the agent Skill (`meshy-dcc agent-skill`).
+
+With npm (the CLI only; adapters always install through `meshy-dcc install`):
+
+```sh
+npm install -g meshy-dcc
+meshy-dcc agent-skill --execute
+```
+
 ## Components
 
 | Component | Role |

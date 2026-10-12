@@ -14,6 +14,7 @@ ROOT = Path(__file__).resolve().parents[1]
 SH_INSTALLER = ROOT / "scripts" / "install-cli.sh"
 PS_INSTALLER = ROOT / "scripts" / "install-cli.ps1"
 OFFICIAL_RELEASE = "https://cdn.meshy.ai/meshy-dcc-core"
+GITHUB_RELEASES = "https://github.com/meshy-dev/meshy-dcc-core/releases"
 INSTALL_DOCS = (ROOT / "README.md",)
 
 
@@ -50,6 +51,9 @@ while [ "$#" -gt 0 ]; do
     esac
 done
 printf '%s\n' "$url" >> "$REQUEST_LOG"
+if [ -n "${UNREACHABLE:-}" ]; then
+    case "$url" in "$UNREACHABLE"*) exit 7 ;; esac
+fi
 case "$url" in
     *meshy-dcc-update-manifest-*) cp "$FIXTURE_MANIFEST" "$out" ;;
     *meshy-dcc-*) cp "$FIXTURE_BINARY" "$out" ;;
@@ -75,7 +79,12 @@ esac
 
 
 def _run_sh_installer(
-    tmp_path: Path, manifest: dict, binary: bytes, os_name: str = "Darwin", arch: str = "arm64"
+    tmp_path: Path,
+    manifest: dict,
+    binary: bytes,
+    os_name: str = "Darwin",
+    arch: str = "arm64",
+    unreachable: str = "",
 ) -> subprocess.CompletedProcess[str]:
     fake_bin = tmp_path / "bin"
     _write_fake_unix_tools(fake_bin, os_name, arch)
@@ -94,6 +103,7 @@ def _run_sh_installer(
             "FIXTURE_BINARY": _shell_path(binary_path),
             "REQUEST_LOG": _shell_path(request_log),
             "ARG_LOG": _shell_path(tmp_path / "args.log"),
+            "UNREACHABLE": unreachable,
         }
     )
     return subprocess.run(
@@ -132,7 +142,7 @@ def _run_ps_installer(tmp_path: Path, manifest: dict, binary: bytes) -> subproce
         """$ErrorActionPreference = "Stop"
 $originalUserPath = [Environment]::GetEnvironmentVariable("Path", "User")
 function Invoke-WebRequest {
-    param([string] $Uri, [string] $OutFile)
+    param([string] $Uri, [string] $OutFile, [int] $TimeoutSec)
     Add-Content -LiteralPath $env:REQUEST_LOG -Value $Uri
     if ($Uri -like "*meshy-dcc-update-manifest-*") {
         Copy-Item -LiteralPath $env:FIXTURE_MANIFEST -Destination $OutFile
@@ -177,12 +187,13 @@ try {
     )
 
 
-def _manifest(*, platform: str, binary: bytes, url=None, sha256=None) -> dict:
+def _manifest(*, platform: str, binary: bytes, url=None, sha256=None, source: str = "cdn") -> dict:
     ext = ".exe" if platform.startswith("windows") else ""
+    base = f"{OFFICIAL_RELEASE}/v0.2.0" if source == "cdn" else f"{GITHUB_RELEASES}/download/v0.2.0"
     return {
         name: {
             "version": "0.2.0",
-            "url": url or f"{OFFICIAL_RELEASE}/v0.2.0/{name}-{platform}{ext}",
+            "url": url or f"{base}/{name}-{platform}{ext}",
             "sha256": sha256 or hashlib.sha256(binary).hexdigest(),
         }
         for name in ("meshy-dcc", "meshy-dcc-server")
@@ -198,13 +209,19 @@ def test_installers_do_not_recommend_remote_pipe_execution() -> None:
         assert forbidden.search(path.read_text(encoding="utf-8")) is None, path
 
 
-def test_install_docs_do_not_recommend_remote_pipe_or_policy_bypass() -> None:
-    forbidden = re.compile(
-        r"(?:curl|irm|invoke-restmethod)[^\r\n|]*\|[^\r\n]*(?:sh|bash|iex|invoke-expression)|ExecutionPolicy\s+Bypass",
-        re.IGNORECASE,
+def test_install_docs_pipe_only_official_installers_and_never_bypass_policy() -> None:
+    pipe = re.compile(
+        r"(?:curl|irm|invoke-restmethod)\s[^\r\n|]*\|[^\r\n]*(?:sh|bash|iex|invoke-expression)", re.IGNORECASE
+    )
+    official = (
+        "https://cdn.meshy.ai/meshy-dcc-core/install.",
+        "https://github.com/meshy-dev/meshy-dcc-core/releases/latest/download/install.",
     )
     for path in INSTALL_DOCS:
-        assert forbidden.search(path.read_text(encoding="utf-8")) is None, path
+        text = path.read_text(encoding="utf-8")
+        assert re.search(r"ExecutionPolicy\s+Bypass", text, re.IGNORECASE) is None, path
+        for match in pipe.finditer(text):
+            assert any(url in match.group(0) for url in official), match.group(0)
 
 
 def test_installers_use_fixed_official_update_manifests() -> None:
@@ -214,6 +231,7 @@ def test_installers_use_fixed_official_update_manifests() -> None:
         assert "MESHY_DCC_REPO" not in source
         assert "api.github.com" not in source
         assert "https://cdn.meshy.ai/meshy-dcc-core" in source
+        assert "https://github.com/meshy-dev/meshy-dcc-core/releases" in source
         assert "meshy-dcc-update-manifest-" in source
         assert "sha256" in source.lower()
     assert "MESHY_DCC_RELEASE_FALLBACK" not in sh_source
@@ -250,6 +268,37 @@ def test_sh_refuses_unpublished_platforms_before_download(tmp_path: Path, os_nam
     assert result.returncode != 0
     assert "Apple Silicon" in result.stderr
     assert not (tmp_path / "requests.log").exists()
+
+
+def test_sh_falls_back_to_the_github_release_when_the_cdn_is_unreachable(tmp_path: Path) -> None:
+    binary = b'#!/bin/sh\necho "$*" >> "$ARG_LOG"\n'
+    result = _run_sh_installer(
+        tmp_path,
+        _manifest(platform="macos-arm64", binary=binary, source="github"),
+        binary,
+        unreachable="https://cdn.meshy.ai/",
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert (tmp_path / "install" / "meshy-dcc").read_bytes() == binary
+    requests = (tmp_path / "requests.log").read_text(encoding="utf-8").splitlines()
+    assert requests == [
+        f"{OFFICIAL_RELEASE}/latest/meshy-dcc-update-manifest-macos-arm64.json",
+        f"{GITHUB_RELEASES}/latest/download/meshy-dcc-update-manifest-macos-arm64.json",
+        f"{GITHUB_RELEASES}/download/v0.2.0/meshy-dcc-macos-arm64",
+        f"{GITHUB_RELEASES}/download/v0.2.0/meshy-dcc-server-macos-arm64",
+    ]
+
+
+def test_sh_a_failed_check_does_not_move_to_another_source(tmp_path: Path) -> None:
+    binary = b"tampered"
+    result = _run_sh_installer(
+        tmp_path, _manifest(platform="macos-arm64", binary=binary, sha256="0" * 64), binary
+    )
+
+    assert result.returncode != 0
+    requests = (tmp_path / "requests.log").read_text(encoding="utf-8").splitlines()
+    assert not any(url.startswith(GITHUB_RELEASES) for url in requests)
 
 
 def test_sh_checksum_mismatch_preserves_existing_binary(tmp_path: Path) -> None:

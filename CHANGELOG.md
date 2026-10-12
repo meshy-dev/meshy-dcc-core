@@ -114,7 +114,10 @@ and is not runtime-compatible with it. Attribution stays in `LICENSE` and
   manifest's URLs and SHA-256 digests before either replaces an installed
   file, then the installer shows and applies `meshy-dcc agent-skill`. Other
   platforms are refused before anything is downloaded. Both default to
-  `~/.local/bin`. They no longer install dcc-cua.
+  `~/.local/bin`. They no longer install dcc-cua. When the CDN cannot be
+  reached (meshy.ai is blocked in some regions) they fall back to the GitHub
+  Release; a file that fails its checks stops the install instead. The
+  README shows the one-line installs (`curl … | bash`, `irm … | iex`).
   `scripts/release/generate_update_manifest.py` writes the matching manifest
   and the binaries under their published names.
 - Catalog `host-package` entries can list one build per platform under
