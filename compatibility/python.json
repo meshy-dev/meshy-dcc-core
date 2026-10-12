@@ -78,16 +78,8 @@
         }
       ]
     },
-    "meshy-dcc-server": {
-      "pyproject": "pkg/meshy-dcc-server-bin/pyproject.toml",
-      "support_profile": "lts"
-    },
     "meshy-dcc-core-semantic": {
       "pyproject": "pkg/meshy-dcc-core-semantic/pyproject.toml",
-      "support_profile": "lts"
-    },
-    "meshy-dcc": {
-      "pyproject": "pkg/meshy-dcc-bin/pyproject.toml",
       "support_profile": "lts"
     }
   },

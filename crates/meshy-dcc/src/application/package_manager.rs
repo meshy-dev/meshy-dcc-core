@@ -7,18 +7,18 @@
 //! therefore upgrade through the package manager, which is what Homebrew's
 //! packaging policy requires as well.
 //!
-//! The GitHub Release build keeps self-update. The PyPI wrapper
-//! (`pkg/meshy-dcc-bin`) writes a marker file next to the binary it unpacks,
-//! and that marker is the contract between the two:
+//! The native install keeps self-update. The npm platform packages ship a
+//! marker file next to the binary, and that marker is the contract between
+//! the two:
 //!
 //! ```json
 //! {
 //!   "schema_version": 1,
 //!   "distribution": "meshy-dcc",
-//!   "manager": "pypi",
+//!   "manager": "npm",
 //!   "version": "0.20.34",
 //!   "platform": "windows-x86_64",
-//!   "binary": "meshy-dcc-bin.exe"
+//!   "binary": "meshy-dcc.exe"
 //! }
 //! ```
 //!

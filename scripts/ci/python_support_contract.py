@@ -93,9 +93,7 @@ def validate_contract(contract: dict[str, Any]) -> None:
 
     expected_distributions = {
         "meshy-dcc-core": "pyproject.toml",
-        "meshy-dcc-server": "pkg/meshy-dcc-server-bin/pyproject.toml",
         "meshy-dcc-core-semantic": "pkg/meshy-dcc-core-semantic/pyproject.toml",
-        "meshy-dcc": "pkg/meshy-dcc-bin/pyproject.toml",
     }
     if not isinstance(distributions, dict) or set(distributions) != set(expected_distributions):
         raise ContractError("all released Python distributions must be declared")

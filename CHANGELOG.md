@@ -171,6 +171,12 @@ and is not runtime-compatible with it. Attribution stays in `LICENSE` and
 - The inherited documentation site, agent guides, release tooling
   configuration and patch workflow.
 - The `asset-source` demo skill, which returned placeholder assets.
+- The release tooling inherited from upstream for PyPI and release-please: the
+  PyPI wrapper packages for the CLI and the gateway (`pkg/meshy-dcc-bin`,
+  `pkg/meshy-dcc-server-bin`), the wheel retagging, PyPI cleanup and
+  size-budget scripts, the GitHub release bundle builders, and the
+  release-please, release-notes, release-asset and distribution-set checks,
+  with their tests. Releases go out as a GitHub Release plus npm.
 - The CLI no longer downloads `meshy-dcc-server` from the release channel or
   runs a cached copy: it ran that binary without verifying it. With no
   `meshy-dcc-server` beside it, the CLI runs the gateway itself, as it already

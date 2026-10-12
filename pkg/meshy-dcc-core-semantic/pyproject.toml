@@ -2,7 +2,7 @@
 #
 # Ships a separate native Python extension module
 # `meshy_dcc_core_semantic._native` built from `crates/meshy-dcc-semantic`
-# (fastembed-rs + ONNX Runtime). Modelled on `pkg/meshy-dcc-server-bin` so
+# (fastembed-rs + ONNX Runtime). Built like the core wheel so
 # the Rust source lives in the workspace and is not duplicated under
 # `pkg/` — `[tool.maturin] manifest-path` points back at the existing
 # workspace crate.
