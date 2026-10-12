@@ -116,8 +116,8 @@ and is not runtime-compatible with it. Attribution stays in `LICENSE` and
   platforms are refused before anything is downloaded. Both default to
   `~/.local/bin`. They no longer install dcc-cua. When cdn.meshy.ai cannot
   be reached they try cdn.meshy.cn (the same bucket, reachable in mainland
-  China), then the GitHub Release; a file that fails its checks stops the install instead. The
-  latest version comes from the GitHub Release; the CDN keeps each release
+  latest version comes from `latest.txt` on the CDN (served uncached), or the
+  GitHub Release when neither CDN host answers; the CDN keeps each release
   under its own version dir (`v0-2-0`) and never overwrites it, with names
   that follow the CDN rules (`windows-x64`). The README shows the one-line
   installs (`curl … | bash`, `irm … | iex`).
@@ -140,7 +140,10 @@ and is not runtime-compatible with it. Attribution stays in `LICENSE` and
   macOS (arm64) and Windows (MSVC), signs the release manifests, uploads
   everything to the GitHub Release, publishes the three npm packages
   (skipping versions already there) and copies the release to the CDN
-  (`scripts/release/sync_cdn.py`, which never overwrites a release file).
+  bucket (`scripts/release/sync_cdn.py`: release files written once,
+  `latest.txt` last and only forward). No credentials live in GitHub: the
+  workflow assumes an AWS role through OIDC and reads the npm token from
+  AWS Secrets Manager (`scripts/release/aws/`).
 - npm packaging: `meshy-dcc` holds a small launcher and lists one binary
   package per platform (`@meshy-ai/meshy-dcc-darwin-arm64`,
   `@meshy-ai/meshy-dcc-win32-x64`) as optional dependencies, so npm installs

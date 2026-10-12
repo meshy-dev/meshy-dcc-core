@@ -27,9 +27,19 @@ if ([string]::IsNullOrWhiteSpace($InstallDir)) {
     $InstallDir = Join-Path $HOME ".local\bin"
 }
 
-# The CDN keeps every release under a version dir and never overwrites it, so
-# the latest version comes from the GitHub Release redirect:
-# releases/latest -> releases/tag/v<version>.
+# The latest version: latest.txt on either CDN host (served uncached), else the
+# GitHub Release redirect releases/latest -> releases/tag/v<version>.
+if ($Version -eq "latest") {
+    $latestTmp = [System.IO.Path]::GetTempFileName()
+    foreach ($host_ in @($sources.cdn, $sources["cdn-cn"])) {
+        try {
+            Invoke-WebRequest -Uri "$host_/latest.txt" -OutFile $latestTmp -TimeoutSec 15
+            $Version = (Get-Content -LiteralPath $latestTmp -Raw).Trim()
+            break
+        } catch {}
+    }
+    Remove-Item -LiteralPath $latestTmp -Force -ErrorAction SilentlyContinue
+}
 if ($Version -eq "latest") {
     $latest = $null
     try {
@@ -41,7 +51,7 @@ if ($Version -eq "latest") {
         $response.Close()
     } catch {}
     if ($latest -notmatch '/releases/tag/(v[^/]+)$') {
-        throw "Could not find the latest release on GitHub; set MESHY_DCC_VERSION to install a given version"
+        throw "Could not find the latest release on the Meshy CDN or GitHub; set MESHY_DCC_VERSION to install a given version"
     }
     $Version = $Matches[1]
 }

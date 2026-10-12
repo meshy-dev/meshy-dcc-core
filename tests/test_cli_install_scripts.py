@@ -61,6 +61,7 @@ if [ -n "$format" ]; then
     exit 0
 fi
 case "$url" in
+    */latest.txt) printf '0.2.0\n' > "$out" ;;
     *meshy-dcc-update-manifest-*) cp "$FIXTURE_MANIFEST" "$out" ;;
     *meshy-dcc-*) cp "$FIXTURE_BINARY" "$out" ;;
     *) exit 22 ;;
@@ -258,7 +259,7 @@ def test_sh_latest_uses_manifest_pinned_urls_and_installs_verified_binaries(tmp_
     assert (tmp_path / "install" / "meshy-dcc-server").read_bytes() == binary
     requests = (tmp_path / "requests.log").read_text(encoding="utf-8").splitlines()
     assert requests == [
-        f"{GITHUB_RELEASES}/latest",
+        f"{OFFICIAL_RELEASE}/latest.txt",
         f"{OFFICIAL_RELEASE}/v0-2-0/meshy-dcc-update-manifest-macos-arm64.json",
         f"{OFFICIAL_RELEASE}/v0-2-0/meshy-dcc-macos-arm64",
         f"{OFFICIAL_RELEASE}/v0-2-0/meshy-dcc-server-macos-arm64",
@@ -292,7 +293,8 @@ def test_sh_uses_cdn_meshy_cn_when_cdn_meshy_ai_is_unreachable(tmp_path: Path) -
     requests = (tmp_path / "requests.log").read_text(encoding="utf-8").splitlines()
     cn = "https://cdn.meshy.cn/meshy-dcc-core/v0-2-0"
     assert requests == [
-        f"{GITHUB_RELEASES}/latest",
+        f"{OFFICIAL_RELEASE}/latest.txt",
+        "https://cdn.meshy.cn/meshy-dcc-core/latest.txt",
         f"{OFFICIAL_RELEASE}/v0-2-0/meshy-dcc-update-manifest-macos-arm64.json",
         f"{cn}/meshy-dcc-update-manifest-macos-arm64.json",
         f"{cn}/meshy-dcc-macos-arm64",
@@ -313,6 +315,8 @@ def test_sh_falls_back_to_the_github_release_when_both_cdn_hosts_are_unreachable
     assert (tmp_path / "install" / "meshy-dcc").read_bytes() == binary
     requests = (tmp_path / "requests.log").read_text(encoding="utf-8").splitlines()
     assert requests == [
+        f"{OFFICIAL_RELEASE}/latest.txt",
+        "https://cdn.meshy.cn/meshy-dcc-core/latest.txt",
         f"{GITHUB_RELEASES}/latest",
         f"{OFFICIAL_RELEASE}/v0-2-0/meshy-dcc-update-manifest-macos-arm64.json",
         "https://cdn.meshy.cn/meshy-dcc-core/v0-2-0/meshy-dcc-update-manifest-macos-arm64.json",
@@ -366,7 +370,7 @@ def test_sh_rejects_non_official_asset_before_download(tmp_path: Path) -> None:
     assert "official" in result.stderr.lower()
     requests = (tmp_path / "requests.log").read_text(encoding="utf-8").splitlines()
     assert requests == [
-        f"{GITHUB_RELEASES}/latest",
+        f"{OFFICIAL_RELEASE}/latest.txt",
         f"{OFFICIAL_RELEASE}/v0-2-0/meshy-dcc-update-manifest-macos-arm64.json",
     ]
     assert not (tmp_path / "install" / "meshy-dcc").exists()

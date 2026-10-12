@@ -35,6 +35,19 @@ fail() {
     exit 1
 }
 
+download_to() {
+    url="$1"
+    output="$2"
+    echo "Downloading $url"
+    if command -v curl >/dev/null 2>&1; then
+        curl -fsSL --connect-timeout 15 "$url" -o "$output"
+    elif command -v wget >/dev/null 2>&1; then
+        wget -q -T 15 -O "$output" "$url"
+    else
+        fail "curl or wget is required to download release assets"
+    fi
+}
+
 while [ "$#" -gt 0 ]; do
     case "$1" in
         --version)
@@ -67,9 +80,18 @@ case "$OS/$ARCH" in
     *) fail "meshy-dcc is published for macOS (Apple Silicon) and Windows; not for $OS/$ARCH yet" ;;
 esac
 
-# The CDN keeps every release under a version dir and never overwrites it, so
-# the latest version comes from the GitHub Release (a redirect, a few hundred
-# bytes): releases/latest -> releases/tag/v<version>.
+# The latest version: latest.txt on either CDN host (served uncached), else the
+# GitHub Release redirect releases/latest -> releases/tag/v<version>.
+if [ "$VERSION" = "latest" ]; then
+    LATEST_TMP="$(mktemp "${TMPDIR:-/tmp}/meshy-dcc-latest.XXXXXX")"
+    for host in "$CDN" "$CDN_CN"; do
+        if download_to "$host/latest.txt" "$LATEST_TMP" 2>/dev/null; then
+            VERSION="$(tr -d ' \r\n' < "$LATEST_TMP")"
+            break
+        fi
+    done
+    rm -f "$LATEST_TMP"
+fi
 if [ "$VERSION" = "latest" ]; then
     if command -v curl >/dev/null 2>&1; then
         LATEST_URL="$(curl -fsSIL --connect-timeout 15 -o /dev/null -w '%{url_effective}' "$GITHUB/latest" || true)"
@@ -78,7 +100,7 @@ if [ "$VERSION" = "latest" ]; then
     fi
     case "$LATEST_URL" in
         */releases/tag/v*) VERSION="${LATEST_URL##*/releases/tag/}" ;;
-        *) fail "could not find the latest release on GitHub; set MESHY_DCC_VERSION to install a given version" ;;
+        *) fail "could not find the latest release on the Meshy CDN or GitHub; set MESHY_DCC_VERSION to install a given version" ;;
     esac
 fi
 REQUESTED_VERSION="${VERSION#v}"
@@ -118,18 +140,6 @@ cleanup() {
 trap cleanup EXIT
 trap 'exit 1' HUP INT TERM
 
-download_to() {
-    url="$1"
-    output="$2"
-    echo "Downloading $url"
-    if command -v curl >/dev/null 2>&1; then
-        curl -fsSL --connect-timeout 15 "$url" -o "$output"
-    elif command -v wget >/dev/null 2>&1; then
-        wget -q -T 15 -O "$output" "$url"
-    else
-        fail "curl or wget is required to download release assets"
-    fi
-}
 
 # manifest_field <binary> <field>: one string field of one binary's entry.
 manifest_field() {
