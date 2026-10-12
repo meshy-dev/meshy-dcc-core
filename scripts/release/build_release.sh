@@ -14,6 +14,10 @@ mkdir -p "$out"
 # checkout; map them to fixed prefixes.
 cargo_home="${CARGO_HOME:-$HOME/.cargo}"
 export RUSTFLAGS="--remap-path-prefix=$cargo_home=/cargo --remap-path-prefix=$repo=/meshy-dcc-core ${RUSTFLAGS:-}"
+# Git Bash on Windows: rustc sees C:\... paths, not /c/....
+if command -v cygpath >/dev/null 2>&1; then
+    RUSTFLAGS="--remap-path-prefix=$(cygpath -w "$cargo_home")=/cargo --remap-path-prefix=$(cygpath -w "$repo")=/meshy-dcc-core $RUSTFLAGS"
+fi
 
 cargo build --profile dist -p meshy-dcc -p meshy-dcc-server
 exe=""

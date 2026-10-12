@@ -1,0 +1,202 @@
+name: release
+
+# Publishes one release, like meshy-cli and meshy-mcp-server: a GitHub Release
+# plus npm, and a copy on the Meshy CDN for places that reach it faster.
+#
+# Run it by hand from the Actions tab on main ("Run workflow") with the tag of
+# a GitHub Release you already created (draft or published). It runs from main
+# on purpose: meshy-dcc trusts release manifests signed by this workflow file
+# at refs/heads/main, and a release-triggered run would sign from the tag.
+#
+# One-time setup (repository secrets):
+#   NPM_TOKEN    npm automation token with publish rights on `meshy-dcc` and
+#                the `@meshy-ai` scope
+#   CDN_API_KEY  cdnmgr upload key (cdnk_...), created through the cdnmgr
+#                device flow by a person
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag, e.g. v0.2.0"
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.tag }}
+
+      - name: The workspace version matches the tag
+        env:
+          TAG: ${{ inputs.tag }}
+        run: |
+          version="$(sed -n 's/^version = "\(.*\)"$/\1/p' Cargo.toml | head -1)"
+          if [ "v$version" != "$TAG" ]; then
+            echo "::error::Cargo.toml says $version but the tag is $TAG. Bump the version (and CHANGELOG.md) first."
+            exit 1
+          fi
+
+      - name: The GitHub Release exists
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag }}
+        run: gh release view "$TAG" --repo "$GITHUB_REPOSITORY" > /dev/null
+
+      - name: Secrets are configured
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          CDN_API_KEY: ${{ secrets.CDN_API_KEY }}
+        run: |
+          missing=""
+          [ -n "$NPM_TOKEN" ] || missing="$missing NPM_TOKEN"
+          [ -n "$CDN_API_KEY" ] || missing="$missing CDN_API_KEY"
+          if [ -n "$missing" ]; then
+            echo "::error::Missing repository secrets:$missing"
+            exit 1
+          fi
+
+  build:
+    needs: check
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - os: macos-14
+            platform: macos-arm64
+            ext: ""
+          - os: windows-latest
+            platform: windows-x86_64
+            ext: ".exe"
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.tag }}
+
+      # The Rust toolchain comes from rust-toolchain.toml.
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - uses: astral-sh/setup-uv@v6
+
+      - name: Build the CLI, the gateway and the core wheel
+        run: scripts/release/build_release.sh out
+
+      - name: Release files for the GitHub Release and the CDN
+        env:
+          TAG: ${{ inputs.tag }}
+        run: |
+          for source in github cdn; do
+            python scripts/release/generate_update_manifest.py \
+              --version "${TAG#v}" --platform "${{ matrix.platform }}" \
+              --cli-bin "out/meshy-dcc${{ matrix.ext }}" \
+              --server-bin "out/meshy-dcc-server${{ matrix.ext }}" \
+              --out-dir "release/$source" --source "$source"
+          done
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ matrix.platform }}
+          path: |
+            out/
+            release/
+          if-no-files-found: error
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.tag }}
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Collect the release files
+        run: |
+          mkdir -p github cdn
+          for platform in macos-arm64 windows-x86_64; do
+            cp artifacts/release-$platform/release/github/* github/
+            cp artifacts/release-$platform/release/cdn/* cdn/
+            cp artifacts/release-$platform/out/*.whl github/
+          done
+          cp scripts/install-cli.sh github/install.sh
+          cp scripts/install-cli.ps1 github/install.ps1
+
+      # meshy-dcc verifies official manifests against this workflow's signature.
+      - name: Sign the manifests
+        id: attest
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: |
+            github/meshy-dcc-update-manifest-*.json
+            cdn/meshy-dcc-update-manifest-*.json
+
+      - name: Put the signature beside each manifest
+        env:
+          BUNDLE: ${{ steps.attest.outputs.bundle-path }}
+        run: |
+          for manifest in github/meshy-dcc-update-manifest-*.json; do
+            cp "$BUNDLE" "${manifest%.json}.sigstore.json"
+          done
+          # CDN names allow a single extension.
+          for manifest in cdn/meshy-dcc-update-manifest-*.json; do
+            cp "$BUNDLE" "${manifest%.json}-sigstore.json"
+          done
+
+      - name: Upload to the GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag }}
+        run: gh release upload "$TAG" github/* --repo "$GITHUB_REPOSITORY" --clobber
+
+      # Each package is skipped when that version is already on npm, so a rerun
+      # after a half-finished publish picks up where it stopped.
+      - name: Publish to npm
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          version="${TAG#v}"
+          python3 scripts/release/build_npm_packages.py --version "$version" --out npm-out \
+            --macos-arm64 artifacts/release-macos-arm64/out \
+            --windows-x86_64 artifacts/release-windows-x86_64/out
+          # Platform packages first, so `meshy-dcc` never points at missing ones.
+          for tarball in npm-out/meshy-ai-*.tgz npm-out/meshy-dcc-*.tgz; do
+            name="$(tar -xzOf "$tarball" package/package.json | node -p 'JSON.parse(require("fs").readFileSync(0)).name')"
+            if npm view "$name@$version" version > /dev/null 2>&1; then
+              echo "$name@$version is already on npm; skipping"
+            else
+              npm publish "$tarball" --access public --provenance
+            fi
+          done
+
+      - name: Copy to the Meshy CDN
+        env:
+          CDN_API_KEY: ${{ secrets.CDN_API_KEY }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          python3 scripts/release/sync_cdn.py --version "${TAG#v}" --release-dir cdn \
+            --install-script github/install.sh --install-script github/install.ps1

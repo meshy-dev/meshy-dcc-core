@@ -130,6 +130,12 @@ and is not runtime-compatible with it. Attribution stays in `LICENSE` and
   this for the four adapters, each for macOS and Windows; a platform's build
   can bring its own host commands (the Windows launchers are `.cmd` files,
   and Godot's installer runs the package's Python directly).
+- `.github/workflows/release.yml` publishes a release by hand from main for a
+  given tag: it builds the CLI, the gateway and the core wheel natively on
+  macOS (arm64) and Windows (MSVC), signs the release manifests, uploads
+  everything to the GitHub Release, publishes the three npm packages
+  (skipping versions already there) and copies the release to the CDN
+  (`scripts/release/sync_cdn.py`, which never overwrites a release file).
 - npm packaging: `meshy-dcc` holds a small launcher and lists one binary
   package per platform (`@meshy-ai/meshy-dcc-darwin-arm64`,
   `@meshy-ai/meshy-dcc-win32-x64`) as optional dependencies, so npm installs
