@@ -4,15 +4,8 @@
     {
       "Sid": "ReleaseFiles",
       "Effect": "Allow",
-      "Action": ["s3:PutObject", "s3:GetObject"],
+      "Action": ["s3:PutObject", "s3:GetObject", "s3:AbortMultipartUpload"],
       "Resource": "arn:aws:s3:::meshy-cdn/meshy-dcc-core/*"
-    },
-    {
-      "Sid": "ListReleasePrefix",
-      "Effect": "Allow",
-      "Action": "s3:ListBucket",
-      "Resource": "arn:aws:s3:::meshy-cdn",
-      "Condition": { "StringLike": { "s3:prefix": ["meshy-dcc-core/*"] } }
     },
     {
       "Sid": "NpmToken",

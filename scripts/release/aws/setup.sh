@@ -4,8 +4,8 @@
 # only the main branch of meshy-dev/meshy-dcc-core can assume through GitHub
 # OIDC, and the npm token in Secrets Manager.
 #
-#   AWS_PROFILE=<admin profile> scripts/release/aws/setup.sh
-#   AWS_PROFILE=<admin profile> scripts/release/aws/setup.sh --npm-token < token-file
+#   AWS_PROFILE=SRE-133081291590 scripts/release/aws/setup.sh
+#   AWS_PROFILE=SRE-133081291590 scripts/release/aws/setup.sh --npm-token < token-file
 #
 # Safe to rerun. The token is read from stdin and never passed as an argument.
 set -euo pipefail
