@@ -117,7 +117,10 @@ and is not runtime-compatible with it. Attribution stays in `LICENSE` and
   `~/.local/bin`. They no longer install dcc-cua. When the CDN cannot be
   reached (meshy.ai is blocked in some regions) they fall back to the GitHub
   Release; a file that fails its checks stops the install instead. The
-  README shows the one-line installs (`curl … | bash`, `irm … | iex`).
+  latest version comes from the GitHub Release; the CDN keeps each release
+  under its own version dir (`v0-2-0`) and never overwrites it, with names
+  that follow the CDN rules (`windows-x64`). The README shows the one-line
+  installs (`curl … | bash`, `irm … | iex`).
   `scripts/release/generate_update_manifest.py` writes the matching manifest
   and the binaries under their published names.
 - Catalog `host-package` entries can list one build per platform under

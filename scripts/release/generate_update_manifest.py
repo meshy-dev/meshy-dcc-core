@@ -8,11 +8,17 @@ Writes, into ``--out-dir``:
 - ``meshy-dcc-update-manifest-<platform>.json``, mapping each binary to its
   version, download URL and SHA-256.
 
-The same files go to two places, each with its own manifest (``--source``):
-the GitHub Release (``.../releases/download/v<version>/``) and the Meshy CDN
-(``cdn.meshy.ai/meshy-dcc-core/v<version>/``, manifest also under
-``latest/``). The installers try the CDN first and the GitHub Release when the
-CDN is unreachable, and accept only the URLs written here for that source.
+The same binaries go to two places, each with its own manifest (``--source``):
+
+- the GitHub Release, under the names above;
+- the Meshy CDN, under ``meshy-dcc-core/<version dir>/`` with names that follow
+  the CDN naming rules (lowercase letters, digits and hyphens): the version dir
+  is ``v0-2-0`` for 0.2.0 and ``windows-x86_64`` becomes ``windows-x64``.
+  Nothing on the CDN is ever overwritten, so there is no ``latest/``; the
+  installers ask the GitHub Release which version is latest.
+
+The installers try the CDN first and the GitHub Release when the CDN is
+unreachable, and accept only the URLs written here for that source.
 """
 
 from __future__ import annotations
@@ -21,13 +27,19 @@ import argparse
 import hashlib
 import json
 from pathlib import Path
+import re
 import shutil
 
-SOURCES = {
-    "cdn": "https://cdn.meshy.ai/meshy-dcc-core/v{version}",
-    "github": "https://github.com/meshy-dev/meshy-dcc-core/releases/download/v{version}",
-}
+CDN = "https://cdn.meshy.ai/meshy-dcc-core"
+GITHUB = "https://github.com/meshy-dev/meshy-dcc-core/releases/download"
 PLATFORMS = ("macos-arm64", "windows-x86_64")
+SOURCES = ("cdn", "github")
+CDN_PLATFORM = {"macos-arm64": "macos-arm64", "windows-x86_64": "windows-x64"}
+
+
+def cdn_version_dir(version: str) -> str:
+    """``0.2.0`` -> ``v0-2-0``: CDN keys allow only lowercase letters, digits and hyphens."""
+    return "v" + re.sub(r"[^0-9a-z]+", "-", version.lower())
 
 
 def generate(
@@ -36,20 +48,24 @@ def generate(
     if platform not in PLATFORMS:
         raise SystemExit(f"unsupported platform {platform!r}; expected one of {', '.join(PLATFORMS)}")
     ext = ".exe" if platform.startswith("windows") else ""
+    if source == "cdn":
+        label, base = CDN_PLATFORM[platform], f"{CDN}/{cdn_version_dir(version)}"
+    else:
+        label, base = platform, f"{GITHUB}/v{version}"
     out_dir.mkdir(parents=True, exist_ok=True)
     manifest = {}
     for name, path in binaries.items():
         if not path.is_file():
             raise SystemExit(f"binary not found for {name}: {path}")
-        asset = f"{name}-{platform}{ext}"
+        asset = f"{name}-{label}{ext}"
         shutil.copyfile(path, out_dir / asset)
         manifest[name] = {
             "version": version,
-            "url": f"{SOURCES[source].format(version=version)}/{asset}",
+            "url": f"{base}/{asset}",
             "sha256": hashlib.sha256((out_dir / asset).read_bytes()).hexdigest(),
             "release_notes": None,
         }
-    manifest_path = out_dir / f"meshy-dcc-update-manifest-{platform}.json"
+    manifest_path = out_dir / f"meshy-dcc-update-manifest-{label}.json"
     # Bytes, not text: Path.write_text() would write CRLF on Windows, and the
     # manifest is signed and compared as published bytes.
     manifest_path.write_bytes((json.dumps(manifest, indent=2) + "\n").encode("utf-8"))
@@ -63,7 +79,7 @@ def main() -> int:
     parser.add_argument("--cli-bin", type=Path, required=True)
     parser.add_argument("--server-bin", type=Path, required=True)
     parser.add_argument("--out-dir", type=Path, required=True)
-    parser.add_argument("--source", choices=sorted(SOURCES), default="cdn")
+    parser.add_argument("--source", choices=SOURCES, default="cdn")
     args = parser.parse_args()
     path = generate(
         version=args.version,

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from pathlib import Path
 import subprocess
 import sys
@@ -34,16 +35,20 @@ def _run(tmp_path: Path, platform: str, *extra: str) -> subprocess.CompletedProc
     return subprocess.run(command, capture_output=True, text=True, check=False)
 
 
-@pytest.mark.parametrize(("platform", "ext"), [("macos-arm64", ""), ("windows-x86_64", ".exe")])
-def test_manifest_names_cdn_assets_that_sit_beside_it(tmp_path: Path, platform: str, ext: str) -> None:
+@pytest.mark.parametrize(
+    ("platform", "label", "ext"),
+    [("macos-arm64", "macos-arm64", ""), ("windows-x86_64", "windows-x64", ".exe")],
+)
+def test_cdn_manifest_uses_cdn_names_in_a_version_dir(tmp_path: Path, platform: str, label: str, ext: str) -> None:
     result = _run(tmp_path, platform)
     assert result.returncode == 0, result.stderr
     dist = tmp_path / "dist"
-    manifest = json.loads((dist / f"meshy-dcc-update-manifest-{platform}.json").read_text())
+    manifest = json.loads((dist / f"meshy-dcc-update-manifest-{label}.json").read_text())
     assert set(manifest) == {"meshy-dcc", "meshy-dcc-server"}
     for name, content in (("meshy-dcc", b"cli"), ("meshy-dcc-server", b"server")):
-        asset = f"{name}-{platform}{ext}"
-        assert manifest[name]["url"] == f"https://cdn.meshy.ai/meshy-dcc-core/v1.2.3/{asset}"
+        asset = f"{name}-{label}{ext}"
+        assert manifest[name]["url"] == f"https://cdn.meshy.ai/meshy-dcc-core/v1-2-3/{asset}"
+        assert re.fullmatch(r"[a-z0-9-]+(\.[a-z0-9]+)?", asset)
         assert manifest[name]["sha256"] == hashlib.sha256(content).hexdigest()
         assert (dist / asset).read_bytes() == content
 
@@ -60,3 +65,10 @@ def test_github_manifest_points_at_the_github_release(tmp_path: Path) -> None:
     assert manifest["meshy-dcc"]["url"] == (
         "https://github.com/meshy-dev/meshy-dcc-core/releases/download/v1.2.3/meshy-dcc-macos-arm64"
     )
+
+
+def test_windows_on_github_keeps_the_release_platform_name(tmp_path: Path) -> None:
+    result = _run(tmp_path, "windows-x86_64", "--source", "github")
+    assert result.returncode == 0, result.stderr
+    manifest = json.loads((tmp_path / "dist" / "meshy-dcc-update-manifest-windows-x86_64.json").read_text())
+    assert manifest["meshy-dcc-server"]["url"].endswith("/v1.2.3/meshy-dcc-server-windows-x86_64.exe")

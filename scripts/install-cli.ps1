@@ -24,28 +24,39 @@ if ([string]::IsNullOrWhiteSpace($InstallDir)) {
     $InstallDir = Join-Path $HOME ".local\bin"
 }
 
-$requestedVersion = $null
-if ($Version -ne "latest") {
-    if ($Version -notmatch '^v?([0-9]+\.[0-9]+\.[0-9]+([.+-][0-9A-Za-z.-]+)?)$') {
-        throw "Invalid release version: $Version"
+# The CDN keeps every release under a version dir and never overwrites it, so
+# the latest version comes from the GitHub Release redirect:
+# releases/latest -> releases/tag/v<version>.
+if ($Version -eq "latest") {
+    $latest = $null
+    try {
+        $request = [System.Net.WebRequest]::Create("$($sources.github)/latest")
+        $request.Method = "HEAD"
+        $request.Timeout = 15000
+        $response = $request.GetResponse()
+        $latest = $response.ResponseUri.AbsoluteUri
+        $response.Close()
+    } catch {}
+    if ($latest -notmatch '/releases/tag/(v[^/]+)$') {
+        throw "Could not find the latest release on GitHub; set MESHY_DCC_VERSION to install a given version"
     }
-    $requestedVersion = $Matches[1]
+    $Version = $Matches[1]
 }
-$manifestName = "meshy-dcc-update-manifest-$platform.json"
-
-function Get-ManifestUrl([string] $source) {
-    $base = $sources[$source]
-    if ($source -eq "cdn") {
-        if ($requestedVersion) { return "$base/v$requestedVersion/$manifestName" }
-        return "$base/latest/$manifestName"
-    }
-    if ($requestedVersion) { return "$base/download/v$requestedVersion/$manifestName" }
-    return "$base/latest/download/$manifestName"
+if ($Version -notmatch '^v?([0-9]+\.[0-9]+\.[0-9]+([.+-][0-9A-Za-z.-]+)?)$') {
+    throw "Invalid release version: $Version"
 }
+$requestedVersion = $Matches[1]
 
-function Get-AssetDir([string] $source, [string] $version) {
-    if ($source -eq "cdn") { return "$($sources[$source])/v$version" }
-    return "$($sources[$source])/download/v$version"
+# CDN names follow the CDN rules (lowercase letters, digits, hyphens): the
+# version dir for 0.2.0 is v0-2-0 and the platform is windows-x64. GitHub
+# keeps the release names.
+$cdnDir = "$($sources.cdn)/v" + ($requestedVersion.ToLowerInvariant() -replace '[^0-9a-z]+', '-')
+$githubDir = "$($sources.github)/download/v$requestedVersion"
+
+# Release-Url <source> <name>: where <name> for this platform lives.
+function Get-ReleaseUrl([string] $source, [string] $name, [string] $extension) {
+    if ($source -eq "cdn") { return "$cdnDir/$name-windows-x64$extension" }
+    return "$githubDir/$name-$platform$extension"
 }
 
 # A failed download is a NetworkFailure, so the caller tries the next source.
@@ -70,7 +81,7 @@ foreach ($binary in $binaries) {
 }
 
 function Get-VerifiedBinaries([string] $source) {
-    Get-File (Get-ManifestUrl $source) $manifestTmp
+    Get-File (Get-ReleaseUrl $source "meshy-dcc-update-manifest" ".json") $manifestTmp
     $manifestText = Get-Content -LiteralPath $manifestTmp -Raw
     try {
         $manifest = $manifestText | ConvertFrom-Json
@@ -89,10 +100,10 @@ function Get-VerifiedBinaries([string] $source) {
         if ($manifestVersion -notmatch '^[0-9]+\.[0-9]+\.[0-9]+([.+-][0-9A-Za-z.-]+)?$') {
             throw "Official release manifest contains an invalid $binary version"
         }
-        if ($Version -ne "latest" -and $manifestVersion -ne $requestedVersion) {
+        if ($manifestVersion -ne $requestedVersion) {
             throw "Official release manifest version does not match requested version $requestedVersion"
         }
-        $expectedUrl = "$(Get-AssetDir $source $manifestVersion)/$binary-$platform.exe"
+        $expectedUrl = Get-ReleaseUrl $source $binary ".exe"
         if ($assetUrl -cne $expectedUrl) {
             throw "Official release manifest contains a non-official $binary URL"
         }

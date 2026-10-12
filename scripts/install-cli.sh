@@ -65,27 +65,35 @@ case "$OS/$ARCH" in
     *) fail "meshy-dcc is published for macOS (Apple Silicon) and Windows; not for $OS/$ARCH yet" ;;
 esac
 
-REQUESTED_VERSION="${VERSION#v}"
-if [ "$VERSION" != "latest" ]; then
-    printf '%s' "$REQUESTED_VERSION" \
-        | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+([.+-][0-9A-Za-z.-]+)?$' \
-        || fail "invalid release version: $VERSION"
-fi
-MANIFEST_NAME="meshy-dcc-update-manifest-$PLATFORM.json"
-
-# manifest_url <source>, asset_dir <source> <version>
-manifest_url() {
-    case "$1/$VERSION" in
-        cdn/latest) echo "$CDN/latest/$MANIFEST_NAME" ;;
-        cdn/*) echo "$CDN/v$REQUESTED_VERSION/$MANIFEST_NAME" ;;
-        github/latest) echo "$GITHUB/latest/download/$MANIFEST_NAME" ;;
-        github/*) echo "$GITHUB/download/v$REQUESTED_VERSION/$MANIFEST_NAME" ;;
+# The CDN keeps every release under a version dir and never overwrites it, so
+# the latest version comes from the GitHub Release (a redirect, a few hundred
+# bytes): releases/latest -> releases/tag/v<version>.
+if [ "$VERSION" = "latest" ]; then
+    if command -v curl >/dev/null 2>&1; then
+        LATEST_URL="$(curl -fsSIL --connect-timeout 15 -o /dev/null -w '%{url_effective}' "$GITHUB/latest" || true)"
+    else
+        LATEST_URL="$(wget -q -S -T 15 --spider "$GITHUB/latest" 2>&1 | awk '/^ *Location: /{print $2}' | tail -1)"
+    fi
+    case "$LATEST_URL" in
+        */releases/tag/v*) VERSION="${LATEST_URL##*/releases/tag/}" ;;
+        *) fail "could not find the latest release on GitHub; set MESHY_DCC_VERSION to install a given version" ;;
     esac
-}
-asset_dir() {
+fi
+REQUESTED_VERSION="${VERSION#v}"
+printf '%s' "$REQUESTED_VERSION" \
+    | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+([.+-][0-9A-Za-z.-]+)?$' \
+    || fail "invalid release version: $VERSION"
+
+# CDN names follow the CDN rules (lowercase letters, digits, hyphens): the
+# version dir for 0.2.0 is v0-2-0. GitHub keeps the release names.
+CDN_DIR="$CDN/v$(printf '%s' "$REQUESTED_VERSION" | tr 'A-Z' 'a-z' | sed 's/[^0-9a-z][^0-9a-z]*/-/g')"
+GITHUB_DIR="$GITHUB/download/v$REQUESTED_VERSION"
+
+# release_url <source> <name without platform>: where <name>-<platform> lives.
+release_url() {
     case "$1" in
-        cdn) echo "$CDN/v$2" ;;
-        github) echo "$GITHUB/download/v$2" ;;
+        cdn) echo "$CDN_DIR/$2-$PLATFORM" ;;
+        github) echo "$GITHUB_DIR/$2-$PLATFORM" ;;
     esac
 }
 
@@ -143,8 +151,8 @@ calculate_sha256() {
 }
 
 # fetch_verified <source> <binary> <output>: download one binary the manifest
-# names and check its version, URL and SHA-256. Sets MANIFEST_VERSION. Returns 1
-# when the download fails; exits when a check fails.
+# names and check its version, URL and SHA-256. Returns 1 when the download
+# fails; exits when a check fails.
 fetch_verified() {
     source="$1"
     binary="$2"
@@ -158,10 +166,9 @@ fetch_verified() {
     printf '%s' "$version" \
         | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+([.+-][0-9A-Za-z.-]+)?$' \
         || fail "official release manifest contains an invalid $binary version"
-    if [ "$VERSION" != "latest" ] && [ "$version" != "$REQUESTED_VERSION" ]; then
-        fail "official release manifest version does not match requested version $REQUESTED_VERSION"
-    fi
-    [ "$url" = "$(asset_dir "$source" "$version")/$binary-$PLATFORM" ] \
+    [ "$version" = "$REQUESTED_VERSION" ] \
+        || fail "official release manifest version does not match requested version $REQUESTED_VERSION"
+    [ "$url" = "$(release_url "$source" "$binary")" ] \
         || fail "official release manifest contains a non-official $binary URL"
     [ "${#expected}" -eq 64 ] \
         && ! printf '%s' "$expected" | grep -Eq '[^0-9A-Fa-f]' \
@@ -172,13 +179,12 @@ fetch_verified() {
     [ "$(printf '%s' "$actual" | tr 'A-F' 'a-f')" = "$(printf '%s' "$expected" | tr 'A-F' 'a-f')" ] \
         || fail "$binary SHA-256 does not match the official release manifest"
     chmod 0755 "$output"
-    MANIFEST_VERSION="$version"
 }
 
 # Both are verified before either replaces an installed file.
 FETCHED=""
 for SOURCE in cdn github; do
-    if download_to "$(manifest_url "$SOURCE")" "$MANIFEST_TMP" \
+    if download_to "$(release_url "$SOURCE" meshy-dcc-update-manifest).json" "$MANIFEST_TMP" \
         && fetch_verified "$SOURCE" meshy-dcc "$CLI_TMP" \
         && fetch_verified "$SOURCE" meshy-dcc-server "$SERVER_TMP"; then
         FETCHED="$SOURCE"
@@ -190,7 +196,7 @@ done
 mv -f "$SERVER_TMP" "$INSTALL_DIR/meshy-dcc-server"
 TARGET="$INSTALL_DIR/meshy-dcc"
 mv -f "$CLI_TMP" "$TARGET"
-echo "Installed verified meshy-dcc $MANIFEST_VERSION to $INSTALL_DIR"
+echo "Installed verified meshy-dcc $REQUESTED_VERSION to $INSTALL_DIR"
 
 echo "Installing the meshy-dcc Skill for the agents on this machine:"
 "$TARGET" --output human agent-skill || true

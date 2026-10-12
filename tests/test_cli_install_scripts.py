@@ -43,9 +43,11 @@ def _write_fake_unix_tools(bin_dir: Path, os_name: str = "Darwin", arch: str = "
             """#!/bin/sh
 url=""
 out=""
+format=""
 while [ "$#" -gt 0 ]; do
     case "$1" in
         -o) out="$2"; shift 2 ;;
+        -w) format="$2"; shift 2 ;;
         http*) url="$1"; shift ;;
         *) shift ;;
     esac
@@ -53,6 +55,10 @@ done
 printf '%s\n' "$url" >> "$REQUEST_LOG"
 if [ -n "${UNREACHABLE:-}" ]; then
     case "$url" in "$UNREACHABLE"*) exit 7 ;; esac
+fi
+if [ -n "$format" ]; then
+    printf '%s' "$LATEST_REDIRECT"
+    exit 0
 fi
 case "$url" in
     *meshy-dcc-update-manifest-*) cp "$FIXTURE_MANIFEST" "$out" ;;
@@ -104,6 +110,7 @@ def _run_sh_installer(
             "REQUEST_LOG": _shell_path(request_log),
             "ARG_LOG": _shell_path(tmp_path / "args.log"),
             "UNREACHABLE": unreachable,
+            "LATEST_REDIRECT": f"{GITHUB_RELEASES}/tag/v0.2.0",
         }
     )
     return subprocess.run(
@@ -157,7 +164,7 @@ function Start-Process {
     [pscustomobject]@{ ExitCode = 0 }
 }
 try {
-    & $env:INSTALL_SCRIPT -Version latest -InstallDir $env:TEST_INSTALL_DIR
+    & $env:INSTALL_SCRIPT -Version v0.2.0 -InstallDir $env:TEST_INSTALL_DIR
 } finally {
     $currentUserPath = [Environment]::GetEnvironmentVariable("Path", "User")
     if ($currentUserPath -cne $originalUserPath) {
@@ -189,11 +196,14 @@ try {
 
 def _manifest(*, platform: str, binary: bytes, url=None, sha256=None, source: str = "cdn") -> dict:
     ext = ".exe" if platform.startswith("windows") else ""
-    base = f"{OFFICIAL_RELEASE}/v0.2.0" if source == "cdn" else f"{GITHUB_RELEASES}/download/v0.2.0"
+    if source == "cdn":
+        base, label = f"{OFFICIAL_RELEASE}/v0-2-0", platform.replace("x86_64", "x64")
+    else:
+        base, label = f"{GITHUB_RELEASES}/download/v0.2.0", platform
     return {
         name: {
             "version": "0.2.0",
-            "url": url or f"{base}/{name}-{platform}{ext}",
+            "url": url or f"{base}/{name}-{label}{ext}",
             "sha256": sha256 or hashlib.sha256(binary).hexdigest(),
         }
         for name in ("meshy-dcc", "meshy-dcc-server")
@@ -232,7 +242,7 @@ def test_installers_use_fixed_official_update_manifests() -> None:
         assert "api.github.com" not in source
         assert "https://cdn.meshy.ai/meshy-dcc-core" in source
         assert "https://github.com/meshy-dev/meshy-dcc-core/releases" in source
-        assert "meshy-dcc-update-manifest-" in source
+        assert "meshy-dcc-update-manifest" in source
         assert "sha256" in source.lower()
     assert "MESHY_DCC_RELEASE_FALLBACK" not in sh_source
     assert "[string] $Repo" not in ps_source
@@ -247,9 +257,10 @@ def test_sh_latest_uses_manifest_pinned_urls_and_installs_verified_binaries(tmp_
     assert (tmp_path / "install" / "meshy-dcc-server").read_bytes() == binary
     requests = (tmp_path / "requests.log").read_text(encoding="utf-8").splitlines()
     assert requests == [
-        f"{OFFICIAL_RELEASE}/latest/meshy-dcc-update-manifest-macos-arm64.json",
-        f"{OFFICIAL_RELEASE}/v0.2.0/meshy-dcc-macos-arm64",
-        f"{OFFICIAL_RELEASE}/v0.2.0/meshy-dcc-server-macos-arm64",
+        f"{GITHUB_RELEASES}/latest",
+        f"{OFFICIAL_RELEASE}/v0-2-0/meshy-dcc-update-manifest-macos-arm64.json",
+        f"{OFFICIAL_RELEASE}/v0-2-0/meshy-dcc-macos-arm64",
+        f"{OFFICIAL_RELEASE}/v0-2-0/meshy-dcc-server-macos-arm64",
     ]
     # The Skill plan is shown before it is written.
     assert (tmp_path / "args.log").read_text(encoding="utf-8").splitlines() == [
@@ -283,8 +294,9 @@ def test_sh_falls_back_to_the_github_release_when_the_cdn_is_unreachable(tmp_pat
     assert (tmp_path / "install" / "meshy-dcc").read_bytes() == binary
     requests = (tmp_path / "requests.log").read_text(encoding="utf-8").splitlines()
     assert requests == [
-        f"{OFFICIAL_RELEASE}/latest/meshy-dcc-update-manifest-macos-arm64.json",
-        f"{GITHUB_RELEASES}/latest/download/meshy-dcc-update-manifest-macos-arm64.json",
+        f"{GITHUB_RELEASES}/latest",
+        f"{OFFICIAL_RELEASE}/v0-2-0/meshy-dcc-update-manifest-macos-arm64.json",
+        f"{GITHUB_RELEASES}/download/v0.2.0/meshy-dcc-update-manifest-macos-arm64.json",
         f"{GITHUB_RELEASES}/download/v0.2.0/meshy-dcc-macos-arm64",
         f"{GITHUB_RELEASES}/download/v0.2.0/meshy-dcc-server-macos-arm64",
     ]
@@ -298,7 +310,7 @@ def test_sh_a_failed_check_does_not_move_to_another_source(tmp_path: Path) -> No
 
     assert result.returncode != 0
     requests = (tmp_path / "requests.log").read_text(encoding="utf-8").splitlines()
-    assert not any(url.startswith(GITHUB_RELEASES) for url in requests)
+    assert not any(url.startswith(f"{GITHUB_RELEASES}/download") for url in requests)
 
 
 def test_sh_checksum_mismatch_preserves_existing_binary(tmp_path: Path) -> None:
@@ -334,7 +346,8 @@ def test_sh_rejects_non_official_asset_before_download(tmp_path: Path) -> None:
     assert "official" in result.stderr.lower()
     requests = (tmp_path / "requests.log").read_text(encoding="utf-8").splitlines()
     assert requests == [
-        f"{OFFICIAL_RELEASE}/latest/meshy-dcc-update-manifest-macos-arm64.json"
+        f"{GITHUB_RELEASES}/latest",
+        f"{OFFICIAL_RELEASE}/v0-2-0/meshy-dcc-update-manifest-macos-arm64.json",
     ]
     assert not (tmp_path / "install" / "meshy-dcc").exists()
 
@@ -354,9 +367,9 @@ def test_powershell_latest_uses_manifest_pinned_url_and_installs_verified_binary
     assert (tmp_path / "install" / "meshy-dcc-server.exe").read_bytes() == binary
     requests = (tmp_path / "requests.log").read_text(encoding="utf-8").splitlines()
     assert requests == [
-        f"{OFFICIAL_RELEASE}/latest/meshy-dcc-update-manifest-windows-x86_64.json",
-        f"{OFFICIAL_RELEASE}/v0.2.0/meshy-dcc-windows-x86_64.exe",
-        f"{OFFICIAL_RELEASE}/v0.2.0/meshy-dcc-server-windows-x86_64.exe",
+        f"{OFFICIAL_RELEASE}/v0-2-0/meshy-dcc-update-manifest-windows-x64.json",
+        f"{OFFICIAL_RELEASE}/v0-2-0/meshy-dcc-windows-x64.exe",
+        f"{OFFICIAL_RELEASE}/v0-2-0/meshy-dcc-server-windows-x64.exe",
     ]
 
 
@@ -393,6 +406,6 @@ def test_powershell_rejects_non_official_asset_before_download(tmp_path: Path) -
     assert "official release" in result.stderr.lower()
     requests = (tmp_path / "requests.log").read_text(encoding="utf-8").splitlines()
     assert requests == [
-        f"{OFFICIAL_RELEASE}/latest/meshy-dcc-update-manifest-windows-x86_64.json"
+        f"{OFFICIAL_RELEASE}/v0-2-0/meshy-dcc-update-manifest-windows-x64.json",
     ]
     assert not (tmp_path / "install" / "meshy-dcc.exe").exists()
