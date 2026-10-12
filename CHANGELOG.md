@@ -108,6 +108,15 @@ and is not runtime-compatible with it. Attribution stays in `LICENSE` and
   gate.
 - Tool arguments are checked against JSON Schema `pattern`.
 - A `not_available` catalog entry's error carries the catalog's reason.
+- `scripts/install-cli.sh` (macOS, Apple Silicon) and `scripts/install-cli.ps1`
+  (Windows x86_64) install `meshy-dcc` and `meshy-dcc-server` from
+  `cdn.meshy.ai/meshy-dcc-core`: both are checked against the release
+  manifest's URLs and SHA-256 digests before either replaces an installed
+  file, then the installer shows and applies `meshy-dcc agent-skill`. Other
+  platforms are refused before anything is downloaded. Both default to
+  `~/.local/bin`. They no longer install dcc-cua.
+  `scripts/release/generate_update_manifest.py` writes the matching manifest
+  and the binaries under their published names.
 - `meshy-dcc agent-skill` installs the `meshy-dcc` Skill, which is embedded in
   the CLI, into agents' skill directories: Claude Code (`~/.claude/skills`)
   and Codex (`$CODEX_HOME/skills`) when they are present, or any `--dir`. It

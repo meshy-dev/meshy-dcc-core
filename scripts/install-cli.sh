@@ -1,20 +1,21 @@
 #!/usr/bin/env sh
 set -eu
 
-OFFICIAL_RELEASES="https://github.com/meshy-dev/meshy-dcc-core/releases"
+OFFICIAL_RELEASES="https://cdn.meshy.ai/meshy-dcc-core"
 VERSION="${MESHY_DCC_VERSION:-latest}"
 INSTALL_DIR="${MESHY_DCC_INSTALL_DIR:-$HOME/.local/bin}"
 
 usage() {
     cat <<'EOF'
-Install meshy-dcc from its official GitHub release manifest.
+Install meshy-dcc and its gateway from the Meshy release channel.
 
 Usage:
-  install-cli.sh [--version v0.19.63] [--install-dir ~/.local/bin]
+  install-cli.sh [--version 0.2.0] [--install-dir ~/.local/bin]
 
 Download this script first, inspect it, then run the local file.
-The installer verifies the release-manifest URL and SHA-256 before replacing
-an existing meshy-dcc binary.
+The installer checks the release manifest's URLs and SHA-256 digests before
+replacing an existing meshy-dcc, then installs the meshy-dcc Skill for the
+agents it finds (Claude Code, Codex).
 
 Environment:
   MESHY_DCC_VERSION      Release version, default latest
@@ -53,38 +54,28 @@ done
 
 OS="$(uname -s)"
 ARCH="$(uname -m)"
-case "$OS" in
-    Linux)
-        if [ "$ARCH" != "x86_64" ] && [ "$ARCH" != "amd64" ]; then
-            fail "unsupported Linux architecture: $ARCH"
-        fi
-        PLATFORM="linux-x86_64"
-        ASSET="meshy-dcc-linux-x86_64"
-        ;;
-    Darwin)
-        PLATFORM="macos-universal2"
-        ASSET="meshy-dcc-macos-universal2"
-        ;;
-    *)
-        fail "unsupported OS: $OS"
-        ;;
+case "$OS/$ARCH" in
+    Darwin/arm64) PLATFORM="macos-arm64" ;;
+    Darwin/*) fail "meshy-dcc supports Apple Silicon Macs only (this Mac is $ARCH)" ;;
+    *) fail "meshy-dcc is published for macOS (Apple Silicon) and Windows; not for $OS/$ARCH yet" ;;
 esac
 
 REQUESTED_VERSION="${VERSION#v}"
 if [ "$VERSION" = "latest" ]; then
-    MANIFEST_URL="$OFFICIAL_RELEASES/latest/download/meshy-dcc-update-manifest-$PLATFORM.json"
+    MANIFEST_URL="$OFFICIAL_RELEASES/latest/meshy-dcc-update-manifest-$PLATFORM.json"
 else
     printf '%s' "$REQUESTED_VERSION" \
         | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+([.+-][0-9A-Za-z.-]+)?$' \
         || fail "invalid release version: $VERSION"
-    MANIFEST_URL="$OFFICIAL_RELEASES/download/v$REQUESTED_VERSION/meshy-dcc-update-manifest-$PLATFORM.json"
+    MANIFEST_URL="$OFFICIAL_RELEASES/v$REQUESTED_VERSION/meshy-dcc-update-manifest-$PLATFORM.json"
 fi
 
 mkdir -p "$INSTALL_DIR"
 MANIFEST_TMP="$(mktemp "$INSTALL_DIR/.meshy-dcc-manifest.XXXXXX")"
-BINARY_TMP="$(mktemp "$INSTALL_DIR/.meshy-dcc.XXXXXX")"
+CLI_TMP="$(mktemp "$INSTALL_DIR/.meshy-dcc.XXXXXX")"
+SERVER_TMP="$(mktemp "$INSTALL_DIR/.meshy-dcc-server.XXXXXX")"
 cleanup() {
-    rm -f "$MANIFEST_TMP" "$BINARY_TMP"
+    rm -f "$MANIFEST_TMP" "$CLI_TMP" "$SERVER_TMP"
 }
 trap cleanup EXIT
 trap 'exit 1' HUP INT TERM
@@ -102,15 +93,15 @@ download_to() {
     fi
 }
 
+# manifest_field <binary> <field>: one string field of one binary's entry.
 manifest_field() {
-    field="$1"
-    awk -v field="$field" '
-        /^[[:space:]]*"meshy-dcc"[[:space:]]*:[[:space:]]*\{[[:space:]]*$/ {
-            in_cli = 1
+    awk -v binary="$1" -v field="$2" '
+        $0 ~ "^[[:space:]]*\"" binary "\"[[:space:]]*:[[:space:]]*\\{[[:space:]]*$" {
+            in_entry = 1
             next
         }
-        in_cli && /^[[:space:]]*\}[,]?[[:space:]]*$/ { exit }
-        in_cli && $0 ~ "^[[:space:]]*\"" field "\"[[:space:]]*:" {
+        in_entry && /^[[:space:]]*\}[,]?[[:space:]]*$/ { exit }
+        in_entry && $0 ~ "^[[:space:]]*\"" field "\"[[:space:]]*:" {
             value = $0
             sub("^[^:]*:[[:space:]]*\"", "", value)
             sub("\"[[:space:]]*,?[[:space:]]*$", "", value)
@@ -135,42 +126,50 @@ calculate_sha256() {
 download_to "$MANIFEST_URL" "$MANIFEST_TMP" \
     || fail "official release manifest download failed"
 
-ENTRY_COUNT="$(grep -Ec '^[[:space:]]*"meshy-dcc"[[:space:]]*:[[:space:]]*\{' "$MANIFEST_TMP" || true)"
-[ "$ENTRY_COUNT" = "1" ] || fail "official release manifest must contain one meshy-dcc entry"
+# fetch_verified <binary> <output>: download one binary the manifest names and
+# check its version, URL and SHA-256. Sets MANIFEST_VERSION.
+fetch_verified() {
+    binary="$1"
+    output="$2"
+    count="$(grep -Ec "^[[:space:]]*\"$binary\"[[:space:]]*:[[:space:]]*\\{" "$MANIFEST_TMP" || true)"
+    [ "$count" = "1" ] || fail "official release manifest must contain one $binary entry"
 
-MANIFEST_VERSION="$(manifest_field version)"
-ASSET_URL="$(manifest_field url)"
-EXPECTED_SHA256="$(manifest_field sha256)"
-printf '%s' "$MANIFEST_VERSION" \
-    | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+([.+-][0-9A-Za-z.-]+)?$' \
-    || fail "official release manifest contains an invalid meshy-dcc version"
-if [ "$VERSION" != "latest" ] && [ "$MANIFEST_VERSION" != "$REQUESTED_VERSION" ]; then
-    fail "official release manifest version does not match requested version $REQUESTED_VERSION"
-fi
+    version="$(manifest_field "$binary" version)"
+    url="$(manifest_field "$binary" url)"
+    expected="$(manifest_field "$binary" sha256)"
+    printf '%s' "$version" \
+        | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+([.+-][0-9A-Za-z.-]+)?$' \
+        || fail "official release manifest contains an invalid $binary version"
+    if [ "$VERSION" != "latest" ] && [ "$version" != "$REQUESTED_VERSION" ]; then
+        fail "official release manifest version does not match requested version $REQUESTED_VERSION"
+    fi
+    [ "$url" = "$OFFICIAL_RELEASES/v$version/$binary-$PLATFORM" ] \
+        || fail "official release manifest contains a non-official $binary URL"
+    [ "${#expected}" -eq 64 ] \
+        && ! printf '%s' "$expected" | grep -Eq '[^0-9A-Fa-f]' \
+        || fail "official release manifest contains an invalid SHA-256"
 
-EXPECTED_URL="$OFFICIAL_RELEASES/download/v$MANIFEST_VERSION/$ASSET"
-[ "$ASSET_URL" = "$EXPECTED_URL" ] \
-    || fail "official release manifest contains a non-official meshy-dcc URL"
-[ "${#EXPECTED_SHA256}" -eq 64 ] \
-    && ! printf '%s' "$EXPECTED_SHA256" | grep -Eq '[^0-9A-Fa-f]' \
-    || fail "official release manifest contains an invalid SHA-256"
+    download_to "$url" "$output" || fail "$binary download failed"
+    actual="$(calculate_sha256 "$output")"
+    [ "$(printf '%s' "$actual" | tr 'A-F' 'a-f')" = "$(printf '%s' "$expected" | tr 'A-F' 'a-f')" ] \
+        || fail "$binary SHA-256 does not match the official release manifest"
+    chmod 0755 "$output"
+    MANIFEST_VERSION="$version"
+}
 
-download_to "$ASSET_URL" "$BINARY_TMP" || fail "meshy-dcc download failed"
-ACTUAL_SHA256="$(calculate_sha256 "$BINARY_TMP")"
-[ "$(printf '%s' "$ACTUAL_SHA256" | tr 'A-F' 'a-f')" = "$(printf '%s' "$EXPECTED_SHA256" | tr 'A-F' 'a-f')" ] \
-    || fail "meshy-dcc SHA-256 does not match the official release manifest"
-
-chmod 0755 "$BINARY_TMP"
+# Both are verified before either replaces an installed file.
+fetch_verified meshy-dcc "$CLI_TMP"
+fetch_verified meshy-dcc-server "$SERVER_TMP"
+mv -f "$SERVER_TMP" "$INSTALL_DIR/meshy-dcc-server"
 TARGET="$INSTALL_DIR/meshy-dcc"
-mv -f "$BINARY_TMP" "$TARGET"
+mv -f "$CLI_TMP" "$TARGET"
+echo "Installed verified meshy-dcc $MANIFEST_VERSION to $INSTALL_DIR"
 
-# The CLI and dcc-cua are independently released. Reconcile the verified
-# companion only after the CLI replacement succeeds. This is convergent, but
-# not crash-atomic across the two independently owned executables.
-"$TARGET" components ensure dcc-cua --yes --output json \
-    || fail "meshy-dcc installed, but verified dcc-cua component installation failed"
+echo "Installing the meshy-dcc Skill for the agents on this machine:"
+"$TARGET" --output human agent-skill || true
+"$TARGET" --output human agent-skill --execute \
+    || echo "The meshy-dcc Skill was not installed for every agent; run: meshy-dcc agent-skill" >&2
 
-echo "Installed verified meshy-dcc $MANIFEST_VERSION to $TARGET"
 case ":$PATH:" in
     *":$INSTALL_DIR:"*) ;;
     *) echo "Add $INSTALL_DIR to PATH to run meshy-dcc from any shell." ;;

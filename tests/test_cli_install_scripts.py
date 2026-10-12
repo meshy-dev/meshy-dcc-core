@@ -13,7 +13,7 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 SH_INSTALLER = ROOT / "scripts" / "install-cli.sh"
 PS_INSTALLER = ROOT / "scripts" / "install-cli.ps1"
-OFFICIAL_RELEASE = "https://github.com/meshy-dev/meshy-dcc-core/releases/download"
+OFFICIAL_RELEASE = "https://cdn.meshy.ai/meshy-dcc-core"
 INSTALL_DOCS = (ROOT / "README.md",)
 
 
@@ -34,7 +34,7 @@ def _shell_path(path: Path) -> str:
     return value
 
 
-def _write_fake_unix_tools(bin_dir: Path) -> None:
+def _write_fake_unix_tools(bin_dir: Path, os_name: str = "Darwin", arch: str = "arm64") -> None:
     bin_dir.mkdir()
     curl = bin_dir / "curl"
     with curl.open("w", encoding="utf-8", newline="\n") as stream:
@@ -62,19 +62,23 @@ esac
         stream.write(
             """#!/bin/sh
 case "$1" in
-    -s) echo Linux ;;
-    -m) echo x86_64 ;;
+    -s) echo %OS% ;;
+    -m) echo %ARCH% ;;
     *) exit 1 ;;
 esac
 """
+            .replace("%OS%", os_name)
+            .replace("%ARCH%", arch)
         )
     curl.chmod(0o755)
     uname.chmod(0o755)
 
 
-def _run_sh_installer(tmp_path: Path, manifest: dict, binary: bytes) -> subprocess.CompletedProcess[str]:
+def _run_sh_installer(
+    tmp_path: Path, manifest: dict, binary: bytes, os_name: str = "Darwin", arch: str = "arm64"
+) -> subprocess.CompletedProcess[str]:
     fake_bin = tmp_path / "bin"
-    _write_fake_unix_tools(fake_bin)
+    _write_fake_unix_tools(fake_bin, os_name, arch)
     manifest_path = tmp_path / "manifest.json"
     binary_path = tmp_path / "cli.bin"
     request_log = tmp_path / "requests.log"
@@ -89,6 +93,7 @@ def _run_sh_installer(tmp_path: Path, manifest: dict, binary: bytes) -> subproce
             "FIXTURE_MANIFEST": _shell_path(manifest_path),
             "FIXTURE_BINARY": _shell_path(binary_path),
             "REQUEST_LOG": _shell_path(request_log),
+            "ARG_LOG": _shell_path(tmp_path / "args.log"),
         }
     )
     return subprocess.run(
@@ -172,13 +177,15 @@ try {
     )
 
 
-def _manifest(*, asset: str, binary: bytes, url=None, sha256=None) -> dict:
+def _manifest(*, platform: str, binary: bytes, url=None, sha256=None) -> dict:
+    ext = ".exe" if platform.startswith("windows") else ""
     return {
-        "meshy-dcc": {
-            "version": "0.19.63",
-            "url": url or f"{OFFICIAL_RELEASE}/v0.19.63/{asset}",
+        name: {
+            "version": "0.2.0",
+            "url": url or f"{OFFICIAL_RELEASE}/v0.2.0/{name}-{platform}{ext}",
             "sha256": sha256 or hashlib.sha256(binary).hexdigest(),
         }
+        for name in ("meshy-dcc", "meshy-dcc-server")
     }
 
 
@@ -206,28 +213,43 @@ def test_installers_use_fixed_official_update_manifests() -> None:
     for source in (sh_source, ps_source):
         assert "MESHY_DCC_REPO" not in source
         assert "api.github.com" not in source
-        assert "meshy-dev/meshy-dcc-core/releases" in source
+        assert "https://cdn.meshy.ai/meshy-dcc-core" in source
         assert "meshy-dcc-update-manifest-" in source
         assert "sha256" in source.lower()
     assert "MESHY_DCC_RELEASE_FALLBACK" not in sh_source
     assert "[string] $Repo" not in ps_source
 
 
-def test_sh_latest_uses_manifest_pinned_url_and_installs_verified_binary(tmp_path: Path) -> None:
-    binary = b'#!/bin/sh\n[ "$1 $2 $3" = "components ensure dcc-cua" ]\n'
-    result = _run_sh_installer(
-        tmp_path,
-        _manifest(asset="meshy-dcc-linux-x86_64", binary=binary),
-        binary,
-    )
+def test_sh_latest_uses_manifest_pinned_urls_and_installs_verified_binaries(tmp_path: Path) -> None:
+    binary = b'#!/bin/sh\necho "$*" >> "$ARG_LOG"\n'
+    result = _run_sh_installer(tmp_path, _manifest(platform="macos-arm64", binary=binary), binary)
 
     assert result.returncode == 0, result.stderr
     assert (tmp_path / "install" / "meshy-dcc").read_bytes() == binary
+    assert (tmp_path / "install" / "meshy-dcc-server").read_bytes() == binary
     requests = (tmp_path / "requests.log").read_text(encoding="utf-8").splitlines()
     assert requests == [
-        "https://github.com/meshy-dev/meshy-dcc-core/releases/latest/download/meshy-dcc-update-manifest-linux-x86_64.json",
-        f"{OFFICIAL_RELEASE}/v0.19.63/meshy-dcc-linux-x86_64",
+        f"{OFFICIAL_RELEASE}/latest/meshy-dcc-update-manifest-macos-arm64.json",
+        f"{OFFICIAL_RELEASE}/v0.2.0/meshy-dcc-macos-arm64",
+        f"{OFFICIAL_RELEASE}/v0.2.0/meshy-dcc-server-macos-arm64",
     ]
+    # The Skill plan is shown before it is written.
+    assert (tmp_path / "args.log").read_text(encoding="utf-8").splitlines() == [
+        "--output human agent-skill",
+        "--output human agent-skill --execute",
+    ]
+
+
+@pytest.mark.parametrize(("os_name", "arch"), [("Darwin", "x86_64"), ("Linux", "x86_64")])
+def test_sh_refuses_unpublished_platforms_before_download(tmp_path: Path, os_name: str, arch: str) -> None:
+    binary = b"never downloaded"
+    result = _run_sh_installer(
+        tmp_path, _manifest(platform="macos-arm64", binary=binary), binary, os_name, arch
+    )
+
+    assert result.returncode != 0
+    assert "Apple Silicon" in result.stderr
+    assert not (tmp_path / "requests.log").exists()
 
 
 def test_sh_checksum_mismatch_preserves_existing_binary(tmp_path: Path) -> None:
@@ -238,7 +260,7 @@ def test_sh_checksum_mismatch_preserves_existing_binary(tmp_path: Path) -> None:
     binary = b"tampered"
     result = _run_sh_installer(
         tmp_path,
-        _manifest(asset="meshy-dcc-linux-x86_64", binary=binary, sha256="0" * 64),
+        _manifest(platform="macos-arm64", binary=binary, sha256="0" * 64),
         binary,
     )
 
@@ -252,9 +274,9 @@ def test_sh_rejects_non_official_asset_before_download(tmp_path: Path) -> None:
     result = _run_sh_installer(
         tmp_path,
         _manifest(
-            asset="meshy-dcc-linux-x86_64",
+            platform="macos-arm64",
             binary=binary,
-            url="https://example.invalid/meshy-dcc-linux-x86_64",
+            url="https://example.invalid/meshy-dcc-macos-arm64",
         ),
         binary,
     )
@@ -263,7 +285,7 @@ def test_sh_rejects_non_official_asset_before_download(tmp_path: Path) -> None:
     assert "official" in result.stderr.lower()
     requests = (tmp_path / "requests.log").read_text(encoding="utf-8").splitlines()
     assert requests == [
-        "https://github.com/meshy-dev/meshy-dcc-core/releases/latest/download/meshy-dcc-update-manifest-linux-x86_64.json"
+        f"{OFFICIAL_RELEASE}/latest/meshy-dcc-update-manifest-macos-arm64.json"
     ]
     assert not (tmp_path / "install" / "meshy-dcc").exists()
 
@@ -274,16 +296,18 @@ def test_powershell_latest_uses_manifest_pinned_url_and_installs_verified_binary
     binary = b"verified windows cli"
     result = _run_ps_installer(
         tmp_path,
-        _manifest(asset="meshy-dcc-windows-x86_64.exe", binary=binary),
+        _manifest(platform="windows-x86_64", binary=binary),
         binary,
     )
 
     assert result.returncode == 0, result.stderr
     assert (tmp_path / "install" / "meshy-dcc.exe").read_bytes() == binary
+    assert (tmp_path / "install" / "meshy-dcc-server.exe").read_bytes() == binary
     requests = (tmp_path / "requests.log").read_text(encoding="utf-8").splitlines()
     assert requests == [
-        "https://github.com/meshy-dev/meshy-dcc-core/releases/latest/download/meshy-dcc-update-manifest-windows-x86_64.json",
-        f"{OFFICIAL_RELEASE}/v0.19.63/meshy-dcc-windows-x86_64.exe",
+        f"{OFFICIAL_RELEASE}/latest/meshy-dcc-update-manifest-windows-x86_64.json",
+        f"{OFFICIAL_RELEASE}/v0.2.0/meshy-dcc-windows-x86_64.exe",
+        f"{OFFICIAL_RELEASE}/v0.2.0/meshy-dcc-server-windows-x86_64.exe",
     ]
 
 
@@ -295,7 +319,7 @@ def test_powershell_checksum_mismatch_preserves_existing_binary(tmp_path: Path) 
     binary = b"tampered"
     result = _run_ps_installer(
         tmp_path,
-        _manifest(asset="meshy-dcc-windows-x86_64.exe", binary=binary, sha256="0" * 64),
+        _manifest(platform="windows-x86_64", binary=binary, sha256="0" * 64),
         binary,
     )
 
@@ -309,7 +333,7 @@ def test_powershell_rejects_non_official_asset_before_download(tmp_path: Path) -
     result = _run_ps_installer(
         tmp_path,
         _manifest(
-            asset="meshy-dcc-windows-x86_64.exe",
+            platform="windows-x86_64",
             binary=binary,
             url="https://example.invalid/meshy-dcc-windows-x86_64.exe",
         ),
@@ -320,6 +344,6 @@ def test_powershell_rejects_non_official_asset_before_download(tmp_path: Path) -
     assert "official release" in result.stderr.lower()
     requests = (tmp_path / "requests.log").read_text(encoding="utf-8").splitlines()
     assert requests == [
-        "https://github.com/meshy-dev/meshy-dcc-core/releases/latest/download/meshy-dcc-update-manifest-windows-x86_64.json"
+        f"{OFFICIAL_RELEASE}/latest/meshy-dcc-update-manifest-windows-x86_64.json"
     ]
     assert not (tmp_path / "install" / "meshy-dcc.exe").exists()

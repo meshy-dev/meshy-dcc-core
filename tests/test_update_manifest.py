@@ -8,14 +8,14 @@ from pathlib import Path
 import subprocess
 import sys
 
+import pytest
+
 SCRIPT = Path(__file__).resolve().parents[1] / "scripts" / "release" / "generate_update_manifest.py"
 
 
 def _run(tmp_path: Path, platform: str) -> subprocess.CompletedProcess[str]:
-    server = tmp_path / ("meshy-dcc-server.exe" if platform.startswith("windows-") else "meshy-dcc-server")
-    cli = tmp_path / ("meshy-dcc.exe" if platform.startswith("windows-") else "meshy-dcc")
-    server.write_bytes(b"server")
-    cli.write_bytes(b"cli")
+    (tmp_path / "cli").write_bytes(b"cli")
+    (tmp_path / "server").write_bytes(b"server")
     command = [
         sys.executable,
         str(SCRIPT),
@@ -23,24 +23,30 @@ def _run(tmp_path: Path, platform: str) -> subprocess.CompletedProcess[str]:
         "1.2.3",
         "--platform",
         platform,
-        "--release-tag",
-        "v1.2.3",
-        "--repo",
-        "meshy-dev/meshy-dcc-core",
-        "--server-bin",
-        str(server),
         "--cli-bin",
-        str(cli),
+        str(tmp_path / "cli"),
+        "--server-bin",
+        str(tmp_path / "server"),
         "--out-dir",
         str(tmp_path / "dist"),
     ]
     return subprocess.run(command, capture_output=True, text=True, check=False)
 
 
-def test_platform_manifests_publish_only_core_binaries(tmp_path: Path) -> None:
-    result = _run(tmp_path, "windows-x86_64")
+@pytest.mark.parametrize(("platform", "ext"), [("macos-arm64", ""), ("windows-x86_64", ".exe")])
+def test_manifest_names_cdn_assets_that_sit_beside_it(tmp_path: Path, platform: str, ext: str) -> None:
+    result = _run(tmp_path, platform)
     assert result.returncode == 0, result.stderr
-    manifest = json.loads((tmp_path / "dist" / "meshy-dcc-update-manifest-windows-x86_64.json").read_text())
-    assert set(manifest) == {"meshy-dcc-server", "meshy-dcc"}
-    assert manifest["meshy-dcc-server"]["sha256"] == hashlib.sha256(b"server").hexdigest()
-    assert manifest["meshy-dcc"]["sha256"] == hashlib.sha256(b"cli").hexdigest()
+    dist = tmp_path / "dist"
+    manifest = json.loads((dist / f"meshy-dcc-update-manifest-{platform}.json").read_text())
+    assert set(manifest) == {"meshy-dcc", "meshy-dcc-server"}
+    for name, content in (("meshy-dcc", b"cli"), ("meshy-dcc-server", b"server")):
+        asset = f"{name}-{platform}{ext}"
+        assert manifest[name]["url"] == f"https://cdn.meshy.ai/meshy-dcc-core/v1.2.3/{asset}"
+        assert manifest[name]["sha256"] == hashlib.sha256(content).hexdigest()
+        assert (dist / asset).read_bytes() == content
+
+
+def test_unpublished_platforms_are_refused(tmp_path: Path) -> None:
+    result = _run(tmp_path, "macos-universal2")
+    assert result.returncode != 0

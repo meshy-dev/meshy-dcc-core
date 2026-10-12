@@ -1,11 +1,17 @@
 #!/usr/bin/env python3
-"""Generate the update manifest JSON for the release.
+"""Generate one platform's release files for the Meshy release channel.
 
-Produces a platform-specific manifest that maps binary names to their
-version, download URL, and SHA-256 checksum. The gateway's update-check
-endpoint fetches this manifest via ``MESHY_DCC_UPDATE_MANIFEST_URL``.
+Writes, into ``--out-dir``:
 
-Output: ``meshy-dcc-update-manifest-<platform>.json``
+- ``meshy-dcc-<platform>[.exe]`` and ``meshy-dcc-server-<platform>[.exe]``,
+  copies of the two binaries under their published names;
+- ``meshy-dcc-update-manifest-<platform>.json``, mapping each binary to its
+  version, download URL and SHA-256.
+
+The directory is uploaded to ``cdn.meshy.ai/meshy-dcc-core/v<version>/``, and
+the manifest also to ``latest/``. The install scripts and the gateway's
+update check read the manifest; the installers accept only the URLs written
+here.
 """
 
 from __future__ import annotations
@@ -13,110 +19,52 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import os
 from pathlib import Path
-import sys
+import shutil
+
+BASE_URL = "https://cdn.meshy.ai/meshy-dcc-core"
+PLATFORMS = ("macos-arm64", "windows-x86_64")
 
 
-def _github_error(message: str) -> None:
-    print(f"::error::{message}", file=sys.stderr)
-
-
-def _sha256(path: Path) -> str:
-    h = hashlib.sha256()
-    with path.open("rb") as f:
-        while True:
-            chunk = f.read(8192)
-            if not chunk:
-                break
-            h.update(chunk)
-    return h.hexdigest()
-
-
-def generate_manifest(
-    *,
-    version: str,
-    platform: str,
-    release_tag: str,
-    repo: str,
-    assets: dict[str, Path],
-    out_dir: Path,
-) -> Path:
-    """Generate the update manifest file.
-
-    Args:
-        version: Release version (e.g. ``0.19.0``).
-        platform: Platform label (e.g. ``linux-x86_64``).
-        release_tag: GitHub release tag (e.g. ``v0.19.0``).
-        repo: GitHub repository (e.g. ``meshy-dev/meshy-dcc-core``).
-        assets: Mapping of logical binary names to their filesystem paths.
-        out_dir: Output directory for the manifest.
-
-    Returns:
-        Path to the generated manifest file.
-
-    """
-    manifest: dict[str, dict] = {}
-
-    for binary_name, asset_path in assets.items():
-        if not asset_path.is_file():
-            raise FileNotFoundError(f"Asset not found for {binary_name}: {asset_path}")
-
-        asset_filename = asset_path.name
-        download_url = f"https://github.com/{repo}/releases/download/{release_tag}/{asset_filename}"
-        sha256_digest = _sha256(asset_path)
-
-        manifest[binary_name] = {
+def generate(*, version: str, platform: str, binaries: dict[str, Path], out_dir: Path) -> Path:
+    if platform not in PLATFORMS:
+        raise SystemExit(f"unsupported platform {platform!r}; expected one of {', '.join(PLATFORMS)}")
+    ext = ".exe" if platform.startswith("windows") else ""
+    out_dir.mkdir(parents=True, exist_ok=True)
+    manifest = {}
+    for name, path in binaries.items():
+        if not path.is_file():
+            raise SystemExit(f"binary not found for {name}: {path}")
+        asset = f"{name}-{platform}{ext}"
+        shutil.copyfile(path, out_dir / asset)
+        manifest[name] = {
             "version": version,
-            "url": download_url,
-            "sha256": sha256_digest,
+            "url": f"{BASE_URL}/v{version}/{asset}",
+            "sha256": hashlib.sha256((out_dir / asset).read_bytes()).hexdigest(),
             "release_notes": None,
         }
-
-    out_dir.mkdir(parents=True, exist_ok=True)
     manifest_path = out_dir / f"meshy-dcc-update-manifest-{platform}.json"
-    # Byte write on purpose: the manifest is consumed by an updater that compares
-    # published bytes, and Path.write_text() would rewrite it as CRLF on Windows.
+    # Bytes, not text: Path.write_text() would write CRLF on Windows, and the
+    # manifest is signed and compared as published bytes.
     manifest_path.write_bytes((json.dumps(manifest, indent=2) + "\n").encode("utf-8"))
-
     return manifest_path
 
 
 def main() -> int:
-    """Run the update manifest generator."""
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--version", required=True)
-    parser.add_argument("--platform", required=True)
-    parser.add_argument("--release-tag", required=True)
-    parser.add_argument("--repo", default="meshy-dev/meshy-dcc-core")
-    parser.add_argument("--server-bin", type=Path, required=True)
+    parser.add_argument("--platform", required=True, choices=PLATFORMS)
     parser.add_argument("--cli-bin", type=Path, required=True)
-    parser.add_argument("--out-dir", type=Path, default=Path())
+    parser.add_argument("--server-bin", type=Path, required=True)
+    parser.add_argument("--out-dir", type=Path, required=True)
     args = parser.parse_args()
-
-    assets = {
-        "meshy-dcc-server": args.server_bin,
-        "meshy-dcc": args.cli_bin,
-    }
-    try:
-        manifest_path = generate_manifest(
-            version=args.version,
-            platform=args.platform,
-            release_tag=args.release_tag,
-            repo=args.repo,
-            assets=assets,
-            out_dir=args.out_dir,
-        )
-    except Exception as exc:
-        _github_error(str(exc))
-        raise SystemExit(1) from exc
-
-    manifest_output = manifest_path.as_posix()
-    github_output = os.environ.get("GITHUB_OUTPUT")
-    if github_output:
-        with Path(github_output).open("a", encoding="utf-8") as fh:
-            fh.write(f"manifest_path={manifest_output}\n")
-    print(manifest_output)
+    path = generate(
+        version=args.version,
+        platform=args.platform,
+        binaries={"meshy-dcc": args.cli_bin, "meshy-dcc-server": args.server_bin},
+        out_dir=args.out_dir,
+    )
+    print(path.as_posix())
     return 0
 
 
