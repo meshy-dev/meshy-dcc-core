@@ -46,6 +46,7 @@ pack:
 # and `name` where the canonical recipe says `object_names` and `new_name`).
 # Where an adapter cannot express a canonical argument at all, use the
 # scripting fallback instead of dropping it silently.
+# Blender is available now; the Houdini, Maya and 3ds Max adapters are on the way.
 tool_routing:
   adapters: [blender, houdini, maya, "3dsmax"]
   scripting_fallback:

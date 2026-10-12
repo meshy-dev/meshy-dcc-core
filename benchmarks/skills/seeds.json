@@ -8,159 +8,6 @@
   ],
   "skills": [
     {
-      "name": "asset-source",
-      "description": "Gateway skill for cross-DCC asset import — search and resolve assets into a validated AssetDescriptor (local path + attribution). Demo source returns static catalog entries; production sources can add download or remote resolution without changing the contract.",
-      "license": "MIT",
-      "compatibility": "",
-      "allowed-tools": [
-        "Bash",
-        "Read"
-      ],
-      "metadata": {
-        "meshy-dcc.dcc": "python",
-        "meshy-dcc.layer": "domain",
-        "meshy-dcc.stage": "source",
-        "meshy-dcc.version": "1.0.0",
-        "meshy-dcc.tags": [
-          "pipeline",
-          "asset-import",
-          "read-only"
-        ],
-        "meshy-dcc.search-hint": "search assets, find asset, resolve asset, asset descriptor, asset import source, cross-dcc asset",
-        "meshy-dcc.search-aliases": [
-          "asset search",
-          "find asset",
-          "resolve asset",
-          "asset catalog",
-          "import source",
-          "asset descriptor"
-        ],
-        "meshy-dcc.intent": "Search and resolve assets into a validated AssetDescriptor (local path + attribution) for cross-DCC import pipelines.",
-        "meshy-dcc.recall-context": {
-          "app_type": "python",
-          "domain": "asset",
-          "workflow_stage": "source",
-          "task_category": "query"
-        },
-        "meshy-dcc.preconditions": [],
-        "meshy-dcc.side-effects": {
-          "creates": false,
-          "modifies": false,
-          "file_output": false,
-          "targets": []
-        },
-        "meshy-dcc.produces": [
-          "asset_descriptor"
-        ],
-        "meshy-dcc.requires": [],
-        "meshy-dcc.tools": "tools.yaml"
-      },
-      "dcc": "python",
-      "tags": [
-        "pipeline",
-        "asset-import",
-        "read-only"
-      ],
-      "search-hint": "search assets, find asset, resolve asset, asset descriptor, asset import source, cross-dcc asset",
-      "search-aliases": [
-        "asset search",
-        "find asset",
-        "resolve asset",
-        "asset catalog",
-        "import source",
-        "asset descriptor"
-      ],
-      "tools": [
-        {
-          "name": "search_assets",
-          "description": "Search the asset catalog and return matching AssetDescriptor entries.",
-          "input_schema": {
-            "type": "object",
-            "additionalProperties": false,
-            "required": [
-              "query"
-            ],
-            "properties": {
-              "query": {
-                "type": "string",
-                "minLength": 1,
-                "description": "Search query (asset name, id, or keyword)."
-              },
-              "limit": {
-                "type": "integer",
-                "minimum": 1,
-                "maximum": 50,
-                "default": 10,
-                "description": "Maximum number of results to return."
-              }
-            }
-          },
-          "output_schema": {
-            "type": "object",
-            "additionalProperties": true,
-            "required": [
-              "success"
-            ],
-            "properties": {
-              "success": {
-                "type": "boolean"
-              },
-              "message": {
-                "type": "string"
-              },
-              "context": {
-                "type": "object"
-              }
-            }
-          },
-          "read_only": true,
-          "destructive": false,
-          "idempotent": true,
-          "defer-loading": false,
-          "source_file": "scripts/search_assets.py",
-          "next-tools": {
-            "on-success": [],
-            "on-failure": []
-          },
-          "group": "",
-          "execution": "sync",
-          "timeout_hint_secs": 0,
-          "enforce_thread_affinity": true,
-          "annotations": {
-            "read_only_hint": true,
-            "destructive_hint": false,
-            "idempotent_hint": true,
-            "open_world_hint": true
-          },
-          "call_examples": [
-            {
-              "arguments": {
-                "query": "table",
-                "limit": 5
-              },
-              "note": "Search for table assets, return up to 5 results"
-            },
-            {
-              "arguments": {
-                "query": "chair"
-              },
-              "note": "Search for chair assets with default limit"
-            }
-          ]
-        }
-      ],
-      "version": "1.0.0",
-      "depends": [],
-      "scripts": [
-        "skills/asset-source/scripts/search_assets.py"
-      ],
-      "skill_path": "skills/asset-source",
-      "metadata_files": [],
-      "groups": [],
-      "layer": "domain",
-      "stage": "source"
-    },
-    {
       "name": "async-render-example",
       "description": "Example skill — demonstrates async execution affinity: long-running tools surface as deferredHint=true in MCP tools/list. Use as a reference when writing domain skills with render or simulation tools. Not intended for production use.",
       "license": "MIT",
@@ -433,7 +280,10 @@
             ]
           },
           "group": "",
-          "execution": "sync"
+          "execution": "sync",
+          "annotations": {
+            "read_only_hint": true
+          }
         },
         {
           "name": "audit_log",
@@ -469,7 +319,11 @@
             "on-failure": []
           },
           "group": "",
-          "execution": "sync"
+          "execution": "sync",
+          "annotations": {
+            "read_only_hint": true,
+            "idempotent_hint": true
+          }
         },
         {
           "name": "tool_metrics",
@@ -505,7 +359,11 @@
             "on-failure": []
           },
           "group": "",
-          "execution": "sync"
+          "execution": "sync",
+          "annotations": {
+            "read_only_hint": true,
+            "idempotent_hint": true
+          }
         },
         {
           "name": "process_status",
@@ -531,7 +389,11 @@
             ]
           },
           "group": "",
-          "execution": "sync"
+          "execution": "sync",
+          "annotations": {
+            "read_only_hint": true,
+            "idempotent_hint": true
+          }
         }
       ],
       "version": "1.0.0",
@@ -925,7 +787,10 @@
             "on-failure": []
           },
           "group": "",
-          "execution": "sync"
+          "execution": "sync",
+          "annotations": {
+            "idempotent_hint": true
+          }
         }
       ],
       "version": "1.0.0",
@@ -1003,7 +868,11 @@
             "on-failure": []
           },
           "group": "",
-          "execution": "sync"
+          "execution": "sync",
+          "annotations": {
+            "read_only_hint": true,
+            "idempotent_hint": true
+          }
         },
         {
           "name": "diff",
@@ -1031,7 +900,11 @@
             "on-failure": []
           },
           "group": "",
-          "execution": "sync"
+          "execution": "sync",
+          "annotations": {
+            "read_only_hint": true,
+            "idempotent_hint": true
+          }
         }
       ],
       "version": "1.0.0",
@@ -1175,7 +1048,10 @@
             "on-failure": []
           },
           "group": "",
-          "execution": "sync"
+          "execution": "sync",
+          "annotations": {
+            "idempotent_hint": true
+          }
         },
         {
           "name": "composite",
@@ -1229,7 +1105,10 @@
             "on-failure": []
           },
           "group": "",
-          "execution": "sync"
+          "execution": "sync",
+          "annotations": {
+            "idempotent_hint": true
+          }
         }
       ],
       "version": "1.0.0",
@@ -1825,7 +1704,10 @@
             ]
           },
           "group": "",
-          "execution": "sync"
+          "execution": "sync",
+          "annotations": {
+            "idempotent_hint": true
+          }
         },
         {
           "name": "export_usd",
@@ -1951,7 +1833,11 @@
           "group": "",
           "execution": "sync",
           "timeout_hint_secs": 30,
-          "enforce_thread_affinity": true
+          "enforce_thread_affinity": true,
+          "annotations": {
+            "read_only_hint": true,
+            "idempotent_hint": true
+          }
         },
         {
           "name": "image_stats",
@@ -1994,7 +1880,11 @@
           "group": "",
           "execution": "sync",
           "timeout_hint_secs": 30,
-          "enforce_thread_affinity": true
+          "enforce_thread_affinity": true,
+          "annotations": {
+            "read_only_hint": true,
+            "idempotent_hint": true
+          }
         },
         {
           "name": "sequence_to_mp4",
@@ -2334,7 +2224,7 @@
       "name": "mesh-ops",
       "description": "Cross-adapter polygon modeling recipe pack for the shared cross-DCC modeling vocabulary. Structured RECIPES.yaml entries for primitive creation, hard-surface edits, topology cleanup, UV generation, radial arraying, and material assignment. Reusable by every DCC adapter's mesh-ops skill (maya, blender, houdini, 3dsmax, and custom hosts) before falling back to raw scripting.",
       "license": "MIT",
-      "compatibility": "meshy-dcc-core 0.20.29+, Python 3.7+",
+      "compatibility": "meshy-dcc-core 0.2.0+, Python 3.7+",
       "allowed-tools": [
         "Read"
       ],
@@ -2387,6 +2277,23 @@
       "recipes_file": "RECIPES.yaml"
     },
     {
+      "name": "meshy-dcc",
+      "description": "Work inside a creator's running DCC application through the local meshy-dcc CLI - find the live instance, discover and load its tools, call them, and read the scene back. Use for scene edits and for importing Meshy-generated models into a DCC project. Supported today - Blender, Unity, Godot and Unreal.",
+      "license": "",
+      "compatibility": "",
+      "allowed-tools": [],
+      "dcc": "python",
+      "tags": [],
+      "search-hint": "",
+      "tools": [],
+      "version": "1.0.0",
+      "depends": [],
+      "scripts": [],
+      "skill_path": "skills/meshy-dcc",
+      "metadata_files": [],
+      "groups": []
+    },
+    {
       "name": "multi-script",
       "description": "Example skill — demonstrates a skill with multiple script types (Python, Shell, Batch). Use as a reference when writing cross-platform skills. Not intended for production use — this is an authoring reference only.",
       "license": "MIT",
@@ -2434,7 +2341,11 @@
             "on-failure": []
           },
           "group": "",
-          "execution": "sync"
+          "execution": "sync",
+          "annotations": {
+            "read_only_hint": true,
+            "idempotent_hint": true
+          }
         },
         {
           "name": "action_shell",
@@ -2459,7 +2370,11 @@
             "on-failure": []
           },
           "group": "",
-          "execution": "sync"
+          "execution": "sync",
+          "annotations": {
+            "read_only_hint": true,
+            "idempotent_hint": true
+          }
         },
         {
           "name": "action_batch",
@@ -2484,7 +2399,11 @@
             "on-failure": []
           },
           "group": "",
-          "execution": "sync"
+          "execution": "sync",
+          "annotations": {
+            "read_only_hint": true,
+            "idempotent_hint": true
+          }
         }
       ],
       "version": "1.0.0",
@@ -2551,7 +2470,10 @@
             "on-failure": []
           },
           "group": "",
-          "execution": "sync"
+          "execution": "sync",
+          "annotations": {
+            "read_only_hint": true
+          }
         },
         {
           "name": "find_widgets",
@@ -2596,7 +2518,10 @@
             "on-failure": []
           },
           "group": "",
-          "execution": "sync"
+          "execution": "sync",
+          "annotations": {
+            "read_only_hint": true
+          }
         },
         {
           "name": "describe_widget",
@@ -2622,7 +2547,10 @@
             "on-failure": []
           },
           "group": "",
-          "execution": "sync"
+          "execution": "sync",
+          "annotations": {
+            "read_only_hint": true
+          }
         },
         {
           "name": "snapshot_tree",
@@ -2657,7 +2585,10 @@
             "on-failure": []
           },
           "group": "",
-          "execution": "sync"
+          "execution": "sync",
+          "annotations": {
+            "read_only_hint": true
+          }
         },
         {
           "name": "wait_for_widget",
@@ -2702,7 +2633,10 @@
             "on-failure": []
           },
           "group": "",
-          "execution": "sync"
+          "execution": "sync",
+          "annotations": {
+            "read_only_hint": true
+          }
         }
       ],
       "version": "\\\"1.0.0\\\"",
@@ -2723,7 +2657,7 @@
       "name": "spatial-interchange",
       "description": "Plan deterministic coordinate-axis and unit conversions between DCCs, engines, and interchange formats from explicit right/up/forward axes and meters-per-unit values.",
       "license": "MIT",
-      "compatibility": "meshy-dcc-core 0.19.91+, Python 3.7+",
+      "compatibility": "meshy-dcc-core 0.2.0+, Python 3.7+",
       "allowed-tools": [],
       "metadata": {
         "meshy-dcc.dcc": "python",
@@ -3843,7 +3777,11 @@
             "on-failure": []
           },
           "group": "",
-          "execution": "sync"
+          "execution": "sync",
+          "annotations": {
+            "read_only_hint": true,
+            "idempotent_hint": true
+          }
         },
         {
           "name": "validate",
@@ -3870,7 +3808,11 @@
             "on-failure": []
           },
           "group": "",
-          "execution": "sync"
+          "execution": "sync",
+          "annotations": {
+            "read_only_hint": true,
+            "idempotent_hint": true
+          }
         }
       ],
       "version": "1.0.0",
@@ -3971,7 +3913,11 @@
           "group": "",
           "execution": "sync",
           "timeout_hint_secs": 10,
-          "enforce_thread_affinity": true
+          "enforce_thread_affinity": true,
+          "annotations": {
+            "read_only_hint": true,
+            "idempotent_hint": true
+          }
         },
         {
           "name": "image_stats",
@@ -4023,7 +3969,11 @@
           "group": "",
           "execution": "sync",
           "timeout_hint_secs": 30,
-          "enforce_thread_affinity": true
+          "enforce_thread_affinity": true,
+          "annotations": {
+            "read_only_hint": true,
+            "idempotent_hint": true
+          }
         },
         {
           "name": "validate_scene_vs_spec",
@@ -4065,7 +4015,11 @@
           "group": "",
           "execution": "sync",
           "timeout_hint_secs": 10,
-          "enforce_thread_affinity": true
+          "enforce_thread_affinity": true,
+          "annotations": {
+            "read_only_hint": true,
+            "idempotent_hint": true
+          }
         },
         {
           "name": "make_comparison_sheet",

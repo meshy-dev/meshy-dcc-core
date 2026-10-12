@@ -8,7 +8,7 @@ description: >-
   blender, houdini, 3dsmax, and custom hosts) before falling back to raw
   scripting.
 license: "MIT"
-compatibility: "meshy-dcc-core 0.20.29+, Python 3.7+"
+compatibility: "meshy-dcc-core 0.2.0+, Python 3.7+"
 allowed-tools: ["Read"]
 metadata:
   meshy-dcc:
@@ -40,6 +40,13 @@ vocabulary. Every recipe is a DCC-agnostic plan: a validated `inputs_schema`,
 an ordered list of `steps` that dispatch the canonical `mesh_ops__<verb>` tool,
 a Draft 2020-12 `output_contract`, and a `toolset_profiles: [mesh-ops]`
 binding.
+
+## Adapter availability
+
+Recipes route to Blender today: every Blender entry in `tool_routing` resolves
+to a tool the Meshy Blender adapter publishes. The Houdini, Maya and 3ds Max
+entries are kept for the adapters that are on the way; until one ships, no
+instance of that host exists to call.
 
 ## How to use
 

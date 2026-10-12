@@ -5,7 +5,7 @@ description: >-
   engines, and interchange formats from explicit right/up/forward axes and
   meters-per-unit values.
 license: "MIT"
-compatibility: "meshy-dcc-core 0.19.91+, Python 3.7+"
+compatibility: "meshy-dcc-core 0.2.0+, Python 3.7+"
 metadata:
   meshy-dcc:
     dcc: python

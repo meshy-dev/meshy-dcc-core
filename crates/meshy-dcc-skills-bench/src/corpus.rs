@@ -435,10 +435,17 @@ mod tests {
         // is not even a candidate.
         let corpus = Corpus::build(SCALE_300);
         let catalog = corpus.catalog();
+        // Example-layer skills only surface for an explicit layer filter or an
+        // exact name, so a pair built on one cannot show the dcc filter at work.
         let negative = corpus
             .hard_negatives
             .iter()
-            .find(|n| n.kind == HardNegativeKind::CrossDccSameContent)
+            .find(|n| {
+                n.kind == HardNegativeKind::CrossDccSameContent
+                    && corpus
+                        .get(&n.target)
+                        .is_some_and(|t| t.layer.as_deref() != Some("example"))
+            })
             .expect("a cross-DCC pair exists");
         let target = corpus.get(&negative.target).unwrap();
 

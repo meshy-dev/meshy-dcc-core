@@ -127,6 +127,7 @@ and is not runtime-compatible with it. Attribution stays in `LICENSE` and
 
 - The inherited documentation site, agent guides, release tooling
   configuration and patch workflow.
+- The `asset-source` demo skill, which returned placeholder assets.
 
 ## 0.1.0 (2026-09-28)
 
