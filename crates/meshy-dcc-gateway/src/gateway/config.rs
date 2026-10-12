@@ -15,8 +15,8 @@ fn official_update_manifest_url() -> Option<String> {
         "windows-x86_64"
     } else if cfg!(all(target_os = "linux", target_arch = "x86_64")) {
         "linux-x86_64"
-    } else if cfg!(target_os = "macos") {
-        "macos-universal2"
+    } else if cfg!(all(target_os = "macos", target_arch = "aarch64")) {
+        "macos-arm64"
     } else {
         return None;
     };

@@ -11,9 +11,10 @@ pub const PRODUCT_VERSION: &str = env!("CARGO_PKG_VERSION");
 pub const BASE_URL: &str = "https://cdn.meshy.ai/meshy-dcc-core";
 
 const MANIFEST_PREFIX: &str = "meshy-dcc-update-manifest-";
-const PLATFORMS: &[&str] = &["linux-x86_64", "windows-x86_64", "macos-universal2"];
+// Apple Silicon only on macOS; Linux is not published yet.
+const PLATFORMS: &[&str] = &["linux-x86_64", "windows-x86_64", "macos-arm64"];
 
-/// Latest update manifest for a release platform such as `macos-universal2`.
+/// Latest update manifest for a release platform such as `macos-arm64`.
 /// Signed install catalog feed; `meshy-dcc` falls back to its bundled copy.
 pub fn install_catalog_url() -> String {
     format!("{BASE_URL}/catalog/install-catalog.json")
@@ -53,11 +54,11 @@ mod tests {
 
     #[test]
     fn official_manifests_require_a_sibling_attestation() {
-        let latest = update_manifest_url("macos-universal2");
+        let latest = update_manifest_url("macos-arm64");
         assert_eq!(
             manifest_attestation_url(&latest).as_deref(),
             Some(
-                "https://cdn.meshy.ai/meshy-dcc-core/latest/meshy-dcc-update-manifest-macos-universal2.sigstore.json"
+                "https://cdn.meshy.ai/meshy-dcc-core/latest/meshy-dcc-update-manifest-macos-arm64.sigstore.json"
             )
         );
         assert!(
@@ -72,12 +73,12 @@ mod tests {
     fn other_urls_are_not_treated_as_official() {
         for url in [
             "https://studio.example/update.json",
-            "http://cdn.meshy.ai/meshy-dcc-core/latest/meshy-dcc-update-manifest-macos-universal2.json",
-            "https://cdn.meshy.ai.attacker.example/meshy-dcc-core/latest/meshy-dcc-update-manifest-macos-universal2.json",
+            "http://cdn.meshy.ai/meshy-dcc-core/latest/meshy-dcc-update-manifest-macos-arm64.json",
+            "https://cdn.meshy.ai.attacker.example/meshy-dcc-core/latest/meshy-dcc-update-manifest-macos-arm64.json",
             "https://cdn.meshy.ai/meshy-dcc-core/latest/unexpected.json",
-            "https://cdn.meshy.ai/meshy-dcc-core/latest/nested/meshy-dcc-update-manifest-macos-universal2.json",
-            "https://cdn.meshy.ai/meshy-dcc-core/v/meshy-dcc-update-manifest-macos-universal2.json",
-            "https://cdn.meshy.ai/meshy-dcc-core/latest/meshy-dcc-update-manifest-macos-universal2.json?x=1",
+            "https://cdn.meshy.ai/meshy-dcc-core/latest/nested/meshy-dcc-update-manifest-macos-arm64.json",
+            "https://cdn.meshy.ai/meshy-dcc-core/v/meshy-dcc-update-manifest-macos-arm64.json",
+            "https://cdn.meshy.ai/meshy-dcc-core/latest/meshy-dcc-update-manifest-macos-arm64.json?x=1",
         ] {
             assert_eq!(manifest_attestation_url(url), None, "{url}");
         }
