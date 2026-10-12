@@ -263,6 +263,17 @@ lto = true
 codegen-units = 1
 strip = true
 
+# Published binaries and wheels. `.cargo/config.toml` turns `release` down for
+# fast local builds; nothing overrides `dist`.
+[profile.dist]
+inherits = "release"
+opt-level = 3
+lto = true
+codegen-units = 1
+strip = true
+debug = false
+split-debuginfo = "off"
+
 [features]
 default = []
 python-bindings = ["pyo3", "dep:reqwest", "meshy-dcc-naming/python-bindings", "meshy-dcc-models/python-bindings", "meshy-dcc-actions/python-bindings", "meshy-dcc-skills/python-bindings", "meshy-dcc-protocols/python-bindings", "meshy-dcc-logging/python-bindings", "meshy-dcc-pybridge/python-bindings", "meshy-dcc-paths/python-bindings", "meshy-dcc-transport/python-bindings", "meshy-dcc-process/python-bindings", "meshy-dcc-telemetry/python-bindings", "meshy-dcc-sandbox/python-bindings", "meshy-dcc-shm/python-bindings", "meshy-dcc-capture/python-bindings", "meshy-dcc-usd/python-bindings", "meshy-dcc-http-py/python-bindings", "meshy-dcc-artefact/python-bindings", "meshy-dcc-host/python-bindings", "meshy-dcc-wire/python-bindings", "meshy-dcc-workflow?/python-bindings", "meshy-dcc-scheduler?/python-bindings"]
