@@ -108,6 +108,9 @@ and is not runtime-compatible with it. Attribution stays in `LICENSE` and
   gate.
 - Tool arguments are checked against JSON Schema `pattern`.
 - A `not_available` catalog entry's error carries the catalog's reason.
+- `dcc-types` reports an adapter the catalog lists but cannot install with
+  `next_action.id: report_unavailable` and the catalog's reason, and no
+  command. It used to point back at `dcc-types`, which sent agents in a loop.
 
 ### Fixed
 

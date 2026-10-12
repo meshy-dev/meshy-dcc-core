@@ -58,7 +58,7 @@ fn game_engine_decisions_match_v1_schema_and_preserve_unknowns() {
             if installable {
                 "plan_install"
             } else {
-                "inspect_catalog"
+                "report_unavailable"
             }
         );
         assert_eq!(

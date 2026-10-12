@@ -72,6 +72,8 @@ meshy-dcc dcc-types --dcc-type blender --project /absolute/project
   launch plan. With the user's go-ahead to open the application, run
   `meshy-dcc start-instance --dcc-type blender --project /absolute/project --wait-ready --yes`.
   Then use the instance it reports.
+- If `next_action.id` is `report_unavailable`, there is nothing to run. Tell the user
+  `next_action.reason`, for example that the adapter for that host is not published yet.
 - Unity, Godot and Unreal install into each project. If such a project has no
   launch plan yet, see the host reference ([Unity](references/unity.md#set-up-a-project),
   [Godot](references/godot.md#set-up-a-project), [Unreal](references/unreal.md#set-up-a-project)).

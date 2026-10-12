@@ -74,7 +74,8 @@
     "next_action": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["id", "command", "requires_consent"],
+      "required": ["id", "requires_consent"],
+      "anyOf": [{ "required": ["command"] }, { "required": ["reason"] }],
       "properties": {
         "id": {
           "type": "string",
@@ -94,7 +95,8 @@
           "minLength": 1,
           "maxLength": 2048,
           "pattern": "^https://"
-        }
+        },
+        "reason": { "type": "string", "minLength": 1, "maxLength": 512 }
       }
     }
   },

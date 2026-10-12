@@ -103,10 +103,14 @@ enum Uncertainty {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 struct DiscoveryNextAction {
     id: String,
+    /// Empty for an action that only reports to the user; `reason` says why.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
     command: Vec<String>,
     requires_consent: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
     instructions_url: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    reason: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -297,6 +301,12 @@ impl InstallService {
                 project.filter(|_| per_project),
                 instructions_url,
             )
+        } else if let Some(error) = adapter
+            .filter(|_| catalog_path.is_none())
+            .and_then(|entry| crate::domain::install::policy::validate(entry).err())
+        {
+            // Pointing back at `dcc-types` here sent agents in a loop.
+            unavailable_action(error.to_string())
         } else {
             inspect_catalog_action()
         };
@@ -304,6 +314,11 @@ impl InstallService {
             (
                 Some("catalog_lookup".to_string()),
                 Some("CATALOG_ENTRY_NOT_FOUND".to_string()),
+            )
+        } else if next_action.id == UNAVAILABLE_ACTION {
+            (
+                Some("catalog_policy".to_string()),
+                Some("ADAPTER_NOT_AVAILABLE".to_string()),
             )
         } else if direct_readiness == DirectReadiness::NotReady {
             (
@@ -463,6 +478,7 @@ fn install_plan_action(
         command,
         requires_consent: false,
         instructions_url,
+        reason: None,
     }
 }
 
@@ -479,6 +495,7 @@ fn search_action(dcc_type: &str) -> DiscoveryNextAction {
         ],
         requires_consent: false,
         instructions_url: None,
+        reason: None,
     }
 }
 
@@ -500,6 +517,7 @@ fn start_instance_action(dcc_type: &str, project: &std::path::Path) -> Discovery
         ],
         requires_consent: true,
         instructions_url: None,
+        reason: None,
     }
 }
 
@@ -516,6 +534,20 @@ fn wait_ready_action(dcc_type: &str) -> DiscoveryNextAction {
         ],
         requires_consent: false,
         instructions_url: None,
+        reason: None,
+    }
+}
+
+const UNAVAILABLE_ACTION: &str = "report_unavailable";
+
+/// Nothing to run: the catalog lists the adapter but it cannot be installed.
+fn unavailable_action(reason: String) -> DiscoveryNextAction {
+    DiscoveryNextAction {
+        id: UNAVAILABLE_ACTION.to_string(),
+        command: Vec::new(),
+        requires_consent: false,
+        instructions_url: None,
+        reason: Some(reason),
     }
 }
 
@@ -531,6 +563,7 @@ fn inspect_catalog_action() -> DiscoveryNextAction {
         ],
         requires_consent: false,
         instructions_url: None,
+        reason: None,
     }
 }
 
@@ -545,6 +578,7 @@ fn doctor_action() -> DiscoveryNextAction {
         ],
         requires_consent: false,
         instructions_url: None,
+        reason: None,
     }
 }
 
@@ -565,14 +599,14 @@ mod tests {
                 ),
                 (
                     json!({"policy": {"installation": "not_available"}}),
-                    "inspect_catalog",
+                    "report_unavailable",
                 ),
                 (
                     json!({"policy": {"installation": "revoked"}}),
-                    "inspect_catalog",
+                    "report_unavailable",
                 ),
-                (json!({"min_core_version": "999.0.0"}), "inspect_catalog"),
-                (json!({"min_core_version": "invalid"}), "inspect_catalog"),
+                (json!({"min_core_version": "999.0.0"}), "report_unavailable"),
+                (json!({"min_core_version": "invalid"}), "report_unavailable"),
             ] {
                 let mut entry = json!({
                     "name": format!("meshy-dcc-{dcc}"),
@@ -593,6 +627,14 @@ mod tests {
                 let decision =
                     service.discovery_decision(None, dcc, Some(&json!({"instances": []})), None);
                 assert_eq!(decision.next_action.id, expected_action, "{dcc}: {fields}");
+                if expected_action == UNAVAILABLE_ACTION {
+                    assert!(decision.next_action.command.is_empty());
+                    assert!(decision.next_action.reason.is_some(), "{dcc}: {fields}");
+                    assert_eq!(
+                        decision.failure_reason.as_deref(),
+                        Some("ADAPTER_NOT_AVAILABLE")
+                    );
+                }
                 assert_eq!(decision.released_catalog, CatalogPresence::Present);
                 assert_eq!(decision.live_instances, Some(0));
             }

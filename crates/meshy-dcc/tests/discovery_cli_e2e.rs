@@ -46,19 +46,17 @@ fn dcc_types_distinguishes_catalog_support_from_zero_live_instances() {
         serde_json::json!(["version", "custom_fork", "real_host"])
     );
     // The Meshy Blender adapter is cataloged but not published, so there is
-    // nothing to install yet.
-    assert_eq!(value["failure_stage"], Value::Null);
-    assert_eq!(value["next_action"]["id"], "inspect_catalog");
+    // nothing to install yet: report the catalog's reason, run nothing.
+    assert_eq!(value["failure_stage"], "catalog_policy");
+    assert_eq!(value["failure_reason"], "ADAPTER_NOT_AVAILABLE");
+    assert_eq!(value["next_action"]["id"], "report_unavailable");
     assert_eq!(value["next_action"]["requires_consent"], false);
-    assert_eq!(
-        value["next_action"]["command"],
-        serde_json::json!([
-            "meshy-dcc",
-            "--output",
-            "json",
-            "--non-interactive",
-            "dcc-types"
-        ])
+    assert!(value["next_action"].get("command").is_none());
+    assert!(
+        value["next_action"]["reason"]
+            .as_str()
+            .unwrap()
+            .contains("not published yet")
     );
     assert_eq!(value["next_action"]["instructions_url"], Value::Null);
 
@@ -123,7 +121,7 @@ fn targeted_decision_uses_the_bundled_release_catalog_not_cwd() {
     assert_eq!(value["public_adapter"], "present");
     assert_eq!(value["released_catalog"], "present");
     // The cwd entry is installable; the bundled Meshy one is not published yet.
-    assert_eq!(value["next_action"]["id"], "inspect_catalog");
+    assert_eq!(value["next_action"]["id"], "report_unavailable");
     assert_eq!(value["next_action"]["instructions_url"], Value::Null);
     assert!(!value.to_string().contains("private.invalid"));
     validate_decision(&value);
