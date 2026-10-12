@@ -20,6 +20,20 @@ pub fn install_catalog_url() -> String {
     format!("{BASE_URL}/catalog/install-catalog.json")
 }
 
+/// Release platform of this build (`macos-arm64`, `windows-x86_64`,
+/// `linux-x86_64`), or `None` where Meshy publishes nothing.
+pub fn current_platform() -> Option<&'static str> {
+    if cfg!(all(target_os = "macos", target_arch = "aarch64")) {
+        Some("macos-arm64")
+    } else if cfg!(all(target_os = "windows", target_arch = "x86_64")) {
+        Some("windows-x86_64")
+    } else if cfg!(all(target_os = "linux", target_arch = "x86_64")) {
+        Some("linux-x86_64")
+    } else {
+        None
+    }
+}
+
 pub fn update_manifest_url(platform: &str) -> String {
     format!("{BASE_URL}/latest/{MANIFEST_PREFIX}{platform}.json")
 }

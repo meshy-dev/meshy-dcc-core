@@ -17,6 +17,7 @@
 //!     tags: ["skills", "maya", "official"]
 //! ```
 
+use std::collections::BTreeMap;
 use std::path::Path;
 
 use meshy_dcc_gateway_search::{SearchQuery, SearchRecord, rank_all};
@@ -260,6 +261,38 @@ pub struct CatalogInstall {
     /// Host commands for `host-package` installs.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub host: Option<CatalogHostInstall>,
+    /// Per-platform builds keyed by release platform (`macos-arm64`,
+    /// `windows-x86_64`); see [`CatalogInstall::select_platform`].
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub platforms: BTreeMap<String, CatalogArtifact>,
+}
+
+/// One platform's build of a package.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct CatalogArtifact {
+    pub url: String,
+    pub sha256: String,
+}
+
+impl CatalogInstall {
+    /// Use `platform`'s build as this install's `url` and `sha256`. An entry
+    /// without `platforms` is the same everywhere and is left as it is; one
+    /// that lists platforms but not this one cannot be installed here.
+    pub fn select_platform(&mut self, platform: &str) -> Result<(), String> {
+        if self.platforms.is_empty() {
+            return Ok(());
+        }
+        let Some(build) = self.platforms.get(platform) else {
+            let published: Vec<&str> = self.platforms.keys().map(String::as_str).collect();
+            return Err(format!(
+                "no build for {platform}; published for {}",
+                published.join(", ")
+            ));
+        };
+        self.url = Some(build.url.clone());
+        self.sha256 = Some(build.sha256.clone());
+        Ok(())
+    }
 }
 
 /// Host-side commands for a `host-package` install.
@@ -973,6 +1006,7 @@ entries:
                 host: None,
                 sop_version: None,
                 sop_schema_digest: None,
+                platforms: Default::default(),
             }),
             icon: None,
             showcase: None,
@@ -998,6 +1032,7 @@ entries:
             host: None,
             sop_version: None,
             sop_schema_digest: None,
+            platforms: Default::default(),
         });
 
         assert!(validate_entry(&entry).is_err());
@@ -1023,6 +1058,7 @@ entries:
             host: None,
             sop_version: None,
             sop_schema_digest: None,
+            platforms: Default::default(),
         });
 
         assert!(validate_entry(&entry).is_err());
@@ -1064,6 +1100,7 @@ entries:
                 host: None,
                 sop_version: None,
                 sop_schema_digest: None,
+                platforms: Default::default(),
             }),
             icon: None,
             showcase: None,
@@ -1156,6 +1193,7 @@ entries:
                 host: None,
                 sop_version: None,
                 sop_schema_digest: None,
+                platforms: Default::default(),
             }),
             icon: None,
             showcase: None,

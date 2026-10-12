@@ -190,6 +190,7 @@ pub fn publish_marketplace_package(
             host: None,
             sop_version: None,
             sop_schema_digest: None,
+            platforms: Default::default(),
         }),
         package,
         maintainer: options.maintainer.or_else(|| {

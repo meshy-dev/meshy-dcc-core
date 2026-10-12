@@ -155,6 +155,7 @@ mod tests {
             host: None,
             sop_version: None,
             sop_schema_digest: None,
+            platforms: Default::default(),
         }
     }
 

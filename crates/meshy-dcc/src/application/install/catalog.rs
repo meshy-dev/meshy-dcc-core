@@ -98,7 +98,21 @@ impl super::InstallService {
             .map(|catalog| catalog.entries)
     }
 
+    /// The catalog with every entry narrowed to this machine's build.
     pub(super) fn load_catalog(
+        &self,
+        requested_path: Option<&Path>,
+    ) -> Result<ResolvedCatalog, super::InstallError> {
+        let mut catalog = self.load_catalog_for_any_platform(requested_path)?;
+        let platform =
+            meshy_dcc_updater::meshy_release::current_platform().unwrap_or("unsupported");
+        for entry in &mut catalog.entries {
+            select_platform(entry, platform);
+        }
+        Ok(catalog)
+    }
+
+    fn load_catalog_for_any_platform(
         &self,
         requested_path: Option<&Path>,
     ) -> Result<ResolvedCatalog, super::InstallError> {
@@ -124,6 +138,27 @@ impl super::InstallService {
             }
         }
         ResolvedCatalog::bundled().map_err(Into::into)
+    }
+}
+
+/// Use `platform`'s build of an entry; an entry without one for this
+/// platform becomes `not_available` with the reason (an entry that is already
+/// unavailable keeps its own reason).
+fn select_platform(entry: &mut CatalogEntry, platform: &str) {
+    let Some(install) = entry.install.as_mut() else {
+        return;
+    };
+    if let Err(reason) = install.select_platform(platform) {
+        let unavailable = entry
+            .policy
+            .as_ref()
+            .is_some_and(|policy| policy.installation == "not_available");
+        if !unavailable {
+            entry.policy = Some(meshy_dcc_catalog::CatalogPolicy {
+                installation: "not_available".to_string(),
+                reason: Some(reason),
+            });
+        }
     }
 }
 

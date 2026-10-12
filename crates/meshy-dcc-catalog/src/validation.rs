@@ -132,6 +132,20 @@ const MARKETPLACE_V2_SCHEMA_JSON: &str = r##"{
             "instructions_url": { "type": "string" },
             "sop_version": { "type": "integer", "minimum": 1 },
             "sop_schema_digest": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+            "platforms": {
+              "type": "object",
+              "minProperties": 1,
+              "propertyNames": { "enum": ["macos-arm64", "windows-x86_64", "linux-x86_64"] },
+              "additionalProperties": {
+                "type": "object",
+                "required": ["url", "sha256"],
+                "properties": {
+                  "url": { "type": "string", "pattern": "^https://[^?#]+$" },
+                  "sha256": { "type": "string", "pattern": "^(sha256:)?[0-9a-fA-F]{64}$" }
+                },
+                "additionalProperties": false
+              }
+            },
             "adobe": {
               "type": "object",
               "required": ["product", "extensionType"],
@@ -181,7 +195,8 @@ const MARKETPLACE_V2_SCHEMA_JSON: &str = r##"{
             {
               "if": { "properties": { "type": { "const": "host-package" } } },
               "then": {
-                "required": ["url", "sha256", "host"],
+                "required": ["host"],
+                "anyOf": [{ "required": ["url", "sha256"] }, { "required": ["platforms"] }],
                 "properties": {
                   "url": { "pattern": "^https://[^?#]+$" },
                   "sha256": { "pattern": "^(sha256:)?[0-9a-fA-F]{64}$" }
@@ -334,5 +349,43 @@ mod host_package_schema_tests {
         validate_catalog_entries(&entries(good)).unwrap();
         let bad = "        project_steps: [[\"{project}/evil\"]]\n";
         assert!(validate_catalog_entries(&entries(bad)).is_err());
+    }
+
+    fn per_platform(install: &str) -> Vec<crate::CatalogEntry> {
+        crate::load_from_str(&format!(
+            "version: \"1\"\nentries:\n  - name: meshy-dcc-blender\n    description: Blender adapter\n    dcc: [blender]\n    install:\n      type: host-package\n      host:\n        steps: [[\"{{dcc_path}}\", \"-e\", \"{{package}}\"]]\n{install}"
+        ))
+        .unwrap()
+    }
+
+    #[test]
+    fn host_package_entries_take_per_platform_builds_instead_of_one_url() {
+        let sha = "a".repeat(64);
+        let build = |platform: &str| {
+            format!(
+                "        {platform}:\n          url: https://cdn.example/{platform}.zip\n          sha256: \"{sha}\"\n"
+            )
+        };
+        let good = format!(
+            "      platforms:\n{}{}",
+            build("macos-arm64"),
+            build("windows-x86_64")
+        );
+        validate_catalog_entries(&per_platform(&good)).unwrap();
+        let unknown = format!("      platforms:\n{}", build("macos-universal2"));
+        assert!(validate_catalog_entries(&per_platform(&unknown)).is_err());
+        assert!(
+            validate_catalog_entries(&per_platform("")).is_err(),
+            "needs url+sha256 or platforms"
+        );
+
+        let mut install = per_platform(&good).remove(0).install.unwrap();
+        install.select_platform("windows-x86_64").unwrap();
+        assert_eq!(
+            install.url.as_deref(),
+            Some("https://cdn.example/windows-x86_64.zip")
+        );
+        let error = install.select_platform("linux-x86_64").unwrap_err();
+        assert!(error.contains("no build for linux-x86_64"), "{error}");
     }
 }

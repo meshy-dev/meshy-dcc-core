@@ -1136,10 +1136,27 @@ mod tests {
             CatalogSource::Bundled
         );
         let entries = service.catalog_entries(None).unwrap();
-        assert_eq!(
-            entries,
-            meshy_dcc_catalog::load_from_str(BUNDLED_CATALOG).unwrap()
-        );
+        let raw = meshy_dcc_catalog::load_from_str(BUNDLED_CATALOG).unwrap();
+        let names = |list: &[meshy_dcc_catalog::CatalogEntry]| {
+            list.iter()
+                .map(|entry| entry.name.clone())
+                .collect::<Vec<_>>()
+        };
+        assert_eq!(names(&entries), names(&raw));
+        // Every entry is narrowed to this platform's build.
+        let platform = meshy_dcc_updater::meshy_release::current_platform().unwrap();
+        for entry in &entries {
+            if let Some(install) = &entry.install
+                && let Some(build) = install.platforms.get(platform)
+            {
+                assert_eq!(
+                    install.url.as_deref(),
+                    Some(build.url.as_str()),
+                    "{}",
+                    entry.name
+                );
+            }
+        }
         let listing = service.dcc_types(None).unwrap();
         let blender = listing
             .dcc_types

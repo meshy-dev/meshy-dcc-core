@@ -270,3 +270,48 @@ fn rejected_official_cache_preserves_unavailable_execution_evidence() {
         b"not an authenticated envelope"
     );
 }
+
+#[test]
+fn per_platform_builds_install_only_where_one_is_published() {
+    let root = TempDir::new().unwrap();
+    let here = meshy_dcc_updater::meshy_release::current_platform().unwrap_or("unsupported");
+    let other = if here == "windows-x86_64" {
+        "macos-arm64"
+    } else {
+        "windows-x86_64"
+    };
+    let host_entry = |platforms: Value| {
+        let mut entry = catalog_entry("blender");
+        entry["install"] = json!({
+            "type": "host-package",
+            "platforms": platforms,
+            "host": {"steps": [["{dcc_path}", "install", "{package}"]], "launch": ["{executable}"]},
+        });
+        entry
+    };
+    let build = |name: &str| json!({"url": format!("https://cdn.example/{name}.zip"), "sha256": "a".repeat(64)});
+
+    let only_other = write_catalog(&root, vec![host_entry(json!({ other: build(other) }))]);
+    let output = cli(&only_other, "blender", false);
+    assert!(!output.status.success());
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains(&format!("no build for {here}")),
+        "stderr: {stderr}"
+    );
+
+    let both = write_catalog(
+        &root,
+        vec![host_entry(
+            json!({ here: build(here), other: build(other) }),
+        )],
+    );
+    let output = cli(&both, "blender", false);
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(output.status.success(), "stdout: {stdout}");
+    let plan: Value = serde_json::from_slice(&output.stdout).unwrap();
+    assert_eq!(
+        plan["adapter"]["install"]["url"],
+        format!("https://cdn.example/{here}.zip")
+    );
+}

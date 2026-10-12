@@ -11,18 +11,8 @@ pub use super::relay_registration::RelaySourceConfig;
 const DEFAULT_BACKEND_TIMEOUT_MS: u64 = 120_000;
 
 fn official_update_manifest_url() -> Option<String> {
-    let platform = if cfg!(all(target_os = "windows", target_arch = "x86_64")) {
-        "windows-x86_64"
-    } else if cfg!(all(target_os = "linux", target_arch = "x86_64")) {
-        "linux-x86_64"
-    } else if cfg!(all(target_os = "macos", target_arch = "aarch64")) {
-        "macos-arm64"
-    } else {
-        return None;
-    };
-    Some(meshy_dcc_updater::meshy_release::update_manifest_url(
-        platform,
-    ))
+    meshy_dcc_updater::meshy_release::current_platform()
+        .map(meshy_dcc_updater::meshy_release::update_manifest_url)
 }
 
 /// Admin persistence configuration (SQLite + skill-path reload hook).

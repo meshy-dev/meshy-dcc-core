@@ -117,6 +117,12 @@ and is not runtime-compatible with it. Attribution stays in `LICENSE` and
   `~/.local/bin`. They no longer install dcc-cua.
   `scripts/release/generate_update_manifest.py` writes the matching manifest
   and the binaries under their published names.
+- Catalog `host-package` entries can list one build per platform under
+  `install.platforms` (`macos-arm64`, `windows-x86_64`); `meshy-dcc` uses the
+  running machine's build, and an entry with none for it is reported as
+  `not_available` with the platforms it does have. The bundled catalog does
+  this for the four adapters: Blender for macOS and Windows, Unity, Godot
+  and Unreal for macOS so far.
 - npm packaging: `meshy-dcc` holds a small launcher and lists one binary
   package per platform (`@meshy-ai/meshy-dcc-darwin-arm64`,
   `@meshy-ai/meshy-dcc-win32-x64`) as optional dependencies, so npm installs

@@ -3,7 +3,8 @@
 # One entry per DCC with a Meshy adapter. A DCC joins by adding an entry: core
 # has no per-DCC code, it only runs what the entry declares.
 #
-# `host-package` installs download `url`, check `sha256`, then run the `host`
+# `host-package` installs download the running platform's build from
+# `platforms` (`macos-arm64`, `windows-x86_64`), check its `sha256`, then run the `host`
 # commands (argv lists, no shell) with the executable the operator passed via
 # `--dcc-path`. `host.launch` becomes the start-instance launch plan.
 #
@@ -26,8 +27,13 @@ entries:
       reason: "The Meshy Blender adapter build is not published yet."
     install:
       type: host-package
-      url: "https://cdn.meshy.ai/meshy-dcc-core/adapters/blender/0.1.0/meshy_dcc_blender_addon_macos_v0.1.0.zip"
-      sha256: "702053d1e498bebcca65bd40af733522a4a549b46be79673724ce1f4b4aa85f0"
+      platforms:
+        macos-arm64:
+          url: "https://cdn.meshy.ai/meshy-dcc-core/adapters/blender/0.1.0/meshy_dcc_blender_addon_macos_v0.1.0.zip"
+          sha256: "e347f8c362830960d7e0d2905043bf3db0523e2784f5d105aefeb1090de2cbf8"
+        windows-x86_64:
+          url: "https://cdn.meshy.ai/meshy-dcc-core/adapters/blender/0.1.0/meshy_dcc_blender_addon_win64_v0.1.0.zip"
+          sha256: "bceb1800b643f2f370bd556454149cad88f4eabe54c86e5bad3d846e0d20e035"
       host:
         uninstall:
           - ["{dcc_path}", "--command", "extension", "remove", "user_default.meshy_dcc_blender"]
@@ -48,8 +54,10 @@ entries:
     # Installs per project: `meshy-dcc install --dcc-type unity --project <root>`.
     install:
       type: host-package
-      url: "https://cdn.meshy.ai/meshy-dcc-core/adapters/unity/0.1.0/meshy_dcc_unity_macos_arm64_v0.1.0.zip"
-      sha256: "5a7dbf3a16dd52396340cc5930724f59418c84da0c4809f0846d5d0ed09e7c70"
+      platforms:
+        macos-arm64:
+          url: "https://cdn.meshy.ai/meshy-dcc-core/adapters/unity/0.1.0/meshy_dcc_unity_macos_arm64_v0.1.0.zip"
+          sha256: "1f271536336d7d0ca587a005acb3896c1ba1bfd8296fabbf0a1c19c2f65d602e"
       host:
         extract: true
         project_steps:
@@ -68,8 +76,10 @@ entries:
     # Installs per project: `meshy-dcc install --dcc-type godot --project <root>`.
     install:
       type: host-package
-      url: "https://cdn.meshy.ai/meshy-dcc-core/adapters/godot/0.1.0/meshy_dcc_godot_macos_arm64_v0.1.0.zip"
-      sha256: "43ffc0a4bbd1922827401fe3f783effbc047c619211c984ed62b19a20aaaf9d1"
+      platforms:
+        macos-arm64:
+          url: "https://cdn.meshy.ai/meshy-dcc-core/adapters/godot/0.1.0/meshy_dcc_godot_macos_arm64_v0.1.0.zip"
+          sha256: "8469877311f8b1a986fbda6feb1d61e3e6252df9628e6cbab6e28c2508bd03fe"
       host:
         extract: true
         project_steps:
@@ -88,8 +98,10 @@ entries:
     # Installs per project: `meshy-dcc install --dcc-type unreal --project <root>`.
     install:
       type: host-package
-      url: "https://cdn.meshy.ai/meshy-dcc-core/adapters/unreal/0.1.0/meshy_dcc_unreal_macos_arm64_v0.1.0.zip"
-      sha256: "a5896d96d85d915aa1d5333f05ec261ad4722cc970366bbb67320bccc4c33424"
+      platforms:
+        macos-arm64:
+          url: "https://cdn.meshy.ai/meshy-dcc-core/adapters/unreal/0.1.0/meshy_dcc_unreal_macos_arm64_v0.1.0.zip"
+          sha256: "163fedbd8f76e4f6f277a87c0c966bab7ae61dc8427523e60fdcbf5db2f04791"
       host:
         extract: true
         project_steps:
