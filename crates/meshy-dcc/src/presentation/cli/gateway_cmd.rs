@@ -96,6 +96,7 @@ pub(crate) fn gateway_endpoint_for_command(
         Command::Install { .. }
         | Command::Marketplace { .. }
         | Command::Lint(_)
+        | Command::AgentSkill(_)
         | Command::Components { .. }
         | Command::Gateway { .. }
         | Command::StartInstance { dry_run: true, .. } => None,

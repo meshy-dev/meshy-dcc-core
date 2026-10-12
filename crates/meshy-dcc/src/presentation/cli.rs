@@ -236,6 +236,8 @@ async fn run_with_args(args: Args) -> anyhow::Result<()> {
     // hosts directly.
     let require_gateway = require_gateway || gateway.as_deref() != Some("local");
     let writer = OutputWriter::new(output_format(&command, output).map_err(anyhow::Error::msg)?);
+    // Installed agent Skills follow the CLI version, however the CLI was updated.
+    crate::application::agent_skill::refresh_installed();
     let explicit_update_command = matches!(&command, Command::Update { .. });
     let marketplace_update_check = (!crate::application::update::is_background_refresh())
         .then(|| tokio::spawn(check_marketplace_updates()));
@@ -930,6 +932,23 @@ async fn run_with_args(args: Args) -> anyhow::Result<()> {
                 exit_code = ExitCode::InvalidInput;
             }
             result.value
+        }
+        Command::AgentSkill(args) => {
+            use crate::application::agent_skill;
+            let targets = if args.dirs.is_empty() {
+                agent_skill::detected_targets()
+            } else {
+                args.dirs
+                    .into_iter()
+                    .map(|skills_dir| agent_skill::Target {
+                        agent: "custom".to_string(),
+                        skills_dir,
+                    })
+                    .collect()
+            };
+            let value = agent_skill::run(&targets, args.remove, args.execute)?;
+            failed = value["failed"] == true;
+            value
         }
         Command::Components { action } => super::components_cmd::run(action).await?,
         Command::Update { action } => {

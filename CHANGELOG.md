@@ -108,6 +108,13 @@ and is not runtime-compatible with it. Attribution stays in `LICENSE` and
   gate.
 - Tool arguments are checked against JSON Schema `pattern`.
 - A `not_available` catalog entry's error carries the catalog's reason.
+- `meshy-dcc agent-skill` installs the `meshy-dcc` Skill, which is embedded in
+  the CLI, into agents' skill directories: Claude Code (`~/.claude/skills`)
+  and Codex (`$CODEX_HOME/skills`) when they are present, or any `--dir`. It
+  prints the plan unless `--execute` is given, writes only into
+  `<skills dir>/meshy-dcc/`, records what it wrote, never overwrites a
+  directory it did not write, and `--remove` deletes only its own files.
+  Release builds update an installed copy when the CLI changes.
 - `dcc-types` reports an adapter the catalog lists but cannot install with
   `next_action.id: report_unavailable` and the catalog's reason, and no
   command. It used to point back at `dcc-types`, which sent agents in a loop.

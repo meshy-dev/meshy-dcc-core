@@ -320,6 +320,9 @@ pub(crate) enum Command {
     },
     /// Validate local SKILL.md packages before loading them at runtime.
     Lint(LintArgs),
+    /// Install the meshy-dcc Skill into agents' skill directories (Claude Code and
+    /// Codex when present, or --dir). Prints the plan unless --execute is given.
+    AgentSkill(AgentSkillArgs),
     Components {
         #[command(subcommand)]
         action: crate::presentation::components_cmd::ComponentsAction,
@@ -381,6 +384,19 @@ pub(crate) struct UiControlArgs {
     /// Print the complete underlying MCP response, including the bounded UI tree.
     #[arg(long, default_value_t = false)]
     pub(crate) full_output: bool,
+}
+
+#[derive(Debug, clap::Args)]
+pub(crate) struct AgentSkillArgs {
+    /// An agent's skills directory to use instead of the detected ones (repeatable).
+    #[arg(long = "dir")]
+    pub dirs: Vec<PathBuf>,
+    /// Remove the files this command installed.
+    #[arg(long)]
+    pub remove: bool,
+    /// Apply the plan. Without it nothing is written.
+    #[arg(long)]
+    pub execute: bool,
 }
 
 #[derive(Debug, clap::Args)]

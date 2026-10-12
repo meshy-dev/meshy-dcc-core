@@ -1,4 +1,5 @@
 pub mod adapter_import;
+pub mod agent_skill;
 pub mod call_attribution;
 pub mod client;
 pub mod components;
