@@ -141,7 +141,24 @@ const MARKETPLACE_V2_SCHEMA_JSON: &str = r##"{
                 "required": ["url", "sha256"],
                 "properties": {
                   "url": { "type": "string", "pattern": "^https://[^?#]+$" },
-                  "sha256": { "type": "string", "pattern": "^(sha256:)?[0-9a-fA-F]{64}$" }
+                  "sha256": { "type": "string", "pattern": "^(sha256:)?[0-9a-fA-F]{64}$" },
+                  "host": {
+                  "type": "object",
+                  "properties": {
+                    "extract": { "type": "boolean" },
+                    "steps": { "type": "array", "items": { "type": "array", "minItems": 1, "prefixItems": [{ "type": "string", "pattern": "^(\\{dcc_path\\}|\\{package_dir\\}/.+)$" }], "items": { "type": "string" } } },
+                    "project_steps": { "type": "array", "items": { "type": "array", "minItems": 1, "prefixItems": [{ "type": "string", "pattern": "^(\\{dcc_path\\}|\\{package_dir\\}/.+)$" }], "items": { "type": "string" } } },
+                    "uninstall": { "type": "array", "items": { "type": "array", "minItems": 1, "prefixItems": [{ "type": "string", "pattern": "^(\\{dcc_path\\}|\\{package_dir\\}/.+)$" }], "items": { "type": "string" } } },
+                    "launch": {
+                      "type": "array",
+                      "minItems": 1,
+                      "prefixItems": [{ "const": "{executable}" }],
+                      "items": { "type": "string" }
+                    },
+                    "project_markers": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+                  },
+                  "additionalProperties": false
+                }
                 },
                 "additionalProperties": false
               }
@@ -387,5 +404,17 @@ mod host_package_schema_tests {
         );
         let error = install.select_platform("linux-x86_64").unwrap_err();
         assert!(error.contains("no build for linux-x86_64"), "{error}");
+
+        // A platform can bring its own host commands, e.g. a .cmd launcher.
+        let windows_host = format!(
+            "      platforms:\n{}          host:\n            extract: true\n            project_steps: [[\"{{package_dir}}/bin/setup.cmd\", \"{{project}}\"]]\n",
+            build("windows-x86_64")
+        );
+        let entries = per_platform(&windows_host);
+        validate_catalog_entries(&entries).unwrap();
+        let mut install = entries[0].install.clone().unwrap();
+        install.select_platform("windows-x86_64").unwrap();
+        let host = install.host.unwrap();
+        assert_eq!(host.project_steps[0][0], "{package_dir}/bin/setup.cmd");
     }
 }

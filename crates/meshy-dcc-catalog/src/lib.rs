@@ -272,6 +272,10 @@ pub struct CatalogInstall {
 pub struct CatalogArtifact {
     pub url: String,
     pub sha256: String,
+    /// Host commands for this platform, when they differ from the entry's
+    /// (for example a `.cmd` launcher on Windows).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub host: Option<CatalogHostInstall>,
 }
 
 impl CatalogInstall {
@@ -291,6 +295,9 @@ impl CatalogInstall {
         };
         self.url = Some(build.url.clone());
         self.sha256 = Some(build.sha256.clone());
+        if let Some(host) = &build.host {
+            self.host = Some(host.clone());
+        }
         Ok(())
     }
 }
