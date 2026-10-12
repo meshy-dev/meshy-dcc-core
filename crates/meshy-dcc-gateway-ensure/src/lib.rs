@@ -101,6 +101,8 @@ pub struct GatewayLaunchArtifacts {
     pub stdout_log: PathBuf,
     pub stderr_log: PathBuf,
     pub manifest_path: PathBuf,
+    /// The launched process, so a wait can tell when it has already exited.
+    pub child: Option<std::sync::Arc<std::sync::Mutex<std::process::Child>>>,
 }
 
 /// Extra context for a gateway-ready wait failure.
@@ -271,12 +273,24 @@ pub async fn wait_gateway_ready_with_diagnostics(
         if gateway_health_ok(host, port).await {
             return Ok(());
         }
+        // A gateway that already exited will never answer; stop waiting.
+        if let Some(status) = diagnostics.launch.and_then(launched_process_exit) {
+            anyhow::bail!(
+                "gateway process exited ({status}) before it became healthy; {}",
+                gateway_ready_timeout_message(host, port, timeout, diagnostics)
+            );
+        }
         tokio::time::sleep(Duration::from_millis(150)).await;
     }
     anyhow::bail!(
         "{}",
         gateway_ready_timeout_message(host, port, timeout, diagnostics)
     )
+}
+
+/// Exit status of the launched gateway, if it has exited already.
+fn launched_process_exit(launch: &GatewayLaunchArtifacts) -> Option<std::process::ExitStatus> {
+    launch.child.as_ref()?.lock().ok()?.try_wait().ok().flatten()
 }
 
 /// Build the detailed timeout message used by wait helpers.
@@ -395,6 +409,7 @@ pub fn spawn_detached_gateway_with_context(
         stdout_log,
         stderr_log,
         manifest_path,
+        child: Some(std::sync::Arc::new(std::sync::Mutex::new(child))),
     };
     write_launch_manifest(registry_dir, &context, &artifacts);
     Ok(artifacts)
@@ -902,6 +917,7 @@ mod tests {
             stdout_log: dir.path().join("gateway-autolaunch-19765-stdout.log"),
             stderr_log: dir.path().join("gateway-autolaunch-19765-stderr.log"),
             manifest_path: dir.path().join("gateway-autolaunch-19765.json"),
+            child: None,
         };
 
         let msg = gateway_ready_timeout_message(
@@ -929,6 +945,42 @@ mod tests {
         assert!(msg.contains("stdout_log="));
         assert!(msg.contains("stderr_log="));
         assert!(msg.contains("manifest="));
+    }
+
+    #[tokio::test]
+    async fn ready_wait_stops_when_the_launched_gateway_exits() {
+        let dir = tempfile::tempdir().unwrap();
+        // The test binary prints its help and exits, like a gateway that dies on start.
+        let exe = std::env::current_exe().unwrap();
+        let context = GatewayLaunchContext::gateway("127.0.0.1", 19765, "0.0.0.0", 59765, 30);
+        let launch = spawn_detached_gateway_with_context(
+            &exe,
+            &[OsString::from("--help")],
+            dir.path(),
+            context,
+        )
+        .unwrap();
+        let port = std::net::TcpListener::bind("127.0.0.1:0")
+            .unwrap()
+            .local_addr()
+            .unwrap()
+            .port();
+
+        let started = Instant::now();
+        let error = wait_gateway_ready_with_diagnostics(
+            "127.0.0.1",
+            port,
+            Duration::from_secs(60),
+            GatewayReadyDiagnostics {
+                launch: Some(&launch),
+                ..GatewayReadyDiagnostics::default()
+            },
+        )
+        .await
+        .unwrap_err();
+
+        assert!(started.elapsed() < Duration::from_secs(20), "{error}");
+        assert!(error.to_string().contains("gateway process exited"), "{error}");
     }
 
     #[test]

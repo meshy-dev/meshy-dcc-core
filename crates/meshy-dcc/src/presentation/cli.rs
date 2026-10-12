@@ -96,11 +96,13 @@ pub struct Args {
     /// Explicit gateway binary for auto-start. Defaults to discovery/cache/current CLI fallback.
     #[arg(long, env = "MESHY_DCC_GATEWAY_BIN")]
     auto_gateway_bin: Option<PathBuf>,
-    /// Seconds to wait for an auto-started gateway to become healthy.
+    /// Seconds to wait for an auto-started gateway to become healthy. Long
+    /// enough for the port to leave TCP TIME_WAIT after a previous gateway;
+    /// the wait ends early if the gateway process exits.
     #[arg(
         long,
         env = "MESHY_DCC_CLI_AUTO_GATEWAY_TIMEOUT_SECS",
-        default_value = "10"
+        default_value = "90"
     )]
     auto_gateway_timeout_secs: u64,
     /// Output format: human, json, ndjson, or toon. Auto-detects from TTY when omitted.

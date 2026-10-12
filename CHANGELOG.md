@@ -119,6 +119,13 @@ and is not runtime-compatible with it. Attribution stays in `LICENSE` and
 - When a `tools.yaml` entry sets `read_only`, `destructive` or `idempotent` to
   `true` and declares no `*_hint` key, the matching MCP annotation is now
   published.
+- A gateway started right after another one stopped no longer gives up: the
+  port stays unbindable while TCP TIME_WAIT lasts (about 30 s on macOS, 60 s
+  on Linux), and the new `meshy-dcc-server` used to exit at once, leaving the
+  next host to run the gateway inside its own process. It now keeps
+  contesting the port for up to 75 s, and the CLI waits up to 90 s for it,
+  stopping early if the gateway process exits. The behavior is the same on
+  every platform.
 - `components ensure dcc-cua` downloads from the upstream `dcc-mcp/dcc-cua`
   releases again; the rename had pointed it at a repository that does not
   exist.

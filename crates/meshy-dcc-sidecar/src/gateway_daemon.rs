@@ -10,6 +10,12 @@ use meshy_dcc_gateway::{AdminPersistConfig, GatewayConfig, GatewayRunner, RelayS
 
 const DAEMONIZED_ENV: &str = "MESHY_DCC__DAEMONIZED";
 
+/// How long a standalone gateway keeps contesting a port that nothing answers
+/// on. Longer than TCP TIME_WAIT on any platform (30 s macOS, 60 s Linux),
+/// which keeps the port unbindable for a while after the previous gateway
+/// stops.
+const CONTEST_PORT_SECS: u64 = 75;
+
 #[cfg(feature = "gateway-auto")]
 mod guardian;
 #[cfg(feature = "gateway-auto")]
@@ -388,7 +394,32 @@ pub async fn run(args: GatewayArgs) -> anyhow::Result<()> {
         .await
         .map_err(|err| anyhow::anyhow!("running gateway election: {err}"))?;
 
+    // A challenger means the port could not be bound although no healthy
+    // gateway answers on it, e.g. right after the previous gateway stopped.
+    // A host process leaves its challenger to take the port later; this
+    // process has nothing else to do, so it contests the port until it wins
+    // or a healthy gateway answers there.
+    let contest_until = std::time::Instant::now() + Duration::from_secs(CONTEST_PORT_SECS);
+    while !outcome.is_gateway && std::time::Instant::now() < contest_until {
+        let Some(challenger) = outcome.challenger_abort.take() else {
+            break;
+        };
+        challenger.abort();
+        tokio::time::sleep(Duration::from_secs(1)).await;
+        outcome = runner
+            .run_election()
+            .await
+            .map_err(|err| anyhow::anyhow!("running gateway election: {err}"))?;
+    }
+
     if !outcome.is_gateway {
+        if outcome.challenger_abort.is_some() {
+            anyhow::bail!(
+                "could not bind {}:{} within {CONTEST_PORT_SECS} s and no healthy gateway answers there",
+                args.host,
+                args.port
+            );
+        }
         tracing::info!(
             host = %args.host,
             port = args.port,
