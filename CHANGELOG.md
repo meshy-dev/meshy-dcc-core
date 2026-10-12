@@ -114,9 +114,9 @@ and is not runtime-compatible with it. Attribution stays in `LICENSE` and
   manifest's URLs and SHA-256 digests before either replaces an installed
   file, then the installer shows and applies `meshy-dcc agent-skill`. Other
   platforms are refused before anything is downloaded. Both default to
-  `~/.local/bin`. They no longer install dcc-cua. When the CDN cannot be
-  reached (meshy.ai is blocked in some regions) they fall back to the GitHub
-  Release; a file that fails its checks stops the install instead. The
+  `~/.local/bin`. They no longer install dcc-cua. When cdn.meshy.ai cannot
+  be reached they try cdn.meshy.cn (the same bucket, reachable in mainland
+  China), then the GitHub Release; a file that fails its checks stops the install instead. The
   latest version comes from the GitHub Release; the CDN keeps each release
   under its own version dir (`v0-2-0`) and never overwrites it, with names
   that follow the CDN rules (`windows-x64`). The README shows the one-line
@@ -126,8 +126,8 @@ and is not runtime-compatible with it. Attribution stays in `LICENSE` and
 - A platform build in the catalog can list `mirrors`: URLs serving the same
   bytes, tried in order when a download fails. A download whose bytes fail
   the SHA-256 check stops the install instead. The bundled catalog points
-  each adapter build at its CDN copy (CDN names, version dirs) with the
-  adapter repository's GitHub Release as the mirror.
+  each adapter build at its CDN copy (CDN names, version dirs) with
+  cdn.meshy.cn and the adapter repository's GitHub Release as mirrors.
 - Catalog `host-package` entries can list one build per platform under
   `install.platforms` (`macos-arm64`, `windows-x86_64`); `meshy-dcc` uses the
   running machine's build, and an entry with none for it is reported as

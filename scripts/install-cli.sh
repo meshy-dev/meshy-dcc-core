@@ -1,10 +1,12 @@
 #!/usr/bin/env sh
 set -eu
 
-# Tried in order: the Meshy CDN, then the GitHub Release (meshy.ai is not
-# reachable everywhere). A download that fails moves on to the next source; a
-# manifest or file that fails its checks stops the install.
+# Tried in order: the Meshy CDN, its mainland-China host (cdn.meshy.cn serves
+# the same bucket; cdn.meshy.ai does not resolve there), then the GitHub
+# Release. A download that fails moves on to the next source; a manifest or
+# file that fails its checks stops the install.
 CDN="https://cdn.meshy.ai/meshy-dcc-core"
+CDN_CN="https://cdn.meshy.cn/meshy-dcc-core"
 GITHUB="https://github.com/meshy-dev/meshy-dcc-core/releases"
 VERSION="${MESHY_DCC_VERSION:-latest}"
 INSTALL_DIR="${MESHY_DCC_INSTALL_DIR:-$HOME/.local/bin}"
@@ -89,11 +91,20 @@ printf '%s' "$REQUESTED_VERSION" \
 CDN_DIR="$CDN/v$(printf '%s' "$REQUESTED_VERSION" | tr 'A-Z' 'a-z' | sed 's/[^0-9a-z][^0-9a-z]*/-/g')"
 GITHUB_DIR="$GITHUB/download/v$REQUESTED_VERSION"
 
-# release_url <source> <name without platform>: where <name>-<platform> lives.
+# release_url <source> <name without platform>: where <name>-<platform> lives,
+# as the manifest names it. Both CDN hosts use the cdn.meshy.ai URLs.
 release_url() {
     case "$1" in
-        cdn) echo "$CDN_DIR/$2-$PLATFORM" ;;
+        cdn | cdn-cn) echo "$CDN_DIR/$2-$PLATFORM" ;;
         github) echo "$GITHUB_DIR/$2-$PLATFORM" ;;
+    esac
+}
+
+# fetch_url <source> <url>: the same object on the host that source uses.
+fetch_url() {
+    case "$1" in
+        cdn-cn) echo "$CDN_CN${2#"$CDN"}" ;;
+        *) echo "$2" ;;
     esac
 }
 
@@ -174,7 +185,7 @@ fetch_verified() {
         && ! printf '%s' "$expected" | grep -Eq '[^0-9A-Fa-f]' \
         || fail "official release manifest contains an invalid SHA-256"
 
-    download_to "$url" "$output" || return 1
+    download_to "$(fetch_url "$source" "$url")" "$output" || return 1
     actual="$(calculate_sha256 "$output")"
     [ "$(printf '%s' "$actual" | tr 'A-F' 'a-f')" = "$(printf '%s' "$expected" | tr 'A-F' 'a-f')" ] \
         || fail "$binary SHA-256 does not match the official release manifest"
@@ -183,8 +194,8 @@ fetch_verified() {
 
 # Both are verified before either replaces an installed file.
 FETCHED=""
-for SOURCE in cdn github; do
-    if download_to "$(release_url "$SOURCE" meshy-dcc-update-manifest).json" "$MANIFEST_TMP" \
+for SOURCE in cdn cdn-cn github; do
+    if download_to "$(fetch_url "$SOURCE" "$(release_url "$SOURCE" meshy-dcc-update-manifest).json")" "$MANIFEST_TMP" \
         && fetch_verified "$SOURCE" meshy-dcc "$CLI_TMP" \
         && fetch_verified "$SOURCE" meshy-dcc-server "$SERVER_TMP"; then
         FETCHED="$SOURCE"
@@ -192,7 +203,7 @@ for SOURCE in cdn github; do
     fi
     echo "Could not download from $SOURCE; trying the next source." >&2
 done
-[ -n "$FETCHED" ] || fail "meshy-dcc could not be downloaded from the Meshy CDN or GitHub"
+[ -n "$FETCHED" ] || fail "meshy-dcc could not be downloaded from the Meshy CDN (cdn.meshy.ai, cdn.meshy.cn) or GitHub"
 mv -f "$SERVER_TMP" "$INSTALL_DIR/meshy-dcc-server"
 TARGET="$INSTALL_DIR/meshy-dcc"
 mv -f "$CLI_TMP" "$TARGET"

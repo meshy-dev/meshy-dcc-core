@@ -11,8 +11,11 @@ param(
 
 $ErrorActionPreference = "Stop"
 $ProgressPreference = "SilentlyContinue"
+# cdn.meshy.cn serves the same bucket as cdn.meshy.ai, which does not resolve
+# in mainland China; manifests on both name the cdn.meshy.ai URLs.
 $sources = [ordered]@{
     cdn = "https://cdn.meshy.ai/meshy-dcc-core"
+    "cdn-cn" = "https://cdn.meshy.cn/meshy-dcc-core"
     github = "https://github.com/meshy-dev/meshy-dcc-core/releases"
 }
 $platform = "windows-x86_64"
@@ -55,8 +58,14 @@ $githubDir = "$($sources.github)/download/v$requestedVersion"
 
 # Release-Url <source> <name>: where <name> for this platform lives.
 function Get-ReleaseUrl([string] $source, [string] $name, [string] $extension) {
-    if ($source -eq "cdn") { return "$cdnDir/$name-windows-x64$extension" }
+    if ($source -like "cdn*") { return "$cdnDir/$name-windows-x64$extension" }
     return "$githubDir/$name-$platform$extension"
+}
+
+# The same object on the host that source uses.
+function Get-FetchUrl([string] $source, [string] $url) {
+    if ($source -eq "cdn-cn") { return $sources["cdn-cn"] + $url.Substring($sources.cdn.Length) }
+    return $url
 }
 
 # A failed download is a NetworkFailure, so the caller tries the next source.
@@ -81,7 +90,7 @@ foreach ($binary in $binaries) {
 }
 
 function Get-VerifiedBinaries([string] $source) {
-    Get-File (Get-ReleaseUrl $source "meshy-dcc-update-manifest" ".json") $manifestTmp
+    Get-File (Get-FetchUrl $source (Get-ReleaseUrl $source "meshy-dcc-update-manifest" ".json")) $manifestTmp
     $manifestText = Get-Content -LiteralPath $manifestTmp -Raw
     try {
         $manifest = $manifestText | ConvertFrom-Json
@@ -111,7 +120,7 @@ function Get-VerifiedBinaries([string] $source) {
             throw "Official release manifest contains an invalid SHA-256"
         }
 
-        Get-File $assetUrl $downloads[$binary]
+        Get-File (Get-FetchUrl $source $assetUrl) $downloads[$binary]
         $actualSha256 = (Get-FileHash -LiteralPath $downloads[$binary] -Algorithm SHA256).Hash
         if ($actualSha256 -ine $expectedSha256) {
             throw "$binary SHA-256 does not match the official release manifest"
@@ -132,7 +141,7 @@ try {
         }
     }
     if (-not $manifestVersion) {
-        throw "meshy-dcc could not be downloaded from the Meshy CDN or GitHub"
+        throw "meshy-dcc could not be downloaded from the Meshy CDN (cdn.meshy.ai, cdn.meshy.cn) or GitHub"
     }
 
     foreach ($binary in @("meshy-dcc-server", "meshy-dcc")) {

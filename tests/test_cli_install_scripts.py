@@ -53,9 +53,9 @@ while [ "$#" -gt 0 ]; do
     esac
 done
 printf '%s\n' "$url" >> "$REQUEST_LOG"
-if [ -n "${UNREACHABLE:-}" ]; then
-    case "$url" in "$UNREACHABLE"*) exit 7 ;; esac
-fi
+for prefix in ${UNREACHABLE:-}; do
+    case "$url" in "$prefix"*) exit 7 ;; esac
+done
 if [ -n "$format" ]; then
     printf '%s' "$LATEST_REDIRECT"
     exit 0
@@ -225,6 +225,7 @@ def test_install_docs_pipe_only_official_installers_and_never_bypass_policy() ->
     )
     official = (
         "https://cdn.meshy.ai/meshy-dcc-core/install.",
+        "https://cdn.meshy.cn/meshy-dcc-core/install.",
         "https://github.com/meshy-dev/meshy-dcc-core/releases/latest/download/install.",
     )
     for path in INSTALL_DOCS:
@@ -281,13 +282,31 @@ def test_sh_refuses_unpublished_platforms_before_download(tmp_path: Path, os_nam
     assert not (tmp_path / "requests.log").exists()
 
 
-def test_sh_falls_back_to_the_github_release_when_the_cdn_is_unreachable(tmp_path: Path) -> None:
+def test_sh_uses_cdn_meshy_cn_when_cdn_meshy_ai_is_unreachable(tmp_path: Path) -> None:
+    binary = b'#!/bin/sh\necho "$*" >> "$ARG_LOG"\n'
+    result = _run_sh_installer(
+        tmp_path, _manifest(platform="macos-arm64", binary=binary), binary, unreachable="https://cdn.meshy.ai/"
+    )
+
+    assert result.returncode == 0, result.stderr
+    requests = (tmp_path / "requests.log").read_text(encoding="utf-8").splitlines()
+    cn = "https://cdn.meshy.cn/meshy-dcc-core/v0-2-0"
+    assert requests == [
+        f"{GITHUB_RELEASES}/latest",
+        f"{OFFICIAL_RELEASE}/v0-2-0/meshy-dcc-update-manifest-macos-arm64.json",
+        f"{cn}/meshy-dcc-update-manifest-macos-arm64.json",
+        f"{cn}/meshy-dcc-macos-arm64",
+        f"{cn}/meshy-dcc-server-macos-arm64",
+    ]
+
+
+def test_sh_falls_back_to_the_github_release_when_both_cdn_hosts_are_unreachable(tmp_path: Path) -> None:
     binary = b'#!/bin/sh\necho "$*" >> "$ARG_LOG"\n'
     result = _run_sh_installer(
         tmp_path,
         _manifest(platform="macos-arm64", binary=binary, source="github"),
         binary,
-        unreachable="https://cdn.meshy.ai/",
+        unreachable="https://cdn.meshy.ai/ https://cdn.meshy.cn/",
     )
 
     assert result.returncode == 0, result.stderr
@@ -296,6 +315,7 @@ def test_sh_falls_back_to_the_github_release_when_the_cdn_is_unreachable(tmp_pat
     assert requests == [
         f"{GITHUB_RELEASES}/latest",
         f"{OFFICIAL_RELEASE}/v0-2-0/meshy-dcc-update-manifest-macos-arm64.json",
+        "https://cdn.meshy.cn/meshy-dcc-core/v0-2-0/meshy-dcc-update-manifest-macos-arm64.json",
         f"{GITHUB_RELEASES}/download/v0.2.0/meshy-dcc-update-manifest-macos-arm64.json",
         f"{GITHUB_RELEASES}/download/v0.2.0/meshy-dcc-macos-arm64",
         f"{GITHUB_RELEASES}/download/v0.2.0/meshy-dcc-server-macos-arm64",

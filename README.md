@@ -39,10 +39,12 @@ Windows (PowerShell):
 irm https://cdn.meshy.ai/meshy-dcc-core/install.ps1 | iex
 ```
 
-Where meshy.ai cannot be reached, use the copies on the GitHub Release:
-`https://github.com/meshy-dev/meshy-dcc-core/releases/latest/download/install.sh`
-and `…/install.ps1`. The installers themselves fall back to the GitHub Release
-when the CDN is unreachable, check every file against the release manifest's
+In mainland China, where cdn.meshy.ai does not resolve, use cdn.meshy.cn
+(`https://cdn.meshy.cn/meshy-dcc-core/install.sh`, `…/install.ps1`); the
+GitHub Release carries copies too
+(`https://github.com/meshy-dev/meshy-dcc-core/releases/latest/download/install.sh`).
+The installers themselves try cdn.meshy.ai, cdn.meshy.cn and then the GitHub
+Release, check every file against the release manifest's
 SHA-256, install `meshy-dcc` and `meshy-dcc-server` into `~/.local/bin`, and
 then show and install the agent Skill (`meshy-dcc agent-skill`).
 
