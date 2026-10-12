@@ -39,9 +39,10 @@ and is not runtime-compatible with it. Attribution stays in `LICENSE` and
   with `--instance-id`, even when only one instance is live. The only
   exception is a tool the host marks `readOnlyHint: true`. The CLI rejects
   the call before sending anything to the host.
-- Agents reach hosts through the gateway. The Skill runs every command with
-  `--require-gateway`, and the gateway routes each call to the instance the
-  agent names. The gateway is one resident process that the CLI starts on
+- Agents reach hosts through the gateway. It is the CLI's default route, and
+  the gateway routes each call to the instance the agent names. Only an
+  explicit `--gateway local` talks to hosts directly, for diagnostics;
+  `--require-gateway` is still accepted and changes nothing. The gateway is one resident process that the CLI starts on
   demand: `meshy-dcc-server` when it is installed next to the CLI, otherwise
   the CLI's own `meshy-dcc gateway`. `start-instance` starts it before it
   launches a host, so the host registers behind it. The CLI's direct-to-host

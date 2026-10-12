@@ -74,13 +74,15 @@ const DEFAULT_START_INSTANCE_TIMEOUT_SECS: u64 = 300;
 pub struct Args {
     #[arg(long, global = true, env = "MESHY_DCC_BASE_URL")]
     base_url: Option<String>,
-    /// Select a gateway profile. Use `local` for the local FileRegistry path.
+    /// Select a gateway profile. `local` bypasses the gateway and reads the local
+    /// FileRegistry directly; it is a diagnostic path, not the agent path.
     #[arg(long, global = true, env = "MESHY_DCC_GATEWAY_PROFILE")]
     gateway: Option<String>,
     /// Disable the default local gateway auto-start before agent control commands.
     #[arg(long, env = "MESHY_DCC_CLI_NO_AUTO_GATEWAY", default_value = "false")]
     no_auto_gateway: bool,
-    /// Require local agent-control calls to pass through the gateway for audit and stats.
+    /// Agent-control calls already go through the gateway unless `--gateway local`
+    /// is given; this flag is kept so existing invocations keep working.
     #[arg(
         long,
         global = true,
@@ -228,6 +230,9 @@ async fn run_with_args(args: Args) -> anyhow::Result<()> {
     if require_gateway {
         global_flags.push(vec!["--require-gateway".to_string()]);
     }
+    // The gateway is the agent path; only an explicit `--gateway local` talks to
+    // hosts directly.
+    let require_gateway = require_gateway || gateway.as_deref() != Some("local");
     let writer = OutputWriter::new(output_format(&command, output).map_err(anyhow::Error::msg)?);
     let explicit_update_command = matches!(&command, Command::Update { .. });
     let marketplace_update_check = (!crate::application::update::is_background_refresh())

@@ -169,7 +169,7 @@ pub async fn run_doctor(request: DoctorRequest) -> anyhow::Result<Value> {
             "route": if direct_local { "local_mcp_direct" } else { "gateway" },
             "gateway_stats_recorded": !direct_local,
             "stats_hint": if direct_local {
-                "Use --require-gateway and _meta.agent_context.session_id when gateway stats are required evidence."
+                "Calls with --gateway local bypass the gateway and are not recorded; drop that flag."
             } else {
                 "Gateway-routed calls can be attributed with _meta.agent_context.session_id."
             },

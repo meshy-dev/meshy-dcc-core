@@ -26,7 +26,7 @@ its `meshy-3d-generation` skill. This Skill takes over once the model file is on
 Run every command in this form:
 
 ```sh
-meshy-dcc --require-gateway --non-interactive --output json <command> ...
+meshy-dcc --non-interactive --output json <command> ...
 ```
 
 It is shortened to `meshy-dcc <command>` below. Every command goes through the local

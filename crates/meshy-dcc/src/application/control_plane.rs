@@ -638,7 +638,7 @@ fn attach_call_route(mut value: Value, direct_local: bool) -> Value {
             object.insert(
                 "gateway_stats_hint".to_string(),
                 json!(
-                    "Use --require-gateway and _meta.agent_context.session_id for attributable gateway stats."
+                    "Calls with --gateway local bypass the gateway and are not recorded; drop that flag."
                 ),
             );
         }
@@ -656,7 +656,7 @@ fn attach_stats_coverage(mut value: Value, direct_local: bool) -> Value {
                 "configured_route_recorded": !direct_local,
                 "excluded_control_routes": ["local_mcp_direct"],
                 "session_id_meta_path": "_meta.agent_context.session_id",
-                "hint": "Use --require-gateway for every task call when gateway stats are required evidence.",
+                "hint": "Calls with --gateway local bypass the gateway and are not recorded; drop that flag.",
             }),
         );
     }
@@ -1486,7 +1486,7 @@ mod tests {
             call["gateway_stats_hint"]
                 .as_str()
                 .unwrap()
-                .contains("--require-gateway")
+                .contains("--gateway local")
         );
 
         let stats = attach_stats_coverage(json!({"total_calls": 0}), true);

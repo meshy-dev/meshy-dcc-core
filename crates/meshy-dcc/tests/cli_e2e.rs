@@ -108,6 +108,7 @@ fn two_same_type_default_port_instances_are_discoverable() {
     let envs = [
         ("MESHY_DCC_REGISTRY_DIR", registry_s.as_str()),
         ("MESHY_DCC_GATEWAY_PROFILES_FILE", profiles_s.as_str()),
+        ("MESHY_DCC_GATEWAY_PROFILE", "local"),
         ("MESHY_DCC_CLI_NO_AUTO_GATEWAY", "true"),
     ];
     let local = run_json_with_env(&["list"], &envs);
@@ -430,6 +431,7 @@ fn local_list_reads_file_registry_after_gateway_ensure() {
         ("MESHY_DCC_REGISTRY_DIR", registry_s.as_str()),
         ("MESHY_DCC_GATEWAY_PROFILES_FILE", profiles_s.as_str()),
         ("MESHY_DCC_GATEWAY_IDLE_TIMEOUT_SECS", "1"),
+        ("MESHY_DCC_GATEWAY_PROFILE", "local"),
         ("MESHY_DCC_CLI_NO_AUTO_GATEWAY", "true"),
     ];
     let list = run_json_with_env(&["list"], &envs);
@@ -466,7 +468,7 @@ fn local_list_uses_core_default_registry_without_env_override() {
         ("MESHY_DCC_CLI_NO_AUTO_GATEWAY", "true"),
     ];
     let list = run_json_with_env_removed(
-        &["list"],
+        &["--gateway", "local", "list"],
         &envs,
         &[
             "MESHY_DCC_REGISTRY_DIR",
@@ -1563,8 +1565,8 @@ fn doctor_reports_local_defaults_without_starting_gateway() {
     assert_eq!(doctor["profile"]["stored_current"], "local");
     assert_eq!(doctor["profile"]["selected"]["name"], "local");
     assert_eq!(doctor["profile"]["selected"]["mode"], "local");
-    assert_eq!(doctor["control"]["route"], "local_mcp_direct");
-    assert_eq!(doctor["control"]["gateway_stats_recorded"], false);
+    assert_eq!(doctor["control"]["route"], "gateway");
+    assert_eq!(doctor["control"]["gateway_stats_recorded"], true);
     assert_eq!(doctor["local"]["registry_dir"], registry_s);
     assert_eq!(doctor["local"]["inventory"]["ok"], true);
     assert_eq!(doctor["local"]["inventory"]["total"], 0);

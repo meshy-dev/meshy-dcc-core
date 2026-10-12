@@ -46,7 +46,7 @@ CLI（`crates/meshy-dcc`）已具备本产品需要的主体能力：
 
 ### Gateway：Meshy 本地 hub
 
-Agent 的所有调用都经 gateway（Skill 用 `--require-gateway`）：gateway 按 agent 指名的实例
+Agent 的所有调用都经 gateway（CLI 默认如此）：gateway 按 agent 指名的实例
 路由，集中做批量调用、异步 job、错误归类和审计，agent 只面对 CLI。
 
 - gateway 是一个常驻进程，占 19765：CLI 同目录有 `meshy-dcc-server` 时用它，否则 CLI 自己以
@@ -56,7 +56,7 @@ Agent 的所有调用都经 gateway（Skill 用 `--require-gateway`）：gateway
   gateway，直到退出；之后不会再自我升级，因为那条路径要重启宿主服务、实例 ID 会变。
 - 跨实例搜索、事件推送、平台管理 UI 也在 gateway；以后 Meshy 网页端或托管 Agent 访问本机时，
   gateway（配合 tunnel）是固定入口。
-- CLI 的 local profile 直连宿主（`--gateway local --no-auto-gateway`）保留给诊断，Skill 不用。
+- 只有显式 `--gateway local` 才直连宿主（常配 `--no-auto-gateway`），保留给诊断，Skill 不用。
 - 启停宿主（`start-instance`、`stop-instance`）是本机生命周期操作，所有权记在本地操作记录里，
   不经 gateway。
 
