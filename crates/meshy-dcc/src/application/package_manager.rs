@@ -61,6 +61,7 @@ impl PackageManagerMarker {
                        `uv tool upgrade meshy-dcc`, `pipx upgrade meshy-dcc`, or \
                        `pip install --upgrade meshy-dcc`"
                 .to_string(),
+            "npm" => "upgrade it with `npm install -g meshy-dcc@latest`".to_string(),
             other => format!("upgrade it through {other} instead of `meshy-dcc update apply`"),
         }
     }

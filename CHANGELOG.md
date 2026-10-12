@@ -117,6 +117,12 @@ and is not runtime-compatible with it. Attribution stays in `LICENSE` and
   `~/.local/bin`. They no longer install dcc-cua.
   `scripts/release/generate_update_manifest.py` writes the matching manifest
   and the binaries under their published names.
+- npm packaging: `meshy-dcc` holds a small launcher and lists one binary
+  package per platform (`@meshy-ai/meshy-dcc-darwin-arm64`,
+  `@meshy-ai/meshy-dcc-win32-x64`) as optional dependencies, so npm installs
+  only the machine's own. Each carries both binaries and the package-manager
+  marker, so `update apply` leaves upgrades to npm.
+  `scripts/release/build_npm_packages.py` builds the tarballs.
 - `meshy-dcc agent-skill` installs the `meshy-dcc` Skill, which is embedded in
   the CLI, into agents' skill directories: Claude Code (`~/.claude/skills`)
   and Codex (`$CODEX_HOME/skills`) when they are present, or any `--dir`. It
