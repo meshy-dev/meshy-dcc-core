@@ -820,12 +820,20 @@ fn execute_host_package(
         let output = values
             .command(argv)
             .map_err(&fail)?
+            .stdout(Stdio::piped())
             .stderr(Stdio::piped())
             .output()
             .map_err(|e| fail(format!("failed to launch {:?}: {e}", argv[0])))?;
         if !output.status.success() {
-            let stderr = String::from_utf8_lossy(&output.stderr);
-            let tail: String = stderr
+            // Installers explain a failure on stderr, or in their JSON report
+            // on stdout when run with `--json`.
+            let detail = if output.stderr.iter().all(u8::is_ascii_whitespace) {
+                &output.stdout
+            } else {
+                &output.stderr
+            };
+            let detail = String::from_utf8_lossy(detail);
+            let tail: String = detail
                 .chars()
                 .rev()
                 .take(2000)

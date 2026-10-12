@@ -160,6 +160,31 @@ fn host_package_runs_uninstall_then_install_and_writes_launch_plan() {
 }
 
 #[test]
+fn host_package_failure_carries_the_installer_report_from_stdout() {
+    let temp = TempDir::new().unwrap();
+    let host = temp.path().join("failing-host");
+    std::fs::write(
+        &host,
+        "#!/bin/sh\necho '{\"status\":\"failed\",\"reason\":\"ownership_conflict\"}'\nexit 30\n",
+    )
+    .unwrap();
+    std::fs::set_permissions(&host, std::fs::Permissions::from_mode(0o755)).unwrap();
+    let bytes = package(&temp);
+    let sha = sha256_hex(&bytes);
+    let catalog = catalog(&temp, &serve(bytes), &sha);
+
+    let output = install(&temp, &catalog, Some(&host));
+
+    assert!(!output.status.success());
+    let text = format!(
+        "{}{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(text.contains("ownership_conflict"), "{text}");
+}
+
+#[test]
 fn host_package_with_wrong_checksum_runs_no_host_command() {
     let temp = TempDir::new().unwrap();
     let url = serve(package(&temp));

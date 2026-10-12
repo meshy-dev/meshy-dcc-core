@@ -119,6 +119,10 @@ and is not runtime-compatible with it. Attribution stays in `LICENSE` and
 - When a `tools.yaml` entry sets `read_only`, `destructive` or `idempotent` to
   `true` and declares no `*_hint` key, the matching MCP annotation is now
   published.
+- When an adapter installer fails, `install` reports what it said: its
+  stderr, or its JSON report on stdout when stderr is empty. The installer's
+  stdout used to be discarded, so a Godot `ownership_conflict` showed only as
+  `exit status: 30:`.
 - A gateway started right after another one stopped no longer gives up: the
   port stays unbindable while TCP TIME_WAIT lasts (about 30 s on macOS, 60 s
   on Linux), and the new `meshy-dcc-server` used to exit at once, leaving the
