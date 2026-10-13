@@ -12,12 +12,18 @@ use serde::{Deserialize, Serialize};
 
 // ── source ────────────────────────────────────────────────────────────────────
 
-/// Canonical URL for the official meshy-dev/marketplace catalog.
+/// Canonical URL for the official meshy-dev/marketplace catalog. The feed is
+/// replaced in place, so it is published uncached.
 pub const OFFICIAL_MARKETPLACE_SOURCE: &str =
     "https://cdn.meshy.ai/meshy-dcc-core/marketplace/marketplace.json";
-/// Detached Sigstore bundle for [`OFFICIAL_MARKETPLACE_SOURCE`].
+/// Detached Sigstore bundle for [`OFFICIAL_MARKETPLACE_SOURCE`] (CDN names
+/// allow one extension).
 pub const OFFICIAL_MARKETPLACE_ATTESTATION: &str =
-    "https://cdn.meshy.ai/meshy-dcc-core/marketplace/marketplace.sigstore.json";
+    "https://cdn.meshy.ai/meshy-dcc-core/marketplace/marketplace-sigstore.json";
+/// The same bucket on the host that resolves in mainland China, tried when
+/// cdn.meshy.ai cannot be reached.
+pub(crate) const OFFICIAL_MARKETPLACE_HOSTS: [&str; 2] =
+    ["https://cdn.meshy.ai", "https://cdn.meshy.cn"];
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct MarketplaceSource {

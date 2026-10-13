@@ -19,9 +19,9 @@ use crate::types::{
     MarketplaceInstallResult, MarketplaceInstalledList, MarketplaceInstalledState,
     MarketplaceOutdatedList, MarketplaceSearchResult, MarketplaceSource, MarketplaceSourceOrigin,
     MarketplaceUninstallResult, MarketplaceUpdateResult, OFFICIAL_MARKETPLACE_ATTESTATION,
-    OFFICIAL_MARKETPLACE_SOURCE, OutdatedMarketplacePackage, RepoInstallResult, RepoSkillList,
-    StoredMarketplaceSource, entry_dcc_ids, entry_targets, entry_targets_dcc, is_host_neutral_dcc,
-    is_shared_dcc_request, package_serves_dcc,
+    OFFICIAL_MARKETPLACE_HOSTS, OFFICIAL_MARKETPLACE_SOURCE, OutdatedMarketplacePackage,
+    RepoInstallResult, RepoSkillList, StoredMarketplaceSource, entry_dcc_ids, entry_targets,
+    entry_targets_dcc, is_host_neutral_dcc, is_shared_dcc_request, package_serves_dcc,
 };
 
 #[path = "service_internals.rs"]
@@ -925,6 +925,52 @@ impl MarketplaceService {
 
     // ── internal helpers ─────────────────────────────────────────────────────
 
+    /// The official feed from cdn.meshy.ai, then the same objects on
+    /// cdn.meshy.cn: a host that cannot be reached moves on, a feed that
+    /// fails verification stops.
+    async fn fetch_official_marketplace(&self) -> Result<Vec<u8>, MarketplaceError> {
+        let mut unreachable = None;
+        for host in OFFICIAL_MARKETPLACE_HOSTS {
+            let on_host = |url: &str| url.replacen(OFFICIAL_MARKETPLACE_HOSTS[0], host, 1);
+            let attempt = async {
+                let bytes = self
+                    .fetch_bytes(&on_host(OFFICIAL_MARKETPLACE_SOURCE))
+                    .await?;
+                let bundle = self
+                    .fetch_bytes(&on_host(OFFICIAL_MARKETPLACE_ATTESTATION))
+                    .await?;
+                meshy_dcc_attestation::verify_attested_bytes(
+                    &bytes,
+                    &String::from_utf8_lossy(&bundle),
+                    &meshy_dcc_attestation::GitHubAttestationPolicy::official_marketplace(),
+                )?;
+                Ok(bytes)
+            }
+            .await;
+            match attempt {
+                Err(error @ MarketplaceError::Fetch(..)) => unreachable = Some(error),
+                result => return result,
+            }
+        }
+        Err(unreachable.expect("every official host was tried"))
+    }
+
+    async fn fetch_bytes(&self, url: &str) -> Result<Vec<u8>, MarketplaceError> {
+        let fetch = |err| MarketplaceError::Fetch(url.to_owned(), err);
+        self.client
+            .get(url)
+            .header("User-Agent", "meshy-dcc marketplace")
+            .send()
+            .await
+            .map_err(fetch)?
+            .error_for_status()
+            .map_err(fetch)?
+            .bytes()
+            .await
+            .map(|bytes| bytes.to_vec())
+            .map_err(fetch)
+    }
+
     fn dcc_dir(&self, dcc: &str) -> PathBuf {
         self.root.join(dcc.to_lowercase())
     }
@@ -934,44 +980,12 @@ impl MarketplaceService {
         source: &MarketplaceSource,
     ) -> Result<Vec<CatalogEntry>, MarketplaceError> {
         let text = if source.url.starts_with("http://") || source.url.starts_with("https://") {
-            let bytes = self
-                .client
-                .get(&source.url)
-                .header("User-Agent", "meshy-dcc marketplace")
-                .send()
-                .await
-                .map_err(|err| MarketplaceError::Fetch(source.url.clone(), err))?
-                .error_for_status()
-                .map_err(|err| MarketplaceError::Fetch(source.url.clone(), err))?
-                .bytes()
-                .await
-                .map_err(|err| MarketplaceError::Fetch(source.url.clone(), err))?;
-            if source.url == OFFICIAL_MARKETPLACE_SOURCE {
-                let bundle = self
-                    .client
-                    .get(OFFICIAL_MARKETPLACE_ATTESTATION)
-                    .header("User-Agent", "meshy-dcc marketplace")
-                    .send()
-                    .await
-                    .map_err(|err| {
-                        MarketplaceError::Fetch(OFFICIAL_MARKETPLACE_ATTESTATION.into(), err)
-                    })?
-                    .error_for_status()
-                    .map_err(|err| {
-                        MarketplaceError::Fetch(OFFICIAL_MARKETPLACE_ATTESTATION.into(), err)
-                    })?
-                    .text()
-                    .await
-                    .map_err(|err| {
-                        MarketplaceError::Fetch(OFFICIAL_MARKETPLACE_ATTESTATION.into(), err)
-                    })?;
-                meshy_dcc_attestation::verify_attested_bytes(
-                    &bytes,
-                    &bundle,
-                    &meshy_dcc_attestation::GitHubAttestationPolicy::official_marketplace(),
-                )?;
-            }
-            String::from_utf8(bytes.to_vec()).map_err(|error| {
+            let bytes = if source.url == OFFICIAL_MARKETPLACE_SOURCE {
+                self.fetch_official_marketplace().await?
+            } else {
+                self.fetch_bytes(&source.url).await?
+            };
+            String::from_utf8(bytes).map_err(|error| {
                 meshy_dcc_catalog::CatalogError::Parse(format!(
                     "catalog is not valid UTF-8: {error}"
                 ))

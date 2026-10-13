@@ -214,14 +214,26 @@ pub(super) fn now_seconds() -> Result<u64, RefreshError> {
         .as_secs())
 }
 
+/// cdn.meshy.ai, then cdn.meshy.cn: an unreachable or unpublished feed moves
+/// on, anything else stops the refresh.
 async fn download() -> Result<Vec<u8>, RefreshError> {
     let client = reqwest::Client::builder()
         .redirect(reqwest::redirect::Policy::none())
         .timeout(Duration::from_secs(10))
         .build()
         .map_err(invalid)?;
+    for url in meshy_dcc_updater::meshy_release::install_catalog_urls() {
+        match download_from(&client, &url).await {
+            Err(RefreshError::Unavailable) => {}
+            result => return result,
+        }
+    }
+    Err(RefreshError::Unavailable)
+}
+
+async fn download_from(client: &reqwest::Client, url: &str) -> Result<Vec<u8>, RefreshError> {
     let mut response = client
-        .get(meshy_dcc_updater::meshy_release::install_catalog_url())
+        .get(url)
         .header(reqwest::header::USER_AGENT, "meshy-dcc install-catalog")
         .header(reqwest::header::CACHE_CONTROL, "no-cache")
         .send()

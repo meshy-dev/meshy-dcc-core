@@ -26,9 +26,12 @@ const MANIFEST_PREFIX: &str = "meshy-dcc-update-manifest-";
 // Apple Silicon only on macOS; Linux is not published yet.
 const PLATFORMS: &[&str] = &["linux-x86_64", "windows-x86_64", "macos-arm64"];
 
-/// Signed install catalog feed; `meshy-dcc` falls back to its bundled copy.
-pub fn install_catalog_url() -> String {
-    format!("{BASE_URL}/catalog/install-catalog.json")
+/// Signed install catalog feed on each CDN host, in the order to try them;
+/// `meshy-dcc` falls back to its cache, then its bundled copy. Unlike a
+/// release file, the feed is replaced in place (it expires and carries
+/// revocations), so it is published uncached.
+pub fn install_catalog_urls() -> [String; 2] {
+    [BASE_URL, BASE_URL_CN].map(|base| format!("{base}/catalog/install-catalog.json"))
 }
 
 /// Release platform of this build (`macos-arm64`, `windows-x86_64`,

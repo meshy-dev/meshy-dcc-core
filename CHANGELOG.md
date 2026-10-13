@@ -25,11 +25,14 @@ and is not runtime-compatible with it. Attribution stays in `LICENSE` and
   gone, and gateway election compares Meshy components only.
 - The bundled install catalog lists only Meshy adapters, 23 hosts in all. An
   entry stays `not_available` until its adapter is published.
-- The catalog is refreshed from `cdn.meshy.ai/meshy-dcc-core/catalog/` and
+- The catalog is refreshed from `cdn.meshy.ai/meshy-dcc-core/catalog/`, or
+  the same object on cdn.meshy.cn when cdn.meshy.ai cannot be reached, and
   must carry a Meshy signature. While the feed is unpublished, the CDN's 403
   counts as unavailable and the bundled catalog is used.
 - The marketplace's default source is
-  `cdn.meshy.ai/meshy-dcc-core/marketplace/`.
+  `cdn.meshy.ai/meshy-dcc-core/marketplace/` (signature
+  `marketplace-sigstore.json`), with cdn.meshy.cn as the fallback host. Both
+  feeds are replaced in place and published uncached.
 - The gateway no longer opens its remote (LAN) listener by default. Adapter
   processes used to bind `0.0.0.0:59765` with no authentication, so anyone on
   the network could list instances and call DCC tools. Set
