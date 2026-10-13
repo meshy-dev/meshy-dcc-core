@@ -6,6 +6,7 @@ import argparse
 import json
 from pathlib import Path
 import re
+import subprocess
 import sys
 from typing import Any
 from typing import Mapping
@@ -179,11 +180,28 @@ def _project_python_classifiers(text: str) -> set[str]:
     return set(_PYTHON_CLASSIFIER.findall(block.group(1))) if block is not None else set()
 
 
+def _tracked_files(root: Path) -> set[str] | None:
+    """Files git tracks under ``root``, or None outside a git checkout."""
+    result = subprocess.run(["git", "ls-files", "-z"], cwd=root, capture_output=True, check=False)
+    if result.returncode != 0:
+        return None
+    return set(result.stdout.decode("utf-8", "surrogateescape").split("\0"))
+
+
 def _projected_files(root: Path, patterns: list[str]) -> list[Path]:
-    """Resolve projection globs once and return stable repository paths."""
+    """Resolve projection globs once and return stable repository paths.
+
+    In a checkout only tracked files count: ignored local trees such as
+    ``docs/local`` hold third-party files that are not ours to police.
+    """
+    tracked = _tracked_files(root)
     paths: set[Path] = set()
     for pattern in patterns:
-        paths.update(path for path in root.glob(pattern) if path.is_file())
+        paths.update(
+            path
+            for path in root.glob(pattern)
+            if path.is_file() and (tracked is None or path.relative_to(root).as_posix() in tracked)
+        )
     return sorted(paths)
 
 
