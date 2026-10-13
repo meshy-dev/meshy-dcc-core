@@ -10,9 +10,11 @@ pub use super::relay_registration::RelaySourceConfig;
 // routinely exceed the former 10-second gateway default.
 const DEFAULT_BACKEND_TIMEOUT_MS: u64 = 120_000;
 
+/// The official channel where Meshy publishes this platform; the update
+/// manifest loader resolves it to the latest release's signed manifest.
 fn official_update_manifest_url() -> Option<String> {
     meshy_dcc_updater::meshy_release::current_platform()
-        .map(meshy_dcc_updater::meshy_release::update_manifest_url)
+        .map(|_| meshy_dcc_updater::meshy_release::LATEST_URL.to_owned())
 }
 
 /// Admin persistence configuration (SQLite + skill-path reload hook).
@@ -314,15 +316,11 @@ mod tests {
     #[test]
     fn official_update_manifest_targets_latest_release() {
         let url = official_update_manifest_url();
-        if cfg!(any(
-            all(target_os = "windows", target_arch = "x86_64"),
-            all(target_os = "linux", target_arch = "x86_64"),
-            target_os = "macos"
-        )) {
-            assert!(url.unwrap().starts_with(&format!(
-                "{}/latest/",
-                meshy_dcc_updater::meshy_release::BASE_URL
-            )));
+        if meshy_dcc_updater::meshy_release::current_platform().is_some() {
+            assert_eq!(
+                url.as_deref(),
+                Some(meshy_dcc_updater::meshy_release::LATEST_URL)
+            );
         } else {
             assert!(url.is_none());
         }

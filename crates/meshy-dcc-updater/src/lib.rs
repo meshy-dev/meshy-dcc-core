@@ -50,6 +50,9 @@ pub struct UpdateCheckResponse {
     pub download_url: Option<String>,
     /// SHA-256 hex digest; required when an update is available.
     pub sha256: Option<String>,
+    /// Other places holding the same bytes, tried in order when a download fails.
+    #[serde(default)]
+    pub mirrors: Vec<String>,
     /// Human-readable release notes / changelog excerpt.
     pub release_notes: Option<String>,
 }
@@ -62,6 +65,8 @@ pub struct UpdateInfo {
     pub latest_version: String,
     pub download_url: Option<String>,
     pub sha256: Option<String>,
+    #[serde(default)]
+    pub mirrors: Vec<String>,
     pub release_notes: Option<String>,
 }
 
@@ -281,6 +286,11 @@ impl Updater {
             latest_version: resp.latest_version,
             download_url,
             sha256,
+            mirrors: if resp.update_available {
+                resp.mirrors
+            } else {
+                Vec::new()
+            },
             release_notes: resp.release_notes,
         })
     }
@@ -353,8 +363,25 @@ impl Updater {
         // the platform-appropriate URL configured in the manifest.
         let dest_path = staging_dir.join(format!("{}.download", self.binary_name));
 
-        let response = self.client.get(download_url).send().await?;
-        let mut response = response.error_for_status()?;
+        // A source that cannot be reached moves on to the next mirror; bytes
+        // that fail a check stop the update.
+        let sources: Vec<&str> = std::iter::once(download_url)
+            .chain(info.mirrors.iter().map(String::as_str))
+            .collect();
+        let mut response = None;
+        for (index, source) in sources.iter().enumerate() {
+            match async { self.client.get(*source).send().await?.error_for_status() }.await {
+                Ok(found) => {
+                    response = Some(found);
+                    break;
+                }
+                Err(error) if index + 1 == sources.len() => return Err(error.into()),
+                Err(error) => {
+                    tracing::warn!(%source, %error, "update download failed; trying a mirror")
+                }
+            }
+        }
+        let mut response = response.expect("the last source returns its error");
         if response
             .content_length()
             .is_some_and(|length| length > MAX_UPDATE_BYTES)
@@ -694,6 +721,7 @@ mod tests {
             latest_version: "0.2.0".into(),
             download_url: Some(format!("http://{addr}/missing")),
             sha256: Some("a".repeat(64)),
+            mirrors: Vec::new(),
             release_notes: None,
         };
 
@@ -717,6 +745,7 @@ mod tests {
             latest_version: "0.2.0".into(),
             download_url: Some("http://127.0.0.1:9/unreachable".into()),
             sha256: None,
+            mirrors: Vec::new(),
             release_notes: None,
         };
 
@@ -740,6 +769,7 @@ mod tests {
             latest_version: "0.2.0".into(),
             download_url: Some(format!("http://{addr}/binary")),
             sha256: Some(sha256_bytes(body)),
+            mirrors: Vec::new(),
             release_notes: None,
         };
 
@@ -764,6 +794,58 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn download_update_tries_mirrors_when_a_source_fails() {
+        let body = b"mirrored-binary";
+        let (addr, server) = spawn_binary_response(body, body.len() as u64).await;
+        let binary_name = unique_binary_name("mirror");
+        let updater = Updater::new("http://127.0.0.1", &binary_name, "0.1.0");
+        let info = UpdateInfo {
+            update_available: true,
+            current_version: "0.1.0".into(),
+            latest_version: "0.2.0".into(),
+            download_url: Some("http://127.0.0.1:9/unreachable".into()),
+            sha256: Some(sha256_bytes(body)),
+            mirrors: vec![format!("http://{addr}/binary")],
+            release_notes: None,
+        };
+
+        let asset = updater.download_verified_update(&info).await.unwrap();
+
+        assert_eq!(std::fs::read(asset.path()).unwrap(), body);
+        server.await.unwrap();
+        std::fs::remove_dir_all(staging_dir(&binary_name).unwrap()).unwrap();
+    }
+
+    #[tokio::test]
+    async fn download_update_stops_on_a_checksum_mismatch() {
+        let (addr, server) = spawn_binary_response(b"tampered", 8).await;
+        let binary_name = unique_binary_name("mismatch");
+        let updater = Updater::new("http://127.0.0.1", &binary_name, "0.1.0");
+        let info = UpdateInfo {
+            update_available: true,
+            current_version: "0.1.0".into(),
+            latest_version: "0.2.0".into(),
+            download_url: Some(format!("http://{addr}/binary")),
+            sha256: Some(sha256_bytes(b"genuine")),
+            // Never reached: bad bytes do not move on to another source.
+            mirrors: vec!["http://127.0.0.1:9/unreachable".into()],
+            release_notes: None,
+        };
+
+        let error = updater.download_verified_update(&info).await.unwrap_err();
+
+        assert!(
+            matches!(error, UpdateError::ChecksumMismatch { .. }),
+            "{error}"
+        );
+        server.await.unwrap();
+        let dir = staging_dir(&binary_name).unwrap();
+        if dir.exists() {
+            std::fs::remove_dir_all(dir).unwrap();
+        }
+    }
+
+    #[tokio::test]
     async fn download_update_rejects_empty_and_oversized_assets() {
         for (label, content_length, expected) in [
             ("empty", 0, "empty"),
@@ -778,6 +860,7 @@ mod tests {
                 latest_version: "0.2.0".into(),
                 download_url: Some(format!("http://{addr}/binary")),
                 sha256: Some(sha256_bytes(b"")),
+                mirrors: Vec::new(),
                 release_notes: None,
             };
 

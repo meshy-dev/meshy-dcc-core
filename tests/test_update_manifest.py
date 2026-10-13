@@ -48,6 +48,10 @@ def test_cdn_manifest_uses_cdn_names_in_a_version_dir(tmp_path: Path, platform: 
     for name, content in (("meshy-dcc", b"cli"), ("meshy-dcc-server", b"server")):
         asset = f"{name}-{label}{ext}"
         assert manifest[name]["url"] == f"https://cdn.meshy.ai/meshy-dcc-core/v1-2-3/{asset}"
+        assert manifest[name]["mirrors"] == [
+            f"https://cdn.meshy.cn/meshy-dcc-core/v1-2-3/{asset}",
+            f"https://github.com/meshy-dev/meshy-dcc-core/releases/download/v1.2.3/{name}-{platform}{ext}",
+        ]
         assert re.fullmatch(r"[a-z0-9-]+(\.[a-z0-9]+)?", asset)
         assert manifest[name]["sha256"] == hashlib.sha256(content).hexdigest()
         assert (dist / asset).read_bytes() == content

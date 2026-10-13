@@ -15,10 +15,13 @@ The same binaries go to two places, each with its own manifest (``--source``):
   the CDN naming rules (lowercase letters, digits and hyphens): the version dir
   is ``v0-2-0`` for 0.2.0 and ``windows-x86_64`` becomes ``windows-x64``.
   Nothing on the CDN is ever overwritten, so there is no ``latest/``; the
-  installers ask the GitHub Release which version is latest.
+  uncached ``latest.txt`` names the latest version.
 
 The installers try the CDN first and the GitHub Release when the CDN is
-unreachable, and accept only the URLs written here for that source.
+unreachable, and accept only the URLs written here for that source. Each CDN
+manifest entry also lists ``mirrors`` (the same bytes on cdn.meshy.cn and the
+GitHub Release), which the gateway self-update tries when cdn.meshy.ai cannot
+be reached.
 """
 
 from __future__ import annotations
@@ -31,6 +34,7 @@ import re
 import shutil
 
 CDN = "https://cdn.meshy.ai/meshy-dcc-core"
+CDN_CN = "https://cdn.meshy.cn/meshy-dcc-core"
 GITHUB = "https://github.com/meshy-dev/meshy-dcc-core/releases/download"
 PLATFORMS = ("macos-arm64", "windows-x86_64")
 SOURCES = ("cdn", "github")
@@ -65,6 +69,11 @@ def generate(
             "sha256": hashlib.sha256((out_dir / asset).read_bytes()).hexdigest(),
             "release_notes": None,
         }
+        if source == "cdn":
+            manifest[name]["mirrors"] = [
+                f"{CDN_CN}{manifest[name]['url'][len(CDN):]}",
+                f"{GITHUB}/v{version}/{name}-{platform}{ext}",
+            ]
     manifest_path = out_dir / f"meshy-dcc-update-manifest-{label}.json"
     # Bytes, not text: Path.write_text() would write CRLF on Windows, and the
     # manifest is signed and compared as published bytes.

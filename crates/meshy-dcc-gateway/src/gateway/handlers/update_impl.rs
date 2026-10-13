@@ -129,6 +129,7 @@ pub(crate) async fn handle_v1_update_check(
         "update_available": update_available,
         "latest_version": entry.version,
         "download_url": verified_asset.as_ref().map(|asset| asset.url),
+        "mirrors": verified_asset.as_ref().map_or(&[][..], |asset| asset.mirrors),
         "sha256": verified_asset
             .as_ref()
             .map(|asset| asset.sha256.as_str()),
@@ -182,6 +183,7 @@ pub(crate) async fn handle_v1_update_download(
         Json(json!({
             "download_url": asset.url,
             "sha256": asset.sha256.as_str(),
+            "mirrors": asset.mirrors,
         })),
     )
         .into_response()

@@ -201,14 +201,23 @@ def _manifest(*, platform: str, binary: bytes, url=None, sha256=None, source: st
         base, label = f"{OFFICIAL_RELEASE}/v0-2-0", platform.replace("x86_64", "x64")
     else:
         base, label = f"{GITHUB_RELEASES}/download/v0.2.0", platform
-    return {
+    manifest = {
         name: {
             "version": "0.2.0",
             "url": url or f"{base}/{name}-{label}{ext}",
             "sha256": sha256 or hashlib.sha256(binary).hexdigest(),
+            "release_notes": None,
         }
         for name in ("meshy-dcc", "meshy-dcc-server")
     }
+    if source == "cdn":
+        # As generate_update_manifest.py writes them; the installers ignore mirrors.
+        for name, entry in manifest.items():
+            entry["mirrors"] = [
+                entry["url"].replace("cdn.meshy.ai", "cdn.meshy.cn"),
+                f"{GITHUB_RELEASES}/download/v0.2.0/{name}-{platform}{ext}",
+            ]
+    return manifest
 
 
 def test_installers_do_not_recommend_remote_pipe_execution() -> None:

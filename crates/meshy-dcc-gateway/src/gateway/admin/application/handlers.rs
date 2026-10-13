@@ -312,6 +312,7 @@ pub async fn handle_admin_instance_update(
             "current_version_source": current_version_source,
             "latest_version": manifest_entry.version,
             "download_url": verified_asset.as_ref().map(|asset| asset.url),
+            "mirrors": verified_asset.as_ref().map_or(&[][..], |asset| asset.mirrors),
             "sha256": verified_asset
                 .as_ref()
                 .map(|asset| asset.sha256.as_str()),
@@ -347,6 +348,7 @@ pub async fn handle_admin_instance_update(
             "download_url": verified_asset
                 .as_ref()
                 .map(|asset| asset.url),
+            "mirrors": verified_asset.as_ref().map_or(&[][..], |asset| asset.mirrors),
             "sha256": verified_asset
                 .as_ref()
                 .map(|asset| asset.sha256.as_str()),

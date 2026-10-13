@@ -13,6 +13,9 @@ pub(crate) struct ManifestEntry {
     pub(crate) version: String,
     pub(crate) url: Option<String>,
     pub(crate) sha256: Option<String>,
+    /// Other places holding the same bytes, tried when `url` cannot be reached.
+    #[serde(default)]
+    pub(crate) mirrors: Vec<String>,
     pub(crate) release_notes: Option<String>,
 }
 
@@ -20,6 +23,7 @@ pub(crate) struct ManifestEntry {
 pub(crate) struct VerifiedManifestAsset<'a> {
     pub(crate) url: &'a str,
     pub(crate) sha256: meshy_dcc_updater::Sha256Digest,
+    pub(crate) mirrors: &'a [String],
 }
 
 #[derive(Debug, Error)]
@@ -43,7 +47,11 @@ impl ManifestEntry {
                 binary_name: binary_name.to_owned(),
             })?;
         let sha256 = meshy_dcc_updater::Sha256Digest::require(binary_name, self.sha256.as_deref())?;
-        Ok(VerifiedManifestAsset { url, sha256 })
+        Ok(VerifiedManifestAsset {
+            url,
+            sha256,
+            mirrors: &self.mirrors,
+        })
     }
 }
 
@@ -78,12 +86,25 @@ pub(crate) enum UpdateManifestError {
     Parse(#[from] serde_json::Error),
     #[error("official update manifest attestation verification failed: {0}")]
     Attestation(#[from] meshy_dcc_attestation::AttestationError),
+    #[error("Meshy publishes no meshy-dcc release for this platform")]
+    NoRelease,
+    #[error("could not find the latest meshy-dcc release on the Meshy CDN or GitHub")]
+    NoLatestRelease,
 }
 
 /// Fetch and parse the configured update manifest.
+///
+/// The official channel ([`meshy_release::LATEST_URL`]) first finds the latest
+/// version, then fetches that release's manifest from cdn.meshy.ai,
+/// cdn.meshy.cn or the GitHub Release: a source that cannot be reached moves
+/// on to the next, a manifest that fails verification stops.
+///
+/// [`meshy_release::LATEST_URL`]: meshy_dcc_updater::meshy_release::LATEST_URL
 pub(crate) async fn fetch_update_manifest(
     url: &str,
 ) -> Result<UpdateManifest, UpdateManifestError> {
+    use meshy_dcc_updater::meshy_release;
+
     // Release assets redirect to GitHub's download host. Keep this policy
     // separate from the gateway's redirect-rejecting DCC backend client.
     let client = reqwest::Client::builder()
@@ -94,9 +115,76 @@ pub(crate) async fn fetch_update_manifest(
             url: url.to_owned(),
             source,
         })?;
-    let manifest_bytes = fetch_bounded(&client, url, MAX_MANIFEST_BYTES).await?;
+    if url != meshy_release::LATEST_URL {
+        return fetch_manifest_at(&client, url).await;
+    }
+    let platform = meshy_release::current_platform().ok_or(UpdateManifestError::NoRelease)?;
+    let version = latest_version(&client).await?;
+    first_reachable_manifest(
+        &client,
+        meshy_release::update_manifest_urls(&version, platform),
+    )
+    .await
+}
+
+async fn first_reachable_manifest(
+    client: &reqwest::Client,
+    urls: impl IntoIterator<Item = String>,
+) -> Result<UpdateManifest, UpdateManifestError> {
+    let mut unreachable = UpdateManifestError::NoLatestRelease;
+    for url in urls {
+        match fetch_manifest_at(client, &url).await {
+            Err(
+                error @ (UpdateManifestError::Fetch { .. }
+                | UpdateManifestError::UnexpectedStatus { .. }),
+            ) => {
+                tracing::warn!(%error, "update manifest source unreachable; trying the next");
+                unreachable = error;
+            }
+            result => return result,
+        }
+    }
+    Err(unreachable)
+}
+
+/// `latest.txt` on cdn.meshy.ai, then cdn.meshy.cn, then the GitHub latest
+/// release, which redirects to `releases/tag/v<version>`.
+async fn latest_version(client: &reqwest::Client) -> Result<String, UpdateManifestError> {
+    use meshy_dcc_updater::meshy_release;
+
+    for url in meshy_release::latest_version_urls() {
+        if let Ok(bytes) = fetch_bounded(client, &url, 64).await
+            && let Ok(text) = String::from_utf8(bytes)
+            && meshy_release::is_stable_version(text.trim())
+        {
+            return Ok(text.trim().to_owned());
+        }
+    }
+    let url = format!("{}/latest", meshy_release::GITHUB_RELEASES);
+    let response = client
+        .get(&url)
+        .timeout(std::time::Duration::from_secs(15))
+        .send()
+        .await
+        .map_err(|source| UpdateManifestError::Fetch { url, source })?;
+    response
+        .url()
+        .path()
+        .rsplit_once("/releases/tag/v")
+        .map(|(_, version)| version)
+        .filter(|version| meshy_release::is_stable_version(version))
+        .map(str::to_owned)
+        .ok_or(UpdateManifestError::NoLatestRelease)
+}
+
+/// Fetch one manifest, verifying the attestation an official one must carry.
+async fn fetch_manifest_at(
+    client: &reqwest::Client,
+    url: &str,
+) -> Result<UpdateManifest, UpdateManifestError> {
+    let manifest_bytes = fetch_bounded(client, url, MAX_MANIFEST_BYTES).await?;
     if let Some(attestation_url) = official_attestation_url(url) {
-        let bundle_bytes = fetch_bounded(&client, &attestation_url, MAX_ATTESTATION_BYTES).await?;
+        let bundle_bytes = fetch_bounded(client, &attestation_url, MAX_ATTESTATION_BYTES).await?;
         let bundle =
             String::from_utf8(bundle_bytes).map_err(|source| UpdateManifestError::InvalidUtf8 {
                 url: attestation_url,
@@ -212,13 +300,51 @@ mod tests {
 
     #[test]
     fn official_manifest_requires_meshy_attestation() {
-        let url = meshy_dcc_updater::meshy_release::update_manifest_url("windows-x86_64");
-        assert!(official_attestation_url(&url).is_some());
-        assert_eq!(
-            official_attestation_url(
-                "https://github.com/meshy-dev/meshy-dcc-core/releases/latest/download/meshy-dcc-update-manifest-windows-x86_64.json"
-            ),
-            None
-        );
+        for url in meshy_dcc_updater::meshy_release::update_manifest_urls("0.2.0", "windows-x86_64")
+        {
+            assert!(official_attestation_url(&url).is_some(), "{url}");
+        }
+    }
+
+    #[tokio::test]
+    async fn unreachable_sources_move_on_and_invalid_manifests_stop() {
+        use axum::{Router, http::StatusCode, routing::get};
+        let app = Router::new()
+            .route("/missing", get(|| async { StatusCode::FORBIDDEN }))
+            .route(
+                "/good",
+                get(|| async { r#"{"meshy-dcc":{"version":"0.2.0"}}"# }),
+            )
+            .route("/garbage", get(|| async { "not json" }));
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let base = format!("http://{}", listener.local_addr().unwrap());
+        let server = tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
+        let client = reqwest::Client::new();
+        let urls = |paths: &[&str]| {
+            paths
+                .iter()
+                .map(|path| format!("{base}{path}"))
+                .collect::<Vec<_>>()
+        };
+
+        let found = super::first_reachable_manifest(
+            &client,
+            [
+                vec!["http://127.0.0.1:9/down".to_owned()],
+                urls(&["/missing", "/good"]),
+            ]
+            .concat(),
+        )
+        .await;
+        let stopped = super::first_reachable_manifest(&client, urls(&["/garbage", "/good"])).await;
+        let none = super::first_reachable_manifest(&client, urls(&["/missing"])).await;
+        server.abort();
+
+        assert_eq!(found.unwrap()["meshy-dcc"].version, "0.2.0");
+        assert!(matches!(stopped, Err(super::UpdateManifestError::Parse(_))));
+        assert!(matches!(
+            none,
+            Err(super::UpdateManifestError::Fetch { .. })
+        ));
     }
 }

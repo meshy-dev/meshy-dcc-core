@@ -765,6 +765,7 @@ fn gateway_schemas() -> Vec<(&'static str, Value)> {
                     "latest_version": {"type": "string", "description": "Present when the binary exists in the update manifest."},
                     "download_url": {"type": ["string", "null"], "format": "uri"},
                     "sha256": {"type": ["string", "null"], "pattern": "^[0-9a-fA-F]{64}$"},
+                    "mirrors": {"type": "array", "items": {"type": "string", "format": "uri"}, "description": "Other places holding the same bytes, tried in order when download_url cannot be reached."},
                     "release_notes": {"type": ["string", "null"]},
                     "status": {"type": "string", "description": "Present on structured error responses."},
                     "error": {"type": "string"},
@@ -788,6 +789,7 @@ fn gateway_schemas() -> Vec<(&'static str, Value)> {
                 "properties": {
                     "download_url": {"type": "string", "format": "uri"},
                     "sha256": {"type": "string", "pattern": "^[0-9a-fA-F]{64}$"},
+                    "mirrors": {"type": "array", "items": {"type": "string", "format": "uri"}},
                     "status": {"type": "string"},
                     "error": {"type": "string"},
                     "message": {"type": "string"},

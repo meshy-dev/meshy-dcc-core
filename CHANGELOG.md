@@ -116,6 +116,7 @@ and is not runtime-compatible with it. Attribution stays in `LICENSE` and
   platforms are refused before anything is downloaded. Both default to
   `~/.local/bin`. They no longer install dcc-cua. When cdn.meshy.ai cannot
   be reached they try cdn.meshy.cn (the same bucket, reachable in mainland
+  China), then the GitHub Release. The
   latest version comes from `latest.txt` on the CDN (served uncached), or the
   GitHub Release when neither CDN host answers; the CDN keeps each release
   under its own version dir (`v0-2-0`) and never overwrites it, with names
@@ -123,6 +124,15 @@ and is not runtime-compatible with it. Attribution stays in `LICENSE` and
   installs (`curl … | bash`, `irm … | iex`).
   `scripts/release/generate_update_manifest.py` writes the matching manifest
   and the binaries under their published names.
+- The gateway self-update uses the same layout. It reads the latest version
+  from `latest.txt` (cdn.meshy.ai, then cdn.meshy.cn, then the GitHub
+  Release) and fetches that release's manifest and Sigstore bundle from its
+  version dir on either CDN host, or from the GitHub Release: a source that
+  cannot be reached moves on, a manifest that fails verification stops.
+  GitHub Release manifests must carry the signature too. Each CDN manifest
+  entry lists `mirrors` (cdn.meshy.cn, the GitHub Release) that
+  `update apply` tries when a download fails; bytes that fail the SHA-256
+  check stop the update.
 - A platform build in the catalog can list `mirrors`: URLs serving the same
   bytes, tried in order when a download fails. A download whose bytes fail
   the SHA-256 check stops the install instead. The bundled catalog points
