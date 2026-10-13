@@ -54,6 +54,7 @@ use axum::http::{HeaderMap, StatusCode};
 use axum::response::Response;
 use axum::routing::{get, post};
 use clap::Args;
+use meshy_dcc_gateway::gateway::origin_guard::{cors_layer, origin_guard};
 use meshy_dcc_jsonrpc::{JsonRpcMessage, JsonRpcNotification, JsonRpcRequest, JsonRpcResponse};
 #[cfg(feature = "gateway-auto")]
 use meshy_dcc_transport::discovery::types::ServiceEntry;
@@ -61,7 +62,6 @@ use serde_json::Value;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::process::{Child, ChildStdin, Command};
 use tokio::sync::{Mutex, mpsc, oneshot};
-use tower_http::cors::CorsLayer;
 use tracing::{debug, error, info, warn};
 
 #[cfg(all(feature = "gateway-auto", feature = "gateway-daemon"))]
@@ -886,7 +886,11 @@ fn build_router(state: BridgeState) -> Router {
         router = router.route("/sse", post(handle_sse_post));
     }
 
-    router.with_state(state).layer(CorsLayer::permissive())
+    // Browsers get the gateway's rules: same-origin or loopback pages only.
+    router
+        .with_state(state)
+        .layer(cors_layer())
+        .layer(axum::middleware::from_fn(origin_guard))
 }
 
 // ── Entry point ───────────────────────────────────────────────────────────────

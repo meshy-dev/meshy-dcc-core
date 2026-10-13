@@ -40,6 +40,8 @@ pub struct AdminState {
     pub recordings: crate::gateway::record_replay::RecordReplayStore,
     /// Traffic subscription active only while at least one recording is running.
     pub recording_subscription: Arc<Mutex<Option<u64>>>,
+    /// Address of the LAN listener, when it is open.
+    pub remote_listener: Option<std::net::SocketAddr>,
 }
 
 impl AdminState {
@@ -59,7 +61,14 @@ impl AdminState {
             pending_integrations: Arc::new(Mutex::new(HashMap::new())),
             recordings: crate::gateway::record_replay::RecordReplayStore::default(),
             recording_subscription: Arc::new(Mutex::new(None)),
+            remote_listener: None,
         }
+    }
+
+    /// Record the LAN listener address for the health summary.
+    pub fn with_remote_listener(mut self, addr: Option<std::net::SocketAddr>) -> Self {
+        self.remote_listener = addr;
+        self
     }
 
     /// Activate redacted traffic projection while demonstrations are running.

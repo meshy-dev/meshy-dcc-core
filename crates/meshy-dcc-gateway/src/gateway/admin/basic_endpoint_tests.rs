@@ -648,4 +648,174 @@ mod endpoint_contracts {
             );
         }
     }
+
+    async fn send(router: Router, req: Request<axum::body::Body>) -> (StatusCode, Value) {
+        let resp = router.oneshot(req).await.unwrap();
+        let status = resp.status();
+        let bytes = to_bytes(resp.into_body(), 1024 * 1024).await.unwrap();
+        (
+            status,
+            serde_json::from_slice(&bytes).unwrap_or(Value::Null),
+        )
+    }
+
+    fn get_from(origin: Option<&str>, host: &str) -> Request<axum::body::Body> {
+        let mut builder = Request::builder()
+            .uri("/admin/api/health")
+            .header("host", host);
+        if let Some(origin) = origin {
+            builder = builder.header("origin", origin);
+        }
+        builder.body(axum::body::Body::empty()).unwrap()
+    }
+
+    #[tokio::test]
+    async fn browser_requests_from_other_sites_are_refused() {
+        let app = gateway_router_with_admin(make_gateway_state());
+        let (status, body) = send(
+            app.clone(),
+            get_from(Some("https://evil.example"), "127.0.0.1:19765"),
+        )
+        .await;
+        assert_eq!(status, StatusCode::FORBIDDEN);
+        assert_eq!(body["error"], "origin_not_allowed");
+
+        // DNS rebinding: same-origin, but on a name that is not an address.
+        let (status, _) = send(
+            app.clone(),
+            get_from(Some("http://evil.example:19765"), "evil.example:19765"),
+        )
+        .await;
+        assert_eq!(status, StatusCode::FORBIDDEN);
+
+        // The admin page itself, a remote browser by IP, and non-browser clients.
+        for (origin, host) in [
+            (Some("http://127.0.0.1:19765"), "127.0.0.1:19765"),
+            (Some("http://192.168.1.20:19765"), "192.168.1.20:19765"),
+            (None, "studio-pc.local:19765"),
+        ] {
+            let (status, _) = send(app.clone(), get_from(origin, host)).await;
+            assert_eq!(status, StatusCode::OK, "{origin:?} @ {host}");
+        }
+    }
+
+    #[tokio::test]
+    async fn cors_reflects_only_allowed_origins() {
+        let app = gateway_router_with_admin(make_gateway_state());
+        let preflight = |origin: &str| {
+            Request::builder()
+                .method("OPTIONS")
+                .uri("/admin/api/agents/skill")
+                .header("host", "127.0.0.1:19765")
+                .header("origin", origin)
+                .header("access-control-request-method", "POST")
+                .body(axum::body::Body::empty())
+                .unwrap()
+        };
+        let allowed = app
+            .clone()
+            .oneshot(preflight("http://127.0.0.1:19765"))
+            .await
+            .unwrap();
+        assert_eq!(
+            allowed.headers()["access-control-allow-origin"],
+            "http://127.0.0.1:19765"
+        );
+        let refused = app
+            .oneshot(preflight("https://evil.example"))
+            .await
+            .unwrap();
+        assert!(
+            !refused
+                .headers()
+                .contains_key("access-control-allow-origin")
+        );
+    }
+
+    fn post_json(uri: &str, body: Value, peer: Option<[u8; 4]>) -> Request<axum::body::Body> {
+        let mut req = Request::builder()
+            .method("POST")
+            .uri(uri)
+            .header("content-type", "application/json")
+            .body(axum::body::Body::from(body.to_string()))
+            .unwrap();
+        if let Some(ip) = peer {
+            req.extensions_mut()
+                .insert(axum::extract::ConnectInfo(std::net::SocketAddr::from((
+                    ip, 50000,
+                ))));
+        }
+        req
+    }
+
+    #[tokio::test]
+    async fn product_changes_are_local_only_and_validated() {
+        let app = admin_router();
+        for peer in [None, Some([192, 168, 1, 9])] {
+            let (status, body) = send(
+                app.clone(),
+                post_json("/api/agents/skill", json!({"agents": ["cursor"]}), peer),
+            )
+            .await;
+            assert_eq!(status, StatusCode::FORBIDDEN, "{peer:?}");
+            assert_eq!(body["error"], "local_only");
+        }
+        let (status, body) = send(
+            app.clone(),
+            post_json(
+                "/api/connectors/install",
+                json!({"dcc_type": "--execute"}),
+                Some([127, 0, 0, 1]),
+            ),
+        )
+        .await;
+        assert_eq!(status, StatusCode::BAD_REQUEST);
+        assert_eq!(body["error"], "invalid_dcc_type");
+        let (status, body) = send(
+            app,
+            post_json(
+                "/api/connectors/install",
+                json!({"dcc_type": "unity", "project": "relative/dir"}),
+                Some([127, 0, 0, 1]),
+            ),
+        )
+        .await;
+        assert_eq!(status, StatusCode::BAD_REQUEST);
+        assert_eq!(body["error"], "invalid_project");
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn product_reads_run_the_cli_and_return_its_json() {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = tempfile::tempdir().unwrap();
+        let cli = dir.path().join("meshy-dcc");
+        // Echo the arguments back so the test sees what the gateway passed.
+        std::fs::write(&cli, "#!/bin/sh\nprintf '{\"args\":\"%s\"}' \"$*\"\n").unwrap();
+        std::fs::set_permissions(&cli, std::fs::Permissions::from_mode(0o755)).unwrap();
+        let _guard = meshy_dcc_test_utils::EnvVarGuard::set(
+            crate::gateway::admin::application::product::CLI_BIN_ENV,
+            Some(cli.to_str().unwrap()),
+        );
+        let (status, body) = body_json(admin_router(), "/api/agents").await;
+        assert_eq!(status, StatusCode::OK);
+        assert_eq!(
+            body["args"],
+            "--output json --non-interactive --no-auto-gateway agent-skill --agent *"
+        );
+        let (status, body) = send(
+            admin_router(),
+            post_json(
+                "/api/agents/skill",
+                json!({"agents": ["cursor", "codex"], "remove": true}),
+                Some([127, 0, 0, 1]),
+            ),
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK);
+        assert_eq!(
+            body["args"],
+            "--output json --non-interactive --no-auto-gateway agent-skill --agent cursor --agent codex --execute --remove"
+        );
+    }
 }

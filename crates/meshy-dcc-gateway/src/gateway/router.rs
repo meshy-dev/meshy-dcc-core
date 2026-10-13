@@ -1,7 +1,6 @@
 //! Gateway axum router builder.
 
 use axum::{Router, middleware, routing};
-use tower_http::cors::{Any, CorsLayer};
 use tower_http::limit::RequestBodyLimitLayer;
 use tower_http::trace::TraceLayer;
 
@@ -20,6 +19,7 @@ use super::handlers::{
     handle_v1_update_download,
 };
 use super::http_limits::rate_limit_middleware;
+use super::origin_guard::{cors_layer, origin_guard};
 use super::state::GatewayState;
 
 /// Build the gateway `Router` with all discovery, SSE, REST, and proxy routes.
@@ -72,12 +72,9 @@ pub fn build_gateway_router(mut state: GatewayState) -> Router {
             rate_limit_middleware,
         ));
     }
-    r.layer(TraceLayer::new_for_http()).layer(
-        CorsLayer::new()
-            .allow_origin(Any)
-            .allow_methods(Any)
-            .allow_headers(Any),
-    )
+    r.layer(TraceLayer::new_for_http())
+        .layer(middleware::from_fn(origin_guard))
+        .layer(cors_layer())
 }
 
 /// Build the gateway router, optionally attaching the admin UI sub-router.
@@ -128,12 +125,10 @@ pub fn build_gateway_router_with_admin(
         router
     };
 
-    router.layer(TraceLayer::new_for_http()).layer(
-        CorsLayer::new()
-            .allow_origin(Any)
-            .allow_methods(Any)
-            .allow_headers(Any),
-    )
+    router
+        .layer(TraceLayer::new_for_http())
+        .layer(middleware::from_fn(origin_guard))
+        .layer(cors_layer())
 }
 
 fn build_base_router(state: GatewayState) -> Router {

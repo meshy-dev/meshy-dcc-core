@@ -115,6 +115,29 @@ async fn wait_for_gateway_yield(mut yield_rx: watch::Receiver<bool>) {
 /// gateway that leaves first makes that host serve as the gateway itself.
 const FIRST_BACKEND_GRACE: Duration = Duration::from_secs(600);
 
+/// Last time an open `meshy-dcc ui` page polled the gateway (Unix seconds).
+/// The page polls every 5 s while it is visible; an open page keeps an idle
+/// standalone gateway alive, and the normal grace starts once it closes.
+// ponytail: one process-wide clock; per-gateway state if a process ever runs several daemons.
+static UI_SEEN_UNIX: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+const UI_PRESENCE_WINDOW_SECS: u64 = 15;
+
+fn unix_now() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(0, |d| d.as_secs())
+}
+
+/// Record that the admin page is open.
+pub(crate) fn note_ui_presence() {
+    UI_SEEN_UNIX.store(unix_now(), std::sync::atomic::Ordering::Relaxed);
+}
+
+fn ui_present() -> bool {
+    let seen = UI_SEEN_UNIX.load(std::sync::atomic::Ordering::Relaxed);
+    seen != 0 && unix_now().saturating_sub(seen) <= UI_PRESENCE_WINDOW_SECS
+}
+
 fn idle_grace(grace: Duration, seen_backend: bool) -> Duration {
     if seen_backend {
         grace
@@ -141,6 +164,10 @@ fn spawn_gateway_idle_shutdown_task(
                 gw_state.live_instances(reg).len()
             };
 
+            if live_count == 0 && ui_present() {
+                idle_since = None;
+                continue;
+            }
             if live_count > 0 {
                 seen_backend = true;
                 if idle_since.take().is_some() {
@@ -1162,7 +1189,12 @@ pub(crate) async fn start_gateway_tasks(
                     .with_trace_log(trace_log, sqlite_reader)
                     .with_skill_paths_snapshot(admin_persist.skill_paths_snapshot)
                     .with_admin_sqlite_lane(sqlite_lane.clone())
-                    .with_skill_paths_reload(admin_persist.skill_paths_reload.clone()),
+                    .with_skill_paths_reload(admin_persist.skill_paths_reload.clone())
+                    .with_remote_listener(
+                        remote_listener
+                            .as_ref()
+                            .and_then(|listener| listener.local_addr().ok()),
+                    ),
             )
         } else {
             None
@@ -1372,6 +1404,19 @@ mod tests {
     use super::*;
     use axum::{Router, response::Redirect, routing::get};
     use std::sync::atomic::{AtomicUsize, Ordering};
+
+    #[test]
+    fn an_open_admin_page_counts_as_presence() {
+        UI_SEEN_UNIX.store(0, std::sync::atomic::Ordering::Relaxed);
+        assert!(!ui_present());
+        note_ui_presence();
+        assert!(ui_present());
+        UI_SEEN_UNIX.store(
+            unix_now() - UI_PRESENCE_WINDOW_SECS - 1,
+            std::sync::atomic::Ordering::Relaxed,
+        );
+        assert!(!ui_present());
+    }
 
     #[test]
     fn idle_gateway_waits_longer_for_its_first_host() {

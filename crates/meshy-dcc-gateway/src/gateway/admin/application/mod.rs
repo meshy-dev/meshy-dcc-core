@@ -41,6 +41,9 @@ pub(super) mod memory;
 pub mod marketplace;
 
 #[cfg(feature = "admin")]
+pub(crate) mod product;
+
+#[cfg(feature = "admin")]
 pub(super) mod recordings;
 
 #[cfg(feature = "admin")]

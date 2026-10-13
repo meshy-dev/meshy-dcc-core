@@ -51,6 +51,7 @@ pub mod mdns_registration;
 pub mod middleware;
 pub mod native_resources;
 pub mod openapi;
+pub mod origin_guard;
 pub(crate) mod port_recovery;
 pub mod proxy;
 pub mod record_replay;

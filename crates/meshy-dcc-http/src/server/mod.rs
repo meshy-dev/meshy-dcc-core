@@ -14,7 +14,6 @@ use tower_http::classify::{
     ClassifiedResponse, ClassifyResponse, MakeClassifier, NeverClassifyEos, ServerErrorsAsFailures,
     ServerErrorsFailureClass,
 };
-use tower_http::cors::{Any, CorsLayer};
 use tower_http::limit::RequestBodyLimitLayer;
 use tower_http::trace::{MakeSpan, TraceLayer};
 use uuid::Uuid;
@@ -794,13 +793,21 @@ impl McpHttpServer {
         // the existing REST routes and the nested MCP service.
         router = router.layer(middleware::from_fn(echo_request_id));
 
+        // Browsers get the gateway's rules: a page on another site (or a
+        // rebound DNS name) cannot drive the DCC; CORS, when enabled, answers
+        // only the origins the guard accepts.
+        #[cfg(feature = "auto-gateway")]
+        {
+            use meshy_dcc_gateway::gateway::origin_guard::{cors_layer, origin_guard};
+            if self.config.server.enable_cors {
+                router = router.layer(cors_layer());
+            }
+            router = router.layer(middleware::from_fn(origin_guard));
+        }
+        // ponytail: without auto-gateway there is no browser guard and no CORS; move origin_guard to a shared crate if such builds ship.
+        #[cfg(not(feature = "auto-gateway"))]
         if self.config.server.enable_cors {
-            router = router.layer(
-                CorsLayer::new()
-                    .allow_origin(Any)
-                    .allow_methods(Any)
-                    .allow_headers(Any),
-            );
+            tracing::warn!("enable_cors needs the auto-gateway feature; CORS stays off");
         }
 
         let bind_addr = self.config.bind_addr();

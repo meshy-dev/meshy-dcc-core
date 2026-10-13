@@ -37,6 +37,9 @@ use super::marketplace::{
     handle_marketplace_uninstall, handle_marketplace_update,
 };
 use super::memory::{handle_admin_memory, handle_admin_memory_forget};
+use super::product::{
+    handle_agent_skill, handle_agents, handle_connector_install, handle_connectors, local_only,
+};
 use super::recordings::{
     handle_recording_compile, handle_recording_replay_validate, handle_recording_review,
     handle_recording_review_body, handle_recording_start, handle_recording_stop,
@@ -72,8 +75,21 @@ use super::skill_paths::{
 /// - `GET  /api/logs`               → JSON event log
 /// - `GET  /api/health`             → JSON health summary
 /// - `GET  /api/feedback`           → persisted per-instance feedback aggregation
+/// - `GET  /api/connectors`, `POST /api/connectors/install`,
+///   `GET  /api/agents`, `POST /api/agents/skill` → see `product`
 pub fn build_admin_router(state: AdminState) -> Router {
+    // Changes to this computer: loopback peers only.
+    let local_changes = Router::new()
+        .route(
+            "/api/connectors/install",
+            routing::post(handle_connector_install),
+        )
+        .route("/api/agents/skill", routing::post(handle_agent_skill))
+        .route_layer(axum::middleware::from_fn(local_only));
     Router::new()
+        .merge(local_changes)
+        .route("/api/connectors", routing::get(handle_connectors))
+        .route("/api/agents", routing::get(handle_agents))
         .route("/", routing::get(handle_admin_ui))
         .route("/api/activity", routing::get(handle_admin_activity))
         .route("/api/instances", routing::get(handle_admin_instances))

@@ -22,6 +22,8 @@ use meshy_dcc_transport::discovery::types::{GATEWAY_SENTINEL_DCC_TYPE, ServiceEn
 
 /// `GET /admin/api/health` — service health summary.
 pub async fn handle_admin_health(State(s): State<AdminState>) -> impl IntoResponse {
+    // The `meshy-dcc ui` sidebar polls this; an open page keeps the gateway up.
+    crate::gateway::tasks::note_ui_presence();
     let registry = s.gateway.registry.clone();
     let all = s.gateway.all_instances_async().await;
     let live = s.gateway.live_instances_async().await;
@@ -66,6 +68,15 @@ pub async fn handle_admin_health(State(s): State<AdminState>) -> impl IntoRespon
                 "token_estimator": TOKEN_ESTIMATOR,
             },
             "gateway": gateway_health_snapshot(&gateway_sentinels),
+            "service": {
+                // `gateway` is the standalone service; otherwise the DCC whose
+                // connector started it.
+                "started_by": s.gateway.adapter_dcc,
+                "network_listener": s.remote_listener.map(|addr| addr.to_string()),
+                "auth_enabled": s.gateway.auth.is_enabled(),
+                "idle_timeout_secs": s.gateway.gateway_idle_timeout_secs,
+                "persist": s.gateway.gateway_persist,
+            },
             "job_persistence": job_persistence,
             "limits": {
                 "body_max_bytes": limits.body_max_bytes,
