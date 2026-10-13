@@ -33,8 +33,11 @@ each one on a real host before porting it as a Rust test.
   `meshy-dcc-*`, Python package
   `meshy_dcc_core`, environment variables `MESHY_DCC_*`, registry and state
   under `meshy-dcc`, gateway port 19765.
-- Host adapters are Meshy-owned, one repository per host, each built against
-  this repo's `meshy_dcc_core` wheel. The bundled catalog
+- Host adapters are Meshy-owned and live together in one repository,
+  `meshy-dev/meshy-dcc-adapters` (a directory per host, its own version line
+  and releases tagged `<host>-v<version>`), each built against this repo's
+  `meshy_dcc_core` wheel. Never release an adapter from this repository: its
+  GitHub `releases/latest` must stay core's. The bundled catalog
   (`meshy-dcc-catalog.yml`) lists only Meshy adapters; an entry stays
   `not_available` until its build is published.
 - Other hosts reach users as opt-in Meshy marketplace packages, built the same

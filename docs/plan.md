@@ -18,7 +18,8 @@
   - gateway 端口：19765。
   - 这样与其他 DCC 运行时装在同一台机器上也不会冲突。
 - **DCC 范围与 adapter**：
-  - 每个宿主一个 Meshy 自有 adapter 仓库，都基于本仓库的 `meshy_dcc_core` 构建，经 Meshy 渠道发布。
+  - adapter 都是 Meshy 自有，放在同一个仓库 `meshy-dev/meshy-dcc-adapters`（每个宿主一个目录、各自的版本线，
+    发版 tag 为 `<host>-v<version>`），都基于本仓库的 `meshy_dcc_core` 构建，经 Meshy 渠道发布。
   - 内置 catalog（`meshy-dcc-catalog.yml`）列出 23 个宿主：Blender、Unity、Godot、Unreal、ZBrush、
     Maya、3ds Max、Roblox、Omniverse、Houdini、Cinema 4D、Marmoset、Substance 3D Painter / Designer、
     Mari、OpenUSD、Katana、MotionBuilder、SketchUp、FreeCAD、OpenSCAD、Material Maker、Photoshop。

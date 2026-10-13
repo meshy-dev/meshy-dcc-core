@@ -67,7 +67,8 @@ Agents use the CLI together with the `meshy-dcc` Skill; no MCP connector has to
 be configured. Meshy generation, authentication and downloads stay in the
 published [`meshy-cli`](https://www.npmjs.com/package/meshy-cli).
 
-Host adapters are Meshy-owned, one repository per host. The bundled install
+Host adapters are Meshy-owned and live together in
+[meshy-dcc-adapters](https://github.com/meshy-dev/meshy-dcc-adapters). The bundled install
 catalog (`meshy-dcc-catalog.yml`) lists the Meshy adapters for these hosts:
 - Blender, Unity, Godot, Unreal, ZBrush, Maya, 3ds Max, Roblox and Omniverse;
 - Houdini, Cinema 4D, Marmoset, Substance 3D Painter and Designer, Mari,

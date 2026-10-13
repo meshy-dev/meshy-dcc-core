@@ -137,7 +137,8 @@ and is not runtime-compatible with it. Attribution stays in `LICENSE` and
   bytes, tried in order when a download fails. A download whose bytes fail
   the SHA-256 check stops the install instead. The bundled catalog points
   each adapter build at its CDN copy (CDN names, version dirs) with
-  cdn.meshy.cn and the adapter repository's GitHub Release as mirrors.
+  cdn.meshy.cn and the GitHub Release of meshy-dcc-adapters (tagged
+  `<host>-v<version>`, one repository for all adapters) as mirrors.
 - Catalog `host-package` entries can list one build per platform under
   `install.platforms` (`macos-arm64`, `windows-x86_64`); `meshy-dcc` uses the
   running machine's build, and an entry with none for it is reported as
