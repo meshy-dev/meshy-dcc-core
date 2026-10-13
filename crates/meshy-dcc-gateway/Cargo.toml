@@ -67,7 +67,7 @@ tokio-stream = { version = "0.1", features = ["sync", "tokio-util"] }
 # `nucleo-matcher` backs fuzzy capability search via the `meshy-dcc-gateway-search`
 # crate (transitive through `meshy-dcc-gateway-core`).
 
-lru = "0.15"
+lru = "0.16"
 
 workspace-hack = { version = "0.1", path = "../workspace-hack" }
 

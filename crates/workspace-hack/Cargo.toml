@@ -79,7 +79,7 @@ regex-syntax = { version = "0.8.10" }
 reqwest = { version = "0.13.4", default-features = false, features = ["blocking", "form", "json", "rustls", "stream"] }
 ring = { version = "0.17.14" }
 rustls-pki-types = { version = "1.14.1", features = ["std"] }
-rustls-webpki = { version = "0.103.13", default-features = false, features = ["aws-lc-rs", "ring", "std"] }
+rustls-webpki = { version = "0.103.15", default-features = false, features = ["aws-lc-rs", "ring", "std"] }
 serde = { version = "1.0.228", features = ["alloc", "derive", "rc"] }
 serde_core = { version = "1.0.228", features = ["alloc", "rc"] }
 serde_json = { version = "1.0.150", features = ["alloc", "float_roundtrip", "preserve_order", "raw_value"] }
@@ -175,7 +175,7 @@ regex-syntax = { version = "0.8.10" }
 reqwest = { version = "0.13.4", default-features = false, features = ["blocking", "form", "json", "rustls", "stream"] }
 ring = { version = "0.17.14" }
 rustls-pki-types = { version = "1.14.1", features = ["std"] }
-rustls-webpki = { version = "0.103.13", default-features = false, features = ["aws-lc-rs", "ring", "std"] }
+rustls-webpki = { version = "0.103.15", default-features = false, features = ["aws-lc-rs", "ring", "std"] }
 serde = { version = "1.0.228", features = ["alloc", "derive", "rc"] }
 serde_core = { version = "1.0.228", features = ["alloc", "rc"] }
 serde_json = { version = "1.0.150", features = ["alloc", "float_roundtrip", "preserve_order", "raw_value"] }
@@ -209,7 +209,7 @@ bitflags = { version = "2.13.0", default-features = false, features = ["std"] }
 getrandom-9fbad63c4bcf4a8f = { package = "getrandom", version = "0.4.2", default-features = false, features = ["std", "sys_rng"] }
 hyper-util = { version = "0.1.20", default-features = false, features = ["client-proxy"] }
 libc = { version = "0.2.186", features = ["extra_traits"] }
-rustls = { version = "0.23.40", default-features = false, features = ["aws-lc-rs", "aws_lc_rs", "logging", "ring", "std", "tls12"] }
+rustls = { version = "0.23.45", default-features = false, features = ["aws-lc-rs", "aws_lc_rs", "logging", "ring", "std", "tls12"] }
 tower = { version = "0.5.3", default-features = false, features = ["retry", "timeout"] }
 tower-http = { version = "0.6.11", features = ["cors", "follow-redirect", "limit", "trace"] }
 
@@ -218,7 +218,7 @@ bitflags = { version = "2.13.0", default-features = false, features = ["std"] }
 getrandom-9fbad63c4bcf4a8f = { package = "getrandom", version = "0.4.2", default-features = false, features = ["std", "sys_rng"] }
 hyper-util = { version = "0.1.20", default-features = false, features = ["client-proxy"] }
 libc = { version = "0.2.186", features = ["extra_traits"] }
-rustls = { version = "0.23.40", default-features = false, features = ["aws-lc-rs", "aws_lc_rs", "logging", "ring", "std", "tls12"] }
+rustls = { version = "0.23.45", default-features = false, features = ["aws-lc-rs", "aws_lc_rs", "logging", "ring", "std", "tls12"] }
 tower = { version = "0.5.3", default-features = false, features = ["retry", "timeout"] }
 tower-http = { version = "0.6.11", features = ["cors", "follow-redirect", "limit", "trace"] }
 
@@ -227,7 +227,7 @@ bitflags = { version = "2.13.0", default-features = false, features = ["std"] }
 getrandom-9fbad63c4bcf4a8f = { package = "getrandom", version = "0.4.2", default-features = false, features = ["std", "sys_rng"] }
 hyper-util = { version = "0.1.20", default-features = false, features = ["client-proxy"] }
 libc = { version = "0.2.186", features = ["extra_traits"] }
-rustls = { version = "0.23.40", default-features = false, features = ["aws-lc-rs", "aws_lc_rs", "logging", "ring", "std", "tls12"] }
+rustls = { version = "0.23.45", default-features = false, features = ["aws-lc-rs", "aws_lc_rs", "logging", "ring", "std", "tls12"] }
 tower = { version = "0.5.3", default-features = false, features = ["retry", "timeout"] }
 tower-http = { version = "0.6.11", features = ["cors", "follow-redirect", "limit", "trace"] }
 
@@ -236,7 +236,7 @@ bitflags = { version = "2.13.0", default-features = false, features = ["std"] }
 getrandom-9fbad63c4bcf4a8f = { package = "getrandom", version = "0.4.2", default-features = false, features = ["std", "sys_rng"] }
 hyper-util = { version = "0.1.20", default-features = false, features = ["client-proxy"] }
 libc = { version = "0.2.186", features = ["extra_traits"] }
-rustls = { version = "0.23.40", default-features = false, features = ["aws-lc-rs", "aws_lc_rs", "logging", "ring", "std", "tls12"] }
+rustls = { version = "0.23.45", default-features = false, features = ["aws-lc-rs", "aws_lc_rs", "logging", "ring", "std", "tls12"] }
 tower = { version = "0.5.3", default-features = false, features = ["retry", "timeout"] }
 tower-http = { version = "0.6.11", features = ["cors", "follow-redirect", "limit", "trace"] }
 
@@ -246,7 +246,7 @@ errno = { version = "0.3.14" }
 getrandom-9fbad63c4bcf4a8f = { package = "getrandom", version = "0.4.2", default-features = false, features = ["std", "sys_rng"] }
 hyper-util = { version = "0.1.20", default-features = false, features = ["client-proxy"] }
 libc = { version = "0.2.186", features = ["extra_traits"] }
-rustls = { version = "0.23.40", default-features = false, features = ["aws-lc-rs", "aws_lc_rs", "logging", "ring", "std", "tls12"] }
+rustls = { version = "0.23.45", default-features = false, features = ["aws-lc-rs", "aws_lc_rs", "logging", "ring", "std", "tls12"] }
 tower = { version = "0.5.3", default-features = false, features = ["retry", "timeout"] }
 tower-http = { version = "0.6.11", features = ["cors", "follow-redirect", "limit", "trace"] }
 
@@ -256,7 +256,7 @@ errno = { version = "0.3.14" }
 getrandom-9fbad63c4bcf4a8f = { package = "getrandom", version = "0.4.2", default-features = false, features = ["std", "sys_rng"] }
 hyper-util = { version = "0.1.20", default-features = false, features = ["client-proxy"] }
 libc = { version = "0.2.186", features = ["extra_traits"] }
-rustls = { version = "0.23.40", default-features = false, features = ["aws-lc-rs", "aws_lc_rs", "logging", "ring", "std", "tls12"] }
+rustls = { version = "0.23.45", default-features = false, features = ["aws-lc-rs", "aws_lc_rs", "logging", "ring", "std", "tls12"] }
 tower = { version = "0.5.3", default-features = false, features = ["retry", "timeout"] }
 tower-http = { version = "0.6.11", features = ["cors", "follow-redirect", "limit", "trace"] }
 
@@ -266,7 +266,7 @@ errno = { version = "0.3.14" }
 getrandom-9fbad63c4bcf4a8f = { package = "getrandom", version = "0.4.2", default-features = false, features = ["std", "sys_rng"] }
 hyper-util = { version = "0.1.20", default-features = false, features = ["client-proxy"] }
 libc = { version = "0.2.186", features = ["extra_traits"] }
-rustls = { version = "0.23.40", default-features = false, features = ["aws-lc-rs", "aws_lc_rs", "logging", "ring", "std", "tls12"] }
+rustls = { version = "0.23.45", default-features = false, features = ["aws-lc-rs", "aws_lc_rs", "logging", "ring", "std", "tls12"] }
 tower = { version = "0.5.3", default-features = false, features = ["retry", "timeout"] }
 tower-http = { version = "0.6.11", features = ["cors", "follow-redirect", "limit", "trace"] }
 
@@ -276,14 +276,14 @@ errno = { version = "0.3.14" }
 getrandom-9fbad63c4bcf4a8f = { package = "getrandom", version = "0.4.2", default-features = false, features = ["std", "sys_rng"] }
 hyper-util = { version = "0.1.20", default-features = false, features = ["client-proxy"] }
 libc = { version = "0.2.186", features = ["extra_traits"] }
-rustls = { version = "0.23.40", default-features = false, features = ["aws-lc-rs", "aws_lc_rs", "logging", "ring", "std", "tls12"] }
+rustls = { version = "0.23.45", default-features = false, features = ["aws-lc-rs", "aws_lc_rs", "logging", "ring", "std", "tls12"] }
 tower = { version = "0.5.3", default-features = false, features = ["retry", "timeout"] }
 tower-http = { version = "0.6.11", features = ["cors", "follow-redirect", "limit", "trace"] }
 
 [target.x86_64-pc-windows-msvc.dependencies]
 getrandom-9fbad63c4bcf4a8f = { package = "getrandom", version = "0.4.2", default-features = false, features = ["std", "sys_rng"] }
 hyper-util = { version = "0.1.20", default-features = false, features = ["client-proxy"] }
-rustls = { version = "0.23.40", default-features = false, features = ["aws-lc-rs", "aws_lc_rs", "logging", "ring", "std", "tls12"] }
+rustls = { version = "0.23.45", default-features = false, features = ["aws-lc-rs", "aws_lc_rs", "logging", "ring", "std", "tls12"] }
 tower = { version = "0.5.3", default-features = false, features = ["retry", "timeout"] }
 tower-http = { version = "0.6.11", features = ["cors", "follow-redirect", "limit", "trace"] }
 winapi = { version = "0.3.9", default-features = false, features = ["cfg", "evntrace", "in6addr", "inaddr", "minwinbase", "ntsecapi", "sysinfoapi", "windef", "winioctl", "winsock2"] }
@@ -294,7 +294,7 @@ windows-sys-d4189bed749088b6 = { package = "windows-sys", version = "0.61.2", fe
 [target.x86_64-pc-windows-msvc.build-dependencies]
 getrandom-9fbad63c4bcf4a8f = { package = "getrandom", version = "0.4.2", default-features = false, features = ["std", "sys_rng"] }
 hyper-util = { version = "0.1.20", default-features = false, features = ["client-proxy"] }
-rustls = { version = "0.23.40", default-features = false, features = ["aws-lc-rs", "aws_lc_rs", "logging", "ring", "std", "tls12"] }
+rustls = { version = "0.23.45", default-features = false, features = ["aws-lc-rs", "aws_lc_rs", "logging", "ring", "std", "tls12"] }
 tower = { version = "0.5.3", default-features = false, features = ["retry", "timeout"] }
 tower-http = { version = "0.6.11", features = ["cors", "follow-redirect", "limit", "trace"] }
 winapi = { version = "0.3.9", default-features = false, features = ["cfg", "evntrace", "in6addr", "inaddr", "minwinbase", "ntsecapi", "sysinfoapi", "windef", "winioctl", "winsock2"] }
