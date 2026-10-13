@@ -29,6 +29,9 @@ pub struct DccAdapterSummary {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub url: Option<String>,
     pub catalog_install_available: bool,
+    /// Installed into each project (`install --project`) rather than once per computer.
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    pub per_project: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -161,6 +164,13 @@ impl InstallService {
                 url: entry.url.clone(),
                 catalog_install_available: entry.install.is_some()
                     && crate::domain::install::policy::validate(entry).is_ok(),
+                per_project: entry.install.as_ref().is_some_and(|install| {
+                    install
+                        .host
+                        .iter()
+                        .chain(install.platforms.values().filter_map(|p| p.host.as_ref()))
+                        .any(|host| !host.project_steps.is_empty())
+                }),
             };
             for dcc_type in &entry.dcc {
                 let parsed = DccName::parse(dcc_type).to_string();

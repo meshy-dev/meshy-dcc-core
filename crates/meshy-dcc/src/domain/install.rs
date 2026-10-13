@@ -246,10 +246,11 @@ pub enum InstallPlanError {
 
 /// Default install paths relative to user home or Meshy DCC data root.
 pub fn default_adapter_dir() -> PathBuf {
-    dirs_data_dir().join("adapters")
+    meshy_dcc_data_dir().join("adapters")
 }
 
-fn dirs_data_dir() -> PathBuf {
+/// `MESHY_DCC_DATA_DIR`, else the platform data directory's `meshy-dcc`.
+pub(crate) fn meshy_dcc_data_dir() -> PathBuf {
     if let Some(dir) = std::env::var_os("MESHY_DCC_DATA_DIR").filter(|dir| !dir.is_empty()) {
         return PathBuf::from(dir);
     }

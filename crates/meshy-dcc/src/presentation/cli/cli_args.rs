@@ -42,6 +42,12 @@ pub(crate) enum Command {
     },
     /// Check the configured gateway or per-DCC REST endpoint.
     Health,
+    /// Open the Meshy DCC Core window in the browser, starting the local gateway first.
+    Ui {
+        /// Print the address without opening a browser.
+        #[arg(long)]
+        no_open: bool,
+    },
     /// Query persisted gateway tool-call statistics with composable filters.
     Stats {
         /// Time window: 1h, 24h, 7d, or all.
@@ -320,8 +326,8 @@ pub(crate) enum Command {
     },
     /// Validate local SKILL.md packages before loading them at runtime.
     Lint(LintArgs),
-    /// Install the meshy-dcc Skill into agents' skill directories (Claude Code and
-    /// Codex when present, or --dir). Prints the plan unless --execute is given.
+    /// Install the meshy-dcc Skill into agents' skill directories (the agents found on
+    /// this computer, or --agent / --dir). Prints the plan unless --execute is given.
     AgentSkill(AgentSkillArgs),
     Components {
         #[command(subcommand)]
@@ -391,6 +397,9 @@ pub(crate) struct AgentSkillArgs {
     /// An agent's skills directory to use instead of the detected ones (repeatable).
     #[arg(long = "dir")]
     pub dirs: Vec<PathBuf>,
+    /// An agent by its skills.sh id, such as `cursor` (repeatable); `*` lists every known agent.
+    #[arg(long = "agent")]
+    pub agents: Vec<String>,
     /// Remove the files this command installed.
     #[arg(long)]
     pub remove: bool,

@@ -7,7 +7,8 @@ scene back, including importing Meshy-generated models.
 ```sh
 npm install -g meshy-dcc
 meshy-dcc agent-skill            # shows where the agent Skill would go
-meshy-dcc agent-skill --execute  # installs it for Claude Code and Codex
+meshy-dcc agent-skill --execute  # installs it for the agents on this computer
+meshy-dcc ui                     # opens the Meshy DCC Core window
 ```
 
 Published for macOS on Apple Silicon and Windows x64. Upgrade with

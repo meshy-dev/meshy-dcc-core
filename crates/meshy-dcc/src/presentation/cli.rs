@@ -192,6 +192,27 @@ fn parse_adapter_python(raw: &[String]) -> anyhow::Result<BTreeMap<String, PathB
     Ok(parsed)
 }
 
+/// Hand `url` to the system browser; false when that could not be started.
+fn open_in_browser(url: &str) -> bool {
+    let mut command = if cfg!(target_os = "macos") {
+        std::process::Command::new("open")
+    } else if cfg!(windows) {
+        // `start` would need cmd.exe quoting; the URL handler takes it as is.
+        let mut command = std::process::Command::new("rundll32");
+        command.arg("url.dll,FileProtocolHandler");
+        command
+    } else {
+        std::process::Command::new("xdg-open")
+    };
+    command
+        .arg(url)
+        .stdin(std::process::Stdio::null())
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .status()
+        .is_ok_and(|status| status.success())
+}
+
 fn restart_after_update() -> anyhow::Result<()> {
     let executable = std::env::current_exe()?;
     std::process::Command::new(executable)
@@ -316,6 +337,15 @@ async fn run_with_args(args: Args) -> anyhow::Result<()> {
         Command::Health => {
             let client = MeshyDccClient::new(endpoint.clone());
             client.health().await?
+        }
+        Command::Ui { no_open } => {
+            // The gateway serves the page at `/admin`; `/admin/` is not routed.
+            let url = format!("{}/admin", base_url.trim_end_matches('/'));
+            let opened = !no_open && open_in_browser(&url);
+            if !opened {
+                let _ = writer.diagnostic(&format!("Meshy DCC Core: {url}"));
+            }
+            serde_json::json!({ "url": url, "opened": opened })
         }
         Command::Stats {
             range,
@@ -736,6 +766,7 @@ async fn run_with_args(args: Args) -> anyhow::Result<()> {
             } else {
                 InstallService::refreshed(offline).await
             };
+            let receipt_project = project.clone();
             let req = InstallRequest {
                 dcc_type,
                 version,
@@ -750,8 +781,13 @@ async fn run_with_args(args: Args) -> anyhow::Result<()> {
                 // `--execute` is the mutation opt-in; JSON mode must never add
                 // an interactive prompt to the machine-readable contract.
                 // Install downloads use blocking reqwest, which panics on a runtime thread.
-                let report =
+                let mut report =
                     tokio::task::block_in_place(|| service.execute(req, non_interactive || json));
+                report.receipt_path = crate::application::install::receipt::record(
+                    &report,
+                    receipt_project.as_deref(),
+                )
+                .map(|path| path.display().to_string());
                 explicit_exit_code = Some(report.exit_code);
                 to_json(report)?
             } else {
@@ -935,16 +971,15 @@ async fn run_with_args(args: Args) -> anyhow::Result<()> {
         }
         Command::AgentSkill(args) => {
             use crate::application::agent_skill;
-            let targets = if args.dirs.is_empty() {
+            let targets = if args.dirs.is_empty() && args.agents.is_empty() {
                 agent_skill::detected_targets()
             } else {
-                args.dirs
-                    .into_iter()
-                    .map(|skills_dir| agent_skill::Target {
-                        agent: "custom".to_string(),
-                        skills_dir,
-                    })
-                    .collect()
+                let mut targets = agent_skill::named_targets(&args.agents)?;
+                targets.extend(args.dirs.into_iter().map(|skills_dir| agent_skill::Target {
+                    agents: vec!["custom".to_string()],
+                    skills_dir,
+                }));
+                targets
             };
             let value = agent_skill::run(&targets, args.remove, args.execute)?;
             failed = value["failed"] == true;

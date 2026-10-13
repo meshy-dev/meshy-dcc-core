@@ -769,6 +769,11 @@ fn gateway_endpoint_for_command_ensures_gateway_for_agent_control_commands() {
         .is_none()
     );
     assert!(gateway_endpoint_for_command(DEFAULT_BASE_URL, &Command::Health, &local).is_some());
+    // `ui` brings the local gateway up before it opens the page.
+    assert!(
+        gateway_endpoint_for_command(DEFAULT_BASE_URL, &Command::Ui { no_open: true }, &local)
+            .is_some()
+    );
     assert!(gateway_endpoint_for_command(DEFAULT_BASE_URL, &Command::List, &local).is_some());
     assert!(gateway_endpoint_for_command(DEFAULT_BASE_URL, &Command::List, &remote).is_some());
     assert!(

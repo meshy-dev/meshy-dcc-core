@@ -22,6 +22,7 @@ mod catalog_contract_tests;
 mod discovery;
 mod pip;
 mod policy;
+pub mod receipt;
 mod report;
 
 pub use discovery::{DccAdapterSummary, DccTypeSummary, DccTypesCatalog};

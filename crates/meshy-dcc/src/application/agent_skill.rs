@@ -47,11 +47,185 @@ struct Marker {
     files: Vec<String>,
 }
 
-/// One skills directory to install into.
+/// One skills directory to install into, and the agents that read it.
 #[derive(Debug, Clone)]
 pub struct Target {
-    pub agent: String,
+    /// Agent ids from [`AGENTS`], or `custom` for a `--dir`.
+    pub agents: Vec<String>,
     pub skills_dir: PathBuf,
+}
+
+/// Where a path starts.
+#[derive(Clone, Copy)]
+enum Root {
+    Home,
+    /// `$XDG_CONFIG_HOME`, else `~/.config` (on every platform, like skills.sh).
+    Config,
+    /// An environment variable, else this path under the home directory;
+    /// an empty fallback means "only when the variable is set".
+    Env(&'static str, &'static str),
+    Abs,
+}
+
+use Root::{Abs, Config, Env, Home};
+
+/// An agent: id, display name, global skills directory, and the paths whose
+/// existence means it is installed on this computer.
+type AgentDef = (
+    &'static str,
+    &'static str,
+    (Root, &'static str),
+    &'static [(Root, &'static str)],
+);
+
+/// The skills.sh agent table (`vercel-labs/skills` `src/agents.ts` at
+/// `13e4063`), global installs only. Project-only agents (Eve, PromptScript)
+/// and detection that looks at the current directory are left out.
+// ponytail: a copied table; re-sync from skills.sh when agents change.
+#[rustfmt::skip]
+const AGENTS: &[AgentDef] = &[
+    ("claude-code", "Claude Code", (Env("CLAUDE_CONFIG_DIR", ".claude"), "skills"), &[(Env("CLAUDE_CONFIG_DIR", ".claude"), "")]),
+    ("codex", "Codex", (Home, ".agents/skills"), &[(Env("CODEX_HOME", ".codex"), "")]),
+    ("cursor", "Cursor", (Home, ".cursor/skills"), &[(Home, ".cursor")]),
+    ("gemini-cli", "Gemini CLI", (Home, ".gemini/skills"), &[(Home, ".gemini")]),
+    ("github-copilot", "GitHub Copilot", (Home, ".copilot/skills"), &[(Home, ".copilot")]),
+    ("opencode", "OpenCode", (Config, "opencode/skills"), &[(Config, "opencode")]),
+    ("windsurf", "Windsurf", (Home, ".codeium/windsurf/skills"), &[(Home, ".codeium/windsurf")]),
+    ("kiro-cli", "Kiro CLI", (Home, ".kiro/skills"), &[(Home, ".kiro")]),
+    ("trae", "Trae", (Home, ".trae/skills"), &[(Home, ".trae")]),
+    ("trae-cn", "Trae CN", (Home, ".trae-cn/skills"), &[(Home, ".trae-cn")]),
+    ("qwen-code", "Qwen Code", (Home, ".qwen/skills"), &[(Home, ".qwen")]),
+    ("codebuddy", "CodeBuddy", (Home, ".codebuddy/skills"), &[(Home, ".codebuddy")]),
+    ("openclaw", "OpenClaw", (Home, ".openclaw/skills"), &[(Home, ".openclaw")]),
+    ("hermes-agent", "Hermes Agent", (Env("HERMES_HOME", ".hermes"), "skills"), &[(Env("HERMES_HOME", ".hermes"), "")]),
+    ("cline", "Cline", (Home, ".agents/skills"), &[(Home, ".cline")]),
+    ("goose", "Goose", (Config, "goose/skills"), &[(Config, "goose")]),
+    ("antigravity", "Antigravity", (Home, ".gemini/antigravity/skills"), &[(Home, ".gemini/antigravity")]),
+    ("antigravity-cli", "Antigravity CLI", (Home, ".gemini/antigravity-cli/skills"), &[(Home, ".gemini/antigravity-cli")]),
+    ("amp", "Amp", (Config, "agents/skills"), &[(Config, "amp")]),
+    ("aider-desk", "AiderDesk", (Home, ".aider-desk/skills"), &[(Home, ".aider-desk")]),
+    ("astrbot", "AstrBot", (Home, ".astrbot/data/skills"), &[(Home, ".astrbot")]),
+    ("autohand-code", "Autohand Code CLI", (Env("AUTOHAND_HOME", ".autohand"), "skills"), &[(Env("AUTOHAND_HOME", ".autohand"), "")]),
+    ("augment", "Augment", (Home, ".augment/skills"), &[(Home, ".augment")]),
+    ("bob", "IBM Bob", (Home, ".bob/skills"), &[(Home, ".bob")]),
+    ("codearts-agent", "CodeArts Agent", (Home, ".codeartsdoer/skills"), &[(Home, ".codeartsdoer")]),
+    ("codemaker", "Codemaker", (Home, ".codemaker/skills"), &[(Home, ".codemaker")]),
+    ("codestudio", "Code Studio", (Home, ".codestudio/skills"), &[(Home, ".codestudio")]),
+    ("command-code", "Command Code", (Home, ".commandcode/skills"), &[(Home, ".commandcode")]),
+    ("continue", "Continue", (Home, ".continue/skills"), &[(Home, ".continue")]),
+    ("cortex", "Cortex Code", (Home, ".snowflake/cortex/skills"), &[(Home, ".snowflake/cortex")]),
+    ("crush", "Crush", (Home, ".config/crush/skills"), &[(Home, ".config/crush")]),
+    ("deepagents", "Deep Agents", (Home, ".deepagents/agent/skills"), &[(Home, ".deepagents")]),
+    ("devin", "Devin for Terminal", (Config, "devin/skills"), &[(Config, "devin")]),
+    ("dexto", "Dexto", (Home, ".agents/skills"), &[(Home, ".dexto")]),
+    ("droid", "Droid", (Home, ".factory/skills"), &[(Home, ".factory")]),
+    ("firebender", "Firebender", (Home, ".firebender/skills"), &[(Home, ".firebender")]),
+    ("forgecode", "ForgeCode", (Home, ".forge/skills"), &[(Home, ".forge")]),
+    ("fx", "fx", (Home, ".agents/skills"), &[(Home, ".fx")]),
+    ("grok", "Grok Build", (Env("GROK_HOME", ".grok"), "skills"), &[(Env("GROK_HOME", ".grok"), "")]),
+    ("inference-sh", "inference.sh", (Home, ".inferencesh/skills"), &[(Home, ".inferencesh")]),
+    ("jazz", "Jazz", (Home, ".jazz/skills"), &[(Home, ".jazz")]),
+    ("junie", "Junie", (Home, ".junie/skills"), &[(Home, ".junie")]),
+    ("iflow-cli", "iFlow CLI", (Home, ".iflow/skills"), &[(Home, ".iflow")]),
+    ("kilo", "Kilo Code", (Home, ".kilo/skills"), &[(Home, ".kilo"), (Home, ".kilocode")]),
+    ("kimchi", "Kimchi", (Home, ".config/kimchi/harness/skills"), &[(Home, ".config/kimchi")]),
+    ("kimi-code-cli", "Kimi Code CLI", (Home, ".agents/skills"), &[(Home, ".kimi-code"), (Home, ".kimi")]),
+    ("kode", "Kode", (Home, ".kode/skills"), &[(Home, ".kode")]),
+    ("lingma", "Lingma", (Home, ".lingma/skills"), &[(Home, ".lingma")]),
+    ("loaf", "Loaf", (Home, ".agents/skills"), &[(Home, ".loaf")]),
+    ("mcpjam", "MCPJam", (Home, ".mcpjam/skills"), &[(Home, ".mcpjam")]),
+    ("minimax-code", "MiniMax Code", (Home, ".minimax/skills"), &[(Home, ".minimax"), (Abs, "/Applications/MiniMax Code.app")]),
+    ("mistral-vibe", "Mistral Vibe", (Env("VIBE_HOME", ".vibe"), "skills"), &[(Env("VIBE_HOME", ".vibe"), "")]),
+    ("moxby", "Moxby", (Home, ".moxby/skills"), &[(Home, ".moxby")]),
+    ("mux", "Mux", (Home, ".mux/skills"), &[(Home, ".mux")]),
+    ("openhands", "OpenHands", (Home, ".openhands/skills"), &[(Home, ".openhands")]),
+    ("ona", "Ona", (Home, ".ona/skills"), &[(Home, ".ona")]),
+    ("pi", "Pi", (Home, ".agents/skills"), &[(Home, ".pi/agent")]),
+    ("posit-assistant", "Posit Assistant", (Home, ".posit/assistant/skills"), &[(Home, ".posit/assistant"), (Home, ".positai")]),
+    ("qoder", "Qoder", (Home, ".qoder/skills"), &[(Home, ".qoder")]),
+    ("qoder-cn", "Qoder CN", (Home, ".qoder-cn/skills"), &[(Home, ".qoder-cn")]),
+    ("reasonix", "Reasonix", (Home, ".reasonix/skills"), &[(Home, ".reasonix")]),
+    ("rovodev", "Rovo Dev", (Home, ".rovodev/skills"), &[(Home, ".rovodev")]),
+    ("roo", "Roo Code", (Home, ".roo/skills"), &[(Home, ".roo")]),
+    ("sarvam-code", "Sarvam Code", (Home, ".agents/skills"), &[(Env("SARVAM_HOME", ".sarvam"), "")]),
+    ("tabnine-cli", "Tabnine CLI", (Home, ".tabnine/agent/skills"), &[(Home, ".tabnine")]),
+    ("terramind", "Terramind", (Home, ".terramind/skills"), &[(Home, ".terramind")]),
+    ("tinycloud", "Tinycloud", (Home, ".tinycloud/skills"), &[(Home, ".tinycloud")]),
+    ("warp", "Warp", (Home, ".agents/skills"), &[(Home, ".warp")]),
+    ("zed", "Zed", (Home, ".agents/skills"), &[(Config, "zed"), (Env("APPDATA", ""), "Zed")]),
+    ("zcode", "ZCode", (Home, ".zcode/skills"), &[(Home, ".zcode"), (Abs, "/Applications/ZCode.app")]),
+    ("zencoder", "Zencoder", (Home, ".zencoder/skills"), &[(Home, ".zencoder")]),
+    ("zenflow", "Zenflow", (Home, ".zencoder/skills"), &[(Home, ".zencoder")]),
+    ("neovate", "Neovate", (Home, ".neovate/skills"), &[(Home, ".neovate")]),
+    ("pochi", "Pochi", (Home, ".pochi/skills"), &[(Home, ".pochi")]),
+    ("adal", "AdaL", (Home, ".adal/skills"), &[(Home, ".adal")]),
+];
+
+fn resolve(home: &Path, (root, rel): (Root, &str)) -> Option<PathBuf> {
+    let env = |var: &str| {
+        std::env::var_os(var)
+            .filter(|value| !value.is_empty())
+            .map(PathBuf::from)
+    };
+    let base = match root {
+        Home => home.to_path_buf(),
+        Config => env("XDG_CONFIG_HOME").unwrap_or_else(|| home.join(".config")),
+        Env(var, fallback) => match env(var) {
+            Some(path) => path,
+            None if fallback.is_empty() => return None,
+            None => home.join(fallback),
+        },
+        Abs => PathBuf::new(),
+    };
+    Some(if rel.is_empty() { base } else { base.join(rel) })
+}
+
+fn agent_detected(home: &Path, agent: &AgentDef) -> bool {
+    agent
+        .3
+        .iter()
+        .filter_map(|loc| resolve(home, *loc))
+        .any(|path| path.exists())
+}
+
+fn agent_def(id: &str) -> Option<&'static AgentDef> {
+    AGENTS.iter().find(|agent| agent.0 == id)
+}
+
+/// Group agents by skills directory, keeping table order.
+fn targets_for(home: &Path, agents: &[&'static AgentDef]) -> Vec<Target> {
+    let mut out: Vec<Target> = Vec::new();
+    for agent in agents {
+        let Some(dir) = resolve(home, agent.2) else {
+            continue;
+        };
+        match out.iter_mut().find(|target| target.skills_dir == dir) {
+            Some(target) => target.agents.push(agent.0.to_string()),
+            None => out.push(Target {
+                agents: vec![agent.0.to_string()],
+                skills_dir: dir,
+            }),
+        }
+    }
+    out
+}
+
+/// Targets for the agents named by `--agent` (`*` for every agent in the table).
+pub fn named_targets(ids: &[String]) -> anyhow::Result<Vec<Target>> {
+    let home = dirs::home_dir().context("no home directory")?;
+    let agents = if ids.iter().any(|id| id == "*") {
+        AGENTS.iter().collect()
+    } else {
+        ids.iter()
+            .map(|id| {
+                agent_def(id).with_context(|| {
+                    let known: Vec<&str> = AGENTS.iter().map(|agent| agent.0).collect();
+                    format!("unknown agent `{id}`; known agents: {}", known.join(", "))
+                })
+            })
+            .collect::<anyhow::Result<Vec<_>>>()?
+    };
+    Ok(targets_for(&home, &agents))
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -79,29 +253,16 @@ fn digest() -> String {
         .collect()
 }
 
-/// Agents whose home directory exists: Claude Code and Codex.
+/// Agents installed on this computer, by the skills.sh detection rules.
 pub fn detected_targets() -> Vec<Target> {
-    let mut out = Vec::new();
     let Some(home) = dirs::home_dir() else {
-        return out;
+        return Vec::new();
     };
-    if home.join(".claude").is_dir() {
-        out.push(Target {
-            agent: "claude-code".into(),
-            skills_dir: home.join(".claude").join("skills"),
-        });
-    }
-    let codex_home = std::env::var_os("CODEX_HOME")
-        .filter(|value| !value.is_empty())
-        .map(PathBuf::from)
-        .unwrap_or_else(|| home.join(".codex"));
-    if codex_home.is_dir() {
-        out.push(Target {
-            agent: "codex".into(),
-            skills_dir: codex_home.join("skills"),
-        });
-    }
-    out
+    let detected: Vec<_> = AGENTS
+        .iter()
+        .filter(|agent| agent_detected(&home, agent))
+        .collect();
+    targets_for(&home, &detected)
 }
 
 fn read_marker(dir: &Path) -> Option<Marker> {
@@ -169,6 +330,7 @@ fn remove(dir: &Path) -> anyhow::Result<()> {
 
 /// Plan, and with `execute` apply, installing (or removing) the Skill.
 pub fn run(targets: &[Target], remove_skill: bool, execute: bool) -> anyhow::Result<Value> {
+    let home = dirs::home_dir().unwrap_or_default();
     let mut rows = Vec::new();
     let mut failed = false;
     for target in targets {
@@ -181,8 +343,21 @@ pub fn run(targets: &[Target], remove_skill: bool, execute: bool) -> anyhow::Res
             (_, State::Foreign) => "skip",
             _ => "none",
         };
+        let agents: Vec<Value> = target
+            .agents
+            .iter()
+            .map(|id| match agent_def(id) {
+                Some(agent) => json!({
+                    "id": id,
+                    "name": agent.1,
+                    "detected": agent_detected(&home, agent),
+                }),
+                None => json!({ "id": id }),
+            })
+            .collect();
         let mut row = json!({
-            "agent": target.agent,
+            "agent": target.agents.first(),
+            "agents": agents,
             "path": dir,
             "state": state,
             "action": action,
@@ -239,9 +414,35 @@ mod tests {
 
     fn target(dir: &Path) -> Vec<Target> {
         vec![Target {
-            agent: "test".into(),
+            agents: vec!["test".into()],
             skills_dir: dir.to_path_buf(),
         }]
+    }
+
+    #[test]
+    fn agents_sharing_a_directory_become_one_target() {
+        let home = Path::new("/home/u");
+        let picked: Vec<_> = ["codex", "claude-code", "cline", "cursor"]
+            .iter()
+            .map(|id| agent_def(id).unwrap())
+            .collect();
+        let targets = targets_for(home, &picked);
+        let dirs: Vec<_> = targets.iter().map(|t| t.skills_dir.clone()).collect();
+        assert_eq!(dirs.len(), 3);
+        assert_eq!(dirs[0], home.join(".agents/skills"));
+        assert_eq!(targets[0].agents, ["codex", "cline"]);
+        assert!(named_targets(&["no-such-agent".into()]).is_err());
+        let ids: std::collections::HashSet<_> = AGENTS.iter().map(|a| a.0).collect();
+        assert_eq!(ids.len(), AGENTS.len(), "agent ids are unique");
+    }
+
+    #[test]
+    fn detection_follows_the_listed_paths() {
+        let home = tempfile::tempdir().unwrap();
+        let cursor = agent_def("cursor").unwrap();
+        assert!(!agent_detected(home.path(), cursor));
+        fs::create_dir(home.path().join(".cursor")).unwrap();
+        assert!(agent_detected(home.path(), cursor));
     }
 
     #[test]

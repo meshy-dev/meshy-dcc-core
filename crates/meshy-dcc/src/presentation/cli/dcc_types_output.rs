@@ -22,7 +22,9 @@ pub(super) async fn run(
         let inventory = list_local_instances(gateway_ensure::default_registry_dir()).ok();
         to_json(service.discovery_decision(catalog, dcc_type, inventory.as_ref(), project))?
     } else {
-        to_json(service.dcc_types(catalog)?)?
+        let mut output = to_json(service.dcc_types(catalog)?)?;
+        output["installed"] = to_json(crate::application::install::receipt::list())?;
+        output
     };
     output["catalog"] = to_json(service.catalog_provenance(catalog))?;
     Ok(output)
