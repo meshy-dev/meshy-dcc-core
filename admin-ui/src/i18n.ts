@@ -128,6 +128,10 @@ import reliabilityEn from './locales/en/reliability.json' with { type: 'json' };
 import reliabilityZhCN from './locales/zh-CN/reliability.json' with { type: 'json' };
 import reliabilityJa from './locales/ja/reliability.json' with { type: 'json' };
 import reliabilityKo from './locales/ko/reliability.json' with { type: 'json' };
+import productEn from './locales/en/product.json' with { type: 'json' };
+import productZhCN from './locales/zh-CN/product.json' with { type: 'json' };
+import productJa from './locales/ja/product.json' with { type: 'json' };
+import productKo from './locales/ko/product.json' with { type: 'json' };
 
 export const I18N_MESSAGES = {
   common: {
@@ -297,6 +301,12 @@ export const I18N_MESSAGES = {
     'zh-CN': experimentsZhCN,
     ja: experimentsJa,
     ko: experimentsKo,
+  },
+  product: {
+    en: productEn,
+    'zh-CN': productZhCN,
+    ja: productJa,
+    ko: productKo,
   },
 } as const;
 

@@ -2,7 +2,7 @@ import { type InterpolationValues, type MessageKey } from './i18n';
 
 export type Translator = (key: MessageKey, values?: InterpolationValues) => string;
 
-export type Panel = 'setup' | 'debug' | 'activity' | 'health' | 'instances' | 'tools' | 'workflows' | 'experiments' | 'tasks' | 'openapi' | 'calls' | 'traces' | 'traffic' | 'stats' | 'governance' | 'logs' | 'skill-paths' | 'analytics' | 'memory' | 'marketplace' | 'integrations' | 'discover' | 'overview' | 'reliability' | 'sessions';
+export type Panel = 'home' | 'connectors' | 'agents' | 'settings' | 'setup' | 'debug' | 'activity' | 'health' | 'instances' | 'tools' | 'workflows' | 'experiments' | 'tasks' | 'openapi' | 'calls' | 'traces' | 'traffic' | 'stats' | 'governance' | 'logs' | 'skill-paths' | 'analytics' | 'memory' | 'marketplace' | 'integrations' | 'discover' | 'overview' | 'reliability' | 'sessions';
 
 export type AnalyticsOverview = {
   range: string;
@@ -132,6 +132,14 @@ export type HealthPayload = {
     circuit_open_secs: number;
   };
   circuits?: { tracked_backends: number; circuits_open: number };
+  /// Who runs this gateway and how it is reachable (`meshy-dcc ui`).
+  service?: {
+    started_by?: string | null;
+    network_listener?: string | null;
+    auth_enabled?: boolean;
+    idle_timeout_secs?: number;
+    persist?: boolean;
+  };
 };
 
 export type GatewaySentinel = {

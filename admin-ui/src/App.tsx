@@ -4,9 +4,6 @@ import {
   RiFolderOpenLine,
   RiRefreshLine,
 } from '@remixicon/react';
-import { LanguageSelector } from './components/LanguageSelector';
-import { ThemeSelector } from './components/ThemeSelector';
-import { BrandLogo } from './components/BrandLogo';
 import { LogsPanel } from './components/LogsPanel';
 import { PanelSearchBar } from './components/PanelSearchBar';
 import { Button } from './components/ui/button';
@@ -37,6 +34,21 @@ import { WorkflowsPanel } from './features/workflows';
 import { TasksPanel } from './features/tasks';
 import { TracesPanel } from './features/traces';
 import {
+  AgentsPanel,
+  ConnectorsPanel,
+  HomePanel,
+  ProductSidebar,
+  SettingsPanel,
+  agentEntries,
+  connectedInstances,
+  connectorViews,
+  isLocalPage,
+  startProgress,
+  useAgentsQuery,
+  useConnectorsQuery,
+  type DevLink,
+} from './features/product';
+import {
   canonicalAdminPanelTarget,
   readDiscoverTabFromUrl,
   readOverviewTabFromUrl,
@@ -46,12 +58,12 @@ import {
   type ReliabilityTab,
   type SessionsTab,
 } from './navigation';
-import { createTranslator, detectBrowserLocale, type SupportedLocale } from './i18n';
+import { createTranslator, detectBrowserLocale, type MessageKey, type SupportedLocale } from './i18n';
 import { readLocaleOverride, storeLocaleOverride } from './locale';
 import { applyTheme, readThemeMode, resolveTheme, storeThemeMode, type ThemeMode } from './theme';
 import { filterLogs, isProblemLog, normalizeLogRow, summarizeLogSeverity, type LogSeverityFilter } from './logs';
 import { CRITICAL_LATENCY_MS, SLOW_LATENCY_MS, type ClientPlatform, type DebugSignal, type FailureSignal, type IdeTarget, type InstanceRow, type InstanceSummary, type InstanceUpdatePayload, type OpenApiSource, type Panel, type SetupUrlMode, type TokenBreakdownEntry, type TraceDetailPayload } from './admin-types';
-import { apiJson, backendAccessUrls, compactId, configPathFileUrl, configPathForTarget, detectClientPlatform, DocsIcon, downloadJsonText, flattenOpenApiOperations, gatewayMcpUrl, gatewayOpenApiSource, hrefForAdmin, IDE_TARGETS, ideConfigText, IdeIcon, instanceSetupLabel, isErrStatus, isOkStatus, isProblemActivity, isSlowLatency, issueReportFilename, issueReportJsonText, isWarnStatus, lanGatewayMcpUrl, matchesListFilter, NavIcon, NAVIGATION, openApiSpecFilename, PanelHeader, projectDocsHref, readOpenApiSourceFromUrl, readPanelFromUrl, readStatsRangeFromUrl, readTraceIdFromUrl, STATS_RANGE_IDS, statusClass, StatusLine, totalTraceTokens, traceLatency, haystack, trafficRequestId, trafficSessionId, trafficMethod, trafficRedactedPaths, agentLabel, formatDurationMs, formatTokenCount } from './admin-ui-core';
+import { apiJson, backendAccessUrls, compactId, configPathFileUrl, configPathForTarget, detectClientPlatform, downloadJsonText, flattenOpenApiOperations, gatewayMcpUrl, gatewayOpenApiSource, IDE_TARGETS, ideConfigText, IdeIcon, instanceSetupLabel, isErrStatus, isOkStatus, isProblemActivity, isSlowLatency, issueReportFilename, issueReportJsonText, isWarnStatus, lanGatewayMcpUrl, matchesListFilter, NAVIGATION, openApiSpecFilename, PanelHeader, readOpenApiSourceFromUrl, readPanelFromUrl, readStatsRangeFromUrl, readTraceIdFromUrl, STATS_RANGE_IDS, statusClass, StatusLine, totalTraceTokens, traceLatency, haystack, trafficRequestId, trafficSessionId, trafficMethod, trafficRedactedPaths, agentLabel, formatDurationMs, formatTokenCount } from './admin-ui-core';
 import {
   useActivityQuery,
   useCallsQuery,
@@ -83,6 +95,38 @@ function instanceUpdateTone(payload: InstanceUpdatePayload): InstanceUpdateNotic
   }
   return 'err';
 }
+
+const DEV_DETAILS_KEY = 'meshy-dcc-ui-developer';
+
+/// The Developer section is off unless the user turned it on in Settings.
+function readDevEnabled(): boolean {
+  try {
+    return window.localStorage.getItem(DEV_DETAILS_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+function storeDevEnabled(on: boolean): void {
+  try {
+    window.localStorage.setItem(DEV_DETAILS_KEY, on ? '1' : '0');
+  } catch {
+    // Storage may be blocked; the choice holds for this visit only.
+  }
+}
+
+/// Developer pages: the design's seven groups first, then every other
+/// operations page under its own name.
+const DEV_GROUPS: { id: string; labelKey: MessageKey; nav: string }[] = [
+  { id: 'health', labelKey: 'product.nav.dev.health', nav: 'health' },
+  { id: 'traces', labelKey: 'product.nav.dev.traces', nav: 'traces' },
+  { id: 'logs', labelKey: 'product.nav.dev.logs', nav: 'logs' },
+  { id: 'sessions', labelKey: 'product.nav.dev.sessions', nav: 'sessions' },
+  { id: 'stats', labelKey: 'product.nav.dev.stats', nav: 'overview' },
+  { id: 'skills', labelKey: 'product.nav.dev.skills', nav: 'skills' },
+  { id: 'api', labelKey: 'product.nav.dev.api', nav: 'openapi' },
+];
+const PRODUCT_PANELS = new Set<Panel>(['home', 'connectors', 'agents', 'settings']);
 
 function App() {
   const [localeOverride, setLocaleOverride] = useState<SupportedLocale | null>(() => readLocaleOverride());
@@ -139,8 +183,12 @@ function App() {
   // tasks→tasks | calls→calls | traces→traces | traffic→traffic
   // stats→stats+calls+traces | governance→governance | logs→logs
 
-  const healthQuery = useHealthQuery(isActive('health', 'debug', 'setup'));
-  const workersQuery = useWorkersQuery(isActive('instances', 'debug', 'setup'));
+  // The sidebar shows service status and open apps on every page.
+  const healthQuery = useHealthQuery(true);
+  const workersQuery = useWorkersQuery(true);
+  const connectorsQuery = useConnectorsQuery(isActive('home', 'connectors'));
+  const agentsQuery = useAgentsQuery(isActive('home', 'agents'));
+  const allTimeStatsQuery = useStatsQuery(isActive('home'), 'all');
   const activityQuery = useActivityQuery(isActive('activity', 'debug'));
   const toolsQuery = useToolsQuery(isActive('tools', 'debug'));
   const callsQuery = useCallsQuery(isActive('traces', 'debug', 'overview'));
@@ -253,10 +301,36 @@ function App() {
     return errs;
   }, [healthQuery, workersQuery, activityQuery, toolsQuery, callsQuery, tracesQuery, trafficQuery, tasksQuery, workflowsQuery, statsQuery, governanceQuery, logsQuery, openApiQuery, skillPathsError, marketplaceError, integrationsError]);
 
-  const panels = useMemo(
-    () => NAVIGATION.map((panel) => ({ ...panel, label: t(panel.labelKey), group: t(panel.groupKey) })),
-    [t],
-  );
+  // ── user-facing pages (meshy-dcc ui) ───────────────────────────────────
+  const [devEnabled, setDevEnabled] = useState(() => readDevEnabled());
+  // Collapsed by default; open when the page itself is a developer page.
+  const [devOpen, setDevOpen] = useState(() => !PRODUCT_PANELS.has(activePanel));
+  const localPage = useMemo(() => isLocalPage(), []);
+  const gatewayAddress = window.location.host;
+  const connectedRows = useMemo(() => connectedInstances(workersQuery.data?.workers), [workersQuery.data]);
+  const connectorList = useMemo(() => connectorViews(connectorsQuery.data), [connectorsQuery.data]);
+  const agentList = useMemo(() => agentEntries(agentsQuery.data), [agentsQuery.data]);
+  const homeData = useMemo(() => ({
+    health: healthQuery.data,
+    reachable: !healthQuery.isError,
+    local: localPage,
+    address: gatewayAddress,
+    instances: connectedRows,
+    connectors: connectorList,
+    agents: agentList,
+    progress: startProgress({
+      connectors: connectorList,
+      agents: agentList,
+      successfulCalls: allTimeStatsQuery.data?.successful_calls ?? 0,
+    }),
+    progressKnown: !connectorsQuery.isPending && !agentsQuery.isPending && !allTimeStatsQuery.isPending,
+  }), [healthQuery.data, healthQuery.isError, localPage, gatewayAddress, connectedRows, connectorList, agentList,
+    allTimeStatsQuery.data, allTimeStatsQuery.isPending, connectorsQuery.isPending, agentsQuery.isPending]);
+  const changeDevEnabled = useCallback((on: boolean) => {
+    storeDevEnabled(on);
+    setDevEnabled(on);
+    setDevOpen(on);
+  }, []);
 
   const changeLocale = useCallback((locale: SupportedLocale) => {
     storeLocaleOverride(locale);
@@ -1351,82 +1425,71 @@ function App() {
       ].filter(Boolean).join(' ')
     : '';
 
+  const devLinks = useMemo<DevLink[]>(() => {
+    const byId = new Map(NAVIGATION.map((entry) => [entry.id, entry]));
+    const link = (id: string, label: string, entry: (typeof NAVIGATION)[number]): DevLink => ({
+      id,
+      label,
+      active: entry.panel === activePanel,
+      onSelect: () => goToPanel(entry.panel, {
+        discoverTab: entry.discoverTab,
+        overviewTab: entry.overviewTab,
+        tracesTab: entry.tracesTab,
+        sessionsTab: entry.sessionsTab,
+        reliabilityTab: entry.reliabilityTab,
+        range: entry.panel === 'overview' ? statsRange : undefined,
+      }),
+    });
+    const groups = DEV_GROUPS.flatMap((group) => {
+      const entry = byId.get(group.nav);
+      return entry ? [link(group.id, t(group.labelKey), entry)] : [];
+    });
+    const grouped = new Set(groups.map((group) => byId.get(DEV_GROUPS.find((g) => g.id === group.id)!.nav)!.panel));
+    const rest = NAVIGATION.filter((entry) => !grouped.has(entry.panel)).map((entry) => link(entry.id, t(entry.labelKey), entry));
+    return [...groups, ...rest];
+  }, [activePanel, goToPanel, statsRange, t]);
+
   return (
     <div className="app-shell">
-      <nav className="side-rail" aria-label={t('common.aria.adminNavigation')}>
-        <div className="brand-lockup">
-          <BrandLogo />
-          <div className="brand-text">
-            <h1>{t('chrome.app.title')}</h1>
-            <p className="brand-tag">{t('chrome.app.subtitle')}</p>
-          </div>
-        </div>
-        <div className="sidebar-preferences" aria-label={`${t('common.language.label')} / ${t('common.theme.label')}`}>
-          <LanguageSelector
-            locale={localeDetection.locale}
-            source={localeDetection.source}
-            onChange={changeLocale}
+      <ProductSidebar
+        t={t}
+        panel={activePanel}
+        onNavigate={(panel) => goToPanel(panel)}
+        reachable={!healthQuery.isError}
+        local={localPage}
+        version={healthQuery.data?.version}
+        instances={connectedRows}
+        devEnabled={devEnabled}
+        devOpen={devOpen}
+        onToggleDev={() => setDevOpen((open) => !open)}
+        devLinks={devLinks}
+      />
+      <main className={PRODUCT_PANELS.has(activePanel) ? 'main-stage pd-stage' : 'main-stage'}>
+        {activePanel === 'home' && (
+          <HomePanel t={t} data={homeData} onNavigate={(panel) => goToPanel(panel)} onRecheck={() => void workersQuery.refetch()} />
+        )}
+        {activePanel === 'connectors' && <ConnectorsPanel t={t} local={localPage} />}
+        {activePanel === 'agents' && <AgentsPanel t={t} local={localPage} />}
+        {activePanel === 'settings' && (
+          <SettingsPanel
             t={t}
+            health={healthQuery.data}
+            reachable={!healthQuery.isError}
+            local={localPage}
+            address={gatewayAddress}
+            locale={localeDetection.locale}
+            onLocale={changeLocale}
+            theme={themeMode}
+            onTheme={changeTheme}
+            devEnabled={devEnabled}
+            onDev={changeDevEnabled}
+            onReport={() => {
+              changeDevEnabled(true);
+              goToPanel('debug');
+            }}
           />
-          <ThemeSelector mode={themeMode} onChange={changeTheme} t={t} />
-        </div>
-        <div className="nav-links">
-          {panels.map((panel, index) => {
-            const showGroup = index === 0 || panels[index - 1].group !== panel.group;
-            const isActive =
-              panel.panel === activePanel
-              && (!panel.discoverTab || (activePanel === 'discover' && discoverTab === panel.discoverTab))
-              && (!panel.overviewTab || (activePanel === 'overview' && overviewTab === panel.overviewTab))
-              && (!panel.tracesTab || (activePanel === 'traces' && tracesTab === panel.tracesTab));
-            const href = hrefForAdmin(panel.panel, {
-              discoverTab: panel.discoverTab,
-              overviewTab: panel.overviewTab,
-              tracesTab: panel.tracesTab,
-              sessionsTab: panel.sessionsTab,
-              reliabilityTab: panel.reliabilityTab,
-              range: panel.panel === 'overview' ? statsRange : undefined,
-            });
-            return (
-              <div className="nav-entry" key={panel.id}>
-                {showGroup ? <div className="nav-section-title">{panel.group}</div> : null}
-                <a
-                  href={href}
-                  className={isActive ? 'nav-link active' : 'nav-link'}
-                  aria-current={isActive ? 'page' : undefined}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    goToPanel(panel.panel, {
-                      discoverTab: panel.discoverTab,
-                      overviewTab: panel.overviewTab,
-                      tracesTab: panel.tracesTab,
-                      sessionsTab: panel.sessionsTab,
-                      reliabilityTab: panel.reliabilityTab,
-                      range: panel.panel === 'overview' ? statsRange : undefined,
-                    });
-                  }}
-                >
-                  <NavIcon panel={panel.icon} />
-                  <span>{panel.label}</span>
-                </a>
-              </div>
-            );
-          })}
-          <div className="nav-entry">
-            <a
-              href={projectDocsHref()}
-              className="nav-link"
-              target="_blank"
-              rel="noopener noreferrer"
-              title={t('navigation.docs.title')}
-            >
-              <DocsIcon />
-              <span>{t('navigation.docs.label')}</span>
-            </a>
-          </div>
-        </div>
-      </nav>
-      <main className="main-stage">
-        {!['setup', 'health', 'debug', 'sessions', 'experiments', 'reliability', 'analytics', 'discover'].includes(activePanel) && (
+        )}
+        {!PRODUCT_PANELS.has(activePanel) && !['setup', 'health', 'debug', 'sessions', 'experiments', 'reliability', 'analytics', 'discover'].includes(activePanel) && (
           <PanelSearchBar
             panel={activePanel}
             discoverTab={discoverTab}

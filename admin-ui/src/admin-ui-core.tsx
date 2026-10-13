@@ -393,7 +393,7 @@ export function PanelTabs<T extends string>({
 }
 
 export function NavIcon({ panel }: { panel: Panel }) {
-  const icons: Record<Panel, string[]> = {
+  const icons: Partial<Record<Panel, string[]>> = {
     setup: ['M5 12h10', 'M13 8l4 4-4 4', 'M4 5h16v14H4z'],
     debug: ['M6 6h12v12H6z', 'M9 9h6v6H9z'],
     activity: ['M4 14h4l2-5 4 9 2-4h4'],
@@ -422,7 +422,7 @@ export function NavIcon({ panel }: { panel: Panel }) {
   };
   return (
     <svg className="nav-icon" viewBox="0 0 24 24" aria-hidden="true">
-      {icons[panel].map((d) => <path key={d} d={d} />)}
+      {(icons[panel] ?? []).map((d) => <path key={d} d={d} />)}
     </svg>
   );
 }

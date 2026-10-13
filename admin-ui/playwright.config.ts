@@ -10,7 +10,7 @@ export default defineConfig({
   workers: 1,
   reporter: [['html', { open: 'never' }]],
   webServer: {
-    command: `vx npm run dev -- --port ${testPort}`,
+    command: `npm run dev -- --port ${testPort}`,
     url: `${testBaseURL}/admin/`,
     reuseExistingServer: !process.env.CI && !process.env.ADMIN_UI_TEST_PORT,
     timeout: 60_000,

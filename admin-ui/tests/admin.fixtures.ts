@@ -47,6 +47,16 @@ export async function openIntegrationEditor(page: Page, kind: string) {
   await expect(page.locator('.integration-edit-form')).toBeVisible();
 }
 
+/// Turn on the Developer section, where the operations pages live.
+export async function enableDeveloperDetails(page: Page) {
+  await page.addInitScript(() => localStorage.setItem('meshy-dcc-ui-developer', '1'));
+}
+
+/// A page in the sidebar's Developer section.
+export function developerNav(page: Page, name: string) {
+  return page.getByRole('navigation').getByRole('button', { name, exact: true });
+}
+
 export async function disableTestMotion(page: Page) {
   await page.addInitScript(() => {
     const install = () => {

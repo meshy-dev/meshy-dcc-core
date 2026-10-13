@@ -33,6 +33,14 @@ and is not runtime-compatible with it. Attribution stays in `LICENSE` and
   `cdn.meshy.ai/meshy-dcc-core/marketplace/` (signature
   `marketplace-sigstore.json`), with cdn.meshy.cn as the fallback host. Both
   feeds are replaced in place and published uncached.
+- The gateway answers browsers only from its own origin. CORS used to allow
+  every origin, so any web page could call the gateway, including its admin
+  endpoints. A request that carries `Origin` must now come from the
+  gateway's own address, a loopback page talking to a loopback gateway, or
+  `MESHY_DCC_GATEWAY_ALLOWED_ORIGINS`; browser requests must also name the
+  gateway by IP address or `localhost` (or a name in
+  `MESHY_DCC_GATEWAY_ALLOWED_HOSTS`), which stops DNS rebinding. The CLI,
+  adapters and other non-browser clients are not affected.
 - The gateway no longer opens its remote (LAN) listener by default. Adapter
   processes used to bind `0.0.0.0:59765` with no authentication, so anyone on
   the network could list instances and call DCC tools. Set
@@ -165,12 +173,36 @@ and is not runtime-compatible with it. Attribution stays in `LICENSE` and
   marker, so `update apply` leaves upgrades to npm.
   `scripts/release/build_npm_packages.py` builds the tarballs.
 - `meshy-dcc agent-skill` installs the `meshy-dcc` Skill, which is embedded in
-  the CLI, into agents' skill directories: Claude Code (`~/.claude/skills`)
-  and Codex (`$CODEX_HOME/skills`) when they are present, or any `--dir`. It
-  prints the plan unless `--execute` is given, writes only into
+  the CLI, into agents' skill directories: every agent in the skills.sh table
+  that is installed on the computer (Claude Code, Codex, Cursor, Gemini CLI
+  and about 70 more, each detected the way skills.sh does), the agents named
+  with `--agent <id>` (`*` for all), or any `--dir`. Agents that read one
+  folder (Codex, Cline, Warp, Zed and others share `~/.agents/skills`) are one
+  target. It prints the plan unless `--execute` is given, writes only into
   `<skills dir>/meshy-dcc/`, records what it wrote, never overwrites a
   directory it did not write, and `--remove` deletes only its own files.
   Release builds update an installed copy when the CLI changes.
+- `meshy-dcc ui` opens the Meshy DCC Core window in the browser (the gateway's
+  `/admin` page), starting the local gateway first; `--no-open` only prints
+  the address, and a remote gateway profile opens that gateway. The page is
+  the user-facing product: Overview (core service, connected apps by
+  instance, installed connectors and Skill), Connectors (install, or add to
+  a project, and what is coming), Agents (turn the Skill on per agent),
+  Settings, and a first-run checklist that goes away once a connector is
+  installed, an agent has the Skill and a call has succeeded. Operations
+  pages stay under a Developer section that Settings turns on. English,
+  Simplified Chinese, Japanese and Korean. An open page keeps an idle
+  standalone gateway running.
+- New admin endpoints behind those pages run the `meshy-dcc` CLI installed
+  next to the gateway: `GET /admin/api/connectors` (`dcc-types`),
+  `POST /admin/api/connectors/install` (`install --execute`),
+  `GET /admin/api/agents` and `POST /admin/api/agents/skill`
+  (`agent-skill`). The two that change the computer answer loopback peers
+  only. `/admin/api/health` adds `service`: who started the gateway, the LAN
+  listener, whether authentication is on and the idle timeout.
+- A successful `install --execute` writes a receipt under the Meshy DCC data
+  directory (`receipt_path` in the report); `dcc-types` lists them as
+  `installed` and marks adapters that install per project (`per_project`).
 - `dcc-types` reports an adapter the catalog lists but cannot install with
   `next_action.id: report_unavailable` and the catalog's reason, and no
   command. It used to point back at `dcc-types`, which sent agents in a loop.

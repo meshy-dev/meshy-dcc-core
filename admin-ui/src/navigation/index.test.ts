@@ -115,16 +115,16 @@ describe('readPanelFromUrl', () => {
     expect(replaceState).not.toHaveBeenCalled();
   });
 
-  it('returns "setup" when ?panel is missing', async () => {
+  it('returns "home" when ?panel is missing', async () => {
     mockLocation('');
     const { readPanelFromUrl } = await loadNavigation();
-    expect(readPanelFromUrl()).toBe('setup');
+    expect(readPanelFromUrl()).toBe('home');
   });
 
-  it('returns "setup" when ?panel is invalid and not in alias map', async () => {
+  it('returns "home" when ?panel is invalid and not in alias map', async () => {
     mockLocation('?panel=unknown');
     const { readPanelFromUrl } = await loadNavigation();
-    expect(readPanelFromUrl()).toBe('setup');
+    expect(readPanelFromUrl()).toBe('home');
   });
 
   it.each([
@@ -146,7 +146,7 @@ describe('readPanelFromUrl', () => {
     mockLocation('?panel=old-dashboard');
     const replaceState = vi.spyOn(window.history, 'replaceState');
     const { readPanelFromUrl } = await loadNavigation();
-    expect(readPanelFromUrl()).toBe('setup');
+    expect(readPanelFromUrl()).toBe('home');
     expect(replaceState).not.toHaveBeenCalled();
   });
 

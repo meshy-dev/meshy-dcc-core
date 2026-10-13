@@ -492,16 +492,12 @@ test.describe('Marketplace Panel', () => {
       sources: [],
       outdated: [],
     });
-    // Health query is only enabled on health / debug / setup panels.
-    // Visit health panel first, then navigate to marketplace via SPA link
-    // (client-side nav keeps TanStack Query cache alive; page.goto would reload).
-    await page.goto('/admin/?panel=health', { waitUntil: 'domcontentloaded' });
-    await expect(page.locator('.health-panel')).toContainText('0.17.7');
-    await page.getByRole('navigation').getByRole('link', { name: 'Marketplace' }).click();
+    // The sidebar reads health on every page, so the core version is known here.
+    await gotoMarketplace(page);
     await expect(page.locator('.marketplace-panel')).toBeVisible();
 
     // Open detail modal
-    await page.locator('.marketplace-card[data-name="futuristic-tools"]').click();
+    await page.locator('.marketplace-card[data-name="futuristic-tools"] .marketplace-card-media-trigger').click();
 
     const modal = page.locator('.marketplace-detail-modal');
     await expect(modal).toBeVisible();

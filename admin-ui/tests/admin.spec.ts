@@ -1,87 +1,20 @@
 import { test, expect, type Page } from '@playwright/test';
-import { analyticsSeriesFixture, analyticsTotals, chooseSidebarSelectOption, openIntegrationEditor, disableTestMotion, mockAdminApi } from './admin.fixtures';
+import { analyticsSeriesFixture, analyticsTotals, chooseSidebarSelectOption, openIntegrationEditor, disableTestMotion, developerNav, enableDeveloperDetails, mockAdminApi } from './admin.fixtures';
 
 test.beforeEach(async ({ page }) => {
   await disableTestMotion(page);
+  await enableDeveloperDetails(page);
   await mockAdminApi(page);
 });
 
 test.describe('Admin Page', () => {
   test('loads the command center panel and navigation', async ({ page }) => {
-    await page.goto('/admin/');
+    await page.goto('/admin/?panel=setup');
     await expect(page.locator('html')).toHaveAttribute('lang', 'en');
     await expect(page.locator('html')).toHaveAttribute('data-admin-locale', 'en');
-    await expect(page.getByRole('img', { name: 'Meshy DCC' })).toBeVisible();
-    const preferenceBox = await page.locator('.sidebar-preferences').boundingBox();
-    expect(preferenceBox?.height ?? 0).toBeLessThanOrEqual(48);
-    await expect(page.locator('.sidebar-preferences .preference-icon')).toHaveCount(2);
-    await expect(page.locator('#admin-locale-select .preference-select-visible-value')).toHaveText('EN');
-    await expect(page.locator('#admin-locale-select')).toHaveAttribute('aria-label', 'Language: English');
-    await expect(page.locator('#admin-locale-select')).toHaveText('EN');
-    await expect(page.locator('.sidebar-preferences')).not.toContainText('navigator');
-    await page.locator('#admin-locale-select').click();
-    const localeMenu = page.locator('[data-slot="select-content"]').last();
-    await expect(localeMenu).toBeVisible();
-    const localeMenuStyle = await localeMenu.evaluate((node) => {
-      const style = window.getComputedStyle(node as HTMLElement);
-      return {
-        backgroundColor: style.backgroundColor,
-        borderRadius: style.borderRadius,
-        color: style.color,
-        opacity: style.opacity,
-      };
-    });
-    expect(parseFloat(localeMenuStyle.borderRadius)).toBeLessThanOrEqual(8);
-    expect(localeMenuStyle.backgroundColor).not.toBe('rgba(0, 0, 0, 0)');
-    expect(localeMenuStyle.color).not.toBe(localeMenuStyle.backgroundColor);
-    expect(localeMenuStyle.opacity).toBe('1');
-    const localeMenuBox = await localeMenu.boundingBox();
-    const localeTriggerBox = await page.locator('#admin-locale-select').boundingBox();
-    expect(localeMenuBox?.width ?? 0).toBeGreaterThanOrEqual(localeTriggerBox?.width ?? 0);
-    expect(localeMenuBox?.width ?? 0).toBeGreaterThanOrEqual(150);
-    const localeItemMetrics = await page.locator('[data-slot="select-item"]').evaluateAll((nodes) =>
-      nodes.map((node) => {
-        const element = node as HTMLElement;
-        const style = window.getComputedStyle(element);
-        return {
-          clientWidth: element.clientWidth,
-          scrollWidth: element.scrollWidth,
-          text: element.textContent?.replace(/\s+/g, ' ').trim() ?? '',
-          whiteSpace: style.whiteSpace,
-        };
-      }),
-    );
-    expect(localeItemMetrics.length).toBeGreaterThanOrEqual(4);
-    for (const metric of localeItemMetrics) {
-      expect(metric.whiteSpace).toBe('nowrap');
-      expect(metric.scrollWidth).toBeLessThanOrEqual(metric.clientWidth + 1);
-    }
-    const chineseOption = page.getByRole('option', { name: '简体中文' });
-    await chineseOption.hover();
-    const chineseOptionStyle = await chineseOption.evaluate((node) => {
-      const style = window.getComputedStyle(node as HTMLElement);
-      return {
-        backgroundColor: style.backgroundColor,
-        borderRadius: style.borderRadius,
-      };
-    });
-    expect(parseFloat(chineseOptionStyle.borderRadius)).toBeLessThanOrEqual(6);
-    expect(chineseOptionStyle.backgroundColor).not.toBe('rgb(0, 120, 215)');
-    await page.keyboard.press('Escape');
-    await chooseSidebarSelectOption(page, 'admin-theme-select', 'Light');
-    await expect(page.locator('.brand-logo-image-light')).toBeVisible();
-    await expect(page.locator('.brand-logo-image-dark')).toBeHidden();
-    await chooseSidebarSelectOption(page, 'admin-theme-select', 'Dark');
-    await expect(page.locator('.brand-logo-image-light')).toBeHidden();
-    await expect(page.locator('.brand-logo-image-dark')).toBeVisible();
+    // The setup page is a Developer page in the Meshy DCC Core shell.
+    await expect(developerNav(page, 'Command Center')).toHaveAttribute('aria-current', 'page');
     await expect(page.locator('.command-agent-prompt [data-slot="button"]').first()).toBeVisible();
-    await expect(page.locator('.brand-tag')).toContainText('Meshy DCC Gateway');
-    await expect(page.locator('h1')).toContainText('Admin Dashboard');
-    await expect(page.getByRole('navigation').getByRole('link', { name: 'Command Center' })).toHaveClass(/active/);
-    for (const label of ['Command Center', 'Debug', 'Activity', 'Health', 'Instances', 'Tools', 'Workflows', 'Agent Experiments', 'Tasks', 'Sessions', 'Calls', 'Traces', 'Overview', 'Analytics', 'Reliability', 'OpenAPI Inspector', 'Skills', 'Marketplace', 'Integrations', 'Logs', 'Docs']) {
-      await expect(page.getByRole('navigation').getByRole('link', { name: label })).toBeVisible();
-    }
-    await expect(page.getByRole('navigation').getByRole('link', { name: 'Docs' })).toHaveAttribute('href', 'https://github.com/meshy-dev/meshy-dcc-core/tree/main/docs');
     await expect(page.locator('.setup-panel')).toContainText('Claude Desktop');
     await expect(page.locator('.setup-panel')).toContainText('DCC CLI Command Center');
     await expect(page.getByRole('tab', { name: /Agent Prompt/ })).toHaveAttribute('aria-selected', 'true');
@@ -112,7 +45,7 @@ test.describe('Admin Page', () => {
     await expect(page.locator('.setup-panel')).toContainText('meshy-dcc update check --binary meshy-dcc-server --current-version <server_version>');
     await expect(page.locator('.command-aside-action')).toHaveCount(2);
     await expect(page.locator('.command-aside-action').first()).toContainText('Manage loaded skills');
-    await expect(page.locator('.command-aside-action').last()).toContainText('Install and update skill packages');
+    await expect(page.locator('.command-aside-action').last()).toContainText('Install and update marketplace packages');
     await expect(page.locator('.command-center-aside')).toContainText('Session context');
     await expect(page.locator('.command-center-aside')).toContainText('Agent flow');
     await expect(page.locator('.command-center-aside')).toContainText('Search');
@@ -148,7 +81,7 @@ test.describe('Admin Page', () => {
     await page.getByRole('button', { name: 'Direct' }).click();
     await expect(page.locator('.setup-panel')).toContainText('Maya Layout');
     await expect(page.locator('.setup-panel .ide-config-preview').first()).toContainText('http://127.0.0.1:8765/mcp');
-    await page.getByRole('navigation').getByRole('link', { name: 'Debug' }).click();
+    await developerNav(page, 'Debug').click();
     await expect(page.locator('.debug-panel')).toContainText('Debug Workbench');
     await expect(page.locator('.debug-panel')).toContainText('Agent Triage');
     await expect(page.locator('.debug-panel')).toContainText('Failed execution');
@@ -156,14 +89,14 @@ test.describe('Admin Page', () => {
     await expect(page.locator('.debug-panel')).toContainText('Traffic Shape');
     await expect(page.locator('.debug-panel')).toContainText('Token Pressure');
     await expect(page.locator('.debug-panel')).toContainText('250 payload tokens');
-    await page.getByRole('navigation').getByRole('link', { name: 'Health' }).click();
+    await developerNav(page, 'Health').click();
     await expect(page.locator('.health-panel')).toContainText('0.17.7');
     await expect(page.locator('.health-panel')).toContainText('toon / meshy-dcc-byte4-v1');
   });
 
   test('keeps setup IDE card action rows aligned', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
-    await page.goto('/admin/');
+    await page.goto('/admin/?panel=setup');
     const cards = page.locator('.setup-panel .ide-card');
     await expect(cards).toHaveCount(6);
 
@@ -200,7 +133,7 @@ test.describe('Admin Page', () => {
     }
 
     await page.setViewportSize({ width: 420, height: 900 });
-    await page.goto('/admin/');
+    await page.goto('/admin/?panel=setup');
     const narrowRows = await cards.evaluateAll((elements) => elements.map((card) => {
       const cardRect = card.getBoundingClientRect();
       const actions = card.querySelector('.ide-card-actions')?.getBoundingClientRect();
@@ -287,51 +220,42 @@ test.describe('Admin Page', () => {
     const page = await context.newPage();
     await mockAdminApi(page);
 
-    await page.goto('/admin/');
+    await page.goto('/admin/?panel=setup');
 
     await expect(page.locator('html')).toHaveAttribute('lang', 'ja');
     await expect(page.locator('html')).toHaveAttribute('data-admin-locale-source', 'navigator');
-    await expect(page.locator('.brand-tag')).toContainText('Meshy DCC ゲートウェイ');
-    await expect(page.locator('#admin-locale-select .preference-select-visible-value')).toHaveText('JA');
-    await expect(page.locator('#admin-locale-select')).toHaveAttribute('aria-label', '言語: 日本語');
+    await expect(page.getByRole('navigation').getByRole('button', { name: '概要', exact: true })).toBeVisible();
 
     await context.close();
   });
 
-  test('switches language from the visible selector and persists the override', async ({ page }) => {
-    await page.goto('/admin/');
+  test('switches language from Settings and persists the override', async ({ page }) => {
+    await page.goto('/admin/?panel=settings');
 
-    await chooseSidebarSelectOption(page, 'admin-locale-select', '简体中文');
+    await page.locator('#pd-lang').selectOption('zh-CN');
 
     await expect(page.locator('html')).toHaveAttribute('lang', 'zh-CN');
     await expect(page.locator('html')).toHaveAttribute('data-admin-locale-source', 'override');
-    await expect(page.getByRole('navigation').getByRole('link', { name: '日志' })).toBeVisible();
-    await expect(page.locator('#admin-locale-select .preference-select-visible-value')).toHaveText('ZH');
-    const localeTriggerMetrics = await page.locator('#admin-locale-select').evaluate((node) => {
-      const trigger = node as HTMLElement;
-      return {
-        clientWidth: trigger.clientWidth,
-        scrollWidth: trigger.scrollWidth,
-      };
-    });
-    expect(localeTriggerMetrics.scrollWidth).toBeLessThanOrEqual(localeTriggerMetrics.clientWidth + 1);
+    await expect(page.getByRole('navigation').getByRole('button', { name: '概览', exact: true })).toBeVisible();
+    await page.getByRole('navigation').getByRole('button', { name: '开发者' }).click();
+    await expect(developerNav(page, '日志')).toBeVisible();
 
     await page.reload();
 
     await expect(page.locator('html')).toHaveAttribute('lang', 'zh-CN');
-    await expect(page.locator('#admin-locale-select .preference-select-visible-value')).toHaveText('ZH');
-    await expect(page.locator('#admin-locale-select')).toHaveAttribute('aria-label', '语言: 简体中文');
+    await expect(page.locator('#pd-lang')).toHaveValue('zh-CN');
   });
 
   test('renders an admin flow under Simplified Chinese without translating machine data', async ({ browser }) => {
     const context = await browser.newContext({ locale: 'zh-CN' });
     const page = await context.newPage();
+    await enableDeveloperDetails(page);
     await mockAdminApi(page);
 
     await page.goto('/admin/?panel=governance');
 
     await expect(page.locator('html')).toHaveAttribute('lang', 'zh-CN');
-    await expect(page.getByRole('navigation').getByRole('link', { name: '可靠性' })).toHaveClass(/active/);
+    await expect(developerNav(page, '可靠性')).toHaveAttribute('aria-current', 'page');
     await expect(page).toHaveURL(/panel=reliability.*reliabilityTab=policy/);
     const panel = page.locator('.governance-panel');
     await expect(panel).toContainText('可靠性');
@@ -362,7 +286,7 @@ test.describe('Admin Page', () => {
       });
     });
 
-    await page.goto('/admin/');
+    await page.goto('/admin/?panel=setup');
 
     const setup = page.locator('.setup-panel');
     await expect(setup).toContainText('~/Library/Application Support/Claude/claude_desktop_config.json');
@@ -388,7 +312,7 @@ test.describe('Admin Page', () => {
       });
     });
 
-    await page.goto('/admin/');
+    await page.goto('/admin/?panel=setup');
 
     const setup = page.locator('.setup-panel');
     await expect(setup).toContainText('http://127.0.0.1:19765/mcp');
@@ -396,8 +320,8 @@ test.describe('Admin Page', () => {
   });
 
   test('switches to instances, renders DCC rows, and filters rows', async ({ page }) => {
-    await page.goto('/admin/');
-    await page.getByRole('navigation').getByRole('link', { name: 'Instances' }).click();
+    await page.goto('/admin/?panel=setup');
+    await developerNav(page, 'Instances').click();
     await expect(page.locator('.instances-panel')).toBeVisible();
     await expect(page.locator('.dcc-icon')).toHaveCount(2);
     await expect(page.locator('.instances-list')).toHaveCount(2);
@@ -576,8 +500,9 @@ test.describe('Admin Page', () => {
   });
 
   test('opens trace detail from the calls panel and keeps the URL shareable', async ({ page }) => {
-    await page.goto('/admin/');
-    await page.getByRole('navigation').getByRole('link', { name: 'Calls' }).click();
+    await page.goto('/admin/?panel=setup');
+    await developerNav(page, 'Tool calls and traces').click();
+    await page.getByRole('tab', { name: 'Calls' }).click();
     const callsPanel = page.locator('.traces-panel');
     await expect(callsPanel).toContainText('toon');
     await expect(callsPanel).toContainText('40');
@@ -629,8 +554,9 @@ test.describe('Admin Page', () => {
   });
 
   test('highlights slow calls, traces, and spans independently from failures', async ({ page }) => {
-    await page.goto('/admin/');
-    await page.getByRole('navigation').getByRole('link', { name: 'Calls' }).click();
+    await page.goto('/admin/?panel=setup');
+    await developerNav(page, 'Tool calls and traces').click();
+    await page.getByRole('tab', { name: 'Calls' }).click();
     const callsPanel = page.locator('.traces-panel');
 
     await expect(callsPanel.locator('tr.latency-critical', { hasText: 'req-slow' })).toContainText('TAIL');
@@ -644,7 +570,7 @@ test.describe('Admin Page', () => {
     await expect(callsPanel).toContainText('req-failed-s');
     await expect(callsPanel).not.toContainText('req-failed-f');
 
-    await page.getByRole('navigation').getByRole('link', { name: 'Traces' }).click();
+    await page.getByRole('tab', { name: 'Traces' }).click();
     const tracesPanel = page.locator('.traces-panel');
     await expect(page.locator('.list-search-meta')).toContainText('2 / 5');
     await expect(tracesPanel.locator('.trace-item.latency-critical', { hasText: 'req-slow' })).toContainText('TAIL');
@@ -1191,8 +1117,8 @@ test.describe('Admin Page', () => {
   });
 
   test('shows logs and panel search metadata', async ({ page }) => {
-    await page.goto('/admin/');
-    await page.getByRole('navigation').getByRole('link', { name: 'Logs' }).click();
+    await page.goto('/admin/?panel=setup');
+    await developerNav(page, 'Logs').click();
     await expect(page.locator('.logs-panel')).toContainText('Request req-123');
     await expect(page.locator('.logs-panel')).toContainText('Gateway server version: 0.19.56');
     await expect(page.locator('.logs-panel')).toContainText('Step 1: maya-1234__create_sphere');
@@ -1215,7 +1141,7 @@ test.describe('Admin Page', () => {
 
   test('collapses the sidebar into a horizontal nav on mobile widths', async ({ page }) => {
     await page.setViewportSize({ width: 480, height: 900 });
-    await page.goto('/admin/');
+    await page.goto('/admin/?panel=setup');
     // Let the SPA finish its initial mount (it normalizes the URL via
     // history.replaceState) before reading computed styles.
     await expect(page.locator('.main-stage')).toBeVisible();
@@ -1224,10 +1150,8 @@ test.describe('Admin Page', () => {
       .poll(() => page.locator('.app-shell').evaluate((node) => getComputedStyle(node).flexDirection))
       .toBe('column');
 
-    const navDirection = await page
-      .locator('.nav-links')
-      .evaluate((node) => getComputedStyle(node).flexDirection);
-    expect(navDirection).toBe('row');
+    const sidebar = await page.locator('.pd-sidebar').boundingBox();
+    expect(sidebar?.width ?? 0).toBeGreaterThan(440);
 
     const noPageOverflow = await page.evaluate(
       () => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 2,
@@ -1235,28 +1159,27 @@ test.describe('Admin Page', () => {
     expect(noPageOverflow).toBe(true);
   });
 
-  test('switches color scheme and persists the choice', async ({ page }) => {
-    await page.goto('/admin/');
-    const themeSelect = page.locator('#admin-theme-select');
+  test('switches color scheme from Settings and persists the choice', async ({ page }) => {
+    await page.goto('/admin/?panel=settings');
+    const themeSelect = page.locator('#pd-theme');
     await expect(themeSelect).toBeVisible();
 
-    await chooseSidebarSelectOption(page, 'admin-theme-select', 'Light');
+    await themeSelect.selectOption('light');
     await expect(page.locator('html')).not.toHaveClass(/dark/);
-    await chooseSidebarSelectOption(page, 'admin-theme-select', 'Dark');
+    await themeSelect.selectOption('dark');
     await expect(page.locator('html')).toHaveClass(/dark/);
     await expect(page.locator('html')).toHaveAttribute('data-admin-theme', 'dark');
     expect(await page.evaluate(() => localStorage.getItem('meshy-dcc-admin-theme'))).toBe('dark');
 
-    await chooseSidebarSelectOption(page, 'admin-theme-select', 'Light');
+    await themeSelect.selectOption('light');
     await expect(page.locator('html')).not.toHaveClass(/dark/);
     await expect(page.locator('html')).toHaveAttribute('data-admin-theme', 'light');
 
     // The persisted choice survives a reload.
-    await chooseSidebarSelectOption(page, 'admin-theme-select', 'Dark');
+    await themeSelect.selectOption('dark');
     await page.reload();
     await expect(page.locator('html')).toHaveClass(/dark/);
-    await expect(page.locator('#admin-theme-select .preference-select-visible-value')).toHaveText('Dark');
-    await expect(page.locator('#admin-theme-select')).toHaveAttribute('aria-label', 'Theme: Dark');
+    await expect(page.locator('#pd-theme')).toHaveValue('dark');
   });
 
   test.describe('Integrations panel', () => {
@@ -1558,8 +1481,8 @@ test.describe('Admin Page', () => {
 
 test.describe('Sessions and Reliability panels', () => {
   test('sessions panel renders KPIs, tree, and status badges', async ({ page }) => {
-    await page.goto('/admin/');
-    await page.getByRole('navigation').getByRole('link', { name: 'Sessions' }).click();
+    await page.goto('/admin/?panel=setup');
+    await developerNav(page, 'Sessions and workflows').click();
 
     const panel = page.locator('section.sessions-panel');
     await expect(panel).toBeVisible();
@@ -1603,8 +1526,8 @@ test.describe('Sessions and Reliability panels', () => {
   });
 
   test('sessions panel filters by search text', async ({ page }) => {
-    await page.goto('/admin/');
-    await page.getByRole('navigation').getByRole('link', { name: 'Sessions' }).click();
+    await page.goto('/admin/?panel=setup');
+    await developerNav(page, 'Sessions and workflows').click();
 
     const panel = page.locator('section.sessions-panel');
     await expect(panel).toBeVisible();
@@ -1618,8 +1541,8 @@ test.describe('Sessions and Reliability panels', () => {
   });
 
   test('reliability panel renders health, circuits, funnel, and stability sections', async ({ page }) => {
-    await page.goto('/admin/');
-    await page.getByRole('navigation').getByRole('link', { name: 'Reliability' }).click();
+    await page.goto('/admin/?panel=setup');
+    await developerNav(page, 'Reliability').click();
 
     const panel = page.locator('section.reliability-panel');
     await expect(panel).toBeVisible();
@@ -1642,19 +1565,19 @@ test.describe('Sessions and Reliability panels', () => {
     });
     page.on('pageerror', (err) => pageErrors.push(err.message));
 
-    await page.goto('/admin/');
+    await page.goto('/admin/?panel=setup');
     await expect(page.locator('.setup-panel')).toBeVisible();
 
-    await page.getByRole('navigation').getByRole('link', { name: 'Sessions' }).click();
+    await developerNav(page, 'Sessions and workflows').click();
     await expect(page.locator('section.sessions-panel')).toBeVisible();
 
-    await page.getByRole('navigation').getByRole('link', { name: 'Reliability' }).click();
+    await developerNav(page, 'Reliability').click();
     await expect(page.locator('section.reliability-panel')).toBeVisible();
 
-    await page.getByRole('navigation').getByRole('link', { name: 'Command Center' }).click();
+    await developerNav(page, 'Command Center').click();
     await expect(page.locator('.setup-panel')).toBeVisible();
 
-    await page.getByRole('navigation').getByRole('link', { name: 'Sessions' }).click();
+    await developerNav(page, 'Sessions and workflows').click();
     await expect(page.locator('section.sessions-panel')).toBeVisible();
 
     expect(consoleErrors).toEqual([]);

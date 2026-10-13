@@ -55,6 +55,9 @@ npm install -g meshy-dcc
 meshy-dcc agent-skill --execute
 ```
 
+`meshy-dcc ui` opens the Meshy DCC Core window in the browser: connected apps,
+connectors to install, and the agents that have the Skill.
+
 ## Components
 
 | Component | Role |

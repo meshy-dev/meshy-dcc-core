@@ -25,7 +25,71 @@ const HEALTH = {
   used_skills: 3,
   low_adoption_skills: 1,
   load_error_count: 0,
+  service: { started_by: 'gateway', network_listener: null, auth_enabled: false, idle_timeout_secs: 30, persist: false },
 };
+
+// ── meshy-dcc ui: connectors and agents (CLI JSON passed through) ─────────────
+const MOCK_HOME = '/Users/demo';
+const SHIPPED_CONNECTORS: Record<string, { version: string; per_project?: boolean }> = {
+  blender: { version: '0.1.0' },
+  unity: { version: '0.1.0', per_project: true },
+  godot: { version: '0.1.0', per_project: true },
+  unreal: { version: '0.1.0', per_project: true },
+};
+const PLANNED_CONNECTORS = ['3dsmax', 'c4d', 'freecad', 'houdini', 'katana', 'mari', 'marmoset', 'material-maker', 'maya', 'mobu',
+  'omniverse', 'openscad', 'openusd', 'photoshop', 'roblox', 'sketchup', 'substance3d_designer', 'substance3d_painter', 'zbrush'];
+let connectorReceipts = [
+  { dcc_type: 'blender', adapter_version: '0.1.0', core_version: '0.2.0', installed_at: 1781300000 },
+  { dcc_type: 'unity', adapter_version: '0.1.0', core_version: '0.2.0', installed_at: 1781300100, project: `${MOCK_HOME}/Projects/Racer` },
+];
+function connectorsPayload() {
+  const shipped = Object.entries(SHIPPED_CONNECTORS).map(([dcc_type, info]) => ({
+    dcc_type,
+    adapters: [{ name: `meshy-dcc-${dcc_type}`, version: info.version, url: 'https://www.meshy.ai', catalog_install_available: true, ...(info.per_project ? { per_project: true } : {}) }],
+  }));
+  const planned = PLANNED_CONNECTORS.map((dcc_type) => ({
+    dcc_type,
+    adapters: [{ name: `meshy-dcc-${dcc_type}`, url: 'https://www.meshy.ai', catalog_install_available: false }],
+  }));
+  return { total: shipped.length + planned.length, dcc_types: [...shipped, ...planned], custom_types_supported: true, installed: connectorReceipts };
+}
+const MOCK_AGENTS: [string, string, string, boolean][] = [
+  ['claude-code', 'Claude Code', '.claude/skills', true],
+  ['codex', 'Codex', '.agents/skills', true],
+  ['cursor', 'Cursor', '.cursor/skills', true],
+  ['gemini-cli', 'Gemini CLI', '.gemini/skills', true],
+  ['github-copilot', 'GitHub Copilot', '.copilot/skills', false],
+  ['opencode', 'OpenCode', '.config/opencode/skills', false],
+  ['windsurf', 'Windsurf', '.codeium/windsurf/skills', false],
+  ['kiro-cli', 'Kiro CLI', '.kiro/skills', false],
+  ['trae', 'Trae', '.trae/skills', false],
+  ['qwen-code', 'Qwen Code', '.qwen/skills', false],
+  ['codebuddy', 'CodeBuddy', '.codebuddy/skills', false],
+  ['openclaw', 'OpenClaw', '.openclaw/skills', false],
+  ['hermes-agent', 'Hermes Agent', '.hermes/skills', false],
+  ['cline', 'Cline', '.agents/skills', false],
+  ['goose', 'Goose', '.config/goose/skills', false],
+  ['antigravity', 'Antigravity', '.gemini/antigravity/skills', false],
+  ['warp', 'Warp', '.agents/skills', false],
+  ['zed', 'Zed', '.agents/skills', false],
+  ['roo', 'Roo Code', '.roo/skills', false],
+];
+const agentSkillOn = new Set<string>([`${MOCK_HOME}/.claude/skills`]);
+function agentsPayload(ids?: string[]) {
+  const targets: { agent: string; agents: { id: string; name: string; detected: boolean }[]; path: string; state: string; action: string }[] = [];
+  for (const [id, name, rel, detected] of MOCK_AGENTS) {
+    if (ids && !ids.includes(id)) continue;
+    const dir = `${MOCK_HOME}/${rel}`;
+    const existing = targets.find((target) => target.path === `${dir}/meshy-dcc`);
+    if (existing) {
+      existing.agents.push({ id, name, detected });
+      continue;
+    }
+    const on = agentSkillOn.has(dir);
+    targets.push({ agent: id, agents: [{ id, name, detected }], path: `${dir}/meshy-dcc`, state: on ? 'current' : 'missing', action: on ? 'none' : 'install' });
+  }
+  return { skill: 'meshy-dcc', digest: 'mock', executed: Boolean(ids), failed: false, targets };
+}
 
 const NOW_MS = Date.now();
 const SESSIONS_PAYLOAD = {
@@ -1381,6 +1445,30 @@ export function adminApiMockPlugin(): Plugin {
         const url = req.url ?? '';
         const requestUrl = new URL(url, 'http://admin.local');
         const pathname = requestUrl.pathname;
+        if (pathname === '/connectors/install' && req.method === 'POST') {
+          const body = await readJsonBody(req);
+          const dccType = String(body.dcc_type ?? '');
+          const info = SHIPPED_CONNECTORS[dccType];
+          if (!info) return send(res, 200, { status: 'failed', dcc_type: dccType, adapter_version: '', error: { code: 'INSTALL_UNAVAILABLE', message: 'not published yet' } });
+          const project = typeof body.project === 'string' ? body.project : undefined;
+          connectorReceipts = [
+            ...connectorReceipts.filter((r) => !(r.dcc_type === dccType && r.project === project)),
+            { dcc_type: dccType, adapter_version: info.version, core_version: '0.2.0', installed_at: Math.floor(Date.now() / 1000), ...(project ? { project } : {}) },
+          ];
+          return send(res, 200, { status: 'partial', dcc_type: dccType, adapter_version: info.version, steps: [{ id: 'register-dcc', status: 'deferred' }] });
+        }
+        if (pathname === '/connectors') return send(res, 200, connectorsPayload());
+        if (pathname === '/agents/skill' && req.method === 'POST') {
+          const body = await readJsonBody(req);
+          const ids = Array.isArray(body.agents) ? body.agents.map(String) : [];
+          for (const [id, , rel] of MOCK_AGENTS) {
+            if (!ids.includes(id)) continue;
+            if (body.remove) agentSkillOn.delete(`${MOCK_HOME}/${rel}`);
+            else agentSkillOn.add(`${MOCK_HOME}/${rel}`);
+          }
+          return send(res, 200, agentsPayload(ids));
+        }
+        if (pathname === '/agents') return send(res, 200, agentsPayload());
         if (url.startsWith('/health')) return send(res, 200, HEALTH);
         if (url.startsWith('/activity')) return send(res, 200, ACTIVITY_PAYLOAD);
         if (url.startsWith('/governance')) return send(res, 200, GOVERNANCE_PAYLOAD);
@@ -1717,6 +1805,8 @@ export function adminApiMockPlugin(): Plugin {
       server.middlewares.use('/api', handleAdminApiMock);
       server.middlewares.use('/v1/debug', handleV1DebugMock);
       server.middlewares.use('/v1/openapi.json', handleV1OpenApiMock);
+      server.middlewares.use('/v1/update/check', (_req: IncomingMessage, res: ServerResponse) =>
+        send(res, 200, { update_available: false, latest_version: HEALTH.version, current_version: HEALTH.version }));
     },
   };
 }

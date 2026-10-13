@@ -22,6 +22,10 @@ export type SessionsTab = 'sessions' | 'memory';
 export type ReliabilityTab = 'status' | 'policy';
 
 export const PANELS: PanelDefinition[] = [
+  { id: 'home', labelKey: 'product.nav.overview', groupKey: 'product.nav.overview' },
+  { id: 'connectors', labelKey: 'product.nav.connectors', groupKey: 'product.nav.overview' },
+  { id: 'agents', labelKey: 'product.nav.agents', groupKey: 'product.nav.overview' },
+  { id: 'settings', labelKey: 'product.nav.settings', groupKey: 'product.nav.overview' },
   { id: 'setup', labelKey: 'navigation.panel.setup', groupKey: 'navigation.group.onboarding' },
   { id: 'discover', labelKey: 'navigation.panel.discover', groupKey: 'navigation.group.discover' },
   { id: 'debug', labelKey: 'navigation.panel.debug', groupKey: 'navigation.group.operations' },
@@ -306,7 +310,7 @@ export function readPanelFromUrl(): Panel {
     return resolved;
   }
 
-  return 'setup';
+  return 'home';
 }
 
 export function readStatsRangeFromUrl(): string {

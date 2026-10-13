@@ -16,6 +16,8 @@ import './styles/skill-detail.css';
 import './setup.css';
 import './styles/skills.css';
 import './styles/responsive.css';
+// User-facing pages and the Meshy palette; after responsive.css so it wins.
+import './styles/product.css';
 
 // Apply the persisted color scheme before the first paint to avoid a flash.
 applyTheme(resolveTheme(readThemeMode()));
