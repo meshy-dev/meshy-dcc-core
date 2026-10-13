@@ -333,10 +333,6 @@ lint-skills: build-cli
 check-py37-syntax:
     vx python@3.7 scripts/check_py37_syntax.py
 
-# Verify package metadata, build profiles, CI jobs, and docs match the LTS contract.
-check-python-support:
-    python scripts/ci/check_python_support.py
-
 # Verify declared dependencies match the VFX Platform baseline for the declared host.
 check-vfx-baseline:
     python scripts/ci/check_vfx_baseline.py
@@ -358,7 +354,7 @@ lint-fix: fmt lint-py-fix
 preflight: check clippy fmt-check test-rust
 
 # Full local CI pipeline: compatibility contract → preflight → wheel → tests → lint
-ci: check-python-support preflight install test lint-py
+ci: preflight install test lint-py
 
 # Run the UI Control desktop automation test harness (mock backend, no desktop needed)
 test-ui-control-automation:

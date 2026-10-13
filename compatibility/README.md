@@ -1,10 +1,10 @@
 # Compatibility contracts
 
-Machine-readable contracts that CI enforces on every pull request.
+Machine-readable contracts checked by scripts and the test suite.
 
 | File | Enforced by | Purpose |
 | --- | --- | --- |
-| [`python.json`](python.json) | `scripts/ci/check_python_support.py` (`python37-contract` job) | Long-term-support Python policy, wheel profiles, and release projections. |
+| [`python.json`](python.json) | `scripts/ci/python_support_contract.py` (wheel and Python 3.7 smoke scripts) | Long-term-support Python policy, wheel profiles, and release projections. |
 | [`schema-pins.json`](schema-pins.json) | `tests/test_released_schema_immutability.py` (`released-schema-immutability` job) | Digests of schema revisions that have already shipped in a release. |
 
 ## Released schema pins
