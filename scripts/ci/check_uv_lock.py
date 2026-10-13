@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-import json
 import os
 from pathlib import Path
 import re
@@ -54,9 +53,12 @@ def _uv_lock_is_regular_file(path: Path) -> bool:
 
 
 def check_uv_lock_consistency(root: Path) -> list[str]:
-    """Return stable errors for release metadata and editable-root lock drift."""
-    config_path = root / "release-please-config.json"
-    manifest_path = root / ".release-please-manifest.json"
+    """Return stable errors for release metadata and editable-root lock drift.
+
+    The expected version is the workspace version in ``Cargo.toml``: crates,
+    the wheel and the product share one version line.
+    """
+    cargo_path = root / "Cargo.toml"
     pyproject_path = root / "pyproject.toml"
     lock_path = root / "uv.lock"
 
@@ -64,33 +66,16 @@ def check_uv_lock_consistency(root: Path) -> list[str]:
         return ["uv.lock must be a regular file and not a symlink or reparse point"]
 
     try:
-        release_config = json.loads(config_path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as error:
-        return [f"cannot read {config_path.name}: {type(error).__name__}"]
-    if not isinstance(release_config, dict):
-        return ["release-please-config.json must contain a JSON object"]
-    configured_packages = release_config.get("packages")
-    if not isinstance(configured_packages, dict):
-        return ["release-please-config.json packages must be a mapping"]
-    configured_root = configured_packages.get(".")
-    if not isinstance(configured_root, dict):
-        return ['release-please-config.json packages["."] must be a mapping']
-    configured_name = configured_root.get("package-name")
-    if configured_name != EXPECTED_ROOT_PACKAGE:
-        return [
-            f"release-please-config.json root package-name {configured_name!r} "
-            f"!= fixed identity {EXPECTED_ROOT_PACKAGE!r}"
-        ]
-
-    try:
-        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as error:
-        return [f"cannot read {manifest_path.name}: {type(error).__name__}"]
-    if not isinstance(manifest, dict):
-        return [".release-please-manifest.json must contain a JSON object"]
-    expected_version = manifest.get(".")
+        cargo = _load_toml(cargo_path)
+    except (OSError, tomllib.TOMLDecodeError) as error:
+        return [f"cannot read {cargo_path.name}: {type(error).__name__}"]
+    workspace = cargo.get("workspace")
+    package = workspace.get("package") if isinstance(workspace, dict) else None
+    if not isinstance(package, dict):
+        return ["Cargo.toml workspace.package must be a mapping"]
+    expected_version = package.get("version")
     if not _valid_project_version(expected_version):
-        return [f".release-please-manifest.json root version {expected_version!r} is not a valid project version"]
+        return [f"Cargo.toml workspace.package.version {expected_version!r} is not a valid project version"]
 
     try:
         pyproject = _load_toml(pyproject_path)

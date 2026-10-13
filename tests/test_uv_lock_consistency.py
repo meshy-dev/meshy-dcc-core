@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import importlib.util
-import json
 import os
 from pathlib import Path
 import subprocess
@@ -64,17 +63,12 @@ def _write_version_files(
     *,
     project_version: str,
     lock_version: str,
-    package_name: str = EXPECTED_ROOT_PACKAGE,
     project_name: str = EXPECTED_ROOT_PACKAGE,
     lock_name: str = EXPECTED_ROOT_PACKAGE,
     extra_lock_package: str = "",
 ) -> None:
-    (root / "release-please-config.json").write_text(
-        json.dumps({"packages": {".": {"package-name": package_name}}}),
-        encoding="utf-8",
-    )
-    (root / ".release-please-manifest.json").write_text(
-        json.dumps({".": project_version}),
+    (root / "Cargo.toml").write_text(
+        f'[workspace.package]\nversion = "{project_version}"\n',
         encoding="utf-8",
     )
     (root / "pyproject.toml").write_text(
@@ -110,13 +104,12 @@ def test_synchronized_root_package_rename_is_rejected(tmp_path: Path) -> None:
         tmp_path,
         project_version="0.20.15",
         lock_version="0.20.15",
-        package_name="renamed-core",
         project_name="renamed-core",
         lock_name="renamed-core",
     )
 
     assert checker.check_uv_lock_consistency(tmp_path) == [
-        "release-please-config.json root package-name 'renamed-core' != fixed identity 'meshy-dcc-core'"
+        "pyproject.toml project.name 'renamed-core' != fixed identity 'meshy-dcc-core'"
     ]
 
 
@@ -139,7 +132,7 @@ def test_invalid_project_version_is_rejected(tmp_path: Path) -> None:
     _write_version_files(tmp_path, project_version="latest", lock_version="latest")
 
     assert checker.check_uv_lock_consistency(tmp_path) == [
-        ".release-please-manifest.json root version 'latest' is not a valid project version"
+        "Cargo.toml workspace.package.version 'latest' is not a valid project version"
     ]
 
 
@@ -172,14 +165,9 @@ def test_uv_lock_directory_is_rejected_as_non_regular(tmp_path: Path) -> None:
     ("path", "content", "expected"),
     [
         (
-            ".release-please-manifest.json",
-            "[]",
-            ".release-please-manifest.json must contain a JSON object",
-        ),
-        (
-            "release-please-config.json",
-            '{"packages": []}',
-            "release-please-config.json packages must be a mapping",
+            "Cargo.toml",
+            'workspace = "invalid"\n',
+            "Cargo.toml workspace.package must be a mapping",
         ),
         (
             "pyproject.toml",
