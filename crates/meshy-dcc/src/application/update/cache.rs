@@ -223,7 +223,7 @@ fn refresh_lock_path(cache: &Path) -> PathBuf {
 }
 
 fn automatic_checks_enabled() -> bool {
-    if env_truthy(DISABLE_ENV) {
+    if env_truthy(DISABLE_ENV) || !meshy_dcc_updater::settings::update_check_enabled() {
         return false;
     }
     !cfg!(debug_assertions) || env_truthy(FORCE_ENV)

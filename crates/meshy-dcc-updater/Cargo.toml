@@ -10,6 +10,7 @@ description = "Gateway-controlled auto-update logic for meshy-dcc binaries (CLI 
 
 [dependencies]
 anyhow.workspace = true
+dirs.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 reqwest.workspace = true

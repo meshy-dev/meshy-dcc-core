@@ -3916,6 +3916,7 @@ name = "meshy-dcc-updater"
 version = "0.2.0"
 dependencies = [
  "anyhow",
+ "dirs",
  "fs4",
  "reqwest 0.13.4",
  "serde",

@@ -21,6 +21,7 @@ use sha2::{Digest, Sha256};
 use thiserror::Error;
 
 pub mod meshy_release;
+pub mod settings;
 mod update_set;
 
 const MAX_UPDATE_BYTES: u64 = 256 * 1024 * 1024;
