@@ -208,8 +208,8 @@ test.describe('Marketplace Panel', () => {
     await gotoMarketplace(page);
 
     await expect(page.locator('.marketplace-panel h2')).toContainText('Marketplace');
-    await expect(page.locator('.discover-panel > .discover-tabs')).toHaveCSS('display', 'flex');
-    await expect(page.locator('.discover-panel > .discover-tabs')).toHaveCSS('gap', /[1-9]/);
+    await expect(page.locator('.discover-panel > .discover-toolbar')).toHaveCSS('display', 'flex');
+    await expect(page.locator('.discover-panel > .discover-toolbar')).toHaveCSS('gap', /[1-9]/);
 
     // Browse tab should be active and show empty state
     const browseTab = page.locator('.marketplace-tab').first();
