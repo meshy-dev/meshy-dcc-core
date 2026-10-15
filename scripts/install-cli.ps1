@@ -173,8 +173,7 @@ try {
 $cli = Join-Path $InstallDir "meshy-dcc.exe"
 Write-Host "Installed verified meshy-dcc $manifestVersion to $InstallDir"
 
-Write-Host "Installing the meshy-dcc Skill for the agents on this machine:"
-Start-Process -FilePath $cli -ArgumentList @("--output", "human", "agent-skill") -Wait -NoNewWindow
+Write-Host "Installing the meshy-dcc Skill for the agents on this computer:"
 $skill = Start-Process -FilePath $cli -ArgumentList @(
     "--output", "human", "agent-skill", "--execute"
 ) -Wait -PassThru -NoNewWindow
@@ -192,3 +191,5 @@ if ($pathParts -notcontains $InstallDir) {
     [Environment]::SetEnvironmentVariable("Path", $newPath, "User")
     Write-Host "Added $InstallDir to the user PATH. Open a new terminal before running meshy-dcc."
 }
+Write-Host ""
+Write-Host "Next: run 'meshy-dcc ui' in a new terminal to pick the apps to connect."

@@ -396,6 +396,46 @@ pub fn run(targets: &[Target], remove_skill: bool, execute: bool) -> anyhow::Res
     }))
 }
 
+/// One line per target of a [`run`] result, for people (`--output human`).
+pub fn human_summary(value: &Value) -> String {
+    let home = dirs::home_dir().map(|home| home.display().to_string());
+    let executed = value["executed"] == true;
+    let mut out = String::new();
+    for row in value["targets"].as_array().into_iter().flatten() {
+        let names: Vec<&str> = row["agents"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .filter_map(|agent| agent["name"].as_str().or(agent["id"].as_str()))
+            .collect();
+        let mut path = row["path"].as_str().unwrap_or_default().to_string();
+        if let Some(home) = &home
+            && let Some(rest) = path.strip_prefix(home.as_str())
+        {
+            path = format!("~{rest}");
+        }
+        let what = match (row["action"].as_str(), row["result"].as_str(), executed) {
+            (_, Some("failed"), _) => format!(
+                "failed: {}",
+                row["error"].as_str().unwrap_or("unknown error")
+            ),
+            (Some("install"), _, true) => "installed".into(),
+            (Some("update"), _, true) => "updated".into(),
+            (Some("remove"), _, true) => "removed".into(),
+            (Some(action @ ("install" | "update" | "remove")), _, false) => {
+                format!("will {action} (add --execute)")
+            }
+            (Some("skip"), _, _) => "skipped, the folder was not written by meshy-dcc".into(),
+            _ => "already up to date".into(),
+        };
+        out.push_str(&format!("  {}: {what} ({path})\n", names.join(", ")));
+    }
+    if out.is_empty() {
+        out.push_str("  No agents found on this computer. Name one with --agent <id>, or a folder with --dir.\n");
+    }
+    out
+}
+
 /// Bring Skills this CLI installed earlier up to its own version. Release
 /// builds only, so a development build never rewrites an installed Skill.
 pub fn refresh_installed() {

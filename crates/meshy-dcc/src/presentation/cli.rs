@@ -983,6 +983,13 @@ async fn run_with_args(args: Args) -> anyhow::Result<()> {
             };
             let value = agent_skill::run(&targets, args.remove, args.execute)?;
             failed = value["failed"] == true;
+            if writer.format() == OutputFormat::Human {
+                print!("{}", agent_skill::human_summary(&value));
+                if failed {
+                    std::process::exit(exit_code.as_i32());
+                }
+                return Ok(());
+            }
             value
         }
         Command::Components { action } => super::components_cmd::run(action).await?,

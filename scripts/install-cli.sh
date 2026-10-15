@@ -219,12 +219,34 @@ TARGET="$INSTALL_DIR/meshy-dcc"
 mv -f "$CLI_TMP" "$TARGET"
 echo "Installed verified meshy-dcc $REQUESTED_VERSION to $INSTALL_DIR"
 
-echo "Installing the meshy-dcc Skill for the agents on this machine:"
-"$TARGET" --output human agent-skill || true
+echo "Installing the meshy-dcc Skill for the agents on this computer:"
 "$TARGET" --output human agent-skill --execute \
     || echo "The meshy-dcc Skill was not installed for every agent; run: meshy-dcc agent-skill" >&2
 
+RUN="meshy-dcc"
 case ":$PATH:" in
     *":$INSTALL_DIR:"*) ;;
-    *) echo "Add $INSTALL_DIR to PATH to run meshy-dcc from any shell." ;;
+    *)
+        # Like the Windows installer, which adds it to the user PATH.
+        case "${SHELL:-}" in
+            */zsh) PROFILE="$HOME/.zshrc" ;;
+            */bash) PROFILE="$HOME/.bash_profile" ;;
+            *) PROFILE="" ;;
+        esac
+        LINE="export PATH=\"$INSTALL_DIR:\$PATH\""
+        RUN="$TARGET"
+        echo
+        if [ -n "$PROFILE" ]; then
+            if ! grep -qsF "$LINE" "$PROFILE"; then
+                printf '\n# meshy-dcc\n%s\n' "$LINE" >> "$PROFILE"
+                echo "Added $INSTALL_DIR to PATH in $PROFILE."
+            fi
+            echo "Open a new terminal to run meshy-dcc by name."
+        else
+            echo "Add $INSTALL_DIR to PATH to run meshy-dcc from any terminal:"
+            echo "  $LINE"
+        fi
+        ;;
 esac
+echo
+echo "Next: run '$RUN ui' to pick the apps to connect."
