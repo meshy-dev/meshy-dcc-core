@@ -1155,6 +1155,42 @@ let marketplaceOutdated = [
   },
 ];
 
+// ── Skills page (GET /skill-library) ─────────────────────────────────────────
+
+const MAYA_SKILLS: [string, string, string, number][] = [
+  ['maya-scene', 'Maya scene objects — create, list, rename and delete nodes', 'scene', 6],
+  ['maya-materials', 'Maya shading networks — assign and edit materials', 'lookdev', 5],
+  ['maya-animation', 'Maya keyframes, time range and baking', 'animation', 7],
+  ['maya-import', 'Import FBX, OBJ and glTF files into the open scene', 'import', 3],
+  ['maya-render', 'Render settings and playblasts', 'render', 4],
+];
+let mySkills = [
+  { name: 'my-shot-setup', description: 'Set frame range, camera and units for a new shot', dcc: 'maya', state: 'active' },
+  { name: 'maya-render', description: 'My render presets', dcc: 'maya', state: 'shadowed' },
+  { name: 'my-cleanup', description: 'Delete empty groups and unused shading nodes', dcc: 'maya', state: 'pending' },
+];
+let skillFolders: { id: number; path: string }[] = [];
+
+function skillLibraryPayload() {
+  const instanceId = 'maya-1234567890';
+  const loaded = ['maya-scene', 'my-shot-setup'];
+  const row = (name: string, description: string, stage: string, toolCount: number, source: string) => ({
+    dcc_type: 'maya', name, description, stage, tool_count: toolCount, source, loaded_on: loaded.includes(name) ? [instanceId] : [],
+  });
+  const skills = [
+    ...MAYA_SKILLS.map(([name, description, stage, toolCount]) => row(name, description, stage, toolCount, 'builtin')),
+    ...mySkills.filter((skill) => skill.state === 'active').map((skill) => row(skill.name, skill.description, 'scene', 2, 'mine')),
+  ];
+  return {
+    instances: [{ instance_id: instanceId, dcc_type: 'maya', skill_count: skills.length, loaded, error: null }],
+    skills,
+    folders: [
+      { path: '~/.meshy-dcc/maya/skills', dcc_type: 'maya', custom_id: null, exists: true, skills: mySkills },
+      ...skillFolders.map((folder) => ({ path: folder.path, dcc_type: null, custom_id: folder.id, exists: true, skills: [] })),
+    ],
+  };
+}
+
 async function readJsonBody(req: IncomingMessage): Promise<Record<string, unknown>> {
   const chunks: Buffer[] = [];
   for await (const chunk of req) {
@@ -1561,9 +1597,24 @@ export function adminApiMockPlugin(): Plugin {
         }
         if (url.startsWith('/skills')) return send(res, 200, SKILLS_PAYLOAD);
         if (url.startsWith('/skill-paths')) {
-          if (req.method === 'POST' || req.method === 'DELETE') return send(res, 200, { ok: true });
+          if (req.method === 'POST') {
+            const path = String((await readJsonBody(req)).path ?? '');
+            if (!/^(\/|[A-Za-z]:[\\/]|\\\\)/.test(path)) return send(res, 400, { error: 'not_a_folder', message: 'the path must be an existing folder, given in full' });
+            skillFolders = [...skillFolders, { id: skillFolders.length + 1, path }];
+            return send(res, 200, { ok: true, path });
+          }
+          if (req.method === 'DELETE') {
+            const id = Number(pathname.split('/').pop());
+            skillFolders = skillFolders.filter((folder) => folder.id !== id);
+            return send(res, 200, { ok: true, id });
+          }
           return send(res, 200, SKILL_PATHS_PAYLOAD);
         }
+        if (pathname === '/skill-library/reload' && req.method === 'POST') {
+          mySkills = mySkills.map((skill) => (skill.state === 'pending' ? { ...skill, state: 'active' } : skill));
+          return send(res, 200, { ok: true, reloaded: 1, failed: 0, instances: [{ instance_id: 'maya-1234567890', dcc_type: 'maya', result: '{"success":true}' }] });
+        }
+        if (pathname === '/skill-library') return send(res, 200, skillLibraryPayload());
         if (url.startsWith('/integrations/test') && req.method === 'POST') {
           const payload = await readJsonBody(req);
           const kind = String(payload.kind ?? '').trim().toLowerCase();

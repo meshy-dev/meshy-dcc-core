@@ -32,7 +32,7 @@ test.describe('meshy-dcc ui', () => {
     const nav = page.locator('.pd-sidebar');
     await expect(nav.getByText('DCC Core', { exact: true })).toBeVisible();
     await expect(nav.getByRole('button', { name: /Running · Local/ })).toBeVisible();
-    for (const label of ['Overview', 'Connectors', 'Agents', 'Settings']) {
+    for (const label of ['Overview', 'Connectors', 'Skills', 'Agents', 'Settings']) {
       await expect(nav.getByRole('button', { name: label, exact: true })).toBeVisible();
     }
     await expect(nav.getByRole('link', { name: /Docs/ })).toHaveAttribute('href', 'https://docs.meshy.ai');
@@ -88,6 +88,58 @@ test.describe('meshy-dcc ui', () => {
     await expect(page.locator('.pd-chips li')).toHaveText(['Maya']);
   });
 
+  test('skills show what each instance loaded and where the user\'s own skills stand', async ({ page }) => {
+    // Own the reload round trip so the result does not depend on earlier runs.
+    let reloaded = false;
+    await page.route('**/admin/api/skill-library/reload', (route) => {
+      reloaded = true;
+      return route.fulfill({ json: { ok: true, reloaded: 1, failed: 0, instances: [{ instance_id: 'maya-1234567890', dcc_type: 'maya' }] } });
+    });
+    await page.route('**/admin/api/skill-library', async (route) => {
+      const response = await route.fetch();
+      const body = await response.json();
+      const state = reloaded ? 'active' : 'pending';
+      body.folders[0].skills = body.folders[0].skills.map((skill: { name: string; state: string }) =>
+        (skill.name === 'my-cleanup' ? { ...skill, state } : skill));
+      return route.fulfill({ response, json: body });
+    });
+    await open(page, 'skills');
+
+    const card = page.locator('.pd-skill-instance');
+    await expect(card).toContainText('shot010.ma');
+    await expect(card).toContainText('2 loaded · 6 available');
+    await expect(card.locator('.pd-chips li')).toHaveText(['maya-scene', 'my-shot-setup']);
+
+    const all = page.locator('section', { has: page.getByRole('heading', { name: 'All skills' }) });
+    await expect(all.locator('.pd-list li').first()).toContainText('my-shot-setup');
+    await expect(all.locator('.pd-list li').filter({ hasText: 'maya-scene' })).toContainText('Loaded');
+    await all.getByRole('button', { name: 'Mine 1' }).click();
+    await expect(all.locator('.pd-list li')).toHaveCount(1);
+
+    const folder = page.locator('.pd-skill-folder').first();
+    await expect(folder).toContainText('Maya default folder');
+    await expect(folder.locator('li').filter({ hasText: 'maya-render' })).toContainText('Same name as a built-in skill');
+    await expect(folder.locator('li').filter({ hasText: 'my-cleanup' })).toContainText('Waiting for reload');
+    await expect(page.locator('.pd-prompt')).toContainText('~/.meshy-dcc/maya/skills');
+    await expect(page.getByRole('heading', { name: 'Get more skills' })).toBeVisible();
+    await shot(page, 'skills-en');
+
+    await page.getByRole('button', { name: 'Reload in open apps' }).click();
+    await expect(page.getByRole('status')).toContainText('Instances updated: 1');
+    await expect(folder.locator('li').filter({ hasText: 'my-cleanup' })).toContainText('In use');
+
+    const input = page.getByPlaceholder('Full path of another folder');
+    await input.fill('team/skills');
+    await page.getByRole('button', { name: 'Add folder' }).click();
+    await expect(page.getByRole('status')).toContainText('Enter the full path of a folder that exists.');
+    await input.fill('/Volumes/Team/skills');
+    await page.getByRole('button', { name: 'Add folder' }).click();
+    const added = page.locator('.pd-skill-folder').filter({ hasText: '/Volumes/Team/skills' });
+    await expect(added).toContainText('Added folder');
+    await added.getByRole('button', { name: 'Remove' }).click();
+    await expect(added).toHaveCount(0);
+  });
+
   test('agents found on this computer switch the skill on and off', async ({ page }) => {
     await open(page, 'agents');
     await expect(page.locator('.pd-agent-card').filter({ hasText: 'Codex' })).toContainText('shared with Cline, Warp, Zed');
@@ -118,7 +170,7 @@ test.describe('meshy-dcc ui', () => {
       await open(page, 'home', { locale });
       await expect(page.locator('html')).not.toContainText('product.');
       await shot(page, `overview-${locale}`);
-      for (const panel of ['connectors', 'agents', 'settings']) {
+      for (const panel of ['connectors', 'skills', 'agents', 'settings']) {
         await page.goto(`/admin/?panel=${panel}`);
         await expect(page.locator('.pd-page')).toBeVisible();
         await expect(page.locator('.pd-page')).not.toContainText('product.');

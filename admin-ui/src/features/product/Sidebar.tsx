@@ -21,7 +21,7 @@ export function ProductSidebar(props: {
   devLinks: DevLink[];
 }) {
   const { t, panel, onNavigate } = props;
-  const nav = (id: Panel, icon: 'overview' | 'connectors' | 'agents', label: string) => (
+  const nav = (id: Panel, icon: 'overview' | 'connectors' | 'skills' | 'agents', label: string) => (
     <button type="button" className="pd-nav-item" aria-current={panel === id ? 'page' : undefined}
       onClick={() => onNavigate(id)}>
       <Icon name={icon} />
@@ -48,6 +48,7 @@ export function ProductSidebar(props: {
 
       {nav('home', 'overview', t('product.nav.overview'))}
       {nav('connectors', 'connectors', t('product.nav.connectors'))}
+      {nav('skills', 'skills', t('product.nav.skills'))}
       {nav('agents', 'agents', t('product.nav.agents'))}
 
       <div className="pd-nav-heading">

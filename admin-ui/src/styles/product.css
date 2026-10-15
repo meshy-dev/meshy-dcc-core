@@ -1154,7 +1154,8 @@ span.pd-stat-label {
 
 .pd-list-text {
   display: flex;
-  flex: 1 1 300px;
+  /* Narrow enough to keep the logo beside the text at phone width. */
+  flex: 1 1 220px;
   flex-direction: column;
   gap: 2px;
   min-width: 0;
@@ -1352,6 +1353,89 @@ button.pd-row-link {
 }
 
 /* ── Narrow windows ─────────────────────────────────────────────────── */
+
+/* ── Skills ─────────────────────────────────────────────────────────── */
+
+/* Long skill descriptions stop at two lines; the full text is the title. */
+.pd-clamp {
+  -webkit-box-orient: vertical;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+
+.pd-skill-instances {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(min(320px, 100%), 1fr));
+}
+
+.pd-skill-instance {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+}
+
+.pd-skill-instance-head {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+}
+
+.pd-skill-count {
+  color: var(--pd-muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+/* Chips and code blocks sit on a card here, so they take the next shade. */
+.pd-skill-instance .pd-chips li,
+.pd-skill-write .pd-code {
+  background: var(--pd-nav-active);
+}
+
+.pd-skill-instance .pd-chips li {
+  font: 400 12px 'JetBrains Mono', var(--font-mono);
+}
+
+.pd-skill-folder .pd-result,
+.pd-skill-add {
+  padding-left: 0;
+}
+
+.pd-skill-folder-skills {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  list-style: none;
+}
+
+.pd-skill-folder-skills li {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+}
+
+.pd-skill-folder-skills .pd-list-desc {
+  flex-basis: 100%;
+}
+
+.pd-skill-write {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+}
+
+.pd-prompt p {
+  color: var(--pd-text);
+  flex: 1 1 280px;
+  font-size: 13px;
+  line-height: 20px;
+  min-width: 0;
+}
 
 @media (max-width: 760px) {
   .pd-sidebar {

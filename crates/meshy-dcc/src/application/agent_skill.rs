@@ -24,6 +24,10 @@ const FILES: &[(&str, &str)] = &[
         include_str!("../../../../skills/meshy-dcc/SKILL.md"),
     ),
     (
+        "references/authoring.md",
+        include_str!("../../../../skills/meshy-dcc/references/authoring.md"),
+    ),
+    (
         "references/blender.md",
         include_str!("../../../../skills/meshy-dcc/references/blender.md"),
     ),

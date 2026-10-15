@@ -40,6 +40,7 @@ import {
   HomePanel,
   ProductSidebar,
   SettingsPanel,
+  SkillsPanel,
   agentEntries,
   connectedInstances,
   connectorViews,
@@ -125,9 +126,10 @@ const DEV_GROUPS: { id: string; labelKey: MessageKey; nav: string }[] = [
   { id: 'sessions', labelKey: 'product.nav.dev.sessions', nav: 'sessions' },
   { id: 'stats', labelKey: 'product.nav.dev.stats', nav: 'overview' },
   { id: 'skills', labelKey: 'product.nav.dev.skills', nav: 'skills' },
+  { id: 'integrations', labelKey: 'product.nav.dev.integrations', nav: 'integrations' },
   { id: 'api', labelKey: 'product.nav.dev.api', nav: 'openapi' },
 ];
-const PRODUCT_PANELS = new Set<Panel>(['home', 'connectors', 'agents', 'settings']);
+const PRODUCT_PANELS = new Set<Panel>(['home', 'connectors', 'skills', 'agents', 'settings']);
 
 function App() {
   const [localeOverride, setLocaleOverride] = useState<SupportedLocale | null>(() => readLocaleOverride());
@@ -1431,7 +1433,8 @@ function App() {
     const link = (id: string, label: string, entry: (typeof NAVIGATION)[number]): DevLink => ({
       id,
       label,
-      active: entry.panel === activePanel,
+      // Skill index and integrations are tabs of one panel.
+      active: entry.panel === activePanel && (!entry.discoverTab || entry.discoverTab === discoverTab),
       onSelect: () => goToPanel(entry.panel, {
         discoverTab: entry.discoverTab,
         overviewTab: entry.overviewTab,
@@ -1448,7 +1451,7 @@ function App() {
     const grouped = new Set(groups.map((group) => byId.get(DEV_GROUPS.find((g) => g.id === group.id)!.nav)!.panel));
     const rest = NAVIGATION.filter((entry) => !grouped.has(entry.panel)).map((entry) => link(entry.id, t(entry.labelKey), entry));
     return [...groups, ...rest];
-  }, [activePanel, goToPanel, statsRange, t]);
+  }, [activePanel, discoverTab, goToPanel, statsRange, t]);
 
   return (
     <div className="app-shell">
@@ -1471,6 +1474,7 @@ function App() {
           <HomePanel t={t} data={homeData} onNavigate={(panel) => goToPanel(panel)} onRecheck={() => void workersQuery.refetch()} />
         )}
         {activePanel === 'connectors' && <ConnectorsPanel t={t} local={localPage} />}
+        {activePanel === 'skills' && <SkillsPanel t={t} local={localPage} rows={connectedRows} />}
         {activePanel === 'agents' && <AgentsPanel t={t} local={localPage} />}
         {activePanel === 'settings' && (
           <SettingsPanel

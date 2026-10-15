@@ -24,6 +24,7 @@ export type ReliabilityTab = 'status' | 'policy';
 export const PANELS: PanelDefinition[] = [
   { id: 'home', labelKey: 'product.nav.overview', groupKey: 'product.nav.overview' },
   { id: 'connectors', labelKey: 'product.nav.connectors', groupKey: 'product.nav.overview' },
+  { id: 'skills', labelKey: 'product.nav.skills', groupKey: 'product.nav.overview' },
   { id: 'agents', labelKey: 'product.nav.agents', groupKey: 'product.nav.overview' },
   { id: 'settings', labelKey: 'product.nav.settings', groupKey: 'product.nav.overview' },
   { id: 'setup', labelKey: 'navigation.panel.setup', groupKey: 'navigation.group.onboarding' },

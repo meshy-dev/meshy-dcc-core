@@ -56,7 +56,8 @@ meshy-dcc agent-skill --execute
 ```
 
 `meshy-dcc ui` opens the Meshy DCC Core window in the browser: connected apps,
-connectors to install, and the agents that have the Skill.
+connectors to install, the skills each app offers (your own ones included), and
+the agents that have the Skill.
 
 ## Components
 

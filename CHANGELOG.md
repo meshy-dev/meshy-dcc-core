@@ -46,6 +46,12 @@ and is not runtime-compatible with it. Attribution stays in `LICENSE` and
   the network could list instances and call DCC tools. Set
   `MESHY_DCC_GATEWAY_REMOTE_PORT` (and `MESHY_DCC_GATEWAY_REMOTE_HOST`) to
   enable it; only loopback `127.0.0.1:19765` is served otherwise.
+- Admin endpoints that put code on the computer or write its configuration
+  answer loopback peers only, like the connector and agent installs: adding
+  or removing a skill path, the marketplace's install, uninstall, source and
+  update endpoints and its WebSocket, and saving or testing an integration.
+  A remote viewer reads them and runs the CLI on the gateway's computer. A
+  new skill path must be an existing folder given in full.
 - A local `call` must name its instance, either with an instance slug or
   with `--instance-id`, even when only one instance is live. The only
   exception is a tool the host marks `readOnlyHint: true`. The CLI rejects
@@ -187,7 +193,12 @@ and is not runtime-compatible with it. Attribution stays in `LICENSE` and
   the address, and a remote gateway profile opens that gateway. The page is
   the user-facing product: Overview (core service, connected apps by
   instance, installed connectors and Skill), Connectors (install, or add to
-  a project, and what is coming), Agents (turn the Skill on per agent),
+  a project, and what is coming), Skills (what each connected instance has
+  loaded, every skill it offers and whether it ships with Meshy, is the
+  user's own or came from the marketplace, the user's skill folders with the
+  state of each skill in them and a reload into the open apps, a prompt that
+  has an agent write a skill, and marketplace packages when the marketplace
+  lists any), Agents (turn the Skill on per agent),
   Settings, and a first-run checklist that goes away once a connector is
   installed, an agent has the Skill and a call has succeeded. Operations
   pages stay under a Developer section that Settings turns on. English,
@@ -198,8 +209,12 @@ and is not runtime-compatible with it. Attribution stays in `LICENSE` and
   `POST /admin/api/connectors/install` (`install --execute`),
   `GET /admin/api/agents` and `POST /admin/api/agents/skill`
   (`agent-skill`). The two that change the computer answer loopback peers
-  only. `/admin/api/health` adds `service`: who started the gateway, the LAN
+  only. `GET /admin/api/skill-library` and `POST
+  /admin/api/skill-library/reload` (loopback only) serve the Skills page. `/admin/api/health` adds `service`: who started the gateway, the LAN
   listener, whether authentication is on and the idle timeout.
+- The agent Skill has an authoring guide (`references/authoring.md`): where a
+  user's own Blender skill goes, its `SKILL.md`, `tools.yaml` and script, and
+  `lint`, `reload-skills`, `load-skill` and `call` to check it.
 - A successful `install --execute` writes a receipt under the Meshy DCC data
   directory (`receipt_path` in the report); `dcc-types` lists them as
   `installed` and marks adapters that install per project (`per_project`).
@@ -209,6 +224,21 @@ and is not runtime-compatible with it. Attribution stays in `LICENSE` and
 
 ### Fixed
 
+- Adding or removing a skill path, or installing, updating or uninstalling a
+  marketplace package, now makes the open apps re-scan their skill folders.
+  The standalone gateway only refreshed its own index, so the apps saw the
+  change after a restart or `meshy-dcc reload-skills`. Loaded skills stay
+  loaded, and one whose files changed is reloaded.
+- The admin Sessions page read a summary and row fields the gateway does not
+  send and blanked the whole page; Back stayed blank until a reload. It now
+  follows `GET /admin/api/sessions`, and a page that fails shows its error in
+  place.
+- The OTLP integration showed as active whenever `otlp.json` held an
+  endpoint, though neither the dev nor the release build exports OTLP. It now
+  reads "not in this build" unless `meshy-dcc-server` is built with
+  `otlp-exporter`, which now also enables `telemetry`.
+- The admin Skills tab inlined a 45 KB PNG icon in every row (about 2.8 MB of
+  page for Blender's skills); hosts with a product logo use its small SVG.
 - A host launched by `start-instance` now records its project and operation in
   its registry row, so `start-instance` can find and reuse that instance.
 - When a `tools.yaml` entry sets `read_only`, `destructive` or `idempotent` to

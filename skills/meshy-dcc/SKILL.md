@@ -168,6 +168,12 @@ that cannot tell whether work is unsaved, such as Blender, refuses with
 If a host needs to close and you cannot stop it this way, ask the user to save and close
 it.
 
+## The user's own skills
+
+When the user wants a tool that no skill has (a routine they repeat, a house rule for
+imports), write it as a skill in their skills folder. Read
+[the authoring guide](references/authoring.md) first. Blender only for now.
+
 ## Meshy models
 
 1. Get the model with the `meshy` CLI; its skill covers generation, task recovery and

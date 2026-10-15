@@ -9,9 +9,13 @@ import {
   instanceTone,
   isNewer,
   onePerFolder,
+  skillPromptTarget,
+  skillSourceCounts,
   startProgress,
   tildePath,
+  visibleSkills,
   type AgentsPayload,
+  type SkillLibrary,
 } from './model';
 
 const row = (patch: Partial<InstanceRow>): InstanceRow => ({
@@ -107,5 +111,29 @@ describe('isNewer', () => {
     expect(isNewer('0.10.0', '0.9.1')).toBe(true);
     expect(isNewer('0.2.0', '0.2.0')).toBe(false);
     expect(isNewer('0.2.0', undefined)).toBe(false);
+  });
+});
+
+describe('skills', () => {
+  const library: SkillLibrary = {
+    instances: [{ instance_id: 'b0af-1', dcc_type: 'blender', skill_count: 3, loaded: ['blender-scene'], error: null }],
+    skills: [
+      { dcc_type: 'blender', name: 'blender-scene', description: 'Scene objects', stage: 'scene', tool_count: 4, source: 'builtin', loaded_on: ['b0af-1'] },
+      { dcc_type: 'blender', name: 'my-report', description: 'Count objects', stage: 'scene', tool_count: 1, source: 'mine', loaded_on: [] },
+      { dcc_type: 'blender', name: 'blender-camera', description: 'Cameras', stage: 'scene', tool_count: 4, source: 'builtin', loaded_on: [] },
+    ],
+    folders: [{ path: '~/.meshy-dcc/blender/skills', dcc_type: 'blender', custom_id: null, exists: true, skills: [] }],
+  };
+
+  it('counts sources and lists the user\'s skills first', () => {
+    expect(skillSourceCounts(library)).toEqual({ all: 3, builtin: 2, mine: 1, marketplace: 0 });
+    expect(visibleSkills(library, 'all', '').map((s) => s.name)).toEqual(['my-report', 'blender-camera', 'blender-scene']);
+    expect(visibleSkills(library, 'builtin', 'camera').map((s) => s.name)).toEqual(['blender-camera']);
+    expect(visibleSkills(library, 'all', 'count').map((s) => s.name)).toEqual(['my-report']);
+  });
+
+  it('writes the prompt for an open app and its default folder', () => {
+    expect(skillPromptTarget(library)).toEqual({ dccType: 'blender', folder: '~/.meshy-dcc/blender/skills' });
+    expect(skillPromptTarget(undefined)).toEqual({ dccType: 'blender', folder: '~/.meshy-dcc/blender/skills' });
   });
 });

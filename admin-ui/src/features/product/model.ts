@@ -224,3 +224,70 @@ export function startProgress(input: {
   const call = input.successfulCalls > 0;
   return { connectors, agents, call, done: connectors && agents && call };
 }
+
+// ── Skills ────────────────────────────────────────────────────────────────────
+
+export type SkillSource = 'builtin' | 'mine' | 'marketplace';
+
+/// A skill in one of the user's folders: picked up by the open app, not yet
+/// (needs a reload or fails `meshy-dcc lint`), hidden by a skill of the same
+/// name that the app reads first, or for an app that is not open.
+export type FolderSkillState = 'active' | 'pending' | 'shadowed' | 'app_closed';
+
+/// `GET /admin/api/skill-library`.
+export type SkillLibrary = {
+  instances: { instance_id: string; dcc_type: string; skill_count: number; loaded: string[]; error: string | null }[];
+  skills: {
+    dcc_type: string;
+    name: string;
+    description: string;
+    stage: string | null;
+    tool_count: number | null;
+    source: SkillSource;
+    loaded_on: string[];
+  }[];
+  folders: {
+    path: string;
+    /// Set for the per-app default folder.
+    dcc_type: string | null;
+    /// Set for a folder added on the Skills page.
+    custom_id: number | null;
+    exists: boolean;
+    skills: { name: string; description: string; dcc: string; state: FolderSkillState }[];
+  }[];
+};
+
+export type SkillReloadResult = {
+  ok: boolean;
+  reloaded: number;
+  failed: number;
+  instances: { instance_id: string; dcc_type: string; error?: string }[];
+};
+
+export type SkillFilter = 'all' | SkillSource;
+
+export function skillSourceCounts(library: SkillLibrary | undefined): Record<SkillFilter, number> {
+  const counts: Record<SkillFilter, number> = { all: 0, builtin: 0, mine: 0, marketplace: 0 };
+  for (const skill of library?.skills ?? []) {
+    counts.all += 1;
+    counts[skill.source] += 1;
+  }
+  return counts;
+}
+
+/// Skills to list: the user's and the marketplace's first, then by app and name.
+export function visibleSkills(library: SkillLibrary | undefined, filter: SkillFilter, query: string): SkillLibrary['skills'] {
+  const needle = query.trim().toLowerCase();
+  const order: Record<SkillSource, number> = { mine: 0, marketplace: 1, builtin: 2 };
+  return (library?.skills ?? [])
+    .filter((skill) => filter === 'all' || skill.source === filter)
+    .filter((skill) => !needle || skill.name.toLowerCase().includes(needle) || skill.description.toLowerCase().includes(needle))
+    .sort((a, b) => order[a.source] - order[b.source] || a.dcc_type.localeCompare(b.dcc_type) || a.name.localeCompare(b.name));
+}
+
+/// The app a "write me a skill" prompt is for, and its default folder.
+export function skillPromptTarget(library: SkillLibrary | undefined): { dccType: string; folder: string } {
+  const dccType = library?.instances[0]?.dcc_type ?? library?.folders.find((f) => f.dcc_type)?.dcc_type ?? 'blender';
+  const folder = library?.folders.find((f) => f.dcc_type === dccType)?.path ?? `~/.meshy-dcc/${dccType}/skills`;
+  return { dccType, folder };
+}

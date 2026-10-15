@@ -16,6 +16,7 @@ const PATHS = {
   docs: <><path d="M4 4.5A1.5 1.5 0 0 1 5.5 3H20v15H5.5A1.5 1.5 0 0 0 4 19.5z" /><path d="M4 19.5A1.5 1.5 0 0 0 5.5 21H20" /></>,
   website: <><circle cx="12" cy="12" r="9" /><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18" /></>,
   settings: <><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12" /><circle cx="16" cy="6" r="2" /><circle cx="10" cy="12" r="2" /><circle cx="18" cy="18" r="2" /></>,
+  skills: <path d="M13 3 5 13.5h6L10 21l8-10.5h-6z" />,
   developer: <path d="m8 8-4 4 4 4M16 8l4 4-4 4" />,
   chevronRight: <path d="m9 6 6 6-6 6" />,
   chevronDown: <path d="m6 9 6 6 6-6" />,

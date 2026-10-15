@@ -9,14 +9,16 @@ import type {
   OpenApiSpec,
 } from '../admin-types';
 
-import mayaIcon from '../assets/dcc-icons/maya.png';
-import blenderIcon from '../assets/dcc-icons/blender.png';
+// Hosts the product pages draw use their small SVG logos: every inlined
+// icon is repeated in each row that shows it (a 45 KB PNG per skill row).
+import mayaIcon from '../assets/product/dcc/Maya-color.svg';
+import blenderIcon from '../assets/product/dcc/Blender-color.svg';
 import houdiniIcon from '../assets/dcc-icons/houdini.png';
-import maxIcon from '../assets/dcc-icons/3dsmax.png';
+import maxIcon from '../assets/product/dcc/3DSMax-color.svg';
 import cinema4dIcon from '../assets/dcc-icons/cinema4d.png';
 import photoshopIcon from '../assets/dcc-icons/photoshop.png';
 import zbrushIcon from '../assets/dcc-icons/zbrush.png';
-import unrealIcon from '../assets/dcc-icons/unreal.png';
+import unrealIcon from '../assets/product/dcc/Unreal-color.svg';
 import unityIcon from '../assets/dcc-icons/unity.png';
 import figmaIcon from '../assets/dcc-icons/figma.png';
 import nukeIcon from '../assets/dcc-icons/nuke.png';
