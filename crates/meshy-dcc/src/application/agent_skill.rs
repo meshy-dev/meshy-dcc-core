@@ -32,6 +32,10 @@ const FILES: &[(&str, &str)] = &[
         include_str!("../../../../skills/meshy-dcc/references/blender.md"),
     ),
     (
+        "references/connectors.md",
+        include_str!("../../../../skills/meshy-dcc/references/connectors.md"),
+    ),
+    (
         "references/godot.md",
         include_str!("../../../../skills/meshy-dcc/references/godot.md"),
     ),
@@ -455,6 +459,30 @@ pub fn refresh_installed() {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// A file added to skills/meshy-dcc but not to FILES would never reach agents.
+    #[test]
+    fn every_skill_file_is_embedded() {
+        let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../skills/meshy-dcc");
+        let mut on_disk = Vec::new();
+        for dir in [root.clone(), root.join("references")] {
+            for entry in std::fs::read_dir(&dir).unwrap() {
+                let path = entry.unwrap().path();
+                if path.is_file() {
+                    on_disk.push(
+                        path.strip_prefix(&root)
+                            .unwrap()
+                            .to_string_lossy()
+                            .replace('\\', "/"),
+                    );
+                }
+            }
+        }
+        on_disk.sort();
+        let mut embedded: Vec<String> = FILES.iter().map(|(name, _)| name.to_string()).collect();
+        embedded.sort();
+        assert_eq!(on_disk, embedded);
+    }
 
     fn target(dir: &Path) -> Vec<Target> {
         vec![Target {

@@ -168,6 +168,11 @@ that cannot tell whether work is unsaved, such as Blender, refuses with
 If a host needs to close and you cannot stop it this way, ask the user to save and close
 it.
 
+## Installing or removing a connector
+
+When the user asks to set up or remove a host's connector, follow
+[the connector reference](references/connectors.md).
+
 ## The user's own skills
 
 When the user wants a tool that no skill has (a routine they repeat, a house rule for
