@@ -131,10 +131,6 @@ export function gatewayDocsHref(): string {
   return `${window.location.origin}/docs`;
 }
 
-export function projectDocsHref(): string {
-  return 'https://github.com/meshy-dev/meshy-dcc-core/tree/main/docs';
-}
-
 export function gatewayOpenApiHref(): string {
   return `${window.location.origin}/v1/openapi.json`;
 }

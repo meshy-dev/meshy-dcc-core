@@ -35,7 +35,7 @@ test.describe('meshy-dcc ui', () => {
     for (const label of ['Overview', 'Connectors', 'Skills', 'Agents', 'Settings']) {
       await expect(nav.getByRole('button', { name: label, exact: true })).toBeVisible();
     }
-    await expect(nav.getByRole('link', { name: /Docs/ })).toHaveAttribute('href', 'https://docs.meshy.ai');
+    await expect(nav.getByRole('link', { name: /Docs/ })).toHaveAttribute('href', 'https://docs.meshy.ai/en/webapp/plugins/meshy-dcc/introduction');
     await expect(nav.getByRole('link', { name: /Official Website/ })).toHaveAttribute('href', 'https://www.meshy.ai');
     // Developer pages stay hidden until Settings turns them on.
     await expect(nav.getByRole('button', { name: 'Developer' })).toHaveCount(0);
@@ -86,6 +86,30 @@ test.describe('meshy-dcc ui', () => {
     await expect(list).toHaveCount(0);
     await page.getByPlaceholder('Search connectors').fill('maya');
     await expect(page.locator('.pd-chips li')).toHaveText(['Maya']);
+  });
+
+  test('an app the CLI cannot find asks for its location', async ({ page }) => {
+    await page.route('**/admin/api/connectors', async (route) => {
+      const body = await (await route.fetch()).json();
+      body.installed = body.installed.filter((r: { dcc_type: string }) => r.dcc_type !== 'blender');
+      return route.fulfill({ json: body });
+    });
+    const sent: Record<string, unknown>[] = [];
+    await page.route('**/admin/api/connectors/install', (route) => {
+      const body = route.request().postDataJSON();
+      sent.push(body);
+      return route.fulfill({ json: body.dcc_path
+        ? { status: 'partial', dcc_type: 'blender', adapter_version: '0.1.0' }
+        : { status: 'failed', dcc_type: 'blender', adapter_version: '0.1.0', error: { code: 'DCC_PATH_REQUIRED', message: 'blender was not found' } } });
+    });
+    await open(page, 'connectors');
+    const blender = page.locator('.pd-list li').filter({ hasText: 'Blender' });
+    await blender.getByRole('button', { name: 'Install', exact: true }).click();
+    await expect(blender.getByRole('status')).toContainText('Blender was not found where it is usually installed');
+    await blender.getByPlaceholder('Full path, for example /Applications/Blender.app').fill('/Applications/Blender.app');
+    await blender.getByRole('button', { name: 'Install', exact: true }).last().click();
+    await expect(blender.getByRole('status')).toContainText('Blender connector 0.1.0 installed');
+    expect(sent).toEqual([{ dcc_type: 'blender' }, { dcc_type: 'blender', dcc_path: '/Applications/Blender.app' }]);
   });
 
   test('skills show what each instance loaded and where the user\'s own skills stand', async ({ page }) => {
@@ -150,6 +174,26 @@ test.describe('meshy-dcc ui', () => {
     await expect(page.locator('.pd-agent-grid li').filter({ hasText: 'GitHub Copilot' })).toBeVisible();
     await expect(page.locator('.pd-code').last()).toContainText('meshy-dcc agent-skill --dir');
     await shot(page, 'agents-en');
+  });
+
+  test('the daily update check is a saved setting', async ({ page }) => {
+    let saved: unknown = null;
+    let checks = 0;
+    await page.route('**/admin/api/settings', (route) => {
+      if (route.request().method() === 'PUT') saved = route.request().postDataJSON();
+      return route.fulfill({ json: { update_check: saved === null } });
+    });
+    await page.route('**/v1/update/check**', (route) => {
+      checks += 1;
+      return route.fulfill({ json: { update_available: false, current_version: '0.2.0', latest_version: '0.2.0' } });
+    });
+    await open(page, 'settings');
+    const daily = page.getByRole('switch', { name: 'Check for updates once a day' });
+    await expect(daily).toHaveAttribute('aria-checked', 'true');
+    await expect.poll(() => checks).toBe(1);
+    await daily.click();
+    await expect(daily).toHaveAttribute('aria-checked', 'false');
+    expect(saved).toEqual({ update_check: false });
   });
 
   test('settings turn on the collapsed Developer section', async ({ page }) => {

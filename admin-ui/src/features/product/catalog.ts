@@ -30,7 +30,6 @@ import antigravity from '../../assets/product/agents/antigravity-color.svg';
 
 export const PRODUCT_NAME = 'Meshy DCC Core';
 export const PRODUCT_SHORT_NAME = 'DCC Core';
-export const DOCS_URL = 'https://docs.meshy.ai';
 export const WEBSITE_URL = 'https://www.meshy.ai';
 export const MESHY_LOGO = meshyLogo;
 export const MESHY_ICON = meshyIcon;

@@ -2,7 +2,7 @@ import { useState } from 'react';
 
 import type { HealthPayload, InstanceRow, Panel } from '../../admin-types';
 import { useUpdateCheck } from './api';
-import { DOCS_URL, MESHY_ICON, PRODUCT_NAME, WEBSITE_URL, dccName } from './catalog';
+import { MESHY_ICON, PRODUCT_NAME, WEBSITE_URL, dccName } from './catalog';
 import {
   appLabel,
   instanceTone,
@@ -155,7 +155,7 @@ function GetStarted({ t, data, onNavigate, onClose }: {
         </section>
         <p className="pd-note" style={{ textAlign: 'center' }}>
           {t('product.start.footer')}{' '}
-          <ExternalLink href={DOCS_URL} className="pd-a">{t('product.start.guide')}</ExternalLink>
+          <ExternalLink href={t('product.link.docs')} className="pd-a">{t('product.start.guide')}</ExternalLink>
           {' · '}
           <button type="button" className="pd-btn sm tertiary" onClick={onClose}>{t('product.start.toOverview')}</button>
         </p>
@@ -188,7 +188,9 @@ function Overview({ t, data, onNavigate, onRecheck, onShowStart }: {
     ? update.data.update_available
       ? t('product.overview.version.available', { version: update.data.latest_version ?? '' })
       : t('product.overview.version.latest')
-    : t('product.overview.version.unchecked');
+    : update.isError
+      ? t('product.installed.checkFailed')
+      : t('product.overview.version.unchecked');
   const uptimeSub = service?.persist
     ? t('product.overview.uptime.persist')
     : service?.started_by && service.started_by !== 'gateway'
@@ -418,11 +420,11 @@ function Overview({ t, data, onNavigate, onRecheck, onShowStart }: {
       <section className="pd-section" aria-labelledby="pd-res-title">
         <h2 id="pd-res-title" className="pd-h2">{t('product.resources.title')}</h2>
         <div className="pd-resources">
-          <ExternalLink href={DOCS_URL} className="pd-resource">
+          <ExternalLink href={t('product.link.docs')} className="pd-resource">
             <span className="pd-resource-icon"><Icon name="docs" size={20} stroke={1.5} /></span>
             <span><small>{t('product.resources.docs')}</small><strong>{t('product.resources.docs.title', { product: PRODUCT_NAME })}</strong></span>
           </ExternalLink>
-          <ExternalLink href={DOCS_URL} className="pd-resource">
+          <ExternalLink href={t('product.link.releaseNotes')} className="pd-resource">
             <span className="pd-resource-icon"><Icon name="sparkle" size={20} stroke={1.5} /></span>
             <span><small>{t('product.resources.notes')}</small><strong>{t('product.resources.notes.title', { version: version ?? '' })}</strong></span>
           </ExternalLink>

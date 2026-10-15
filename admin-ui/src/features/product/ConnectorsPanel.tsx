@@ -27,14 +27,17 @@ function reportReason(report: InstallReport): string {
 }
 
 type Outcome = { tone: 'ok' | 'err' | 'busy'; text: string };
+/// The path an install still needs: a project folder, or where the app is
+/// when the CLI could not find it.
+type PathForm = { dccType: string; kind: 'project' | 'app' };
 
 export function ConnectorsPanel({ t, local }: { t: T; local: boolean }) {
   const query = useConnectorsQuery();
   const install = useInstallConnector();
   const [filter, setFilter] = useState<Filter>('all');
   const [search, setSearch] = useState('');
-  const [projectFor, setProjectFor] = useState<string | null>(null);
-  const [projectPath, setProjectPath] = useState('');
+  const [form, setForm] = useState<PathForm | null>(null);
+  const [formPath, setFormPath] = useState('');
   const [pending, setPending] = useState<string | null>(null);
   const [outcomes, setOutcomes] = useState<Record<string, Outcome>>({});
 
@@ -46,18 +49,25 @@ export function ConnectorsPanel({ t, local }: { t: T; local: boolean }) {
   const listed = matches.filter((v) => v.state !== 'soon');
   const soon = matches.filter((v) => v.state === 'soon');
 
-  const runInstall = async (view: ConnectorView, project?: string) => {
+  const runInstall = async (view: ConnectorView, paths: { project?: string; dcc_path?: string } = {}) => {
     setPending(view.dccType);
     setOutcomes((prev) => ({ ...prev, [view.dccType]: { tone: 'busy', text: t('product.connectors.installing') } }));
     let outcome: Outcome;
     try {
-      const report = await install.mutateAsync({ dcc_type: view.dccType, project });
+      const report = await install.mutateAsync({ dcc_type: view.dccType, ...paths });
       // `partial` is a normal install: the host registers itself when it starts.
       const installed = report.status === 'ok' || report.status === 'partial';
+      const appMissing = report.error?.code === 'DCC_PATH_REQUIRED';
       outcome = installed
         ? { tone: 'ok', text: t('product.connectors.done', { app: view.name, version: report.adapter_version }) }
-        : { tone: 'err', text: t('product.connectors.failed', { reason: reportReason(report) }) };
-      if (installed) setProjectFor(null);
+        : appMissing
+          ? { tone: 'err', text: t('product.connectors.app.notFound', { app: view.name }) }
+          : { tone: 'err', text: t('product.connectors.failed', { reason: reportReason(report) }) };
+      if (installed) setForm(null);
+      if (appMissing) {
+        setForm({ dccType: view.dccType, kind: 'app' });
+        setFormPath('');
+      }
     } catch (err) {
       const code = errorCode(err);
       outcome = code === 'install_in_progress'
@@ -100,7 +110,7 @@ export function ConnectorsPanel({ t, local }: { t: T; local: boolean }) {
     if (view.perProject) {
       return (
         <button type="button" className="pd-btn secondary" disabled={busy}
-          onClick={() => { setProjectFor(view.dccType); setProjectPath(''); }}>
+          onClick={() => { setForm({ dccType: view.dccType, kind: 'project' }); setFormPath(''); }}>
           {t('product.connectors.addToProject')}
         </button>
       );
@@ -160,18 +170,22 @@ export function ConnectorsPanel({ t, local }: { t: T; local: boolean }) {
                 </div>
                 {local ? <div className="pd-list-actions">{actions(view)}</div> : null}
                 {!local && view.installable ? <div className="pd-result"><Command text={installCommand(view, t)} t={t} /></div> : null}
-                {local && projectFor === view.dccType ? (
+                {local && form?.dccType === view.dccType ? (
                   <form className="pd-project-form" onSubmit={(e) => {
                     e.preventDefault();
-                    if (projectPath.trim()) void runInstall(view, projectPath.trim());
+                    const path = formPath.trim();
+                    if (path) void runInstall(view, form.kind === 'app' ? { dcc_path: path } : { project: path });
                   }}>
-                    <label className="pd-sr-only" htmlFor={`pd-project-${view.dccType}`}>{t('product.connectors.project.label')}</label>
-                    <input id={`pd-project-${view.dccType}`} className="pd-input pd-mono-text" value={projectPath} autoFocus
-                      placeholder={t('product.connectors.project.placeholder')} onChange={(e) => setProjectPath(e.target.value)} />
-                    <button type="submit" className="pd-btn primary" disabled={!projectPath.trim() || pending !== null}>
+                    <label className="pd-sr-only" htmlFor={`pd-path-${view.dccType}`}>
+                      {form.kind === 'app' ? t('product.connectors.app.label', { app: view.name }) : t('product.connectors.project.label')}
+                    </label>
+                    <input id={`pd-path-${view.dccType}`} className="pd-input pd-mono-text" value={formPath} autoFocus
+                      placeholder={form.kind === 'app' ? t('product.connectors.app.placeholder', { app: view.name }) : t('product.connectors.project.placeholder')}
+                      onChange={(e) => setFormPath(e.target.value)} />
+                    <button type="submit" className="pd-btn primary" disabled={!formPath.trim() || pending !== null}>
                       {t('product.connectors.install')}
                     </button>
-                    <button type="button" className="pd-btn tertiary" disabled={pending !== null} onClick={() => setProjectFor(null)}>
+                    <button type="button" className="pd-btn tertiary" disabled={pending !== null} onClick={() => setForm(null)}>
                       {t('product.action.cancel')}
                     </button>
                   </form>

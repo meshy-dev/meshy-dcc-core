@@ -12,7 +12,7 @@ import { Badge } from './components/ui/badge';
 import { Button } from './components/ui/button';
 import { type MessageKey } from './i18n';
 import { formatTime, timestampTitle } from './time';
-import { CRITICAL_LATENCY_MS, recordOrNull, SLOW_LATENCY_MS, type ActivityEvent, type AdminLinks, type AgentContext, type AttributionFacet, type AttributionTrust, type CallRow, type GovernanceMiddlewareControl, type HealthPayload, type IdeTarget, type InstanceRow, type LatencySeverity, type OpenApiOperationRow, type OpenApiSource, type OpenApiSpec, type Panel, type SkillDetailInstance, type SkillDetailPayload, type SkillRow, type StatsPayload, type TaskRow, type TokenAccounting, type TokenBreakdownEntry, type TokenCarrier, type ToolRow, type TopEntry, type TraceDetailPayload, type TracePayload, type TraceRow, type TraceSpan, type TrafficCaptureStatus, type TrafficFrameEnvelope, type Translator, type WorkflowAgent, type WorkflowGraphNode, type WorkflowGraphStage, type WorkflowRow, type WorkflowSearchSignal, type WorkflowStep } from './admin-types';
+import { CRITICAL_LATENCY_MS, recordOrNull, SLOW_LATENCY_MS, type ActivityEvent, type AdminLinks, type AgentContext, type AttributionFacet, type AttributionTrust, type CallRow, type GovernanceMiddlewareControl, type HealthPayload, type IdeTarget, type InstanceRow, type LatencySeverity, type OpenApiOperationRow, type OpenApiSource, type OpenApiSpec, type SkillDetailInstance, type SkillDetailPayload, type SkillRow, type StatsPayload, type TaskRow, type TokenAccounting, type TokenBreakdownEntry, type TokenCarrier, type ToolRow, type TopEntry, type TraceDetailPayload, type TracePayload, type TraceRow, type TraceSpan, type TrafficCaptureStatus, type TrafficFrameEnvelope, type Translator, type WorkflowAgent, type WorkflowGraphNode, type WorkflowGraphStage, type WorkflowRow, type WorkflowSearchSignal, type WorkflowStep } from './admin-types';
 
 // ══ platform ──────────────────────────────────────────────────────────────
 import {
@@ -111,7 +111,6 @@ import {
   hrefForAdmin,
   isPanelId,
   openApiInspectorHref,
-  projectDocsHref,
   publicSafeIssuePaths,
   publicToolFamily,
   readDiscoverTabFromUrl,
@@ -139,7 +138,6 @@ export {
   hrefForAdmin,
   isPanelId,
   openApiInspectorHref,
-  projectDocsHref,
   publicSafeIssuePaths,
   publicToolFamily,
   readDiscoverTabFromUrl,
@@ -392,55 +390,9 @@ export function PanelTabs<T extends string>({
   );
 }
 
-export function NavIcon({ panel }: { panel: Panel }) {
-  const icons: Partial<Record<Panel, string[]>> = {
-    setup: ['M5 12h10', 'M13 8l4 4-4 4', 'M4 5h16v14H4z'],
-    debug: ['M6 6h12v12H6z', 'M9 9h6v6H9z'],
-    activity: ['M4 14h4l2-5 4 9 2-4h4'],
-    health: ['M12 4l7 4v5c0 4-3 7-7 8-4-1-7-4-7-8V8z'],
-    instances: ['M6 7h12v10H6z', 'M9 4h6', 'M9 20h6'],
-    tools: ['M5 19l5-5', 'M14 5l5 5', 'M12 7l5 5-5 5-5-5z'],
-    workflows: ['M5 6h4v4H5z', 'M15 6h4v4h-4z', 'M5 15h4v4H5z', 'M9 8h6', 'M7 10v5'],
-    experiments: ['M8 3h8', 'M10 3v5l-5 10h14L14 8V3', 'M8 14h8'],
-    tasks: ['M6 7h12', 'M6 12h12', 'M6 17h12', 'M4 7h.01', 'M4 12h.01', 'M4 17h.01'],
-    calls: ['M7 7h10v10H7z', 'M10 10h4v4h-4z'],
-    traces: ['M5 7h4v4H5z', 'M15 13h4v4h-4z', 'M9 9l6 6'],
-    traffic: ['M4 8h4l2 8 4-12 2 8h4', 'M4 16h4', 'M16 16h4'],
-    stats: ['M5 18V9', 'M12 18V5', 'M19 18v-6', 'M4 18h16'],
-    governance: ['M12 4l7 4v5c0 4-3 7-7 8-4-1-7-4-7-8V8z', 'M9 12l2 2 4-5'],
-    logs: ['M7 5h8l3 3v11H7z', 'M15 5v4h4', 'M10 13h6', 'M10 16h5'],
-    openapi: ['M5 5h14v14H5z', 'M8 9h8', 'M8 13h5', 'M8 17h8'],
-    'skill-paths': ['M5 12h14', 'M12 5v14', 'M7 7l10 10', 'M17 7L7 17'],
-    analytics: ['M3 3v18h18', 'M7 16l4-8 4 4 4-6'],
-    memory: ['M5 7c0-2 14-2 14 0s-14 2-14 0', 'M5 7v10c0 2 14 2 14 0V7', 'M5 12c0 2 14 2 14 0'],
-    marketplace: ['M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z', 'M3 6h18', 'M16 10a4 4 0 01-8 0'],
-    integrations: ['M12 2L2 7l10 5 10-5-10-5z', 'M2 17l10 5 10-5', 'M2 12l10 5 10-5'],
-    discover: ['M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z'],
-    overview: ['M3 13h2v-2H3v2zm4 0h2v-2H7v2zm4-2v2h2v-2h-2zm4 0h2v-2h-2v2zm4 0h2v-2h-2v2z'],
-    reliability: ['M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z'],
-    sessions: ['M13 2L3 14h8l-2 8 10-12h-8l2-8z'],
-  };
-  return (
-    <svg className="nav-icon" viewBox="0 0 24 24" aria-hidden="true">
-      {(icons[panel] ?? []).map((d) => <path key={d} d={d} />)}
-    </svg>
-  );
-}
-
 export function IdeIcon({ target }: { target: IdeTarget }) {
   return (
     <img className={`ide-icon ide-icon-${target.id}`} src={target.icon} alt="" aria-hidden="true" />
-  );
-}
-
-export function DocsIcon() {
-  return (
-    <svg className="nav-icon" viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M6 4h9l3 3v13H6z" />
-      <path d="M15 4v4h4" />
-      <path d="M9 13h6" />
-      <path d="M9 16h5" />
-    </svg>
   );
 }
 

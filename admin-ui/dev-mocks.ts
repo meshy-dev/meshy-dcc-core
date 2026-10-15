@@ -42,6 +42,7 @@ let connectorReceipts = [
   { dcc_type: 'blender', adapter_version: '0.1.0', core_version: '0.2.0', installed_at: 1781300000 },
   { dcc_type: 'unity', adapter_version: '0.1.0', core_version: '0.2.0', installed_at: 1781300100, project: `${MOCK_HOME}/Projects/Racer` },
 ];
+let mockSettings = { update_check: true };
 function connectorsPayload() {
   const shipped = Object.entries(SHIPPED_CONNECTORS).map(([dcc_type, info]) => ({
     dcc_type,
@@ -1489,6 +1490,10 @@ export function adminApiMockPlugin(): Plugin {
           return send(res, 200, { status: 'partial', dcc_type: dccType, adapter_version: info.version, steps: [{ id: 'register-dcc', status: 'deferred' }] });
         }
         if (pathname === '/connectors') return send(res, 200, connectorsPayload());
+        if (pathname === '/settings') {
+          if (req.method === 'PUT') mockSettings = { update_check: Boolean((await readJsonBody(req)).update_check) };
+          return send(res, 200, mockSettings);
+        }
         if (pathname === '/agents/skill' && req.method === 'POST') {
           const body = await readJsonBody(req);
           const ids = Array.isArray(body.agents) ? body.agents.map(String) : [];

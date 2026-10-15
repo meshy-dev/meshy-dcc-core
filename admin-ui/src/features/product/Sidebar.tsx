@@ -1,5 +1,5 @@
 import type { InstanceRow, Panel } from '../../admin-types';
-import { DOCS_URL, MESHY_LOGO, PRODUCT_SHORT_NAME, WEBSITE_URL, dccName } from './catalog';
+import { MESHY_LOGO, PRODUCT_SHORT_NAME, WEBSITE_URL, dccName } from './catalog';
 import { instanceTone, sceneLabel, type InstanceTone } from './model';
 import { DccLogo, ExternalLink, Icon, type T } from './ui';
 
@@ -99,7 +99,7 @@ export function ProductSidebar(props: {
       ) : null}
 
       <div className="pd-sidebar-foot">
-        <ExternalLink href={DOCS_URL} className="pd-nav-item small">
+        <ExternalLink href={t('product.link.docs')} className="pd-nav-item small">
           <Icon name="docs" />
           <span className="pd-grow">{t('product.nav.docs')}</span>
           <Icon name="external" size={12} stroke={2} />

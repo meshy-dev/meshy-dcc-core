@@ -60,26 +60,6 @@
     padding-bottom: 0.6rem;
   }
 
-  .sidebar-preferences {
-    border-bottom: 0;
-    display: inline-grid;
-    margin: 0 1rem 0.5rem;
-    max-width: none;
-    padding-bottom: 0;
-    width: calc(100% - 2rem);
-  }
-
-  .sidebar-preferences .language-selector > span,
-  .sidebar-preferences .theme-selector > span {
-    clip: rect(0 0 0 0);
-    clip-path: inset(50%);
-    height: 1px;
-    overflow: hidden;
-    position: absolute;
-    white-space: nowrap;
-    width: 1px;
-  }
-
   .nav-links {
     flex: 0 0 auto;
     flex-direction: row;

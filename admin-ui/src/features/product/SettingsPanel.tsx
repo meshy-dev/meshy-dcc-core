@@ -4,8 +4,8 @@ import type { HealthPayload } from '../../admin-types';
 import { SUPPORTED_LOCALES, type SupportedLocale } from '../../i18n';
 import { LOCALE_LABELS } from '../../locale';
 import type { ThemeMode } from '../../theme';
-import { useUpdateCheck } from './api';
-import { DOCS_URL, PRODUCT_NAME, WEBSITE_URL } from './catalog';
+import { useSetUpdateCheck, useSettings, useUpdateCheck } from './api';
+import { PRODUCT_NAME, WEBSITE_URL } from './catalog';
 import { Command, ExternalLink, Icon, Switch, Tag, type T } from './ui';
 
 export function SettingsPanel(props: {
@@ -25,6 +25,8 @@ export function SettingsPanel(props: {
   const { t, health } = props;
   const version = health?.version;
   const update = useUpdateCheck(version);
+  const settings = useSettings();
+  const setUpdateCheck = useSetUpdateCheck();
   const [remoteHelp, setRemoteHelp] = useState(false);
   const network = health?.service?.network_listener;
 
@@ -87,7 +89,7 @@ export function SettingsPanel(props: {
               <span>{t('product.settings.version', { version: version ?? '—' })}</span>
               <span className="pd-note">
                 {update.data && !update.data.update_available ? `${t('product.settings.upToDate')} · ` : ''}
-                <ExternalLink href={DOCS_URL} className="pd-a">{t('product.settings.releaseNotes')}</ExternalLink>
+                <ExternalLink href={t('product.link.releaseNotes')} className="pd-a">{t('product.settings.releaseNotes')}</ExternalLink>
               </span>
             </div>
             <button type="button" className="pd-btn secondary" disabled={update.isFetching || !version}
@@ -101,6 +103,16 @@ export function SettingsPanel(props: {
                 <Command text="meshy-dcc update apply" t={t} />
               </div>
             ) : null}
+          </div>
+          <div className="pd-row" style={{ paddingRight: 16 }}>
+            <div className="pd-row-text">
+              <span>{t('product.settings.dailyCheck')}</span>
+              <span className="pd-note">{t('product.settings.dailyCheckHint')}</span>
+            </div>
+            <Switch checked={settings.data?.update_check ?? false} label={t('product.settings.dailyCheck')}
+              disabled={!props.local || !settings.data || setUpdateCheck.isPending}
+              onChange={(on) => setUpdateCheck.mutate(on)} />
+            {setUpdateCheck.isError ? <p className="pd-row-detail pd-error">{t('product.settings.saveFailed')}</p> : null}
           </div>
         </div>
       </section>
@@ -121,7 +133,7 @@ export function SettingsPanel(props: {
       <section className="pd-section" aria-labelledby="pd-help">
         <h2 id="pd-help" className="pd-h2 caps">{t('product.settings.help')}</h2>
         <div className="pd-card round pd-rows">
-          <ExternalLink href={DOCS_URL} className="pd-row-link">
+          <ExternalLink href={t('product.link.docs')} className="pd-row-link">
             {t('product.settings.docs')}<Icon name="external" size={12} stroke={2} />
           </ExternalLink>
           <ExternalLink href={WEBSITE_URL} className="pd-row-link">

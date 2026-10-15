@@ -10,6 +10,7 @@ const keys = {
   agents: ['product', 'agents'] as const,
   skills: ['product', 'skills'] as const,
   update: (version: string) => ['product', 'update', version] as const,
+  settings: ['product', 'settings'] as const,
 };
 
 // Installs download and run host installers; give them the gateway's own ceiling.
@@ -18,9 +19,9 @@ const SKILL_TIMEOUT_MS = 70_000;
 // Every open app re-scans its folders; a slow host can take a while.
 const RELOAD_TIMEOUT_MS = 120_000;
 
-async function postJson<T>(path: string, body: unknown, timeoutMs: number): Promise<T> {
+async function postJson<T>(path: string, body: unknown, timeoutMs: number, method = 'POST'): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
-    method: 'POST',
+    method,
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
     signal: AbortSignal.timeout(timeoutMs),
@@ -66,7 +67,7 @@ export function useAgentsQuery(enabled = true) {
 export function useInstallConnector() {
   const client = useQueryClient();
   return useMutation({
-    mutationFn: (body: { dcc_type: string; project?: string }) =>
+    mutationFn: (body: { dcc_type: string; project?: string; dcc_path?: string }) =>
       postJson<InstallReport>('/connectors/install', body, INSTALL_TIMEOUT_MS),
     onSettled: () => client.invalidateQueries({ queryKey: keys.connectors }),
   });
@@ -120,7 +121,25 @@ function gatewayRootUrl(path: string): string {
 
 /// Checked once per page load (it reads the release manifest online, never
 /// downloads); `refetch()` checks again.
+export type Settings = { update_check: boolean };
+
+/// Preferences shared with the CLI (`~/.meshy-dcc/settings.json`).
+export function useSettings() {
+  return useQuery({ queryKey: keys.settings, queryFn: () => apiJson<Settings>('/settings'), staleTime: 60_000 });
+}
+
+export function useSetUpdateCheck() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (on: boolean) => postJson<Settings>('/settings', { update_check: on }, 10_000, 'PUT'),
+    onSuccess: (settings) => client.setQueryData(keys.settings, settings),
+  });
+}
+
+/// The release check. It runs by itself only while the daily check is on;
+/// `refetch()` is the "Check for updates" button either way.
 export function useUpdateCheck(currentVersion: string | undefined) {
+  const automatic = useSettings().data?.update_check ?? false;
   return useQuery({
     queryKey: keys.update(currentVersion ?? ''),
     queryFn: async () => {
@@ -128,8 +147,8 @@ export function useUpdateCheck(currentVersion: string | undefined) {
       const res = await fetch(gatewayRootUrl(path), { signal: AbortSignal.timeout(20_000) });
       return adminJsonResponse<UpdateCheck>(res, path);
     },
-    enabled: Boolean(currentVersion),
+    enabled: Boolean(currentVersion) && automatic,
     retry: false,
-    staleTime: Infinity,
+    staleTime: 24 * 60 * 60_000,
   });
 }
