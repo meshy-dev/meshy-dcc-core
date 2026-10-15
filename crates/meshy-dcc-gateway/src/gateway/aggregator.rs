@@ -40,7 +40,7 @@ pub use prompts::{
 };
 pub use resources::aggregate_resources_list;
 pub(crate) use resources::compute_resources_fingerprint_with_own;
-pub(crate) use skill_mgmt::skill_mgmt_dispatch;
+pub(crate) use skill_mgmt::{list_skills_by_instance, skill_mgmt_dispatch};
 
 use std::time::Duration;
 

@@ -108,6 +108,11 @@ async fn post_skill_path(router: Router, payload: Value) -> StatusCode {
         .oneshot(
             Request::builder()
                 .method("POST")
+                // Writes are loopback-only.
+                .extension(axum::extract::ConnectInfo(std::net::SocketAddr::from((
+                    [127, 0, 0, 1],
+                    50000,
+                ))))
                 .uri("/api/skill-paths")
                 .header(header::CONTENT_TYPE, "application/json")
                 .body(axum::body::Body::from(payload.to_string()))
@@ -185,9 +190,12 @@ async fn test_admin_skill_path_crud_via_api() {
         })));
     let router = build_admin_router(state);
 
+    let dir = tempfile::tempdir().unwrap();
+    let folder = dir.path().join("team").join("new-skills");
+    std::fs::create_dir_all(&folder).unwrap();
     let status = post_skill_path(
         router.clone(),
-        serde_json::json!({"path": "/tmp/new-skills"}),
+        serde_json::json!({"path": folder.to_str().unwrap()}),
     )
     .await;
     assert_eq!(status, StatusCode::OK);
@@ -201,11 +209,11 @@ async fn test_admin_skill_path_crud_via_api() {
         .filter(|p| p["source"] == "admin_custom")
         .collect();
     assert_eq!(custom.len(), 1, "expected 1 custom path, got {paths:?}");
-    assert_eq!(custom[0]["path"], "Admin custom · tmp/new-skills");
+    assert_eq!(custom[0]["path"], "Admin custom · team/new-skills");
     assert_eq!(custom[0]["source_label"], "Admin custom");
     assert_eq!(custom[0]["path_redacted"], true);
     assert!(
-        !body.to_string().contains("/tmp/new-skills"),
+        !body.to_string().contains(folder.to_str().unwrap()),
         "custom path payload should not expose absolute local paths"
     );
 
@@ -217,6 +225,11 @@ async fn test_admin_skill_path_crud_via_api() {
         .oneshot(
             Request::builder()
                 .method("DELETE")
+                // Writes are loopback-only.
+                .extension(axum::extract::ConnectInfo(std::net::SocketAddr::from((
+                    [127, 0, 0, 1],
+                    50000,
+                ))))
                 .uri(format!("/api/skill-paths/{id}"))
                 .body(axum::body::Body::empty())
                 .unwrap(),
@@ -308,6 +321,11 @@ async fn test_admin_memory_lists_stats_and_forgets_rows() {
         .oneshot(
             Request::builder()
                 .method("POST")
+                // Writes are loopback-only.
+                .extension(axum::extract::ConnectInfo(std::net::SocketAddr::from((
+                    [127, 0, 0, 1],
+                    50000,
+                ))))
                 .uri("/api/memory/forget")
                 .header(header::CONTENT_TYPE, "application/json")
                 .body(axum::body::Body::from(
@@ -339,6 +357,11 @@ async fn test_admin_memory_forget_without_selector_returns_400() {
             .oneshot(
                 Request::builder()
                     .method("POST")
+                    // Writes are loopback-only.
+                    .extension(axum::extract::ConnectInfo(std::net::SocketAddr::from((
+                        [127, 0, 0, 1],
+                        50000,
+                    ))))
                     .uri("/api/memory/forget")
                     .header(header::CONTENT_TYPE, "application/json")
                     .body(axum::body::Body::from(body))
@@ -358,6 +381,19 @@ async fn test_admin_skill_path_post_empty_returns_400() {
 
 #[tokio::test]
 async fn test_admin_skill_path_post_without_lane_returns_503() {
-    let status = post_skill_path(admin_router(), serde_json::json!({"path": "/valid/path"})).await;
+    let dir = tempfile::tempdir().unwrap();
+    let status = post_skill_path(
+        admin_router(),
+        serde_json::json!({"path": dir.path().to_str().unwrap()}),
+    )
+    .await;
     assert_eq!(status, StatusCode::SERVICE_UNAVAILABLE);
+}
+
+#[tokio::test]
+async fn test_admin_skill_path_post_missing_or_relative_folder_returns_400() {
+    for path in ["relative/skills", "/no/such/meshy-dcc-skills-folder"] {
+        let status = post_skill_path(admin_router(), serde_json::json!({"path": path})).await;
+        assert_eq!(status, StatusCode::BAD_REQUEST, "{path}");
+    }
 }

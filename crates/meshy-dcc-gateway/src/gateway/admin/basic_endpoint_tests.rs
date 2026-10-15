@@ -784,6 +784,31 @@ mod endpoint_contracts {
         assert_eq!(body["error"], "invalid_project");
     }
 
+    #[tokio::test]
+    async fn installs_and_config_writes_refuse_remote_peers() {
+        let app = admin_router();
+        for (method, uri) in [
+            ("POST", "/api/skill-library/reload"),
+            ("POST", "/api/skill-paths"),
+            ("DELETE", "/api/skill-paths/1"),
+            ("PUT", "/api/integrations"),
+            ("POST", "/api/integrations/test"),
+            ("POST", "/api/marketplace/install"),
+            ("POST", "/api/marketplace/uninstall"),
+            ("POST", "/api/marketplace/sources"),
+            ("POST", "/api/marketplace/update"),
+        ] {
+            let mut req = post_json(uri, json!({}), Some([192, 168, 1, 9]));
+            *req.method_mut() = method.parse().unwrap();
+            let (status, body) = send(app.clone(), req).await;
+            assert_eq!(status, StatusCode::FORBIDDEN, "{method} {uri}");
+            assert_eq!(body["error"], "local_only", "{method} {uri}");
+        }
+        // Reads stay open to remote viewers.
+        let (status, _) = body_json(app, "/api/integrations").await;
+        assert_eq!(status, StatusCode::OK);
+    }
+
     #[cfg(unix)]
     #[tokio::test]
     async fn product_reads_run_the_cli_and_return_its_json() {

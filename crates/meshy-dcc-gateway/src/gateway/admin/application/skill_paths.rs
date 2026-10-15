@@ -83,6 +83,14 @@ pub async fn handle_admin_skill_path_add(
         )
             .into_response();
     }
+    // A folder that does not exist would be stored and silently match nothing.
+    if !std::path::Path::new(&path).is_absolute() || !std::path::Path::new(&path).is_dir() {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(json!({ "error": "not_a_folder", "message": "the path must be an existing folder, given in full" })),
+        )
+            .into_response();
+    }
     let Some(ref lane) = s.admin_sqlite_lane else {
         return (
             StatusCode::SERVICE_UNAVAILABLE,

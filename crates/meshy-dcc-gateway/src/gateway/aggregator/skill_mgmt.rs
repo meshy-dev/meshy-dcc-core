@@ -357,6 +357,40 @@ Standalone `meshy-dcc-server` without `--app` registers as `dcc_type` from MESHY
     }
 }
 
+/// Every skill each live instance offers, in every field and unprojected, for
+/// the admin Skills page (the agent-facing projection pages and trims rows).
+pub(crate) async fn list_skills_by_instance(
+    gs: &GatewayState,
+) -> Vec<(Uuid, String, Result<Vec<Value>, String>)> {
+    let mut targets = targets_for_fanout(gs, None).await;
+    targets.retain(|entry| gs.policy.allows_dcc(&entry.dcc_type) && safe_discovery_target(entry));
+    let args = backend_list_args(&json!({}));
+    let futs = targets.iter().map(|entry| {
+        let url = entry_mcp_url(entry);
+        let args = &args;
+        async move {
+            let walked = walk_backend_skill_pages(
+                &gs.http_client,
+                &gs.resilience,
+                &url,
+                args,
+                gs.backend_timeout,
+            )
+            .await;
+            let rows = match walked.error {
+                Some(error) => Err(error),
+                None => Ok(walked
+                    .skills
+                    .into_iter()
+                    .filter(|skill| skill_allowed_by_policy(&gs.policy, skill))
+                    .collect()),
+            };
+            (entry.instance_id, entry.dcc_type.clone(), rows)
+        }
+    });
+    join_all(futs).await
+}
+
 /// Arguments forwarded to each backend for a fan-out `list_skills`.
 ///
 /// Paging must happen once, on the merged result, not per host: if every

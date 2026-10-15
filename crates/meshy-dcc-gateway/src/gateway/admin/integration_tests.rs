@@ -183,6 +183,11 @@ async fn put_json(router: Router, uri: &str, payload: Value) -> (StatusCode, Val
         .oneshot(
             Request::builder()
                 .method("PUT")
+                // Writes are loopback-only.
+                .extension(axum::extract::ConnectInfo(std::net::SocketAddr::from((
+                    [127, 0, 0, 1],
+                    50000,
+                ))))
                 .uri(uri)
                 .header(header::CONTENT_TYPE, "application/json")
                 .body(axum::body::Body::from(payload.to_string()))
@@ -201,6 +206,11 @@ async fn post_json(router: Router, uri: &str, payload: Value) -> (StatusCode, Va
         .oneshot(
             Request::builder()
                 .method("POST")
+                // Writes are loopback-only.
+                .extension(axum::extract::ConnectInfo(std::net::SocketAddr::from((
+                    [127, 0, 0, 1],
+                    50000,
+                ))))
                 .uri(uri)
                 .header(header::CONTENT_TYPE, "application/json")
                 .body(axum::body::Body::from(payload.to_string()))

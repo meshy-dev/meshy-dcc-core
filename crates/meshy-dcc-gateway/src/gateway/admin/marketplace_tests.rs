@@ -192,6 +192,11 @@ async fn test_marketplace_install_triggers_skill_paths_reload_hook() {
         .oneshot(
             Request::builder()
                 .method("POST")
+                // Writes are loopback-only.
+                .extension(axum::extract::ConnectInfo(std::net::SocketAddr::from((
+                    [127, 0, 0, 1],
+                    50000,
+                ))))
                 .uri("/api/marketplace/install")
                 .header("content-type", "application/json")
                 .body(axum::body::Body::from(
@@ -251,6 +256,11 @@ async fn test_marketplace_uninstall_triggers_skill_paths_reload_hook() {
         .oneshot(
             Request::builder()
                 .method("POST")
+                // Writes are loopback-only.
+                .extension(axum::extract::ConnectInfo(std::net::SocketAddr::from((
+                    [127, 0, 0, 1],
+                    50000,
+                ))))
                 .uri("/api/marketplace/uninstall")
                 .header("content-type", "application/json")
                 .body(axum::body::Body::from(
@@ -315,6 +325,11 @@ async fn test_marketplace_add_source_persists_and_is_visible() {
         .oneshot(
             Request::builder()
                 .method("POST")
+                // Writes are loopback-only.
+                .extension(axum::extract::ConnectInfo(std::net::SocketAddr::from((
+                    [127, 0, 0, 1],
+                    50000,
+                ))))
                 .uri("/api/marketplace/sources")
                 .header("content-type", "application/json")
                 .body(axum::body::Body::from(
@@ -362,6 +377,11 @@ async fn test_marketplace_add_source_duplicate_is_idempotent() {
             .oneshot(
                 Request::builder()
                     .method("POST")
+                    // Writes are loopback-only.
+                    .extension(axum::extract::ConnectInfo(std::net::SocketAddr::from((
+                        [127, 0, 0, 1],
+                        50000,
+                    ))))
                     .uri("/api/marketplace/sources")
                     .header("content-type", "application/json")
                     .body(make_body())
@@ -428,6 +448,11 @@ async fn test_marketplace_install_supports_force_parameter() {
         .oneshot(
             Request::builder()
                 .method("POST")
+                // Writes are loopback-only.
+                .extension(axum::extract::ConnectInfo(std::net::SocketAddr::from((
+                    [127, 0, 0, 1],
+                    50000,
+                ))))
                 .uri("/api/marketplace/install")
                 .header("content-type", "application/json")
                 .body(axum::body::Body::from(
@@ -450,6 +475,11 @@ async fn test_marketplace_install_supports_force_parameter() {
         .oneshot(
             Request::builder()
                 .method("POST")
+                // Writes are loopback-only.
+                .extension(axum::extract::ConnectInfo(std::net::SocketAddr::from((
+                    [127, 0, 0, 1],
+                    50000,
+                ))))
                 .uri("/api/marketplace/install")
                 .header("content-type", "application/json")
                 .body(axum::body::Body::from(
@@ -476,6 +506,11 @@ async fn test_marketplace_install_supports_force_parameter() {
         .oneshot(
             Request::builder()
                 .method("POST")
+                // Writes are loopback-only.
+                .extension(axum::extract::ConnectInfo(std::net::SocketAddr::from((
+                    [127, 0, 0, 1],
+                    50000,
+                ))))
                 .uri("/api/marketplace/install")
                 .header("content-type", "application/json")
                 .body(axum::body::Body::from(
@@ -526,6 +561,11 @@ async fn test_marketplace_error_envelope_has_kind_and_message() {
         .oneshot(
             Request::builder()
                 .method("POST")
+                // Writes are loopback-only.
+                .extension(axum::extract::ConnectInfo(std::net::SocketAddr::from((
+                    [127, 0, 0, 1],
+                    50000,
+                ))))
                 .uri("/api/marketplace/install")
                 .header("content-type", "application/json")
                 .body(axum::body::Body::from(
@@ -642,6 +682,11 @@ async fn test_marketplace_update_triggers_skill_paths_reload_hook() {
         .oneshot(
             Request::builder()
                 .method("POST")
+                // Writes are loopback-only.
+                .extension(axum::extract::ConnectInfo(std::net::SocketAddr::from((
+                    [127, 0, 0, 1],
+                    50000,
+                ))))
                 .uri("/api/marketplace/update")
                 .header("content-type", "application/json")
                 .body(axum::body::Body::from(

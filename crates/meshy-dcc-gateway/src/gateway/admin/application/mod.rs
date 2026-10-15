@@ -44,6 +44,9 @@ pub mod marketplace;
 pub(crate) mod product;
 
 #[cfg(feature = "admin")]
+pub(crate) mod skill_library;
+
+#[cfg(feature = "admin")]
 pub(super) mod recordings;
 
 #[cfg(feature = "admin")]

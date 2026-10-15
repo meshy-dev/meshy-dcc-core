@@ -204,7 +204,12 @@ fn build_base_router(state: GatewayState) -> Router {
 #[cfg(feature = "admin")]
 fn marketplace_ws_router(admin_state: super::admin::state::AdminState) -> Router {
     let ws_state = MarketplaceWsState::new(admin_state);
+    // Installs packages on this computer: loopback peers only, like the admin
+    // marketplace endpoints.
     Router::new()
         .route("/marketplace/ws", routing::get(handle_marketplace_ws))
+        .route_layer(axum::middleware::from_fn(
+            super::admin::application::product::local_only,
+        ))
         .with_state(ws_state)
 }

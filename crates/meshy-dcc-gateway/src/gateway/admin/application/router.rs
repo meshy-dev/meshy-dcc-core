@@ -45,6 +45,7 @@ use super::recordings::{
     handle_recording_review_body, handle_recording_start, handle_recording_stop,
 };
 use super::sessions::{handle_admin_session_detail, handle_admin_sessions};
+use super::skill_library::{handle_skill_library, handle_skill_library_reload};
 use super::skill_paths::{
     handle_admin_skill_path_add, handle_admin_skill_path_delete, handle_admin_skill_paths,
 };
@@ -78,18 +79,56 @@ use super::skill_paths::{
 /// - `GET  /api/connectors`, `POST /api/connectors/install`,
 ///   `GET  /api/agents`, `POST /api/agents/skill` → see `product`
 pub fn build_admin_router(state: AdminState) -> Router {
-    // Changes to this computer: loopback peers only.
+    // Changes to this computer (installs, code the apps will run, config
+    // files): loopback peers only. A remote viewer runs the CLI there instead.
     let local_changes = Router::new()
         .route(
             "/api/connectors/install",
             routing::post(handle_connector_install),
         )
         .route("/api/agents/skill", routing::post(handle_agent_skill))
+        .route(
+            "/api/skill-library/reload",
+            routing::post(handle_skill_library_reload),
+        )
+        .route(
+            "/api/skill-paths",
+            routing::post(handle_admin_skill_path_add),
+        )
+        .route(
+            "/api/skill-paths/{id}",
+            routing::delete(handle_admin_skill_path_delete),
+        )
+        .route(
+            "/api/integrations",
+            routing::put(handle_admin_integration_update),
+        )
+        .route(
+            "/api/integrations/test",
+            routing::post(handle_admin_integration_test),
+        )
+        .route(
+            "/api/marketplace/install",
+            routing::post(handle_marketplace_install),
+        )
+        .route(
+            "/api/marketplace/uninstall",
+            routing::post(handle_marketplace_uninstall),
+        )
+        .route(
+            "/api/marketplace/sources",
+            routing::post(handle_marketplace_add_source),
+        )
+        .route(
+            "/api/marketplace/update",
+            routing::post(handle_marketplace_update),
+        )
         .route_layer(axum::middleware::from_fn(local_only));
     Router::new()
         .merge(local_changes)
         .route("/api/connectors", routing::get(handle_connectors))
         .route("/api/agents", routing::get(handle_agents))
+        .route("/api/skill-library", routing::get(handle_skill_library))
         .route("/", routing::get(handle_admin_ui))
         .route("/api/activity", routing::get(handle_admin_activity))
         .route("/api/instances", routing::get(handle_admin_instances))
@@ -122,14 +161,6 @@ pub fn build_admin_router(state: AdminState) -> Router {
             routing::get(handle_admin_issue_report),
         )
         .route("/api/skill-paths", routing::get(handle_admin_skill_paths))
-        .route(
-            "/api/skill-paths",
-            routing::post(handle_admin_skill_path_add),
-        )
-        .route(
-            "/api/skill-paths/{id}",
-            routing::delete(handle_admin_skill_path_delete),
-        )
         .route("/api/logs", routing::get(handle_admin_logs))
         .route("/api/feedback", routing::get(handle_admin_feedback))
         .route("/api/memory", routing::get(handle_admin_memory))
@@ -175,14 +206,7 @@ pub fn build_admin_router(state: AdminState) -> Router {
             routing::get(handle_experiment_detail),
         )
         .route("/api/artifacts", routing::get(handle_admin_artifacts))
-        .route(
-            "/api/integrations",
-            routing::get(handle_admin_integrations).put(handle_admin_integration_update),
-        )
-        .route(
-            "/api/integrations/test",
-            routing::post(handle_admin_integration_test),
-        )
+        .route("/api/integrations", routing::get(handle_admin_integrations))
         .route(
             "/api/marketplace/catalog",
             routing::get(handle_marketplace_catalog),
@@ -192,28 +216,12 @@ pub fn build_admin_router(state: AdminState) -> Router {
             routing::get(handle_marketplace_installed),
         )
         .route(
-            "/api/marketplace/install",
-            routing::post(handle_marketplace_install),
-        )
-        .route(
-            "/api/marketplace/uninstall",
-            routing::post(handle_marketplace_uninstall),
-        )
-        .route(
             "/api/marketplace/sources",
             routing::get(handle_marketplace_sources),
         )
         .route(
-            "/api/marketplace/sources",
-            routing::post(handle_marketplace_add_source),
-        )
-        .route(
             "/api/marketplace/outdated",
             routing::get(handle_marketplace_outdated),
-        )
-        .route(
-            "/api/marketplace/update",
-            routing::post(handle_marketplace_update),
         )
         .with_state(state)
 }
