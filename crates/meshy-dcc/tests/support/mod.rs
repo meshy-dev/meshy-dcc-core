@@ -1193,13 +1193,12 @@ pub(crate) fn bundled_adapter_names() -> Vec<String> {
 
 pub(crate) fn cli_command() -> Command {
     let mut command = Command::new(env!("CARGO_BIN_EXE_meshy-dcc"));
+    let scratch =
+        std::env::temp_dir().join(format!("meshy-dcc-install-test-{}", uuid::Uuid::new_v4()));
     command.env("MESHY_DCC_INSTALL_OFFLINE", "true");
-    command.env(
-        "MESHY_DCC_INSTALL_CACHE",
-        std::env::temp_dir()
-            .join(format!("meshy-dcc-install-test-{}", uuid::Uuid::new_v4()))
-            .join("catalog.json"),
-    );
+    command.env("MESHY_DCC_INSTALL_CACHE", scratch.join("catalog.json"));
+    // Install receipts go here, never into the developer's own data directory.
+    command.env("MESHY_DCC_DATA_DIR", scratch.join("data"));
     command
 }
 

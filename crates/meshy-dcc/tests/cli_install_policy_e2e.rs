@@ -31,7 +31,8 @@ fn cli(catalog: &Path, dcc: &str, execute: bool) -> Output {
         .arg(catalog)
         .arg("--json")
         .env_remove("MESHY_DCC_INSTALL_DISABLED")
-        .env_remove("MESHY_DCC_INSTALL_PYTHON");
+        .env_remove("MESHY_DCC_INSTALL_PYTHON")
+        .env("MESHY_DCC_DATA_DIR", catalog.with_extension("data"));
     if execute {
         command.arg("--execute");
     }

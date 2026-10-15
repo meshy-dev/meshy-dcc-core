@@ -11,9 +11,11 @@ out="${1:-dist/release}"
 mkdir -p "$out"
 
 # Panic locations and file!() keep absolute paths of dependencies and of this
-# checkout; map them to fixed prefixes.
+# checkout; map them to fixed prefixes. With the rust-src component installed,
+# std's own paths point into the toolchain directory too.
 cargo_home="${CARGO_HOME:-$HOME/.cargo}"
-export RUSTFLAGS="--remap-path-prefix=$cargo_home=/cargo --remap-path-prefix=$repo=/meshy-dcc-core ${RUSTFLAGS:-}"
+sysroot="$(rustc --print sysroot)"
+export RUSTFLAGS="--remap-path-prefix=$cargo_home=/cargo --remap-path-prefix=$sysroot=/rust --remap-path-prefix=$repo=/meshy-dcc-core ${RUSTFLAGS:-}"
 # Git Bash on Windows: rustc sees C:\... paths, not /c/....
 if command -v cygpath >/dev/null 2>&1; then
     RUSTFLAGS="--remap-path-prefix=$(cygpath -w "$cargo_home")=/cargo --remap-path-prefix=$(cygpath -w "$repo")=/meshy-dcc-core $RUSTFLAGS"
