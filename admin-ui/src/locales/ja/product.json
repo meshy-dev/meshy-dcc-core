@@ -27,7 +27,7 @@
   "action.cancel": "キャンセル",
   "action.showStart": "はじめにを表示",
   "start.title": "{product} へようこそ",
-  "start.subtitle": "3 つのステップで、Agent が 3D アプリの中で作業できるようになります。",
+  "start.subtitle": "すべての DCC インスタンスを、Meshy と Agent が動かすひとつの制作パイプラインに。3 ステップで始められます。",
   "start.step1.title": "DCC アプリにコネクタを入れる",
   "start.step1.hint": "使うアプリをすべて選べます",
   "start.step1.action": "選ぶ",

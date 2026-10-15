@@ -76,7 +76,7 @@ def main_package(version: str, platforms: list[str], stage: Path) -> Path:
     manifest = {
         "name": "meshy-dcc",
         "version": version,
-        "description": "Let AI agents work inside running Blender, Unity, Godot and Unreal.",
+        "description": "Turn your DCC instances into one creation pipeline, powered by Meshy and your agent.",
         **COMMON,
         "bin": {"meshy-dcc": "bin/meshy-dcc.js"},
         "files": ["bin/", "README.md", "LICENSE", "NOTICE"],

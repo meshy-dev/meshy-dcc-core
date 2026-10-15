@@ -27,7 +27,7 @@
   "action.cancel": "取消",
   "action.showStart": "显示入门指引",
   "start.title": "欢迎使用 {product}",
-  "start.subtitle": "三步之后，你的 Agent 就能在 3D 软件里工作。",
+  "start.subtitle": "让你的 Agent 与 Meshy 一起，打造跨 DCC 软件的数字艺术生产管线。三步即可开始。",
   "start.step1.title": "为你的 DCC 软件安装连接器",
   "start.step1.hint": "用到的软件都可以选上",
   "start.step1.action": "去选择",

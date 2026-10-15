@@ -27,7 +27,7 @@
   "action.cancel": "취소",
   "action.showStart": "시작하기 보기",
   "start.title": "{product}에 오신 것을 환영합니다",
-  "start.subtitle": "세 단계만 거치면 Agent가 3D 앱 안에서 작업할 수 있습니다.",
+  "start.subtitle": "모든 DCC 인스턴스를 Meshy와 Agent가 움직이는 하나의 제작 파이프라인으로. 세 단계면 시작할 수 있습니다.",
   "start.step1.title": "DCC 앱에 커넥터 설치",
   "start.step1.hint": "사용하는 앱을 모두 고를 수 있습니다",
   "start.step1.action": "선택",

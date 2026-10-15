@@ -1,8 +1,12 @@
 # meshy-dcc-core
 
-One local entry point for agents to work across a creator's DCC applications
-and game engines: install adapters once, discover running instances, load
-capabilities on demand, and route every call to the right scene or project.
+Turn your DCC instances into one creation pipeline, powered by Meshy and your
+agent.
+
+One local entry point for agents across a creator's DCC applications and game
+engines: install connectors once, route every call to the exact running
+instance, and load capabilities as skills on demand, so one agent can carry a
+Meshy model from generation through every app it touches.
 
 **Status: 0.2.0, early development.** Verified so far on macOS arm64:
 

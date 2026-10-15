@@ -1,8 +1,9 @@
 # meshy-dcc
 
-Meshy DCC Core lets an AI agent work inside the Blender, Unity, Godot or Unreal
-you have open: find the running instance, load its tools, call them and read the
-scene back, including importing Meshy-generated models.
+Turn your DCC instances into one creation pipeline, powered by Meshy and your
+agent. Meshy DCC Core gives your agent one entry point to every Blender, Unity,
+Godot and Unreal instance you have open: each call goes to the exact instance,
+tools load as skills on demand, and every change is read back.
 
 ```sh
 npm install -g meshy-dcc

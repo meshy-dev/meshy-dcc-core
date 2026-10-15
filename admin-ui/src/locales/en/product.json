@@ -27,7 +27,7 @@
   "action.cancel": "Cancel",
   "action.showStart": "Show getting started",
   "start.title": "Welcome to {product}",
-  "start.subtitle": "Three steps and your agent can work inside your 3D apps.",
+  "start.subtitle": "Turn your DCC instances into one creation pipeline, powered by Meshy and your agent. Three steps to start.",
   "start.step1.title": "Install connectors for your DCC apps",
   "start.step1.hint": "Pick every app you use",
   "start.step1.action": "Choose",
