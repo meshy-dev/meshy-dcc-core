@@ -1522,7 +1522,7 @@ test.describe('Sessions and Reliability panels', () => {
     await expect(detailRow).toContainText('Version');
     await expect(detailRow).toContainText('0.17.7');
     await expect(detailRow).toContainText('End Reason');
-    await expect(detailRow).toContainText('completed');
+    await expect(detailRow).toContainText('normal');
   });
 
   test('sessions panel filters by search text', async ({ page }) => {
@@ -1533,9 +1533,9 @@ test.describe('Sessions and Reliability panels', () => {
     await expect(panel).toBeVisible();
     await expect(panel.locator('table.sessions-table tbody tr.sessions-row')).toHaveCount(3);
 
-    await panel.locator('.sessions-search-input').fill('bob');
+    await panel.locator('.sessions-search-input').fill('crash');
 
-    // The mock server honors the search filter, so only the crashed session (actor bob) remains.
+    // The search matches session id and status, so only the crashed session remains.
     await expect(panel.locator('table.sessions-table tbody tr.sessions-row')).toHaveCount(1);
     await expect(panel.locator('table.sessions-table tbody tr.sessions-row').first().locator('.badge')).toHaveText('Crashed');
   });

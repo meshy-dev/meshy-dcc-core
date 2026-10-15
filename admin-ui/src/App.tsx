@@ -5,6 +5,7 @@ import {
   RiRefreshLine,
 } from '@remixicon/react';
 import { LogsPanel } from './components/LogsPanel';
+import { PanelBoundary } from './components/PanelBoundary';
 import { PanelSearchBar } from './components/PanelSearchBar';
 import { Button } from './components/ui/button';
 import {
@@ -1465,6 +1466,7 @@ function App() {
         devLinks={devLinks}
       />
       <main className={PRODUCT_PANELS.has(activePanel) ? 'main-stage pd-stage' : 'main-stage'}>
+        <PanelBoundary key={activePanel} message={(message) => t('common.status.panelError', { message })}>
         {activePanel === 'home' && (
           <HomePanel t={t} data={homeData} onNavigate={(panel) => goToPanel(panel)} onRecheck={() => void workersQuery.refetch()} />
         )}
@@ -1922,6 +1924,7 @@ function App() {
             t={t}
           />
         )}
+        </PanelBoundary>
       </main>
     </div>
   );

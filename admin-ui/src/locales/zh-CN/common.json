@@ -68,5 +68,6 @@
   "action.openFile": "打开文件",
   "status.errorPrefix": "错误：{message}",
   "status.waiting": "等待中...",
-  "status.noData": "暂无数据。"
+  "status.noData": "暂无数据。",
+  "status.panelError": "这个页面出错了，无法显示。可以打开其他页面，或刷新重试。（{message}）"
 }

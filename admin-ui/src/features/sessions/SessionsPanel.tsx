@@ -42,31 +42,31 @@ type SessionStatus =
   | 'thread_affinity_failure'
   | 'unknown';
 
+/// Mirrors `GET /admin/api/sessions` (crates/meshy-dcc-gateway-admin/src/sessions.rs).
 type SessionRow = {
   session_id: string;
   parent_session_id?: string | null;
   dcc_type?: string | null;
   instance_id?: string | null;
   status: SessionStatus;
-  started_at: string;
-  ended_at?: string | null;
-  duration_ms?: number | null;
-  end_reason?: string | null;
-  turn_count: number;
+  started_at_ms: number;
+  last_activity_at_ms?: number | null;
+  ended_at_ms?: number | null;
+  end_reason_json?: string | null;
   tool_call_count: number;
-  version?: string | null;
-  agent_name?: string | null;
-  actor_name?: string | null;
+  error_count: number;
+  core_version?: string | null;
+  adapter_version?: string | null;
 };
 
 type SessionsPayload = {
   sessions: SessionRow[];
   total: number;
-  kpi: {
-    total: number;
+  summary?: {
     active: number;
     ended: number;
     crashed: number;
+    disconnected: number;
     by_dcc: Record<string, number>;
   };
 };
@@ -112,10 +112,12 @@ const STATUS_LABEL_KEYS: Record<SessionStatus, MessageKey> = {
 };
 
 function sessionDurationMs(session: SessionRow): number | null {
-  if (session.duration_ms != null) return session.duration_ms;
-  const start = Date.parse(session.started_at);
-  const end = session.ended_at ? Date.parse(session.ended_at) : Date.now();
-  return Number.isFinite(start) && Number.isFinite(end) && end >= start ? end - start : null;
+  const end = session.ended_at_ms ?? Date.now();
+  return end >= session.started_at_ms ? end - session.started_at_ms : null;
+}
+
+function isoTime(ms: number | null | undefined): string | null {
+  return ms == null ? null : new Date(ms).toISOString();
 }
 
 type TreeNode = {
@@ -215,7 +217,7 @@ export function SessionsPanel({
       if (dccFilter !== ALL_DCC && s.dcc_type !== dccFilter) return false;
       if (statusFilter !== ALL_STATUS && s.status !== statusFilter) return false;
       if (search.trim()) {
-        const hay = haystack(s.session_id, s.dcc_type, s.status, s.instance_id, s.agent_name, s.actor_name);
+        const hay = haystack(s.session_id, s.dcc_type, s.status, s.instance_id);
         if (!matchesListFilter(search, hay)) return false;
       }
       return true;
@@ -290,22 +292,22 @@ export function SessionsPanel({
         <MetricTile
           tone="ok"
           label={t('sessions.kpi.active')}
-          value={data?.kpi.active ?? '-'}
+          value={data?.summary?.active ?? '-'}
         />
         <MetricTile
           label={t('sessions.kpi.ended')}
-          value={data?.kpi.ended ?? '-'}
+          value={data?.summary?.ended ?? '-'}
         />
         <MetricTile
           label={t('sessions.kpi.byDcc')}
-          value={data?.kpi.by_dcc ? Object.keys(data.kpi.by_dcc).length : '-'}
+          value={data?.summary?.by_dcc ? Object.keys(data.summary.by_dcc).length : '-'}
         />
       </div>
 
       {/* ── DCC chips ───────────────────────────────────────────────── */}
-      {data?.kpi.by_dcc && Object.keys(data.kpi.by_dcc).length > 0 && (
+      {data?.summary?.by_dcc && Object.keys(data.summary.by_dcc).length > 0 && (
         <div className="sessions-by-dcc">
-          {Object.entries(data.kpi.by_dcc).map(([dcc, count]) => (
+          {Object.entries(data.summary.by_dcc).map(([dcc, count]) => (
             <span className="dcc-chip" key={dcc}>
               {dcc}: {count}
             </span>
@@ -377,7 +379,7 @@ export function SessionsPanel({
               <th style={{ width: '10%' }}>{t('sessions.label.dccType')}</th>
               <th style={{ width: '12%' }}>{t('sessions.label.status')}</th>
               <th style={{ width: '8%' }}>{t('sessions.label.toolCalls')}</th>
-              <th style={{ width: '8%' }}>{t('sessions.label.turns')}</th>
+              <th style={{ width: '8%' }}>{t('sessions.label.errors')}</th>
               <th style={{ width: '18%' }}>{t('sessions.label.startTime')}</th>
               <th style={{ width: '12%' }}>{t('sessions.label.duration')}</th>
               <th style={{ width: '10%' }}>{t('sessions.label.instanceId')}</th>
@@ -391,7 +393,7 @@ export function SessionsPanel({
               const hasChildren = node.children.length > 0;
               const indentStr = node.depth > 0 ? '\u00A0\u00A0\u00A0'.repeat(node.depth) : '';
               const branchPrefix = node.depth > 0 ? '\u2514\u2500 ' : '';
-              const startedAt = s.started_at;
+              const startedAt = isoTime(s.started_at_ms) ?? '';
 
               return (
                 <Fragment key={s.session_id}>
@@ -430,9 +432,7 @@ export function SessionsPanel({
                       </span>
                     </td>
                     <td>{s.tool_call_count}</td>
-                    <td>
-                      {s.turn_count}
-                    </td>
+                    <td>{s.error_count}</td>
                     <td>
                       <time dateTime={startedAt} title={formatTime(startedAt)}>
                         {formatTime(startedAt)}
@@ -472,8 +472,8 @@ export function SessionsPanel({
                             {s.tool_call_count}
                           </span>
                           <span>
-                            <strong>{t('sessions.label.turns')}</strong>
-                            {s.turn_count}
+                            <strong>{t('sessions.label.errors')}</strong>
+                            {s.error_count}
                           </span>
                           <span>
                             <strong>{t('sessions.label.startTime')}</strong>
@@ -481,7 +481,7 @@ export function SessionsPanel({
                           </span>
                           <span>
                             <strong>{t('sessions.label.endedAt')}</strong>
-                            {s.ended_at ? formatTime(s.ended_at) : '\u2014'}
+                            {s.ended_at_ms != null ? formatTime(isoTime(s.ended_at_ms)) : '\u2014'}
                           </span>
                           <span>
                             <strong>{t('sessions.label.duration')}</strong>
@@ -524,17 +524,17 @@ export function SessionsPanel({
                           <div className="detail-grid">
                             <span>
                               <strong>{t('sessions.label.coreVersion')}</strong>
-                              <code>{s.version ?? '\u2014'}</code>
+                              <code>{s.core_version ?? '\u2014'}</code>
                             </span>
                           </div>
                         </div>
 
                         {/* end reason */}
-                        {s.end_reason && (
+                        {s.end_reason_json && (
                           <div className="detail-section">
                             <div className="detail-section-title">{t('sessions.label.endReason')}</div>
                             <div className="end-reason-detail">
-                              <code>{s.end_reason}</code>
+                              <code>{s.end_reason_json}</code>
                             </div>
                           </div>
                         )}

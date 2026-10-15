@@ -68,5 +68,6 @@
   "action.openFile": "파일 열기",
   "status.errorPrefix": "오류: {message}",
   "status.waiting": "대기 중...",
-  "status.noData": "데이터 없음."
+  "status.noData": "데이터 없음.",
+  "status.panelError": "이 페이지에서 오류가 발생해 표시할 수 없습니다. 다른 페이지를 열거나 새로고침하세요. ({message})"
 }

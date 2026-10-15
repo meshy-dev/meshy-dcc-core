@@ -68,5 +68,6 @@
   "action.openFile": "Open file",
   "status.errorPrefix": "Error: {message}",
   "status.waiting": "Waiting...",
-  "status.noData": "No data."
+  "status.noData": "No data.",
+  "status.panelError": "This page hit an error and could not be shown. Open another page, or reload. ({message})"
 }

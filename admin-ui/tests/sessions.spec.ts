@@ -20,7 +20,7 @@ async function mockAdminApi(page: Page) {
             started_at_ms: now - 3600000,
             last_activity_at_ms: now,
             ended_at_ms: null,
-            end_reason: null,
+            end_reason_json: null,
             tool_call_count: 42,
             error_count: 2,
             core_version: '0.19.60',
@@ -36,7 +36,7 @@ async function mockAdminApi(page: Page) {
             started_at_ms: now - 1800000,
             last_activity_at_ms: now - 600000,
             ended_at_ms: now - 600000,
-            end_reason: { normal: null },
+            end_reason_json: '{"normal":null}',
             tool_call_count: 15,
             error_count: 0,
             core_version: '0.19.60',
@@ -52,7 +52,7 @@ async function mockAdminApi(page: Page) {
             started_at_ms: now - 7200000,
             last_activity_at_ms: now - 7000000,
             ended_at_ms: now - 7000000,
-            end_reason: { host_crash: { detail: 'segfault in render thread' } },
+            end_reason_json: '{"host_crash":{"detail":"segfault in render thread"}}',
             tool_call_count: 8,
             error_count: 8,
             core_version: '0.19.59',
@@ -61,10 +61,7 @@ async function mockAdminApi(page: Page) {
           },
         ],
         total: 3,
-        active: 1,
-        ended: 2,
-        by_dcc: { maya: 2, blender: 1 },
-        by_status: { active: 1, ended: 1, crashed: 1 },
+        summary: { active: 1, ended: 1, crashed: 1, disconnected: 0, by_dcc: { maya: 2, blender: 1 } },
       };
     } else if (path === '/sessions/parent-session-1') {
       body = {

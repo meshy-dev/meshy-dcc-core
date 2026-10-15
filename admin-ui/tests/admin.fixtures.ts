@@ -1484,6 +1484,7 @@ export async function mockAdminApi(page: Page) {
         };
       }
     } else if (path === '/sessions') {
+      // Shape of GET /admin/api/sessions (crates/meshy-dcc-gateway-admin/src/sessions.rs).
       const sessionRows = [
         {
           session_id: 'sess-root-0001',
@@ -1491,19 +1492,15 @@ export async function mockAdminApi(page: Page) {
           status: 'active',
           dcc_type: 'maya',
           instance_id: 'maya-inst-1',
-          agent_id: 'agent-1',
-          agent_name: 'Layout Agent',
-          agent_model: 'claude-sonnet-5',
-          started_at: '2026-05-18T07:00:00.000Z',
-          ended_at: null,
-          duration_ms: null,
-          turn_count: 12,
+          started_at_ms: Date.parse('2026-05-18T07:00:00.000Z'),
+          last_activity_at_ms: Date.parse('2026-05-18T07:30:00.000Z'),
+          ended_at_ms: null,
+          end_reason_json: null,
           tool_call_count: 34,
-          end_reason: null,
-          version: '0.17.7',
-          actor_id: 'actor-1',
-          actor_name: 'alice',
-          correlation: { request_id: 'req-root-1', trace_id: 'trace-root-1', workflow_id: null },
+          error_count: 1,
+          core_version: '0.17.7',
+          adapter_version: null,
+          build_sha: null,
         },
         {
           session_id: 'sess-child-0002',
@@ -1511,19 +1508,15 @@ export async function mockAdminApi(page: Page) {
           status: 'ended',
           dcc_type: 'maya',
           instance_id: 'maya-inst-1',
-          agent_id: 'agent-2',
-          agent_name: 'Rig Agent',
-          agent_model: 'claude-sonnet-5',
-          started_at: '2026-05-18T07:05:00.000Z',
-          ended_at: '2026-05-18T07:20:00.000Z',
-          duration_ms: 900000,
-          turn_count: 5,
+          started_at_ms: Date.parse('2026-05-18T07:05:00.000Z'),
+          last_activity_at_ms: Date.parse('2026-05-18T07:20:00.000Z'),
+          ended_at_ms: Date.parse('2026-05-18T07:20:00.000Z'),
+          end_reason_json: '{"normal":null}',
           tool_call_count: 9,
-          end_reason: 'completed',
-          version: '0.17.7',
-          actor_id: 'actor-1',
-          actor_name: 'alice',
-          correlation: { request_id: 'req-child-2', trace_id: 'trace-root-1', workflow_id: 'wf-1' },
+          error_count: 0,
+          core_version: '0.17.7',
+          adapter_version: null,
+          build_sha: null,
         },
         {
           session_id: 'sess-crash-0003',
@@ -1531,46 +1524,28 @@ export async function mockAdminApi(page: Page) {
           status: 'crashed',
           dcc_type: 'houdini',
           instance_id: 'houdini-inst-1',
-          agent_id: 'agent-3',
-          agent_name: 'Sim Agent',
-          agent_model: 'claude-sonnet-5',
-          started_at: '2026-05-18T06:30:00.000Z',
-          ended_at: '2026-05-18T06:45:00.000Z',
-          duration_ms: 900000,
-          turn_count: 3,
+          started_at_ms: Date.parse('2026-05-18T06:30:00.000Z'),
+          last_activity_at_ms: Date.parse('2026-05-18T06:45:00.000Z'),
+          ended_at_ms: Date.parse('2026-05-18T06:45:00.000Z'),
+          end_reason_json: '{"host_crash":{"detail":"segfault"}}',
           tool_call_count: 4,
-          end_reason: 'crash',
-          version: '0.17.6',
-          actor_id: 'actor-2',
-          actor_name: 'bob',
-          correlation: { request_id: 'req-crash-3', trace_id: null, workflow_id: null },
+          error_count: 4,
+          core_version: '0.17.6',
+          adapter_version: null,
+          build_sha: null,
         },
       ];
 
-      let filteredSessions = sessionRows;
-      const dccTypeFilter = url.searchParams.get('dcc_type');
-      const statusFilter = url.searchParams.get('status');
-      const searchFilter = url.searchParams.get('search');
-      if (dccTypeFilter) filteredSessions = filteredSessions.filter((row) => row.dcc_type === dccTypeFilter);
-      if (statusFilter) filteredSessions = filteredSessions.filter((row) => row.status === statusFilter);
-      if (searchFilter) {
-        const needle = searchFilter.toLowerCase();
-        filteredSessions = filteredSessions.filter((row) =>
-          row.session_id.toLowerCase().includes(needle)
-          || (row.agent_name ?? '').toLowerCase().includes(needle)
-          || (row.actor_name ?? '').toLowerCase().includes(needle));
-      }
-
       body = {
-        sessions: filteredSessions,
-        kpi: {
-          total: sessionRows.length,
+        total: sessionRows.length,
+        sessions: sessionRows,
+        summary: {
           active: sessionRows.filter((row) => row.status === 'active').length,
           ended: sessionRows.filter((row) => row.status === 'ended').length,
           crashed: sessionRows.filter((row) => row.status === 'crashed').length,
+          disconnected: 0,
           by_dcc: { maya: 2, houdini: 1 },
         },
-        total: sessionRows.length,
       };
     } else if (path === '/artifacts') {
       body = {

@@ -68,5 +68,6 @@
   "action.openFile": "ファイルを開く",
   "status.errorPrefix": "エラー: {message}",
   "status.waiting": "待機中...",
-  "status.noData": "データなし。"
+  "status.noData": "データなし。",
+  "status.panelError": "このページでエラーが発生したため表示できません。別のページを開くか、再読み込みしてください。（{message}）"
 }
