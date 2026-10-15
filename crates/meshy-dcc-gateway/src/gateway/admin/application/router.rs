@@ -38,7 +38,8 @@ use super::marketplace::{
 };
 use super::memory::{handle_admin_memory, handle_admin_memory_forget};
 use super::product::{
-    handle_agent_skill, handle_agents, handle_connector_install, handle_connectors, local_only,
+    handle_agent_skill, handle_agents, handle_connector_install, handle_connectors,
+    handle_settings, handle_settings_update, local_only,
 };
 use super::recordings::{
     handle_recording_compile, handle_recording_replay_validate, handle_recording_review,
@@ -77,7 +78,8 @@ use super::skill_paths::{
 /// - `GET  /api/health`             → JSON health summary
 /// - `GET  /api/feedback`           → persisted per-instance feedback aggregation
 /// - `GET  /api/connectors`, `POST /api/connectors/install`,
-///   `GET  /api/agents`, `POST /api/agents/skill` → see `product`
+///   `GET  /api/agents`, `POST /api/agents/skill`,
+///   `GET|PUT /api/settings` → see `product`
 pub fn build_admin_router(state: AdminState) -> Router {
     // Changes to this computer (installs, code the apps will run, config
     // files): loopback peers only. A remote viewer runs the CLI there instead.
@@ -87,6 +89,7 @@ pub fn build_admin_router(state: AdminState) -> Router {
             routing::post(handle_connector_install),
         )
         .route("/api/agents/skill", routing::post(handle_agent_skill))
+        .route("/api/settings", routing::put(handle_settings_update))
         .route(
             "/api/skill-library/reload",
             routing::post(handle_skill_library_reload),
@@ -128,6 +131,7 @@ pub fn build_admin_router(state: AdminState) -> Router {
         .merge(local_changes)
         .route("/api/connectors", routing::get(handle_connectors))
         .route("/api/agents", routing::get(handle_agents))
+        .route("/api/settings", routing::get(handle_settings))
         .route("/api/skill-library", routing::get(handle_skill_library))
         .route("/", routing::get(handle_admin_ui))
         .route("/api/activity", routing::get(handle_admin_activity))

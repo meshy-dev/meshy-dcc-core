@@ -156,6 +156,9 @@ pub struct InstallConnectorBody {
     /// Absolute project root, for connectors installed per project.
     #[serde(default)]
     pub project: Option<PathBuf>,
+    /// Absolute path of the app, when the CLI could not find it on its own.
+    #[serde(default)]
+    pub dcc_path: Option<PathBuf>,
 }
 
 /// `POST /admin/api/connectors/install`
@@ -182,6 +185,17 @@ pub async fn handle_connector_install(Json(body): Json<InstallConnectorBody>) ->
         }
         args.push("--project".into());
         args.push(project.to_string_lossy().into_owned());
+    }
+    if let Some(dcc_path) = body.dcc_path {
+        if !dcc_path.is_absolute() {
+            return error(
+                StatusCode::BAD_REQUEST,
+                "invalid_dcc_path",
+                "the app location must be a full path",
+            );
+        }
+        args.push("--dcc-path".into());
+        args.push(dcc_path.to_string_lossy().into_owned());
     }
     args.extend(["--execute".into(), "--json".into()]);
     let Ok(_guard) = install_lock().try_lock() else {
@@ -227,6 +241,29 @@ pub async fn handle_agent_skill(Json(body): Json<AgentSkillBody>) -> Response {
         args.push("--remove".into());
     }
     respond(run_cli(&args, READ_TIMEOUT).await)
+}
+
+#[derive(Debug, Deserialize)]
+pub struct SettingsBody {
+    pub update_check: bool,
+}
+
+/// `GET /admin/api/settings`: the user's preferences shared with the CLI.
+pub async fn handle_settings() -> Response {
+    Json(json!({ "update_check": meshy_dcc_updater::settings::update_check_enabled() }))
+        .into_response()
+}
+
+/// `PUT /admin/api/settings`
+pub async fn handle_settings_update(Json(body): Json<SettingsBody>) -> Response {
+    match meshy_dcc_updater::settings::set_update_check(body.update_check) {
+        Ok(()) => handle_settings().await,
+        Err(err) => error(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "settings_write_failed",
+            &format!("{err:#}"),
+        ),
+    }
 }
 
 #[cfg(test)]

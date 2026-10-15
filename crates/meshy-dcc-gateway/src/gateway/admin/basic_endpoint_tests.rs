@@ -772,7 +772,7 @@ mod endpoint_contracts {
         assert_eq!(status, StatusCode::BAD_REQUEST);
         assert_eq!(body["error"], "invalid_dcc_type");
         let (status, body) = send(
-            app,
+            app.clone(),
             post_json(
                 "/api/connectors/install",
                 json!({"dcc_type": "unity", "project": "relative/dir"}),
@@ -782,6 +782,17 @@ mod endpoint_contracts {
         .await;
         assert_eq!(status, StatusCode::BAD_REQUEST);
         assert_eq!(body["error"], "invalid_project");
+        let (status, body) = send(
+            app,
+            post_json(
+                "/api/connectors/install",
+                json!({"dcc_type": "blender", "dcc_path": "Blender.app"}),
+                Some([127, 0, 0, 1]),
+            ),
+        )
+        .await;
+        assert_eq!(status, StatusCode::BAD_REQUEST);
+        assert_eq!(body["error"], "invalid_dcc_path");
     }
 
     #[tokio::test]
@@ -789,6 +800,7 @@ mod endpoint_contracts {
         let app = admin_router();
         for (method, uri) in [
             ("POST", "/api/skill-library/reload"),
+            ("PUT", "/api/settings"),
             ("POST", "/api/skill-paths"),
             ("DELETE", "/api/skill-paths/1"),
             ("PUT", "/api/integrations"),
