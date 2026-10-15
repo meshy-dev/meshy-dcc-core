@@ -20,6 +20,9 @@ use meshy_dcc_transport::discovery::file_registry::FileRegistry;
 
 struct ScopedIntegrationEnv {
     previous: Vec<(&'static str, Option<String>)>,
+    /// Saves land here unless a test names its own `MESHY_DCC_ETC_DIR`, so the
+    /// suite never writes into the developer's `~/meshy-dcc/etc`.
+    _etc: tempfile::TempDir,
 }
 
 impl ScopedIntegrationEnv {
@@ -42,11 +45,13 @@ impl ScopedIntegrationEnv {
             .iter()
             .map(|key| (*key, std::env::var(key).ok()))
             .collect::<Vec<_>>();
+        let etc = tempfile::tempdir().unwrap();
         // SAFETY: tests using these vars are serialized by INTEGRATIONS_TEST_ENV_LOCK.
         unsafe {
             for key in KEYS {
                 std::env::remove_var(key);
             }
+            std::env::set_var("MESHY_DCC_ETC_DIR", etc.path());
             for (key, value) in values {
                 match value {
                     Some(value) => std::env::set_var(key, value),
@@ -54,7 +59,10 @@ impl ScopedIntegrationEnv {
                 }
             }
         }
-        Self { previous }
+        Self {
+            previous,
+            _etc: etc,
+        }
     }
 }
 
@@ -69,6 +77,15 @@ impl Drop for ScopedIntegrationEnv {
                 }
             }
         }
+    }
+}
+
+/// What the OTLP entry reports when this build can export, or "unavailable".
+fn otlp_status(when_built: &'static str) -> &'static str {
+    if cfg!(feature = "otlp-export") {
+        when_built
+    } else {
+        "unavailable"
     }
 }
 
@@ -321,7 +338,7 @@ events: ["tool.*"]
         .iter()
         .find(|entry| entry["kind"] == "otlp")
         .unwrap();
-    assert_eq!(otlp["status"], "active");
+    assert_eq!(otlp["status"], otlp_status("active"));
     assert_eq!(otlp["config"]["endpoint"], "http://127.0.0.1:4317");
     assert_eq!(
         otlp["config"]["headers"],
@@ -391,7 +408,7 @@ async fn integrations_put_stages_pending_restart_config() {
     .await;
     assert_eq!(status, StatusCode::OK);
     assert_eq!(updated["kind"], "otlp");
-    assert_eq!(updated["status"], "pending_restart");
+    assert_eq!(updated["status"], otlp_status("pending_restart"));
     assert_eq!(updated["config"]["endpoint"], "http://collector.local:4317");
 
     let (status, json) = body_json(router, "/api/integrations").await;
@@ -402,7 +419,7 @@ async fn integrations_put_stages_pending_restart_config() {
         .iter()
         .find(|entry| entry["kind"] == "otlp")
         .unwrap();
-    assert_eq!(otlp["status"], "pending_restart");
+    assert_eq!(otlp["status"], otlp_status("pending_restart"));
     assert_eq!(otlp["config"]["service_name"], "meshy-dcc-gateway");
 }
 
@@ -890,7 +907,7 @@ async fn integrations_put_persists_sentry_and_otlp_json_to_local_etc() {
     )
     .await;
     assert_eq!(status, StatusCode::OK);
-    assert_eq!(otlp["status"], "pending_restart");
+    assert_eq!(otlp["status"], otlp_status("pending_restart"));
     assert_eq!(otlp["config"]["endpoint"], "http://collector.local:4317");
     assert_eq!(otlp["config"]["headers"], "authorization=********");
     let otlp_path = dir.path().join("otlp.json");

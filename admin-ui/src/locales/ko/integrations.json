@@ -6,6 +6,7 @@
   "status.active": "활성",
   "status.inactive": "비활성",
   "status.pendingRestart": "재시작 대기",
+  "status.unavailable": "이 빌드에 없음",
   "badge.pendingRestart": "재시작 필요",
   "card.sentryName": "Sentry 오류 모니터링",
   "card.sentryDesc": "패닉, 오류 이벤트 및 스팬 브레드크럼을 Sentry 프로젝트로 전송합니다. DSN이 설정되지 않으면 비활성화됩니다.",

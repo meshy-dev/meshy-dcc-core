@@ -6,6 +6,7 @@
   "status.active": "已启用",
   "status.inactive": "未启用",
   "status.pendingRestart": "待重启",
+  "status.unavailable": "此版本未包含",
   "badge.pendingRestart": "待重启生效",
   "card.sentryName": "Sentry 错误监控",
   "card.sentryDesc": "向 Sentry 项目发送 panic、错误事件和 span breadcrumb。当未设置 DSN 时禁用。",

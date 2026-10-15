@@ -118,7 +118,11 @@ prometheus = [
     "meshy-dcc-sidecar?/prometheus",
 ]
 
-otlp-exporter = ["meshy-dcc-telemetry/otlp-exporter", "dep:meshy-dcc-telemetry"]
+otlp-exporter = [
+    "telemetry",
+    "meshy-dcc-telemetry/otlp-exporter",
+    "meshy-dcc-gateway?/otlp-export",
+]
 telemetry = ["dep:meshy-dcc-telemetry"]
 
 # Opt-in local Tracy profiling through meshy-dcc-logging's existing subscriber.

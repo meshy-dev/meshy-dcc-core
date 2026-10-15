@@ -1468,7 +1468,7 @@ export type MarketplaceErrorEnvelope = {
 export type IntegrationKind = 'sentry' | 'webhooks' | 'wecom' | 'otlp';
 
 /// Integration status — lifecycle state of a single integration.
-export type IntegrationStatus = 'active' | 'inactive' | 'pending_restart';
+export type IntegrationStatus = 'active' | 'inactive' | 'pending_restart' | 'unavailable';
 
 /// Per-field env lock descriptor — whether a config field is locked to an env var.
 export type EnvLockedField = {

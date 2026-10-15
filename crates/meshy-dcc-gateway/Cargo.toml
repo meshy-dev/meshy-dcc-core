@@ -83,6 +83,9 @@ admin-persist-sqlite = ["admin", "meshy-dcc-gateway-admin/persist-sqlite"]
 telemetry = ["dep:meshy-dcc-telemetry", "dep:opentelemetry"]
 prometheus = ["telemetry", "meshy-dcc-telemetry/prometheus", "dep:prometheus"]
 mdns = ["meshy-dcc-transport/mdns"]
+# Set by meshy-dcc-server's `otlp-exporter`. Without it the server cannot export
+# OTLP, so the integrations page reports OTLP as not in this build.
+otlp-export = []
 
 [dev-dependencies]
 tempfile.workspace = true

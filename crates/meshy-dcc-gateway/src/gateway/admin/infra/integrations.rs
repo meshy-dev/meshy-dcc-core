@@ -514,7 +514,12 @@ fn otlp_integration_entry(s: &AdminState) -> Value {
             config.insert(key, value);
         }
     }
-    let status = integration_status(active, has_pending || (!config.is_empty() && !active));
+    // A saved endpoint does nothing unless the server was built to export.
+    let status = if cfg!(feature = "otlp-export") {
+        integration_status(active, has_pending || (!config.is_empty() && !active))
+    } else {
+        "unavailable"
+    };
     insert_write_config_path(&mut config, DEFAULT_OTLP_CONFIG_FILE);
 
     integration_json(

@@ -6,6 +6,7 @@
   "status.active": "Active",
   "status.inactive": "Inactive",
   "status.pendingRestart": "Pending Restart",
+  "status.unavailable": "Not in this build",
   "badge.pendingRestart": "Restart required",
   "card.sentryName": "Sentry Error Monitoring",
   "card.sentryDesc": "Send panics, error events, and span breadcrumbs to your Sentry project. Disabled when no DSN is configured.",

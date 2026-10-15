@@ -40,6 +40,7 @@ function statusLocaleKey(status: string): MessageKey {
     case 'active': return 'integrations.status.active';
     case 'inactive': return 'integrations.status.inactive';
     case 'pending_restart': return 'integrations.status.pendingRestart';
+    case 'unavailable': return 'integrations.status.unavailable';
     default: return 'integrations.status.inactive';
   }
 }

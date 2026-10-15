@@ -6,6 +6,7 @@
   "status.active": "有効",
   "status.inactive": "無効",
   "status.pendingRestart": "再起動待ち",
+  "status.unavailable": "このビルドには未搭載",
   "badge.pendingRestart": "再起動が必要です",
   "card.sentryName": "Sentry エラー監視",
   "card.sentryDesc": "パニック、エラーイベント、スパンブレッドクラムを Sentry プロジェクトに送信します。DSN が未設定の場合は無効です。",
