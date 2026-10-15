@@ -560,7 +560,7 @@ impl DccControlPlane {
         // Stopping a local host is a lifecycle action, like start-instance:
         // ownership lives in the local operation record, which the gateway
         // never sees, so it stays local even when calls must use the gateway.
-        if self.target.is_local() {
+        if stop_runs_locally(&self.target, &request) {
             local_control::stop_instance_local(self.registry_dir.clone(), request).await
         } else {
             self.gateway_client()
@@ -685,6 +685,22 @@ fn select_remote_instances(
     Ok(matches)
 }
 
+/// Whether `stop-instance` uses the local operation record. The gateway's
+/// stop needs the caller's expected owner and session and refuses without
+/// them, so a gateway on this computer given by `--base-url` (loopback) stops
+/// locally unless the caller brought them; `--base-url` used to send every
+/// stop to the gateway, which then refused a `start-instance` host.
+fn stop_runs_locally(target: &GatewayTarget, request: &StopInstanceRequest) -> bool {
+    match target {
+        GatewayTarget::Local => true,
+        GatewayTarget::Remote { endpoint, .. } => {
+            request.expected_owner.is_none()
+                && request.expected_session.is_none()
+                && crate::application::gateway_ctrl::local_auto_gateway_target(endpoint).is_some()
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;
@@ -699,6 +715,36 @@ mod tests {
     use tempfile::tempdir;
 
     use super::*;
+
+    #[test]
+    fn stop_runs_locally_for_gateways_on_this_computer() {
+        let request = |owner: Option<&str>| StopInstanceRequest {
+            dcc_type: "blender".into(),
+            instance_id: "b0afabcc".into(),
+            expected_owner: owner.map(Into::into),
+            expected_session: owner.map(Into::into),
+            operation_id: None,
+            discard_unsaved: false,
+        };
+        let base_url = |url: &str| GatewayTarget::Remote {
+            name: "base-url".into(),
+            endpoint: crate::domain::rest::Endpoint::new(url),
+        };
+        assert!(stop_runs_locally(&GatewayTarget::Local, &request(None)));
+        assert!(stop_runs_locally(
+            &base_url("http://127.0.0.1:19865"),
+            &request(None)
+        ));
+        // Owner and session ask for the gateway's guarded stop.
+        assert!(!stop_runs_locally(
+            &base_url("http://127.0.0.1:19865"),
+            &request(Some("smoke"))
+        ));
+        assert!(!stop_runs_locally(
+            &base_url("http://192.168.1.20:19765"),
+            &request(None)
+        ));
+    }
 
     async fn echo_request_id(request: Request, next: Next) -> Response {
         let request_id = request.headers().get("x-request-id").cloned();

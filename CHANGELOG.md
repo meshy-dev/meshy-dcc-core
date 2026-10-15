@@ -244,6 +244,12 @@ and is not runtime-compatible with it. Attribution stays in `LICENSE` and
 - When a `tools.yaml` entry sets `read_only`, `destructive` or `idempotent` to
   `true` and declares no `*_hint` key, the matching MCP annotation is now
   published.
+- `stop-instance` with `--base-url` (or `MESHY_DCC_BASE_URL`) pointing at a
+  gateway on this computer stops a `start-instance` host from its local
+  operation record again. Any `--base-url` used to send the stop to the
+  gateway, whose guarded stop needs `--expected-owner` and
+  `--expected-session` and so refused. Passing those two still uses the
+  gateway.
 - `stop-instance --instance-id` right after `start-instance` waits for the
   host to publish its stop hook, as `--operation-id` already did; it used to
   refuse with `safe_stop_unavailable` when the host had not published it yet.
