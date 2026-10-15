@@ -2962,6 +2962,7 @@ dependencies = [
  "clap",
  "dirs",
  "flate2",
+ "glob",
  "hex",
  "jsonschema",
  "libc",

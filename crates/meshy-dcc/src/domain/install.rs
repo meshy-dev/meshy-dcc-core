@@ -245,6 +245,79 @@ pub enum InstallPlanError {
 // ── defaults ─────────────────────────────────────────────────────────────────────
 
 /// Default install paths relative to user home or Meshy DCC data root.
+/// Name of the plan step that stands in for the install when the host
+/// executable has to be named first (`--dcc-path`).
+pub const LOCATE_HOST_STEP: &str = "locate-host";
+
+/// The one existing file that matches the catalog's `dcc_paths` patterns;
+/// otherwise every match (none, or several to choose from).
+fn find_dcc_path(patterns: &[String]) -> Result<PathBuf, Vec<PathBuf>> {
+    let home = dirs::home_dir();
+    let mut found: Vec<PathBuf> = Vec::new();
+    for pattern in patterns {
+        let pattern = match (pattern.strip_prefix("~/"), &home) {
+            (Some(rest), Some(home)) => home.join(rest).to_string_lossy().into_owned(),
+            (Some(_), None) => continue,
+            (None, _) => pattern.clone(),
+        };
+        let Ok(paths) = glob::glob(&pattern) else {
+            continue;
+        };
+        for path in paths.flatten() {
+            if path.is_file() && !found.contains(&path) {
+                found.push(path);
+            }
+        }
+    }
+    if found.len() == 1 {
+        Ok(found.remove(0))
+    } else {
+        Err(found)
+    }
+}
+
+/// A macOS app bundle stands for its main executable (`CFBundleExecutable`
+/// in `Contents/Info.plist`), so `--dcc-path "/Applications/Blender 4.5.app"`
+/// works for a renamed copy too.
+fn app_bundle_executable(path: PathBuf) -> PathBuf {
+    if !(path.extension().is_some_and(|ext| ext == "app") && path.is_dir()) {
+        return path;
+    }
+    // ponytail: XML plists only (what app installers ship); binary ones fall back to the bundle name.
+    let named = std::fs::read_to_string(path.join("Contents/Info.plist"))
+        .ok()
+        .and_then(|plist| {
+            let after = plist.split("<key>CFBundleExecutable</key>").nth(1)?;
+            let value = after.split("<string>").nth(1)?.split("</string>").next()?;
+            Some(value.trim().to_string())
+        })
+        .filter(|name| !name.is_empty() && !name.contains('/'));
+    let name = named
+        .map(std::ffi::OsString::from)
+        .or_else(|| path.file_stem().map(Into::into));
+    match name.map(|name| path.join("Contents/MacOS").join(name)) {
+        Some(executable) if executable.is_file() => executable,
+        _ => path,
+    }
+}
+
+fn locate_host_message(dcc_type: &str, found: &[PathBuf]) -> String {
+    if found.is_empty() {
+        format!(
+            "{dcc_type} was not found in its usual install locations. Pass --dcc-path with the {dcc_type} application."
+        )
+    } else {
+        let list: Vec<String> = found
+            .iter()
+            .map(|path| path.display().to_string())
+            .collect();
+        format!(
+            "Found more than one {dcc_type}: {}. Pass --dcc-path with the one to use.",
+            list.join(", ")
+        )
+    }
+}
+
 pub fn default_adapter_dir() -> PathBuf {
     meshy_dcc_data_dir().join("adapters")
 }
@@ -642,15 +715,20 @@ impl InstallPlanner {
                 .chain(&host.project_steps)
                 .flatten()
                 .any(|token| token.contains("{dcc_path}"));
-        if needs_dcc_path && dcc_path.is_none() {
-            return vec![InstallStep {
-                name: "install-host-package".into(),
-                description: format!(
-                    "Provide --dcc-path with the {dcc_type} executable to install this adapter."
-                ),
-                action: None,
-            }];
-        }
+        let dcc_path = match dcc_path {
+            Some(path) => Some(app_bundle_executable(path)),
+            None if needs_dcc_path => match find_dcc_path(&host.dcc_paths) {
+                Ok(path) => Some(path),
+                Err(found) => {
+                    return vec![InstallStep {
+                        name: LOCATE_HOST_STEP.into(),
+                        description: locate_host_message(dcc_type, &found),
+                        action: None,
+                    }];
+                }
+            },
+            None => None,
+        };
         if !host.project_steps.is_empty() && project.is_none() {
             return vec![InstallStep {
                 name: "install-host-package".into(),
@@ -1037,7 +1115,40 @@ pub(crate) fn normalized_dcc_key(value: &str) -> String {
 
 #[cfg(test)]
 mod host_package_tests {
-    use super::host_package_file_name;
+    use super::{app_bundle_executable, find_dcc_path, host_package_file_name};
+
+    #[test]
+    fn host_executable_is_found_only_when_exactly_one_matches() {
+        let root = tempfile::tempdir().unwrap();
+        let app = |version: &str| {
+            let dir = root.path().join(format!("Blender {version}"));
+            std::fs::create_dir_all(&dir).unwrap();
+            std::fs::write(dir.join("blender"), b"").unwrap();
+            dir.join("blender")
+        };
+        let pattern = vec![format!("{}/Blender */blender", root.path().display())];
+        assert_eq!(find_dcc_path(&pattern), Err(vec![]));
+        let only = app("4.5");
+        assert_eq!(find_dcc_path(&pattern), Ok(only.clone()));
+        app("5.0");
+        assert_eq!(find_dcc_path(&pattern).unwrap_err().len(), 2);
+
+        // A renamed copy keeps its executable's name in Info.plist.
+        let bundle = root.path().join("Blender 4.5.app");
+        std::fs::create_dir_all(bundle.join("Contents/MacOS")).unwrap();
+        std::fs::write(bundle.join("Contents/MacOS/Blender"), b"").unwrap();
+        assert_eq!(app_bundle_executable(bundle.clone()), bundle);
+        std::fs::write(
+            bundle.join("Contents/Info.plist"),
+            "<dict>\n\t<key>CFBundleExecutable</key>\n\t<string>Blender</string>\n</dict>",
+        )
+        .unwrap();
+        assert_eq!(
+            app_bundle_executable(bundle.clone()),
+            bundle.join("Contents/MacOS/Blender")
+        );
+        assert_eq!(app_bundle_executable(only.clone()), only);
+    }
 
     #[test]
     fn host_package_url_allows_https_and_loopback_http_only() {

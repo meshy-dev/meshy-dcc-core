@@ -5,8 +5,10 @@
 #
 # `host-package` installs download the running platform's build from
 # `platforms` (`macos-arm64`, `windows-x86_64`), check its `sha256`, then run the `host`
-# commands (argv lists, no shell) with the executable the operator passed via
-# `--dcc-path`. `host.launch` becomes the start-instance launch plan.
+# commands (argv lists, no shell) with the host executable: the one the
+# operator passed via `--dcc-path`, else the single match of the platform's
+# `dcc_paths` globs (`~/` is home). `host.launch` becomes the start-instance
+# launch plan.
 #
 # The meshy-dcc-adapters repository publishes each adapter's builds on a
 # GitHub Release tagged `<host>-v<version>`; a copy goes to https://cdn.meshy.ai/meshy-dcc-core/adapters/<host>/<version dir>/
@@ -36,10 +38,17 @@ entries:
           url: "https://cdn.meshy.ai/meshy-dcc-core/adapters/blender/v0-1-0/meshy-dcc-blender-macos-arm64.zip"
           sha256: "e347f8c362830960d7e0d2905043bf3db0523e2784f5d105aefeb1090de2cbf8"
           mirrors: ["https://cdn.meshy.cn/meshy-dcc-core/adapters/blender/v0-1-0/meshy-dcc-blender-macos-arm64.zip", "https://github.com/meshy-dev/meshy-dcc-adapters/releases/download/blender-v0.1.0/meshy_dcc_blender_addon_macos_v0.1.0.zip"]
+          dcc_paths:
+            - "/Applications/Blender.app/Contents/MacOS/Blender"
+            - "~/Applications/Blender.app/Contents/MacOS/Blender"
+            - "~/Library/Application Support/Steam/steamapps/common/Blender/Blender.app/Contents/MacOS/Blender"
         windows-x86_64:
           url: "https://cdn.meshy.ai/meshy-dcc-core/adapters/blender/v0-1-0/meshy-dcc-blender-windows-x64.zip"
           sha256: "bceb1800b643f2f370bd556454149cad88f4eabe54c86e5bad3d846e0d20e035"
           mirrors: ["https://cdn.meshy.cn/meshy-dcc-core/adapters/blender/v0-1-0/meshy-dcc-blender-windows-x64.zip", "https://github.com/meshy-dev/meshy-dcc-adapters/releases/download/blender-v0.1.0/meshy_dcc_blender_addon_win64_v0.1.0.zip"]
+          dcc_paths:
+            - "C:/Program Files/Blender Foundation/Blender */blender.exe"
+            - "C:/Program Files (x86)/Steam/steamapps/common/Blender/blender.exe"
       host:
         uninstall:
           - ["{dcc_path}", "--command", "extension", "remove", "user_default.meshy_dcc_blender"]

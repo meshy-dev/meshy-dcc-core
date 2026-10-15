@@ -212,8 +212,30 @@ impl InstallService {
             .collect::<Vec<_>>();
 
         if executable_steps.is_empty() {
-            eprintln!("No executable steps in the install plan.");
-            return failed_report(report, "preflight", 10, "NO_EXECUTABLE_STEPS", None);
+            // The plan's own words say what is missing (catalog text, no step output).
+            let reason: Vec<&str> = plan
+                .steps
+                .iter()
+                .map(|step| step.description.as_str())
+                .collect();
+            let code = if plan
+                .steps
+                .iter()
+                .any(|step| step.name == crate::domain::install::LOCATE_HOST_STEP)
+            {
+                "DCC_PATH_REQUIRED"
+            } else {
+                "NO_EXECUTABLE_STEPS"
+            };
+            eprintln!(
+                "No executable steps in the install plan: {}",
+                reason.join(" ")
+            );
+            let mut report = failed_report(report, "preflight", 10, code, None);
+            if let Some(error) = report.error.as_mut() {
+                error.message = Some(reason.join(" "));
+            }
+            return report;
         }
 
         eprintln!(

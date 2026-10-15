@@ -284,6 +284,11 @@ pub struct CatalogArtifact {
     /// (for example a `.cmd` launcher on Windows).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub host: Option<CatalogHostInstall>,
+    /// Where the host executable usually is on this platform, as glob
+    /// patterns (`~/` is the home directory). Used for `{dcc_path}` when the
+    /// operator passes none; see [`CatalogHostInstall::dcc_paths`].
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub dcc_paths: Vec<String>,
 }
 
 impl CatalogInstall {
@@ -306,6 +311,9 @@ impl CatalogInstall {
         self.mirrors = build.mirrors.clone();
         if let Some(host) = &build.host {
             self.host = Some(host.clone());
+        }
+        if !build.dcc_paths.is_empty() {
+            self.host.get_or_insert_with(Default::default).dcc_paths = build.dcc_paths.clone();
         }
         Ok(())
     }
@@ -343,6 +351,10 @@ pub struct CatalogHostInstall {
     /// Paths a project must contain before start-instance binds to it.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub project_markers: Vec<String>,
+    /// Where to look for the host executable when `{dcc_path}` is needed and
+    /// the operator passed none; filled from the selected platform's build.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub dcc_paths: Vec<String>,
 }
 
 /// Adobe host-side plugin metadata.

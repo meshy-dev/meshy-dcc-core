@@ -143,6 +143,7 @@ const MARKETPLACE_V2_SCHEMA_JSON: &str = r##"{
                   "url": { "type": "string", "pattern": "^https://[^?#]+$" },
                   "sha256": { "type": "string", "pattern": "^(sha256:)?[0-9a-fA-F]{64}$" },
                   "mirrors": { "type": "array", "items": { "type": "string", "pattern": "^https://[^?#]+$" } },
+                  "dcc_paths": { "type": "array", "items": { "type": "string", "minLength": 1 } },
                   "host": {
                   "type": "object",
                   "properties": {
