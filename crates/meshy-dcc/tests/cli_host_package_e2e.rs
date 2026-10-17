@@ -295,7 +295,7 @@ fn host_package_extracts_once_and_runs_project_steps_from_the_package() {
     std::fs::create_dir(&project).unwrap();
     let package_dir = temp
         .path()
-        .join("data/adapters/meshy-dcc-testhost/meshy_dcc_testhost");
+        .join("data/adapters/meshy-dcc-testhost/0.1.0/meshy_dcc_testhost");
 
     for _ in 0..2 {
         let output = install_project(&temp, &catalog, Some(&project));

@@ -504,6 +504,23 @@ fn host_program_is_allowed(program: Option<&String>, extract: bool) -> bool {
 /// File name of an allowed host-package URL: https anywhere, plain http only
 /// on loopback, no userinfo, query or fragment, and a name that cannot escape
 /// the download directory.
+/// `<adapters>/<entry>/<version>/<file stem>`. CDN file names carry no
+/// version (it is in their directory), so the catalog version separates them.
+fn host_package_dir(name: &str, version: Option<&str>, url: &str) -> PathBuf {
+    let file = host_package_file_name(url).unwrap_or_default();
+    let stem = file.strip_suffix(".zip").unwrap_or(&file);
+    let mut dir = default_adapter_dir().join(name);
+    if let Some(version) = version.filter(|v| {
+        matches!(
+            std::path::Path::new(v).components().collect::<Vec<_>>()[..],
+            [std::path::Component::Normal(_)]
+        )
+    }) {
+        dir.push(version);
+    }
+    dir.join(stem)
+}
+
 pub(crate) fn host_package_file_name(url: &str) -> Option<String> {
     let parsed = reqwest::Url::parse(url).ok()?;
     let loopback = matches!(parsed.host_str(), Some("127.0.0.1" | "localhost" | "[::1]"));
@@ -741,10 +758,11 @@ impl InstallPlanner {
         // Each package version gets its own directory, so a host still running
         // an older version keeps its files.
         let extract_to = host.extract.then(|| {
-            let url = install.url.as_deref().unwrap_or_default();
-            let name = host_package_file_name(url).unwrap_or_default();
-            let stem = name.strip_suffix(".zip").unwrap_or(&name).to_string();
-            default_adapter_dir().join(&entry.name).join(stem)
+            host_package_dir(
+                &entry.name,
+                entry.version.as_deref(),
+                install.url.as_deref().unwrap_or_default(),
+            )
         });
         // The catalog's own spelling names the launch plan, so start-instance
         // finds it under the same DCC type.
@@ -1115,7 +1133,30 @@ pub(crate) fn normalized_dcc_key(value: &str) -> String {
 
 #[cfg(test)]
 mod host_package_tests {
-    use super::{app_bundle_executable, find_dcc_path, host_package_file_name};
+    use super::{
+        app_bundle_executable, default_adapter_dir, find_dcc_path, host_package_dir,
+        host_package_file_name,
+    };
+
+    #[test]
+    fn each_adapter_version_extracts_to_its_own_directory() {
+        let url = "https://cdn.meshy.ai/meshy-dcc-core/adapters/godot/v0-1-0/meshy-dcc-godot-macos-arm64.zip";
+        let root = default_adapter_dir().join("meshy-dcc-godot");
+        assert_eq!(
+            host_package_dir("meshy-dcc-godot", Some("0.1.0"), url),
+            root.join("0.1.0").join("meshy-dcc-godot-macos-arm64")
+        );
+        assert_ne!(
+            host_package_dir("meshy-dcc-godot", Some("0.1.0"), url),
+            host_package_dir("meshy-dcc-godot", Some("0.2.0"), url)
+        );
+        for unsafe_version in ["..", "../x", "/abs", ""] {
+            assert_eq!(
+                host_package_dir("meshy-dcc-godot", Some(unsafe_version), url),
+                root.join("meshy-dcc-godot-macos-arm64")
+            );
+        }
+    }
 
     #[test]
     fn host_executable_is_found_only_when_exactly_one_matches() {
