@@ -273,9 +273,8 @@ def test_sh_latest_uses_manifest_pinned_urls_and_installs_verified_binaries(tmp_
         f"{OFFICIAL_RELEASE}/v0-2-0/meshy-dcc-macos-arm64",
         f"{OFFICIAL_RELEASE}/v0-2-0/meshy-dcc-server-macos-arm64",
     ]
-    # The Skill plan is shown before it is written.
+    # The Skill is written for the agents found, one readable line per agent.
     assert (tmp_path / "args.log").read_text(encoding="utf-8").splitlines() == [
-        "--output human agent-skill",
         "--output human agent-skill --execute",
     ]
 
