@@ -174,6 +174,9 @@ never kill a host process.
 meshy-dcc stop-instance --operation-id OPERATION_ID
 ```
 
+`stopping: true` means the host accepted the stop; it closes a few seconds later. A
+`start-instance` for the same project waits for it to close, then launches a new host.
+
 A host with unsaved scenes refuses with `CONFLICT` and `details.reason`
 `unsaved_changes` (Unity, Godot, Unreal; Unreal lists them in `details.unsaved`). A host
 that cannot tell whether work is unsaved, such as Blender, refuses with

@@ -599,14 +599,24 @@ impl DccControlPlane {
         // Stopping a local host is a lifecycle action, like start-instance:
         // ownership lives in the local operation record, which the gateway
         // never sees, so it stays local even when calls must use the gateway.
-        if stop_runs_locally(&self.target, &request) {
-            local_control::stop_instance_local(self.registry_dir.clone(), request).await
+        let result = if stop_runs_locally(&self.target, &request) {
+            local_control::stop_instance_local(self.registry_dir.clone(), request).await?
         } else {
-            self.gateway_client()
-                .stop_instance(request)
-                .await
-                .map_err(Into::into)
+            self.gateway_client().stop_instance(request).await?
+        };
+        // The host only accepted the stop, and its row stays live until it
+        // exits; record it so start-instance waits instead of reusing it. A
+        // failed write must not report an accepted stop as failed: the retry
+        // that invites would repeat it.
+        if let Some(instance_id) = result
+            .get("instance_id")
+            .and_then(Value::as_str)
+            .and_then(|id| uuid::Uuid::parse_str(id).ok())
+        {
+            let _ = crate::application::instance_launch::LifecycleStore::new(&self.registry_dir)
+                .mark_stopping(&instance_id);
         }
+        Ok(result)
     }
 
     async fn reload_skills_remote(&self, request: ReloadSkillsRequest) -> anyhow::Result<Value> {
