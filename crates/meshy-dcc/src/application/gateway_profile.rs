@@ -127,6 +127,11 @@ impl GatewayProfileStore {
         explicit_name: Option<&str>,
         explicit_base_url: Option<&str>,
     ) -> anyhow::Result<GatewayTarget> {
+        // `--gateway local` is the direct diagnostic path; a gateway URL from
+        // the environment must not turn it back into a gateway call.
+        if explicit_name.is_some_and(|name| name.trim().eq_ignore_ascii_case(LOCAL_PROFILE_NAME)) {
+            return Ok(GatewayTarget::Local);
+        }
         if let Some(base_url) = explicit_base_url.filter(|value| !value.trim().is_empty()) {
             let endpoint = Endpoint::new(base_url);
             validate_gateway_url(&endpoint.base_url)?;
@@ -354,6 +359,17 @@ mod tests {
             }
         );
         assert_eq!(store.current, "pcA");
+    }
+
+    #[test]
+    fn explicit_local_profile_ignores_base_url() {
+        let store = GatewayProfileStore::default();
+
+        let target = store
+            .resolve(Some("local"), Some("http://127.0.0.1:19882"))
+            .unwrap();
+
+        assert_eq!(target, GatewayTarget::Local);
     }
 
     #[test]
