@@ -75,17 +75,22 @@ marketplace 的源是一个 `marketplace.json` URL，包以 zip + SHA-256 校验
 ## 3. 架构
 
 ```text
-Agent → skills/meshy-dcc (SKILL.md)
+Agent → skills/meshy-dcc (SKILL.md，编进 CLI，`agent-skill` 写入各 agent 目录)
       → meshy-dcc（单个 Rust 二进制）
-          ├─ install / uninstall / doctor      catalog 声明的安装步骤 + SHA-256
+          ├─ install / dcc-types / doctor     catalog 声明的安装步骤 + SHA-256、安装记录
           ├─ start-instance / list / wait-ready / stop-instance
           ├─ search / describe / load-skill / call   按实例路由，写操作须显式指定实例
-          ├─ asset check / import             manifest / 字节 / SHA / 格式校验 + 读回
+          ├─ lint / reload-skills             自写 skill 校验与热加载
           ├─ marketplace …                    Meshy marketplace（cdn.meshy.ai）上的包
-          └─ meshy …                          透传外部 meshy-cli 的 JSON 输出
+          ├─ ui                               本机窗口：概览、连接器、Skill、Agent、设置
+          └─ gateway / update / components    常驻 gateway、自更新
       → 宿主内 Meshy adapter（内置 meshy_dcc_core）
           └─ Meshy skill 包：导入、PBR 材质重建、分析处理、读回
 ```
+
+计划过、目前**不存在**的命令：`uninstall`（卸载由 agent 照 Skill 的 `references/connectors.md`
+删确切路径）、`asset check / import`（导入由各宿主的导入工具完成并读回）、`meshy …` 透传
+（Meshy 生成仍直接用 `meshy` CLI；是否内置待定）。
 
 工作流层面的 Meshy 能力放在 skill 包里。adapter 缺少的基础能力在 adapter 里补，例如 Unity 的
 模型导入与材质、Godot 的外部模型导入。PBR 通道与色彩空间规则参考 Send To 插件仓库的
@@ -133,7 +138,7 @@ request id 关联并拒绝错位的响应。
 |---|---|---|
 | R0 骨架 | 产品面改名与发布渠道改向（0.1.0） | 真实 Blender：list → search → describe → call → 读回 |
 | 0.2.0 分叉 | 全部 Meshy 命名、单一版本线、Meshy-only catalog | 全部测试通过；Blender adapter 基于新 core 真机复验 |
-| R1 对等 | Meshy Blender / Unity / Godot adapter；平台开启/关闭；asset check/import、meshy 透传；Meshy marketplace 首批包 | 达到 0.3.30 的主矩阵验收；三个宿主导入、读回、保存重开 |
+| R1 对等 | Meshy Blender / Unity / Godot adapter；平台开启/关闭；Meshy marketplace 首批包 | 达到 0.3.30 的主矩阵验收；三个宿主导入、读回、保存重开 |
 | R2 扩宿主 | ZBrush、Unreal、Roblox 及其余内置宿主 | 各宿主导入、读回、保存重开（有宿主的） |
 | R3 评估 | 与既有 v2 对照同任务 | 单次调用延迟、turn 数、token、耗时；不夸大为质量结论 |
 
