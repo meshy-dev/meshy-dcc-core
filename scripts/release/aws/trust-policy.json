@@ -10,7 +10,10 @@
       "Condition": {
         "StringEquals": {
           "token.actions.githubusercontent.com:aud": "sts.amazonaws.com",
-          "token.actions.githubusercontent.com:sub": "repo:meshy-dev/meshy-dcc-core:ref:refs/heads/main"
+          "token.actions.githubusercontent.com:sub": [
+            "repo:meshy-dev/meshy-dcc-core:ref:refs/heads/main",
+            "repo:meshy-dev/meshy-dcc-adapters:ref:refs/heads/main"
+          ]
         }
       }
     }

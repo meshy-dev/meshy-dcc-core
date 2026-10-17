@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # Create or update what .github/workflows/release.yml needs in AWS
 # (account 133081291590, us-west-2): the role meshy-dcc-github-deploy, which
-# only the main branch of meshy-dev/meshy-dcc-core can assume through GitHub
-# OIDC, and the npm token in Secrets Manager.
+# only the main branches of meshy-dev/meshy-dcc-core and
+# meshy-dev/meshy-dcc-adapters (whose release workflow copies adapter builds to
+# the CDN) can assume through GitHub OIDC, and the npm token in Secrets Manager.
 #
 #   AWS_PROFILE=SRE-133081291590 scripts/release/aws/setup.sh
 #   AWS_PROFILE=SRE-133081291590 scripts/release/aws/setup.sh --npm-token < token-file
