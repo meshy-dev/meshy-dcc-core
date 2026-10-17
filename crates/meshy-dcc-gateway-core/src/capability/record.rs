@@ -47,15 +47,15 @@ pub const SCHEMA_AVAILABLE: &str = "schema:available";
 /// escaping. A future revision *could* accept slash-separated aliases in
 /// addition to this canonical form if we add a normalisation layer.
 ///
-/// The DCC type and id8 prefix are always cursor-safe (a-z0-9) by
-/// construction; `backend_tool` is copied verbatim (it was already
+/// The DCC type and id8 prefix never contain a dot by construction;
+/// `backend_tool` is copied verbatim (it was already
 /// validated through `meshy_dcc_naming::validate_tool_name` on the
 /// backend side, so it is client-safe).
 ///
 /// # Arguments
 ///
-/// * `dcc_type` — backend DCC bucket (`"maya"`, `"blender"`, …). Must
-///   itself be within `[a-z0-9_]` because it appears as a slug prefix.
+/// * `dcc_type` — backend DCC bucket (`"maya"`, `"material-maker"`, …);
+///   see [`is_valid_dcc_bucket`] for the accepted alphabet.
 /// * `instance_id` — the backend's UUID; we collapse to the 8-char
 ///   short form used everywhere else in the gateway namespace for
 ///   visual parity.
@@ -106,12 +106,14 @@ pub fn parse_slug(slug: &str) -> Option<(&str, &str, &str)> {
 /// segment of a [`tool_slug`].
 ///
 /// The gateway never invents DCC-type strings — they come from live
-/// `ServiceEntry` rows — but exotic values (`""`, `"unknown"`,
-/// hyphenated) would produce an ambiguous slug and should be rejected
-/// by the builder before they reach the index.
+/// `ServiceEntry` rows. An empty or dotted value would break the
+/// `<dcc>.<id8>.<tool>` shape and is rejected by the builder. Hyphens are
+/// accepted (`material-maker`): the slug splits on dots only, and the other
+/// index paths (unloaded hints, `load_skill`) already carry such slugs, so
+/// rejecting them here dropped every loaded tool of that DCC from the index.
 #[must_use]
 pub fn is_valid_dcc_bucket(dcc_type: &str) -> bool {
-    !dcc_type.is_empty() && is_cursor_safe_alphabet(dcc_type) && !dcc_type.contains('.')
+    dcc_type.split('-').all(is_cursor_safe_alphabet)
 }
 
 /// Compact MCP ToolAnnotations-style hints carried in gateway search records.
@@ -708,9 +710,12 @@ mod unit_tests {
         // Empty and dotted DCC buckets would corrupt the slug shape.
         assert!(!is_valid_dcc_bucket(""));
         assert!(!is_valid_dcc_bucket("my.dcc"));
-        // Hyphens fail the cursor-safe alphabet — agent clients would
-        // filter `maya-adapter.<id8>.<tool>` on sight.
-        assert!(!is_valid_dcc_bucket("maya-adapter"));
+        // Hyphenated DCC types are real (`material-maker`); stray hyphens
+        // and other punctuation are not.
+        assert!(is_valid_dcc_bucket("material-maker"));
+        assert!(!is_valid_dcc_bucket("-maya"));
+        assert!(!is_valid_dcc_bucket("maya--adapter"));
+        assert!(!is_valid_dcc_bucket("maya adapter"));
     }
 
     #[test]

@@ -615,6 +615,33 @@ mod unit_tests {
     }
 
     #[test]
+    fn hyphenated_dcc_type_keeps_loaded_tools_and_job_status() {
+        // Material Maker registers as `material-maker`; an empty slice here
+        // made preloaded skills vanish and `call --wait` poll a slug that was
+        // never registered.
+        let iid = Uuid::from_u128(3);
+        let tools = vec![
+            tool("jobs_get_status", "poll a job", json!({"type": "object"})),
+            tool("mm__export", "export", json!({"type": "object"})),
+        ];
+
+        let out = build_records_from_backend(BuildInput {
+            instance_id: iid,
+            dcc_type: "material-maker",
+            backend_tools: &tools,
+        });
+        let slugs: Vec<_> = out.records.iter().map(|r| r.tool_slug.as_str()).collect();
+
+        assert_eq!(
+            slugs,
+            [
+                "material-maker.00000000.jobs_get_status",
+                "material-maker.00000000.mm__export"
+            ]
+        );
+    }
+
+    #[test]
     fn extracts_skill_from_client_safe_skill_names() {
         let iid = Uuid::from_u128(2);
         let tools = vec![
