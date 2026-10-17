@@ -13,19 +13,29 @@ name: release
 # does); that role may only write s3://meshy-cdn/meshy-dcc-core/* (served by
 # cdn.meshy.ai and cdn.meshy.cn) and read the npm token from AWS Secrets
 # Manager (meshy-dcc/release/npm-token). Setup: scripts/release/aws/.
+#
+# The same workflow publishes the signed install catalog
+# (meshy-dcc-core/catalog/install-catalog.json): meshy-dcc-catalog.yml from main
+# after every listed build is downloaded and checked, signed by this workflow.
+# It expires after seven days, so it is refreshed daily (see the catalog job);
+# run the workflow with no tag to publish it right away, for example after an
+# adapter release.
 
 on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Release tag, e.g. v0.2.0"
-        required: true
+        description: "Release tag, e.g. v0.2.0; empty publishes only the install catalog"
+        required: false
+  schedule:
+    - cron: "17 3 * * *"
 
 permissions:
   contents: read
 
 jobs:
   check:
+    if: inputs.tag != ''
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -199,3 +209,52 @@ jobs:
         run: |
           python3 scripts/release/sync_cdn.py --version "${TAG#v}" --release-dir cdn \
             --install-script github/install.sh --install-script github/install.ps1
+
+  catalog:
+    # meshy-dcc trusts the catalog only when signed from main. The daily
+    # refresh starts once the repository variable INSTALL_CATALOG_REFRESH is
+    # "on" (set at launch); runs started by hand always publish.
+    if: github.ref == 'refs/heads/main' && (github.event_name != 'schedule' || vars.INSTALL_CATALOG_REFRESH == 'on')
+    runs-on: ubuntu-latest
+    concurrency: install-catalog
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Check every listed build and prepare the payload
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          pip install pyyaml
+          python3 scripts/ci/prepare_install_catalog.py --catalog meshy-dcc-catalog.yml \
+            --output catalog/payload.json --source-revision "$GITHUB_SHA"
+
+      - name: Sign the payload
+        id: attest
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: catalog/payload.json
+
+      - name: Envelope
+        env:
+          BUNDLE: ${{ steps.attest.outputs.bundle-path }}
+        run: |
+          python3 - <<'PY'
+          import json, os
+          catalog = open("catalog/payload.json", encoding="utf-8").read()
+          bundle = json.load(open(os.environ["BUNDLE"], encoding="utf-8"))
+          json.dump({"catalog": catalog, "attestation": bundle}, open("catalog/install-catalog.json", "w", encoding="utf-8"))
+          PY
+
+      - uses: aws-actions/configure-aws-credentials@cbe3b392738ccf3f987d68400dafcf4b0624a56c # v6.2.4
+        with:
+          aws-region: us-west-2
+          role-to-assume: arn:aws:iam::133081291590:role/meshy-dcc-github-deploy
+
+      - name: Copy to the Meshy CDN
+        run: |
+          aws s3 cp catalog/install-catalog.json s3://meshy-cdn/meshy-dcc-core/catalog/install-catalog.json \
+            --content-type application/json --cache-control no-cache

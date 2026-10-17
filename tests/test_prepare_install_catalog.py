@@ -563,3 +563,32 @@ def test_quarantine_cli_writes_unavailable_entry_instead_of_retaining_yanked_fee
     entry = json.loads(output.read_bytes())["entries"][0]
     assert "install" not in entry
     assert entry["policy"]["installation"] == "not_available"
+
+
+def _host_package_fixture():
+    data = _wheel()
+    digest = hashlib.sha256(data).hexdigest()
+    cdn = "https://cdn.meshy.ai/meshy-dcc-core/adapters/maya/v1-2-3/meshy-dcc-maya-macos-arm64.zip"
+    mirrors = [cdn.replace("cdn.meshy.ai", "cdn.meshy.cn"),
+               "https://github.com/meshy-dev/meshy-dcc-adapters/releases/download/maya-v1.2.3/meshy-dcc-maya-macos-arm64.zip"]
+    document, _, _ = _fixture()
+    document["entries"][0]["install"] = {
+        "type": "host-package",
+        "platforms": {"macos-arm64": {"url": cdn, "sha256": digest, "mirrors": mirrors}},
+        "host": {"steps": [["{dcc_path}", "{package}"]]},
+    }
+    return document, FakeTransport({url: data for url in [cdn, *mirrors]}), [cdn, *mirrors]
+
+
+def test_host_package_checks_every_platform_url_and_mirror():
+    document, transport, urls = _host_package_fixture()
+    payload = _prepare(document, transport)
+    assert payload["entries"][0]["install"] == document["entries"][0]["install"]
+    assert [call[0] for call in transport.calls] == urls
+
+
+def test_host_package_mirror_with_other_bytes_blocks_catalog():
+    document, transport, urls = _host_package_fixture()
+    transport.responses[urls[-1]] = _wheel(version="9.9.9")
+    with pytest.raises(publisher.CatalogPreparationError, match="SHA-256 mismatch"):
+        _prepare(document, transport)

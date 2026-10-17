@@ -63,6 +63,8 @@ _HOSTS = frozenset(
         "release-assets.githubusercontent.com",
         "pypi.org",
         "files.pythonhosted.org",
+        "cdn.meshy.ai",
+        "cdn.meshy.cn",
     )
 )
 
@@ -162,6 +164,17 @@ def _verified_archive(transport, install: dict) -> bytes:
     if hashlib.sha256(data).hexdigest() != expected:
         raise CatalogPreparationError("artifact SHA-256 mismatch")
     return data
+
+
+def _verify_host_package(transport, install: dict) -> None:
+    """Every platform build must be a valid archive with its digest at each of its URLs."""
+    platforms = install.get("platforms")
+    if not isinstance(platforms, dict) or not platforms:
+        raise CatalogPreparationError("host-package installation needs platform builds")
+    for build in platforms.values():
+        for url in [build["url"], *build.get("mirrors", [])]:
+            with _open_archive(_verified_archive(transport, {"url": url, "sha256": build.get("sha256")})):
+                pass
 
 
 def _open_archive(data: bytes) -> zipfile.ZipFile:
@@ -390,7 +403,7 @@ def prepare_catalog(
         ):
             raise CatalogPreparationError("invalid installation policy")
         if install is not None and (
-            not isinstance(install, dict) or install.get("type") not in ("pip", "git", "zip", "path")
+            not isinstance(install, dict) or install.get("type") not in ("pip", "git", "zip", "path", "host-package")
         ):
             raise CatalogPreparationError("invalid install metadata schema")
         if policy.get("installation") == "not_available":
@@ -406,6 +419,8 @@ def prepare_catalog(
             if install_type == "pip":
                 _verify_pip(transport, entry)
                 _pin_instructions(transport, entry)
+            elif install_type == "host-package":
+                _verify_host_package(transport, install)
             elif install_type == "zip":
                 with _open_archive(_verified_archive(transport, install)):
                     pass
