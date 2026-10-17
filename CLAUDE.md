@@ -14,6 +14,9 @@ the only required attribution.
 Read `docs/plan.md` before proposing changes; it lists the confirmed direction,
 DCC scope and phases.
 
+On a Windows machine, start from `docs/windows-validation.md`: nothing has been
+verified on Windows yet, and that file carries the context and the test plan.
+
 Start new work by inspecting context and stating the intended change and checks.
 A planning request authorizes a plan; implement when the user requests it.
 
