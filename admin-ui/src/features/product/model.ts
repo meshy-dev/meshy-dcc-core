@@ -11,6 +11,7 @@ export type ConnectorAdapter = {
   url?: string;
   catalog_install_available: boolean;
   per_project?: boolean;
+  experimental?: boolean;
 };
 
 export type InstallReceipt = {
@@ -74,6 +75,7 @@ export type ConnectorView = {
   state: ConnectorState;
   adapter?: ConnectorAdapter;
   perProject: boolean;
+  experimental: boolean;
   installable: boolean;
   installs: InstallReceipt[];
   installedVersion?: string;
@@ -104,6 +106,7 @@ export function connectorViews(payload: ConnectorsPayload | undefined): Connecto
         state,
         adapter,
         perProject: Boolean(adapter?.per_project),
+        experimental: Boolean(adapter?.experimental),
         installable,
         installs,
         installedVersion,

@@ -94,6 +94,7 @@ export function ConnectorsPanel({ t, local }: { t: T; local: boolean }) {
     }
     if (view.perProject && view.state !== 'installed') parts.push(t('product.connectors.perProject'));
     if (view.dccType === 'unreal') parts.push(t('product.connectors.unrealNote'));
+    if (view.experimental) parts.push(t('product.connectors.experimentalNote'));
     return parts.filter(Boolean).join(' · ');
   };
 
@@ -165,6 +166,7 @@ export function ConnectorsPanel({ t, local }: { t: T; local: boolean }) {
                   <div className="pd-list-title">
                     <h2>{view.name}</h2>
                     {statusTag(view)}
+                    {view.experimental ? <Tag tone="warn">{t('product.connectors.tag.experimental')}</Tag> : null}
                   </div>
                   <span className="pd-list-desc">{description(view)}</span>
                 </div>

@@ -13,6 +13,10 @@ meshy-dcc install --dcc-type unity --project /absolute/project --execute --json
 Unity, Godot and Unreal install into each project (`--project`); see their references.
 Blender installs once per computer.
 
+`meshy-dcc dcc-types --json` marks a connector `"experimental": true` when it was built
+and tested without the host itself. Tell the user that before installing it, and read
+back every change you make with it.
+
 - `status` `ok` or `partial` is a normal install: the host registers when it starts.
 - `error.code` `DCC_PATH_REQUIRED`: the host was not found in its usual places, or more
   than one copy was. `error.message` lists any copies found. Ask the user which app to

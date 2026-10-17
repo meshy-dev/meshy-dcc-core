@@ -74,6 +74,7 @@ test.describe('meshy-dcc ui', () => {
     await expect(list.locator('li').filter({ hasText: 'Blender' })).toContainText('Installed');
     await expect(list.locator('li').filter({ hasText: 'Unity' })).toContainText('In 1 project');
     await expect(page.locator('.pd-chips')).toContainText('Roblox Studio');
+    await expect(list.locator('li').filter({ hasText: 'Maya' })).toContainText('Experimental');
     await shot(page, 'connectors-en');
 
     const godot = list.locator('li').filter({ hasText: 'Godot' });
@@ -84,8 +85,8 @@ test.describe('meshy-dcc ui', () => {
 
     await page.getByRole('button', { name: /^Coming soon/ }).click();
     await expect(list).toHaveCount(0);
-    await page.getByPlaceholder('Search connectors').fill('maya');
-    await expect(page.locator('.pd-chips li')).toHaveText(['Maya']);
+    await page.getByPlaceholder('Search connectors').fill('houdini');
+    await expect(page.locator('.pd-chips li')).toHaveText(['Houdini']);
   });
 
   test('an app the CLI cannot find asks for its location', async ({ page }) => {

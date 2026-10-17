@@ -30,13 +30,14 @@ const HEALTH = {
 
 // ── meshy-dcc ui: connectors and agents (CLI JSON passed through) ─────────────
 const MOCK_HOME = '/Users/demo';
-const SHIPPED_CONNECTORS: Record<string, { version: string; per_project?: boolean }> = {
+const SHIPPED_CONNECTORS: Record<string, { version: string; per_project?: boolean; experimental?: boolean }> = {
   blender: { version: '0.1.0' },
   unity: { version: '0.1.0', per_project: true },
   godot: { version: '0.1.0', per_project: true },
   unreal: { version: '0.1.0', per_project: true },
+  maya: { version: '0.1.0', experimental: true },
 };
-const PLANNED_CONNECTORS = ['3dsmax', 'c4d', 'freecad', 'houdini', 'katana', 'mari', 'marmoset', 'material-maker', 'maya', 'mobu',
+const PLANNED_CONNECTORS = ['3dsmax', 'c4d', 'freecad', 'houdini', 'katana', 'mari', 'marmoset', 'material-maker', 'mobu',
   'omniverse', 'openscad', 'openusd', 'photoshop', 'roblox', 'sketchup', 'substance3d_designer', 'substance3d_painter', 'zbrush'];
 let connectorReceipts = [
   { dcc_type: 'blender', adapter_version: '0.1.0', core_version: '0.2.0', installed_at: 1781300000 },
@@ -46,7 +47,7 @@ let mockSettings = { update_check: true };
 function connectorsPayload() {
   const shipped = Object.entries(SHIPPED_CONNECTORS).map(([dcc_type, info]) => ({
     dcc_type,
-    adapters: [{ name: `meshy-dcc-${dcc_type}`, version: info.version, url: 'https://www.meshy.ai', catalog_install_available: true, ...(info.per_project ? { per_project: true } : {}) }],
+    adapters: [{ name: `meshy-dcc-${dcc_type}`, version: info.version, url: 'https://www.meshy.ai', catalog_install_available: true, ...(info.per_project ? { per_project: true } : {}), ...(info.experimental ? { experimental: true } : {}) }],
   }));
   const planned = PLANNED_CONNECTORS.map((dcc_type) => ({
     dcc_type,

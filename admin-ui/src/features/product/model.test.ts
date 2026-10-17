@@ -41,7 +41,7 @@ describe('connectorViews', () => {
   it('orders installed, available, then coming soon, and spots updates', () => {
     const views = connectorViews({
       dcc_types: [
-        { dcc_type: 'maya', adapters: [{ name: 'm', catalog_install_available: false }] },
+        { dcc_type: 'maya', adapters: [{ name: 'm', catalog_install_available: false, experimental: true }] },
         { dcc_type: 'unity', adapters: [{ name: 'u', version: '0.2.0', catalog_install_available: true, per_project: true }] },
         { dcc_type: 'blender', adapters: [{ name: 'b', version: '0.1.0', catalog_install_available: true }] },
       ],
@@ -55,6 +55,7 @@ describe('connectorViews', () => {
     expect(views[0].updateAvailable).toBe(true);
     expect(views[0].perProject).toBe(true);
     expect(views[1].updateAvailable).toBe(false);
+    expect(views.map((v) => v.experimental)).toEqual([false, false, true]);
   });
 });
 

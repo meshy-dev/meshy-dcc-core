@@ -32,6 +32,9 @@ pub struct DccAdapterSummary {
     /// Installed into each project (`install --project`) rather than once per computer.
     #[serde(skip_serializing_if = "std::ops::Not::not")]
     pub per_project: bool,
+    /// Tagged `experimental`: built and tested without the host itself.
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    pub experimental: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -171,6 +174,10 @@ impl InstallService {
                         .chain(install.platforms.values().filter_map(|p| p.host.as_ref()))
                         .any(|host| !host.project_steps.is_empty())
                 }),
+                experimental: entry
+                    .tags
+                    .iter()
+                    .any(|tag| tag.eq_ignore_ascii_case("experimental")),
             };
             for dcc_type in &entry.dcc {
                 let parsed = DccName::parse(dcc_type).to_string();
@@ -649,5 +656,38 @@ mod tests {
                 assert_eq!(decision.live_instances, Some(0));
             }
         }
+    }
+
+    #[test]
+    fn dcc_types_marks_experimental_adapters() {
+        let entry = |dcc: &str, tags: serde_json::Value| {
+            serde_json::from_value(json!({
+                "name": format!("meshy-dcc-{dcc}"),
+                "description": "Catalog fixture",
+                "dcc": [dcc],
+                "tags": tags,
+            }))
+            .unwrap()
+        };
+        let mut service = InstallService::bundled();
+        service.catalog_snapshot = Some(ResolvedCatalog {
+            entries: vec![
+                entry("maya", json!(["adapter", "Experimental"])),
+                entry("blender", json!(["adapter"])),
+            ],
+            provenance: CatalogProvenance::local(CatalogSource::Remote),
+        });
+        let types = serde_json::to_value(service.dcc_types(None).unwrap()).unwrap();
+        let adapter = |dcc: &str| {
+            types["dcc_types"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .find(|t| t["dcc_type"] == dcc)
+                .unwrap()["adapters"][0]
+                .clone()
+        };
+        assert_eq!(adapter("maya")["experimental"], true);
+        assert!(adapter("blender").get("experimental").is_none());
     }
 }
