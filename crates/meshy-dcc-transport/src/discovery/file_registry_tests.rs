@@ -171,23 +171,66 @@ fn test_file_registry_heartbeat() {
 }
 
 #[test]
-fn test_update_status_if_unchanged_rejects_refreshed_snapshot() {
+fn test_update_status_if_unchanged_ignores_owner_heartbeat_and_metadata() {
     let dir = tempfile::tempdir().unwrap();
     let registry = FileRegistry::new(dir.path()).unwrap();
-    let entry = ServiceEntry::new("houdini", "127.0.0.1", 18814);
+    let mut entry = ServiceEntry::new("roblox", "127.0.0.1", 18814);
+    entry.status = ServiceStatus::Booting;
     let key = entry.key();
     registry.register(entry).unwrap();
 
     let observed = registry.get(&key).unwrap();
     std::thread::sleep(std::time::Duration::from_millis(1));
     assert!(registry.heartbeat(&key).unwrap());
+    assert!(
+        registry
+            .update_metadata(&key, Some("Place.rbxlx"), Some("0.743"))
+            .unwrap()
+    );
 
+    assert!(
+        registry
+            .update_status_if_unchanged(&observed, ServiceStatus::Available)
+            .unwrap()
+    );
+    assert_eq!(registry.get(&key).unwrap().status, ServiceStatus::Available);
+}
+
+#[test]
+fn test_update_status_if_unchanged_rejects_status_or_registration_change() {
+    let dir = tempfile::tempdir().unwrap();
+    let registry = FileRegistry::new(dir.path()).unwrap();
+    let entry = ServiceEntry::new("houdini", "127.0.0.1", 18814);
+    let key = entry.key();
+    registry.register(entry).unwrap();
+
+    // Someone else (stop-instance, a lease) moved the status on.
+    let observed = registry.get(&key).unwrap();
+    assert!(
+        registry
+            .update_status(&key, ServiceStatus::ShuttingDown)
+            .unwrap()
+    );
+    assert!(
+        !registry
+            .update_status_if_unchanged(&observed, ServiceStatus::Available)
+            .unwrap()
+    );
+    assert_eq!(
+        registry.get(&key).unwrap().status,
+        ServiceStatus::ShuttingDown
+    );
+
+    // The row was re-registered on another port since it was observed.
+    let observed = registry.get(&key).unwrap();
+    let mut moved = observed.clone();
+    moved.port = 18815;
+    registry.register(moved).unwrap();
     assert!(
         !registry
             .update_status_if_unchanged(&observed, ServiceStatus::Unreachable)
             .unwrap()
     );
-    assert_eq!(registry.get(&key).unwrap().status, ServiceStatus::Available);
 }
 
 #[test]

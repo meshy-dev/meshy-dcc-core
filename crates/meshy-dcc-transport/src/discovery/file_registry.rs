@@ -694,6 +694,11 @@ impl FileRegistry {
     }
 
     /// Update an asynchronously observed row only when it has not changed.
+    ///
+    /// "Unchanged" means the same registration, endpoint and status. The
+    /// owner's heartbeat and metadata refreshes do not count: they run on
+    /// their own timer, and comparing them made a gateway that shares that
+    /// timer phase lose every write.
     pub fn update_status_if_unchanged(
         &self,
         observed: &ServiceEntry,
@@ -701,10 +706,13 @@ impl FileRegistry {
     ) -> TransportResult<bool> {
         let key = observed.key();
         self.with_write_transaction(|| {
-            let unchanged = self
-                .services
-                .get(&key)
-                .is_some_and(|current| current.value() == observed);
+            let unchanged = self.services.get(&key).is_some_and(|current| {
+                current.registered_at == observed.registered_at
+                    && current.host == observed.host
+                    && current.port == observed.port
+                    && current.transport_address == observed.transport_address
+                    && current.status == observed.status
+            });
             if unchanged && let Some(mut entry) = self.services.get_mut(&key) {
                 entry.value_mut().status = status;
             }

@@ -129,18 +129,20 @@ pub(crate) fn spawn_health_check_task(
                 if outcome.is_ready() {
                     let recovered_from_failure = failure_counts.remove(&key).is_some();
                     let was_not_available = !matches!(entry.status, ServiceStatus::Available);
-                    if recovered_from_failure || was_not_available {
-                        let _ = registry
+                    if (recovered_from_failure || was_not_available)
+                        && registry
                             .update_status_if_unchanged_async(
                                 entry.clone(),
                                 ServiceStatus::Available,
                             )
-                            .await;
+                            .await
+                            .unwrap_or(false)
+                    {
                         tracing::info!(
                             dcc_type = %entry.dcc_type,
                             instance_id = %entry.instance_id,
                             previous_status = %entry.status,
-                            "Readiness probe green — marking Available"
+                            "Readiness probe green — marked Available"
                         );
                     }
                     #[cfg(feature = "prometheus")]
@@ -149,15 +151,17 @@ pub(crate) fn spawn_health_check_task(
                 }
 
                 if outcome.is_alive() {
-                    if !matches!(entry.status, ServiceStatus::Booting) {
-                        let _ = registry
+                    if !matches!(entry.status, ServiceStatus::Booting)
+                        && registry
                             .update_status_if_unchanged_async(entry.clone(), ServiceStatus::Booting)
-                            .await;
+                            .await
+                            .unwrap_or(false)
+                    {
                         tracing::info!(
                             dcc_type = %entry.dcc_type,
                             instance_id = %entry.instance_id,
                             previous_status = %entry.status,
-                            "Backend booting (GET /v1/readyz red) — marking Booting without deregister"
+                            "Backend booting (GET /v1/readyz red) — marked Booting without deregister"
                         );
                         crate::gateway::event_log::record_event(
                             &event_log,
@@ -280,6 +284,61 @@ mod tests {
                 .iter()
                 .any(|event| event.event == crate::gateway::event_log::EventKind::AutoDeregister)
         );
+    }
+
+    /// Roblox 10-18: an in-process gateway's health tick and the instance's
+    /// heartbeat share a 5 s phase, so the heartbeat lands inside every probe.
+    /// The fake backend refreshes the row while answering the probe; the ready
+    /// row must still leave Booting.
+    #[tokio::test]
+    async fn ready_backend_leaves_booting_although_owner_heartbeats_during_probe() {
+        let dir = tempdir().unwrap();
+        let registry = Arc::new(FileRegistry::new(dir.path()).unwrap());
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let port = listener.local_addr().unwrap().port();
+        let mut entry = ServiceEntry::new("roblox", "127.0.0.1", port);
+        entry.status = ServiceStatus::Booting;
+        let key = entry.key();
+        registry.register(entry).unwrap();
+
+        let (owner, owner_key) = (registry.clone(), key.clone());
+        let app = axum::Router::new().route(
+            "/health",
+            axum::routing::get(move || {
+                let (owner, owner_key) = (owner.clone(), owner_key.clone());
+                async move {
+                    owner.heartbeat_async(owner_key).await.unwrap();
+                    "ok"
+                }
+            }),
+        );
+        let server = tokio::spawn(async move { axum::serve(listener, app).await });
+
+        let handle = spawn_health_check_task(
+            registry.clone(),
+            reqwest::Client::new(),
+            Arc::new(crate::gateway::event_log::EventLog::new()),
+            Arc::new(InstanceDiagnosticsStore::new()),
+            HealthCheckConfig {
+                own_host: "127.0.0.1".into(),
+                own_port: 19765,
+                health_check_interval_secs: 1,
+                health_check_failures: 2,
+                #[cfg(feature = "prometheus")]
+                metrics: Arc::new(crate::gateway::event_log::GatewayMetrics::new()),
+            },
+        );
+
+        let deadline = tokio::time::Instant::now() + Duration::from_secs(4);
+        while registry.get(&key).unwrap().status != ServiceStatus::Available {
+            assert!(
+                tokio::time::Instant::now() < deadline,
+                "ready row stayed Booting while its owner heartbeated"
+            );
+            tokio::time::sleep(Duration::from_millis(20)).await;
+        }
+        handle.abort();
+        server.abort();
     }
 
     #[tokio::test]
