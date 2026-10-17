@@ -30,10 +30,16 @@ Meshy model from generation through every app it touches.
 - OpenSCAD 2026.10.15 snapshot: per-project install, start-instance, writing
   and validating a model, STL export read back, a Meshy STL stood on a print
   base, and the same STL again after a restart.
+- Material Maker 1.7: per-folder install, start-instance, a material graph
+  built and edited around a Meshy texture, PBR texture export read back, and
+  the same graph and byte-identical textures after a restart.
+- FreeCAD 1.1.4: per-project install, start-instance, import of a Meshy GLB
+  with mesh readback, a saved copy, reopen after a restart, and stop (refused
+  while a call runs unless the user agrees to cancel it).
 
 Built and tested without the host itself, so marked experimental and outside
-the support matrix: 3ds Max (Windows only), Cinema 4D, Houdini, Roblox Studio
-and Substance 3D Painter. Other hosts are not in the support matrix yet.
+the support matrix: 3ds Max (Windows only), Cinema 4D, Houdini, Maya, Roblox
+Studio, Substance 3D Painter and ZBrush. Other hosts are not in the support matrix yet.
 
 ## Install
 

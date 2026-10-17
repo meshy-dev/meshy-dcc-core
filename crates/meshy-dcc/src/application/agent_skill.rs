@@ -44,12 +44,24 @@ const FILES: &[(&str, &str)] = &[
         include_str!("../../../../skills/meshy-dcc/references/connectors.md"),
     ),
     (
+        "references/freecad.md",
+        include_str!("../../../../skills/meshy-dcc/references/freecad.md"),
+    ),
+    (
         "references/godot.md",
         include_str!("../../../../skills/meshy-dcc/references/godot.md"),
     ),
     (
         "references/houdini.md",
         include_str!("../../../../skills/meshy-dcc/references/houdini.md"),
+    ),
+    (
+        "references/material-maker.md",
+        include_str!("../../../../skills/meshy-dcc/references/material-maker.md"),
+    ),
+    (
+        "references/maya.md",
+        include_str!("../../../../skills/meshy-dcc/references/maya.md"),
     ),
     (
         "references/openscad.md",
@@ -70,6 +82,10 @@ const FILES: &[(&str, &str)] = &[
     (
         "references/unreal.md",
         include_str!("../../../../skills/meshy-dcc/references/unreal.md"),
+    ),
+    (
+        "references/zbrush.md",
+        include_str!("../../../../skills/meshy-dcc/references/zbrush.md"),
     ),
 ];
 

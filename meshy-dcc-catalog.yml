@@ -150,14 +150,42 @@ entries:
           - ["{package_dir}/bin/meshy-dcc-unreal", "install", "{project}", "--yes", "--json"]
 
   - name: "meshy-dcc-zbrush"
-    description: "Meshy DCC adapter for ZBrush 2026.1+ (planned)"
+    description: "Meshy DCC adapter for ZBrush 2026.1+: OBJ import, subtools, project and tool save and open, maps, turntables"
     dcc: ["zbrush"]
     url: "https://www.meshy.ai"
-    tags: ["adapter", "meshy", "zbrush"]
+    tags: ["adapter", "meshy", "zbrush", "experimental"]
+    version: "0.1.0"
     maintainer: "Meshy"
     policy:
       installation: not_available
-      reason: "The Meshy ZBrush adapter is planned."
+      reason: "The Meshy ZBrush adapter build is not published yet."
+    # Installs per project folder: `meshy-dcc install --dcc-type zbrush --project <folder>`.
+    # setup-project writes <folder>/.meshy-dcc/launch-plan.json (ZBrush -script <bridge>);
+    # nothing goes into the ZBrush installation or its settings.
+    install:
+      type: host-package
+      platforms:
+        macos-arm64:
+          url: "https://cdn.meshy.ai/meshy-dcc-core/adapters/zbrush/v0-1-0/meshy-dcc-zbrush-macos-arm64.zip"
+          sha256: "75ae1d4386c1146dfffc4e0b47befcec26f0791fa7902eae43bebbf3e2c3d91f"
+          mirrors: ["https://cdn.meshy.cn/meshy-dcc-core/adapters/zbrush/v0-1-0/meshy-dcc-zbrush-macos-arm64.zip", "https://github.com/meshy-dev/meshy-dcc-adapters/releases/download/zbrush-v0.1.0/meshy-dcc-zbrush-macos-arm64.zip"]
+          dcc_paths:
+            - "/Applications/Maxon ZBrush 20*/ZBrush.app/Contents/MacOS/ZBrush"
+            - "~/Applications/Maxon ZBrush 20*/ZBrush.app/Contents/MacOS/ZBrush"
+        windows-x86_64:
+          url: "https://cdn.meshy.ai/meshy-dcc-core/adapters/zbrush/v0-1-0/meshy-dcc-zbrush-windows-x64.zip"
+          sha256: "ed8cb01e81441c3aff98f07d779f9178d7bfd7940d381adb8f14185961d33b1e"
+          mirrors: ["https://cdn.meshy.cn/meshy-dcc-core/adapters/zbrush/v0-1-0/meshy-dcc-zbrush-windows-x64.zip", "https://github.com/meshy-dev/meshy-dcc-adapters/releases/download/zbrush-v0.1.0/meshy-dcc-zbrush-windows-x64.zip"]
+          dcc_paths:
+            - "C:/Program Files/Maxon ZBrush 20*/ZBrush.exe"
+          host:
+            extract: true
+            project_steps:
+              - ["{package_dir}/python/python.exe", "-m", "meshy_dcc_zbrush", "setup-project", "{project}", "--dcc-path", "{dcc_path}", "--json"]
+      host:
+        extract: true
+        project_steps:
+          - ["{package_dir}/bin/meshy-dcc-zbrush", "setup-project", "{project}", "--dcc-path", "{dcc_path}", "--json"]
 
   - name: "meshy-dcc-roblox"
     description: "Meshy DCC adapter for Roblox Studio: place tree, instance edits and Meshy GLB import (experimental)"
@@ -193,14 +221,48 @@ entries:
           - ["{package_dir}/python/bin/python3.11", "-I", "-m", "meshy_dcc_roblox", "install", "--project", "{project}"]
 
   - name: "meshy-dcc-maya"
-    description: "Meshy DCC adapter for Maya (planned)"
+    description: "Meshy DCC adapter for Autodesk Maya 2025 and 2026: scene, import, materials, rendering and save tools (experimental)"
     dcc: ["maya"]
     url: "https://www.meshy.ai"
-    tags: ["adapter", "meshy", "maya"]
+    tags: ["adapter", "meshy", "maya", "experimental"]
+    version: "0.1.0"
     maintainer: "Meshy"
     policy:
       installation: not_available
-      reason: "The Meshy Maya adapter is planned."
+      reason: "The Meshy Maya adapter build is not published yet."
+    # Installs once per user: writes meshy_dcc_maya.mod into the Maya modules
+    # folder (macOS ~/Library/Preferences/Autodesk/maya/modules, Windows
+    # <Documents>/maya/modules, or $MAYA_APP_DIR/modules), pointing at the
+    # extracted package. `uninstall` removes only that file.
+    install:
+      type: host-package
+      platforms:
+        macos-arm64:
+          url: "https://cdn.meshy.ai/meshy-dcc-core/adapters/maya/v0-1-0/meshy-dcc-maya-macos-arm64.zip"
+          sha256: "57a9ef55aee715040dce11e5059cef812b75c92bbf85b1ddab66bb0f8414d1d8"
+          mirrors: ["https://cdn.meshy.cn/meshy-dcc-core/adapters/maya/v0-1-0/meshy-dcc-maya-macos-arm64.zip", "https://github.com/meshy-dev/meshy-dcc-adapters/releases/download/maya-v0.1.0/meshy-dcc-maya-macos-arm64.zip"]
+          dcc_paths:
+            - "/Applications/Autodesk/maya*/Maya.app/Contents/MacOS/Maya"
+        windows-x86_64:
+          url: "https://cdn.meshy.ai/meshy-dcc-core/adapters/maya/v0-1-0/meshy-dcc-maya-windows-x64.zip"
+          sha256: "5b1dc689236b498d39c5b838ebf640f6c26e7037fd378cffa8c79acc17be3117"
+          mirrors: ["https://cdn.meshy.cn/meshy-dcc-core/adapters/maya/v0-1-0/meshy-dcc-maya-windows-x64.zip", "https://github.com/meshy-dev/meshy-dcc-adapters/releases/download/maya-v0.1.0/meshy-dcc-maya-windows-x64.zip"]
+          dcc_paths:
+            - "C:/Program Files/Autodesk/Maya*/bin/maya.exe"
+          host:
+            extract: true
+            uninstall:
+              - ["{package_dir}/bin/meshy-dcc-maya.cmd", "uninstall", "--json"]
+            steps:
+              - ["{package_dir}/bin/meshy-dcc-maya.cmd", "install", "--json"]
+            launch: ["{executable}"]
+      host:
+        extract: true
+        uninstall:
+          - ["{package_dir}/bin/meshy-dcc-maya", "uninstall", "--json"]
+        steps:
+          - ["{package_dir}/bin/meshy-dcc-maya", "install", "--json"]
+        launch: ["{executable}"]
 
   - name: "meshy-dcc-3dsmax"
     description: "Meshy DCC adapter for 3ds Max 2025+ on Windows: scene, FBX import, Physical materials and render tools (experimental)"
@@ -436,14 +498,43 @@ entries:
       reason: "The Meshy SketchUp adapter is planned."
 
   - name: "meshy-dcc-freecad"
-    description: "Meshy DCC adapter for FreeCAD (planned)"
+    description: "Meshy DCC adapter for FreeCAD 1.0 and 1.1: FCStd documents, parametric modeling, CAD exchange and Meshy GLB import"
     dcc: ["freecad"]
     url: "https://www.meshy.ai"
     tags: ["adapter", "meshy", "freecad"]
+    version: "0.1.0"
     maintainer: "Meshy"
     policy:
       installation: not_available
-      reason: "The Meshy FreeCAD adapter is planned."
+      reason: "The Meshy FreeCAD adapter build is not published yet."
+    # Installs per project: `meshy-dcc install --dcc-type freecad --project <dir>`.
+    # The adapter is a headless service that runs FreeCADCmd for each call; the
+    # project directory is its only allowed root.
+    install:
+      type: host-package
+      platforms:
+        macos-arm64:
+          url: "https://cdn.meshy.ai/meshy-dcc-core/adapters/freecad/v0-1-0/meshy-dcc-freecad-macos-arm64.zip"
+          sha256: "2e79c404d432c09ee5e2661e94da10810b3b13784b13836a69c986e57d686fd3"
+          mirrors: ["https://cdn.meshy.cn/meshy-dcc-core/adapters/freecad/v0-1-0/meshy-dcc-freecad-macos-arm64.zip", "https://github.com/meshy-dev/meshy-dcc-adapters/releases/download/freecad-v0.1.0/meshy-dcc-freecad-macos-arm64.zip"]
+          dcc_paths:
+            - "/Applications/FreeCAD.app/Contents/MacOS/FreeCAD"
+            - "~/Applications/FreeCAD.app/Contents/MacOS/FreeCAD"
+        windows-x86_64:
+          url: "https://cdn.meshy.ai/meshy-dcc-core/adapters/freecad/v0-1-0/meshy-dcc-freecad-windows-x64.zip"
+          sha256: "cc986f1758fd2d68b9ed8a8b9161b2b9ba8163c01b5619e8d87e61eed531c406"
+          mirrors: ["https://cdn.meshy.cn/meshy-dcc-core/adapters/freecad/v0-1-0/meshy-dcc-freecad-windows-x64.zip", "https://github.com/meshy-dev/meshy-dcc-adapters/releases/download/freecad-v0.1.0/meshy-dcc-freecad-windows-x64.zip"]
+          dcc_paths:
+            - "C:/Program Files/FreeCAD */bin/FreeCAD.exe"
+            - "~/AppData/Local/Programs/FreeCAD */bin/FreeCAD.exe"
+          host:
+            extract: true
+            project_steps:
+              - ["{package_dir}/python/python.exe", "-I", "-m", "meshy_dcc_freecad", "install", "--project", "{project}", "--dcc-path", "{dcc_path}", "--yes", "--json"]
+      host:
+        extract: true
+        project_steps:
+          - ["{package_dir}/bin/meshy-dcc-freecad", "install", "--project", "{project}", "--dcc-path", "{dcc_path}", "--yes", "--json"]
 
   - name: "meshy-dcc-openscad"
     description: "Meshy DCC adapter for OpenSCAD 2021.01 and the 2026.09–2026.10 snapshots: write, inspect, validate, export STL/3MF and render PNG, and stand Meshy STL models on print bases"
@@ -482,14 +573,43 @@ entries:
           - ["{package_dir}/bin/meshy-dcc-openscad-sidecar", "install-project", "{project}", "--openscad", "{dcc_path}", "--sidecar", "{package_dir}/bin/meshy-dcc-openscad-sidecar"]
 
   - name: "meshy-dcc-material-maker"
-    description: "Meshy DCC adapter for Material Maker (planned)"
+    description: "Meshy DCC adapter for Material Maker 1.7+: build and edit procedural material graphs and export PBR texture sets"
     dcc: ["material-maker"]
     url: "https://www.meshy.ai"
     tags: ["adapter", "meshy", "material-maker"]
+    version: "0.1.0"
     maintainer: "Meshy"
     policy:
       installation: not_available
-      reason: "The Meshy Material Maker adapter is planned."
+      reason: "The Meshy Material Maker adapter build is not published yet."
+    # Installs per material folder: `meshy-dcc install --dcc-type material-maker --project <folder>`.
+    install:
+      type: host-package
+      platforms:
+        macos-arm64:
+          url: "https://cdn.meshy.ai/meshy-dcc-core/adapters/material-maker/v0-1-0/meshy-dcc-material-maker-macos-arm64.zip"
+          sha256: "8fa4104c9e41cd56fd66f647e64ad32f8372943d17b1265a01706991c9cfb151"
+          mirrors: ["https://cdn.meshy.cn/meshy-dcc-core/adapters/material-maker/v0-1-0/meshy-dcc-material-maker-macos-arm64.zip", "https://github.com/meshy-dev/meshy-dcc-adapters/releases/download/material-maker-v0.1.0/meshy-dcc-material-maker-macos-arm64.zip"]
+          dcc_paths:
+            - "/Applications/Material Maker.app/Contents/MacOS/Material Maker"
+            - "~/Applications/Material Maker.app/Contents/MacOS/Material Maker"
+        windows-x86_64:
+          url: "https://cdn.meshy.ai/meshy-dcc-core/adapters/material-maker/v0-1-0/meshy-dcc-material-maker-windows-x64.zip"
+          sha256: "9d2526bb87277b006e3219dd1c0dc57c34cc20e83e32d8f8da3caf2149aa525c"
+          mirrors: ["https://cdn.meshy.cn/meshy-dcc-core/adapters/material-maker/v0-1-0/meshy-dcc-material-maker-windows-x64.zip", "https://github.com/meshy-dev/meshy-dcc-adapters/releases/download/material-maker-v0.1.0/meshy-dcc-material-maker-windows-x64.zip"]
+          dcc_paths:
+            - "C:/Program Files/Material Maker/material_maker.exe"
+            - "C:/Program Files/material_maker_*_windows/material_maker.exe"
+            - "~/AppData/Local/Programs/Material Maker/material_maker.exe"
+            - "C:/Program Files (x86)/Steam/steamapps/common/Material Maker/material_maker.exe"
+          host:
+            extract: true
+            project_steps:
+              - ["{package_dir}/python/python.exe", "-I", "-m", "meshy_dcc_material_maker", "install-project", "{project}", "--dcc-path", "{dcc_path}", "--sidecar", "{package_dir}/bin/meshy-dcc-material-maker-sidecar.cmd", "--yes", "--json"]
+      host:
+        extract: true
+        project_steps:
+          - ["{package_dir}/bin/meshy-dcc-material-maker-sidecar", "install-project", "{project}", "--dcc-path", "{dcc_path}", "--sidecar", "{package_dir}/bin/meshy-dcc-material-maker-sidecar", "--yes", "--json"]
 
   - name: "meshy-dcc-photoshop"
     description: "Meshy DCC adapter for Photoshop (planned)"

@@ -10,9 +10,9 @@ meshy-dcc install --dcc-type blender --execute --json
 meshy-dcc install --dcc-type unity --project /absolute/project --execute --json
 ```
 
-Unity, Godot, Unreal, OpenSCAD, Cinema 4D and Roblox Studio install into each project
-(`--project`); see their references. Blender, Houdini and Substance 3D Painter install once
-per computer, 3ds Max once per Windows user and 3ds Max version, with the app closed.
+Unity, Godot, Unreal, OpenSCAD, Material Maker, FreeCAD, Cinema 4D, Roblox Studio and ZBrush
+install into each project (`--project`); see their references. Blender, Maya, Houdini and
+Substance 3D Painter install once per computer, 3ds Max once per Windows user and 3ds Max version, with the app closed.
 
 `meshy-dcc dcc-types --json` marks a connector `"experimental": true` when it was built
 and tested without the host itself. Tell the user that before installing it, and read
@@ -36,8 +36,12 @@ There is no uninstall command. With the user's go-ahead and the host closed:
 | Godot | The project's `addons/meshy_dcc_godot` and `.meshy-dcc` folders, and `res://addons/meshy_dcc_godot/plugin.cfg` from `[editor_plugins] enabled` in `project.godot` |
 | Unreal | The project's `Plugins/MeshyDccUnreal` and `.meshy-dcc` folders |
 | OpenSCAD | The project's `.meshy-dcc` folder |
+| Material Maker | The material folder's `.meshy-dcc` folder |
+| FreeCAD | The project's `.meshy-dcc` folder |
+| ZBrush | The project's `.meshy-dcc` folder |
 | Cinema 4D | Run `<package>/bin/meshy-dcc-c4d uninstall --project <folder> --yes --json` for each project folder (it removes only its two files in `.meshy-dcc`) |
 | Roblox Studio | Run `<package>/python/bin/python3.11 -I -m meshy_dcc_roblox uninstall --plugin` (Windows: `<package>\python\python.exe`), which removes `MeshyDcc.lua` from Studio's Plugins folder; then the project's `.meshy-dcc` folder |
+| Maya | Run `<package>/bin/meshy-dcc-maya uninstall --json` (Windows: `.cmd`), which removes the `meshy_dcc_maya.mod` it wrote |
 | Houdini | Run `<package>/bin/meshy-dcc-houdini uninstall --dcc-path <houdini executable> --json` (Windows: `.cmd`) |
 | Substance 3D Painter | Run `<package>/bin/meshy-dcc-substance3d-painter uninstall --yes --json` (Windows: `.cmd`) |
 | 3ds Max | Run `<package>\bin\meshy-dcc-3dsmax.cmd uninstall --dcc-path "<3dsmax.exe>" --json` |
