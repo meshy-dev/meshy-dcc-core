@@ -65,6 +65,19 @@ use super::update_cmd::UpdateAction;
 
 const DEFAULT_BASE_URL: &str = "http://127.0.0.1:19765";
 const DEFAULT_SMOKE_TIMEOUT_SECS: u64 = 5;
+
+/// The local gateway URL when no `--base-url` or remote profile is chosen:
+/// `MESHY_DCC_GATEWAY_PORT`, the port adapters and `meshy-dcc gateway`
+/// already use, else 19765.
+fn default_base_url(gateway_port: Option<&str>) -> String {
+    gateway_port
+        .and_then(|port| port.trim().parse::<u16>().ok())
+        .filter(|port| *port != 0)
+        .map_or_else(
+            || DEFAULT_BASE_URL.to_string(),
+            |port| format!("http://127.0.0.1:{port}"),
+        )
+}
 const DEFAULT_CALL_TIMEOUT_SECS: u64 = 30;
 const DEFAULT_WAIT_READY_TIMEOUT_SECS: u64 = 30;
 const DEFAULT_START_INSTANCE_TIMEOUT_SECS: u64 = 300;
@@ -275,7 +288,9 @@ async fn run_with_args(args: Args) -> anyhow::Result<()> {
     let profile_path = gateway_profile::default_profile_path();
     let profile_store = gateway_profile::GatewayProfileStore::load(&profile_path)?;
     let gateway_target = profile_store.resolve(gateway.as_deref(), base_url.as_deref())?;
-    let endpoint = gateway_target.endpoint_or_default(DEFAULT_BASE_URL);
+    let endpoint = gateway_target.endpoint_or_default(&default_base_url(
+        std::env::var("MESHY_DCC_GATEWAY_PORT").ok().as_deref(),
+    ));
     let base_url = endpoint.base_url.clone();
     let control = DccControlPlane::new(
         gateway_target.clone(),

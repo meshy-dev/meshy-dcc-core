@@ -425,10 +425,13 @@ pub(crate) struct LintArgs {
 
 #[derive(Debug, Clone, clap::Args)]
 pub(crate) struct GatewayStartArgs {
-    #[arg(long, default_value = "127.0.0.1")]
-    pub(crate) host: String,
-    #[arg(long, default_value = "19765")]
-    pub(crate) port: u16,
+    /// Defaults to the host of the gateway the CLI uses (`--base-url`,
+    /// `MESHY_DCC_BASE_URL`, `MESHY_DCC_GATEWAY_PORT`), else 127.0.0.1.
+    #[arg(long)]
+    pub(crate) host: Option<String>,
+    /// Defaults to the port of the gateway the CLI uses, else 19765.
+    #[arg(long)]
+    pub(crate) port: Option<u16>,
     #[arg(long)]
     pub(crate) name: Option<String>,
     #[arg(long)]
@@ -448,10 +451,11 @@ pub(crate) struct GatewayStartArgs {
 
 #[derive(Debug, Clone, clap::Args)]
 pub(crate) struct GatewayStopArgs {
-    #[arg(long, default_value = "127.0.0.1")]
-    pub(crate) host: String,
-    #[arg(long, default_value = "19765")]
-    pub(crate) port: u16,
+    /// Defaults to the gateway the CLI uses, like `gateway start`.
+    #[arg(long)]
+    pub(crate) host: Option<String>,
+    #[arg(long)]
+    pub(crate) port: Option<u16>,
     #[arg(long)]
     pub(crate) registry_dir: Option<PathBuf>,
     #[arg(long, default_value = "10")]
@@ -460,10 +464,11 @@ pub(crate) struct GatewayStopArgs {
 
 #[derive(Debug, Clone, clap::Args)]
 pub(crate) struct GatewayStatusArgs {
-    #[arg(long, default_value = "127.0.0.1")]
-    pub(crate) host: String,
-    #[arg(long, default_value = "19765")]
-    pub(crate) port: u16,
+    /// Defaults to the gateway the CLI uses, like `gateway start`.
+    #[arg(long)]
+    pub(crate) host: Option<String>,
+    #[arg(long)]
+    pub(crate) port: Option<u16>,
     #[arg(long)]
     pub(crate) registry_dir: Option<PathBuf>,
 }

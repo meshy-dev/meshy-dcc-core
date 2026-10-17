@@ -271,6 +271,11 @@ and is not runtime-compatible with it. Attribution stays in `LICENSE` and
   processes, together with every process they started, and the waiting call
   returns a `CANCELLED: …` error. They used to run on after the stop and
   could write files after it.
+- `gateway start|stop|status|ensure` and `gateway daemon …` without
+  `--host`/`--port` act on the gateway the other commands use (`--base-url`,
+  `MESHY_DCC_BASE_URL`), not always 127.0.0.1:19765. All commands also take
+  the local gateway's port from `MESHY_DCC_GATEWAY_PORT` when neither a base
+  URL nor a remote profile is chosen.
 
 ### Removed
 
