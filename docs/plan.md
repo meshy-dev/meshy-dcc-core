@@ -124,7 +124,7 @@ ORM 打包图要按 glTF 约定取通道：G = roughness，B = metallic。现有
 | Unreal | `meshy-dcc-unreal`，本地已建，真机验证过（5.7.2） | 按工程安装，安装时用本机工具链编译 C++ 编辑器模块，安装器自带 Python；Meshy GLB/FBX 导入、FBX 贴图组转 PBR 材质、读回与渲染截图 | R2 |
 | OpenSCAD | `meshy-dcc-openscad` 0.1.0，真机验证过（2026.10.15 快照） | 按项目安装、自带 Python 的 sidecar 调 OpenSCAD 命令行；导出后读回；Meshy STL 加打印底座 | day-0 |
 | Material Maker | `meshy-dcc-material-maker` 0.1.0，真机验证过（1.7） | 按材质文件夹安装的 sidecar 直接编辑 `.ptex`，导出时调官方 `--export-material`（会短暂抢前台） | day-0 |
-| Roblox | `meshy-dcc-roblox` 0.1.0（新写），experimental，真机待用户同意 | Studio 插件作 WebSocket 客户端连包内 sidecar，按 place 路由；GLB 经 EditableMesh 重建（默认只活在会话里） | day-0 |
+| Roblox | `meshy-dcc-roblox` 0.1.0（新写），真机验证过（Studio 0.743；导入的模型只活在会话里） | Studio 插件作 WebSocket 客户端连包内 sidecar，按 place 路由；GLB 经 EditableMesh 重建（默认只活在会话里） | day-0 |
 | Houdini | `meshy-dcc-houdini` 0.1.0，experimental（本机无宿主） | 用户偏好 `packages/` 下一个包文件指向解开的包，`uiready.py` 自启；safe stop 读 `hasUnsavedChanges` | day-0 |
 | Substance 3D Painter | `meshy-dcc-substance3d-painter` 0.1.0，experimental | 用户 profile 的 `python/startup` 放一个 loader；主线程派发 | day-0 |
 | Cinema 4D | `meshy-dcc-c4d` 0.1.0，experimental | 上游是 headless：每次操作起授权的 `c4dpy` 改项目文件夹里的 `.c4d`，不进 GUI | day-0 |

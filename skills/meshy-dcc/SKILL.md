@@ -1,6 +1,6 @@
 ---
 name: meshy-dcc
-description: Work inside a creator's running DCC application through the local meshy-dcc CLI - find the live instance, discover and load its tools, call them, and read the scene back. Use for scene edits and for importing Meshy-generated models into a DCC project. Supported today - Blender, Unity, Godot, Unreal, OpenSCAD, Material Maker and FreeCAD; experimental - 3ds Max, Cinema 4D, Houdini, Maya, Roblox Studio, Substance 3D Painter and ZBrush.
+description: Work inside a creator's running DCC application through the local meshy-dcc CLI - find the live instance, discover and load its tools, call them, and read the scene back. Use for scene edits and for importing Meshy-generated models into a DCC project. Supported today - Blender, Unity, Godot, Unreal, OpenSCAD, Material Maker, FreeCAD and Roblox Studio; experimental - 3ds Max, Cinema 4D, Houdini, Maya, Substance 3D Painter and ZBrush.
 ---
 
 # Meshy DCC
@@ -18,6 +18,8 @@ you choose. No MCP connector is involved.
 - OpenSCAD (2026.10 snapshot). Read [the OpenSCAD reference](references/openscad.md) before OpenSCAD work.
 - Material Maker 1.7. Read [the Material Maker reference](references/material-maker.md) before Material Maker work.
 - FreeCAD 1.1. Read [the FreeCAD reference](references/freecad.md) before FreeCAD work.
+- Roblox Studio 0.743. Imported models last for the Studio session only. Read
+  [the Roblox reference](references/roblox.md) before Roblox work.
 
 **Experimental**, built and tested without the app itself. Tell the user that before relying
 on one, and read back every change:
@@ -27,7 +29,6 @@ on one, and read back every change:
   Read [the Cinema 4D reference](references/c4d.md).
 - Houdini 20.5+. Read [the Houdini reference](references/houdini.md).
 - Maya 2025+. Read [the Maya reference](references/maya.md).
-- Roblox Studio. Read [the Roblox reference](references/roblox.md).
 - Substance 3D Painter 8.1+. Read [the Substance 3D Painter reference](references/substance3d-painter.md).
 - ZBrush 2026.1+, only when started with `start-instance`. Read [the ZBrush reference](references/zbrush.md).
 
