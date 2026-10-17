@@ -68,8 +68,6 @@ An `image` node brings a project image into a graph:
 `{"op": "add_node", "name": "Base", "type": "image", "parameters": {"image": "textures/base.jpg"}}`.
 Connecting it to the Material's albedo and, through a `normal_map` node, to its
 normal input exports the Meshy base color with a normal map derived from it.
-In readbacks, image nodes carry `materialization_error: missing image data`,
-added by the `meshy-dcc` CLI; ignore it.
 
 ## Saving and unsaved work
 

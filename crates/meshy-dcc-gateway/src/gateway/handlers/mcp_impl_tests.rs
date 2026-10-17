@@ -627,6 +627,22 @@ fn malformed_rich_image_is_redacted_without_native_content() {
 }
 
 #[test]
+fn image_typed_tool_data_outside_content_blocks_is_left_alone() {
+    let raw = json!({
+        "content": [{"type": "text", "text": "graph"}],
+        "structuredContent": {
+            "nodes": [{"name": "Base", "type": "image", "parameters": {"image": "a.png"}}]
+        }
+    })
+    .to_string();
+
+    let (safe_text, images) = extract_native_rich_images(raw.clone());
+
+    assert!(images.is_empty());
+    assert_eq!(safe_text, raw);
+}
+
+#[test]
 fn sidecar_native_mcp_image_is_promoted_without_base64_in_outer_text() {
     let raw = json!({
         "content": [

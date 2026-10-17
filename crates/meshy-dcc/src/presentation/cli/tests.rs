@@ -630,6 +630,23 @@ fn call_materializes_native_mcp_image_and_reports_invalid_data_safely() {
 }
 
 #[test]
+fn image_typed_tool_data_is_not_treated_as_image_content() {
+    let root = tempfile::tempdir().expect("create artifact directory");
+    let node =
+        serde_json::json!({"name": "Base", "type": "image", "parameters": {"image": "a.png"}});
+    let rich_like = serde_json::json!({"kind": "image", "label": "not a __rich__ sidecar"});
+    let mut value = serde_json::json!({
+        "output": {"context": {"nodes": [node.clone()], "preview": rich_like}},
+        "structuredContent": {"result": {"nodes": [node]}}
+    });
+    let before = value.clone();
+
+    materialize_call_images(&mut value, root.path());
+
+    assert_eq!(value, before);
+}
+
+#[test]
 fn call_redacts_malformed_data_with_preexisting_artifact_path() {
     let root = tempfile::tempdir().expect("create artifact directory");
     let encoded = "%%%private-invalid-base64%%%";

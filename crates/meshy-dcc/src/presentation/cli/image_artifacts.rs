@@ -26,18 +26,29 @@ pub(super) fn materialize_call_images(value: &mut Value, root: &Path) {
     materialize_call_images_with_name(value, root, canonical_name.as_deref());
 }
 
+/// Images live in two places only: MCP content blocks (`content: [{type:
+/// "image", ...}]`) and the `__rich__` sidecar (`{kind: "image", ...}`). Any
+/// other object that happens to say `"type": "image"` is tool data (a
+/// Material Maker image node, say) and is left alone.
 fn materialize_call_images_with_name(value: &mut Value, root: &Path, canonical_name: Option<&str>) {
     match value {
         Value::Object(object) => {
-            if object.get("kind").and_then(Value::as_str) == Some("image") {
-                materialize_image_payload(object, "mime", root, canonical_name);
-            } else if object.get("type").and_then(Value::as_str) == Some("image") {
-                let mime_key = if object.contains_key("mimeType") {
-                    "mimeType"
-                } else {
-                    "mime_type"
-                };
-                materialize_image_payload(object, mime_key, root, canonical_name);
+            if let Some(Value::Object(rich)) = object.get_mut("__rich__")
+                && rich.get("kind").and_then(Value::as_str) == Some("image")
+            {
+                materialize_image_payload(rich, "mime", root, canonical_name);
+            }
+            if let Some(Value::Array(blocks)) = object.get_mut("content") {
+                for block in blocks.iter_mut().filter_map(Value::as_object_mut) {
+                    if block.get("type").and_then(Value::as_str) == Some("image") {
+                        let mime_key = if block.contains_key("mimeType") {
+                            "mimeType"
+                        } else {
+                            "mime_type"
+                        };
+                        materialize_image_payload(block, mime_key, root, canonical_name);
+                    }
+                }
             }
             for child in object.values_mut() {
                 materialize_call_images_with_name(child, root, canonical_name);

@@ -33,11 +33,12 @@ fn log_gateway_mcp_slow_dispatch(started: Instant, method: &str) {
 ///
 /// DCC tool servers can embed images in two ways inside a JSON response body:
 ///
-/// ## 1. Inline `{ "type": "image" }` objects
+/// ## 1. MCP image content blocks
 ///
-/// Any JSON object whose `"type"` key is `"image"` (case-insensitive) and
-/// that carries a `"data"` key with base64-encoded bytes is treated as a
-/// native image.  The `"data"` value is replaced with
+/// An element of a `"content"` array whose `"type"` is `"image"`
+/// (case-insensitive) is treated as a native image; an object saying
+/// `"type": "image"` anywhere else is tool data and is left untouched.
+/// The `"data"` value is replaced with
 /// `NATIVE_IMAGE_PLACEHOLDER` in the returned text so the payload remains
 /// valid UTF-8 JSON, and the full image object is appended to the returned
 /// `Vec<Value>` for separate MCP content transport.
@@ -72,17 +73,23 @@ fn extract_native_rich_images_from_value(value: &mut Value, images: &mut Vec<Val
     match value {
         Value::Object(object) => {
             let mut extracted = false;
-            if object
-                .get("type")
-                .and_then(Value::as_str)
-                .is_some_and(|value| value.eq_ignore_ascii_case("image"))
-            {
-                let mime_key = if object.contains_key("mimeType") {
-                    "mimeType"
-                } else {
-                    "mime_type"
-                };
-                extracted |= extract_native_image(object, mime_key, images);
+            // Only MCP content blocks are images; any other object saying
+            // `"type": "image"` is tool data (a Material Maker image node).
+            if let Some(Value::Array(blocks)) = object.get_mut("content") {
+                for block in blocks.iter_mut().filter_map(Value::as_object_mut) {
+                    if block
+                        .get("type")
+                        .and_then(Value::as_str)
+                        .is_some_and(|value| value.eq_ignore_ascii_case("image"))
+                    {
+                        let mime_key = if block.contains_key("mimeType") {
+                            "mimeType"
+                        } else {
+                            "mime_type"
+                        };
+                        extracted |= extract_native_image(block, mime_key, images);
+                    }
+                }
             }
             if let Some(rich) = object.get_mut("__rich__").and_then(Value::as_object_mut) {
                 extracted |= extract_native_rich_image(rich, images);
