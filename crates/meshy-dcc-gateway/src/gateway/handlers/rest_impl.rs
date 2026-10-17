@@ -257,9 +257,9 @@ fn gateway_yield_unavailable_response(
 /// Also served under `GET /v1/instances` for consistency with the
 /// REST-backed dynamic-capability API (#654).
 pub async fn handle_instances(State(gs): State<GatewayState>) -> impl IntoResponse {
-    let registry = &gs.registry;
     let instances: Vec<Value> = gs
-        .live_instances(registry)
+        .live_instances_async()
+        .await
         .into_iter()
         .map(|entry| gs.instance_json(&entry))
         .collect();

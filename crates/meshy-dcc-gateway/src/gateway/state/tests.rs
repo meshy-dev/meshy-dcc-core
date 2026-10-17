@@ -453,6 +453,42 @@ async fn test_live_instances_excludes_unroutable_statuses_from_liveness_view() {
     assert_eq!(live[0].dcc_type, "zbrush");
 }
 
+/// `start-instance` reports ready from its own direct probe; a gateway call
+/// made right after must not wait for the next health tick to route.
+#[tokio::test]
+async fn test_live_instances_async_promotes_booting_row_whose_backend_is_ready() {
+    let dir = tempfile::tempdir().unwrap();
+    let registry = Arc::new(FileRegistry::new(dir.path()).unwrap());
+
+    let ready = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let ready_port = ready.local_addr().unwrap().port();
+    let app = axum::Router::new().route("/health", axum::routing::get(|| async { "ok" }));
+    let server = tokio::spawn(async move { axum::serve(ready, app).await });
+    let closed_port = {
+        let l = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        l.local_addr().unwrap().port()
+    };
+
+    let mut up = ServiceEntry::new("roblox", "127.0.0.1", ready_port);
+    up.status = ServiceStatus::Booting;
+    let up_key = up.key();
+    registry.register(up).unwrap();
+    let mut down = ServiceEntry::new("blender", "127.0.0.1", closed_port);
+    down.status = ServiceStatus::Booting;
+    registry.register(down).unwrap();
+
+    let gs = test_gateway_state(registry.clone());
+    let live = gs.live_instances_async().await;
+    server.abort();
+
+    assert_eq!(live.len(), 1, "only the ready backend is routable");
+    assert_eq!(live[0].dcc_type, "roblox");
+    assert_eq!(
+        registry.get(&up_key).unwrap().status,
+        ServiceStatus::Available
+    );
+}
+
 #[tokio::test]
 async fn test_live_instances_prefers_sidecar_for_same_dcc_pid() {
     let dir = tempfile::tempdir().unwrap();
