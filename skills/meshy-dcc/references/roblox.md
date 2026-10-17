@@ -1,13 +1,18 @@
 # Roblox Studio
 
-Not verified on a real host yet; experimental. Adapter `meshy-dcc-roblox` 0.1.0.
+Experimental. Run once end to end on Roblox Studio 0.743, macOS arm64, with adapter
+`meshy-dcc-roblox` 0.1.0; Windows not run.
 
 - The adapter is a Studio plugin plus a sidecar. `meshy-dcc install --dcc-type roblox
   --project <dir>` needs a directory holding exactly one place file (`.rbxl` or
   `.rbxlx`); it also writes the plugin into Studio's local plugins folder.
 - `start-instance` opens that place in Studio. Each instance is one place; the instance
   only talks to the Studio window of its own place, never to another one.
-- `session` reports the place name, PlaceId, Studio version and whether Luau is allowed.
+- `session` reports the place name, PlaceId, Studio version and whether Luau is allowed. For
+  a local file the place name is the file name with its extension (`MyPlace.rbxlx`).
+- Studio may update itself when `start-instance` launches it; the first start after an
+  update can outlast the wait, and the updated Studio reopens the place on its own. Close
+  that window and run `start-instance` again.
 
 ## Tools used most
 
@@ -31,7 +36,11 @@ Not verified on a real host yet; experimental. Adapter `meshy-dcc-roblox` 0.1.0.
 - A plugin cannot save a place or tell whether it has unsaved changes; `dirty` is always
   `null`. Ask the user to save in Studio (File > Save to File, or Publish).
 - An imported model lasts only for the Studio session (`persistent: false`): Roblox does
-  not save editable meshes with a place. `publish: true` uploads the meshes and images to
+  not save editable meshes with a place. After a save and reopen the Model and its
+  MeshPart are still there but empty; `inspect_model` shows `mesh_source: "None"` and no
+  maps. Parts made with the scene tools keep their properties.
+- Studio may mark a freshly opened place as changed (for example after migrating its
+  lighting), so expect its save prompt even when nothing was edited. `publish: true` uploads the meshes and images to
   the logged-in user's Roblox inventory first and builds from those assets, which saves
   with the place. Ask the user before every upload; uploads that finished stay in their
   inventory even if the import fails later.
