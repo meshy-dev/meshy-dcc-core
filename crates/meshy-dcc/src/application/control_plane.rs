@@ -18,7 +18,7 @@ use crate::application::gateway_profile::GatewayTarget;
 use crate::application::instance_selection::{
     InstanceSelectionError, instance_field, select_instances,
 };
-use crate::application::{local_control, local_registry};
+use crate::application::{local_control, local_instance, local_registry};
 use crate::domain::rest::{
     CallRequest, DescribeRequest, DirectCallRequest, Endpoint, FeedbackQueryRequest,
     LoadSkillRequest, ReloadSkillsRequest, SearchRequest, StatsRequest, StopInstanceRequest,
@@ -276,6 +276,7 @@ impl DccControlPlane {
         let started = tokio::time::Instant::now();
         let mut control_plane_disruptions = 0_u64;
         let mut last_poll_error: Option<String> = None;
+        let watched_instance = self.locally_listed_instance(&result, instance_id.as_deref());
 
         if adapter_wait_target(&result, 0).is_none() {
             let Some(initial) = job_wait_progress(&result, 0) else {
@@ -347,6 +348,11 @@ impl DccControlPlane {
                     Err(error)
                         if !self.uses_direct_local() && job_poll_error_is_retryable(&error) =>
                     {
+                        if let Some(instance) = self.stopped_instance(watched_instance.as_deref()) {
+                            return Ok(job_instance_offline_result(
+                                "core", &job_id, &status, instance, &error, result,
+                            ));
+                        }
                         control_plane_disruptions = control_plane_disruptions.saturating_add(1);
                         let outage_started = last_poll_error.is_none();
                         last_poll_error = Some(error.to_string());
@@ -460,6 +466,16 @@ impl DccControlPlane {
                     value
                 }
                 Err(error) if !self.uses_direct_local() && job_poll_error_is_retryable(&error) => {
+                    if let Some(instance) = self.stopped_instance(watched_instance.as_deref()) {
+                        return Ok(job_instance_offline_result(
+                            "adapter",
+                            &adapter.job_id,
+                            &adapter.status,
+                            instance,
+                            &error,
+                            result,
+                        ));
+                    }
                     control_plane_disruptions = control_plane_disruptions.saturating_add(1);
                     let outage_started = last_poll_error.is_none();
                     last_poll_error = Some(error.to_string());
@@ -520,6 +536,29 @@ impl DccControlPlane {
         );
         attach_wait_recovery(&mut result, &adapter.job_id, control_plane_disruptions);
         Ok(result)
+    }
+
+    /// The instance that ran the call, when this machine's registry lists it.
+    /// A remote instance is never listed, so its polls keep retrying.
+    fn locally_listed_instance(&self, result: &Value, instance_id: Option<&str>) -> Option<String> {
+        let id = result
+            .pointer("/_meta/dcc/instance_id")
+            .and_then(Value::as_str)
+            .or(instance_id)?;
+        self.instance_listed(id).then(|| id.to_string())
+    }
+
+    /// `Some(id)` once a watched instance has left the registry: a poll that
+    /// fails then lost the job's owner, not just the gateway (a gateway the
+    /// instance hosted goes down with it).
+    fn stopped_instance<'a>(&self, watched: Option<&'a str>) -> Option<&'a str> {
+        watched.filter(|id| !self.instance_listed(id))
+    }
+
+    fn instance_listed(&self, id: &str) -> bool {
+        // An unreadable registry proves nothing; keep treating it as listed.
+        local_instance::select_entries(&self.registry_dir, None, Some(id))
+            .map_or(true, |entries| !entries.is_empty())
     }
 
     pub async fn call_batch(&self, body: Value, timeout: Duration) -> anyhow::Result<Value> {
@@ -1410,6 +1449,79 @@ mod tests {
             result["control_plane_error"]["body"]["error"]["previous_status"],
             "exited"
         );
+        server.abort();
+    }
+
+    #[tokio::test]
+    async fn wait_reports_a_stopped_instance_instead_of_retrying_to_timeout() {
+        use meshy_dcc_transport::discovery::file_registry::FileRegistry;
+        use meshy_dcc_transport::discovery::types::{ServiceEntry, ServiceKey};
+
+        let registry_dir = tempdir().unwrap();
+        let registry = FileRegistry::new(registry_dir.path()).unwrap();
+        let entry = ServiceEntry::new("freecad", "127.0.0.1", 18080);
+        let instance_id = entry.instance_id.to_string();
+        let key = entry.key();
+        registry.register(entry).unwrap();
+
+        // The launch succeeds; then the instance stops (and the gateway it
+        // hosted with it), so every poll fails as an outage would.
+        let state = Arc::new((registry_dir.path().to_path_buf(), key, instance_id.clone()));
+        async fn call(
+            State(state): State<Arc<(PathBuf, ServiceKey, String)>>,
+            Json(body): Json<Value>,
+        ) -> Response {
+            if body["tool_slug"]
+                .as_str()
+                .is_some_and(|slug| slug.ends_with(".jobs_get_status"))
+            {
+                let _ = FileRegistry::new(&state.0).unwrap().deregister(&state.1);
+                return (
+                    StatusCode::SERVICE_UNAVAILABLE,
+                    Json(json!({"error": {"kind": "instance-offline", "retryable": true}})),
+                )
+                    .into_response();
+            }
+            Json(json!({
+                "output": {"job_id": "job-freecad-42", "status": "running"},
+                "_meta": {"dcc": {"dcc_type": "freecad", "instance_id": state.2}}
+            }))
+            .into_response()
+        }
+
+        let app = Router::new()
+            .route("/v1/call", post(call))
+            .with_state(state)
+            .layer(middleware::from_fn(echo_request_id));
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        let server = tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
+        let control = DccControlPlane::new(
+            GatewayTarget::Local,
+            Endpoint::new(format!("http://{addr}")),
+            registry_dir.path().to_path_buf(),
+            true,
+        );
+
+        let started = std::time::Instant::now();
+        let result = control
+            .call_and_wait(
+                "freecad.abcdef01.import_geometry".to_string(),
+                None,
+                None,
+                json!({}),
+                None,
+                Duration::from_secs(2),
+                Duration::from_secs(60),
+            )
+            .await
+            .unwrap();
+
+        assert!(started.elapsed() < Duration::from_secs(10));
+        assert_eq!(result["tracking_status"], "instance_offline");
+        assert_eq!(result["instance_id"], instance_id);
+        assert_eq!(result["job_id"], "job-freecad-42");
+        assert_eq!(result["job_not_resubmitted"], true);
         server.abort();
     }
 

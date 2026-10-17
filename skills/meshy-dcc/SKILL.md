@@ -138,6 +138,8 @@ meshy-dcc call SLUG --json-file args.json
   returns a job; `--wait` polls that same job until it finishes, so don't resubmit it.
   With `--wait`, `structuredContent.status` is the job's final state and
   `structuredContent.result` holds the tool's `success`, `message`, `error` and `context`.
+  If the instance stops meanwhile, the wait ends with `tracking_status`
+  `instance_offline` or `owner_exited`: the job's outcome is unknown.
 - **Many similar edits:** send up to 25 calls in one batch instead of one command each.
   The calls run in order; each result says whether it succeeded, and a failed call does not
   stop the rest unless `stop_on_error` is true.
