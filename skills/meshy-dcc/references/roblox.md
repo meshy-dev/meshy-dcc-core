@@ -43,13 +43,21 @@ Experimental. Run once end to end on Roblox Studio 0.743, macOS arm64, with adap
   lighting), so expect its save prompt even when nothing was edited. `publish: true` uploads the meshes and images to
   the logged-in user's Roblox inventory first and builds from those assets, which saves
   with the place. Ask the user before every upload; uploads that finished stay in their
-  inventory even if the import fails later.
+  inventory even if the import fails later. On Studio 0.743 Roblox refuses it ("CreateAssetAsync
+  and CreateAssetVersionAsync are not available yet"): nothing is uploaded and the import is
+  rolled back, so tell the user the model cannot be kept with the place for now.
 - `stop-instance` always answers `unsaved_changes`. Stop with `--discard-unsaved` only
   after the user saved or agreed to lose the changes; it then ends the Studio process that
-  `start-instance` launched.
+  `start-instance` launched (Studio ignores the polite stop, so it is ended after about
+  15 s and may leave an auto-recovery copy of the place in its AutoSaves folder).
 
 ## Luau
 
-`execute_luau` is refused until the user clicks **Allow Luau** in Studio's Meshy DCC
-toolbar. Prefer the typed tools; do not ask the user to allow Luau to work around a tool
-that exists.
+`execute_luau` (`code`) is refused until the user clicks **Allow Luau** in Studio's Meshy DCC
+toolbar (Plugins tab); `session` shows `luau_allowed`. Prefer the typed tools; do not ask the
+user to allow Luau to work around a tool that exists.
+
+- `print` and `warn` come back in `output`; return values come back as strings in
+  `returned`, so a table arrives as `"table: 0x…"`. Return a string, or
+  `game:GetService("HttpService"):JSONEncode(t)`.
+- A run is one undo step. If it errors, its changes are rolled back.
