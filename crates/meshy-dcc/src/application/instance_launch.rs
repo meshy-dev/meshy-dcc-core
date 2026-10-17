@@ -12,7 +12,8 @@
 //! * process creation is never reported as readiness;
 //! * one operation ID spans launch, registration, bootstrap, and readiness;
 //! * an instance bound to another project is reported, never reused;
-//! * a second identical request converges instead of launching a second host.
+//! * a second identical request converges instead of launching a second host;
+//! * an instance that accepted a stop is waited out, never reused.
 
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
@@ -172,13 +173,35 @@ pub async fn start_instance(request: StartInstanceRequest) -> anyhow::Result<Val
     }
 
     // ── Stage: reuse / convergence ──────────────────────────────────────────
-    match find_reusable(
-        &request.registry_dir,
-        &dcc_type,
-        &project,
-        &store,
-        request.instance_id.as_deref(),
-    )? {
+    // An instance that accepted a stop still looks live until its host exits;
+    // wait that out, then launch a fresh host instead of adopting it.
+    let reuse = loop {
+        let reuse = find_reusable(
+            &request.registry_dir,
+            &dcc_type,
+            &project,
+            &store,
+            request.instance_id.as_deref(),
+        )?;
+        if !matches!(reuse, Reuse::Stopping(_)) || started.elapsed() >= request.timeout {
+            break reuse;
+        }
+        tokio::time::sleep(request.interval.max(Duration::from_millis(50))).await;
+    };
+    let (entry, reused, attempts, converged) = match reuse {
+        Reuse::Stopping(stopping) => {
+            return Ok(report.failure(
+                LaunchStage::Reuse,
+                BlockingState::Timeout,
+                format!(
+                    "{dcc_type} instance {} accepted a stop but has not exited within {:?}; \
+                     wait for it to close, or ask the user to close it",
+                    stopping.join(", "),
+                    request.timeout
+                ),
+                json!({ "stopping": stopping, "launch_plan": plan.summary() }),
+            ));
+        }
         Reuse::Ambiguous(candidates) => {
             return Ok(report.failure(
                 LaunchStage::Reuse,
@@ -201,88 +224,73 @@ pub async fn start_instance(request: StartInstanceRequest) -> anyhow::Result<Val
             operation.launched = false;
             operation.owned = owning_operation.as_ref().is_some_and(|owner| owner.owned);
             operation.pid = entry.pid.or(entry.host_pid);
-            operation.instance_id = Some(entry.instance_id.to_string());
+            (entry, true, 1, Some(converged))
+        }
+        Reuse::None => {
+            // ── Stage: launch ───────────────────────────────────────────────
+            let child = match spawn_host(&plan, &dcc_type, &project, &operation_id) {
+                Ok(child) => child,
+                Err(error) => {
+                    return Ok(report.failure(
+                        LaunchStage::Launch,
+                        BlockingState::LaunchFailed,
+                        format!("spawning {} failed: {error}", plan.executable.display()),
+                        json!({
+                            "launch_plan": plan.summary(),
+                            "os_error": error.to_string(),
+                        }),
+                    ));
+                }
+            };
+            let pid = child.id();
+            drop(child);
+
+            operation.launched = true;
+            operation.owned = true;
+            operation.pid = Some(pid);
             operation.touch();
-            // Classify before persisting: `blocking_state` is part of the
-            // record, so assigning it after `store.save` would leave the
-            // on-disk operation without it.
-            let blocking = classify_blocking_state(&entry.metadata);
-            operation.blocking_state = Some(blocking.as_str().to_string());
             store.save(&operation)?;
 
-            let ready =
-                blocking == BlockingState::None && local_instance::direct_control_ready(&entry);
+            // ── Stage: registration ─────────────────────────────────────────
+            let registration = wait_for_registration(
+                &request.registry_dir,
+                &dcc_type,
+                &project,
+                &operation_id,
+                Some(pid),
+                request.timeout,
+                request.interval,
+            )
+            .await?;
 
-            let mut value =
-                report.terminal(&entry, true, blocking, ready, &plan, &operation, 1, None);
-            value["converged_on_operation_id"] =
-                converged.map(Value::String).unwrap_or(Value::Null);
-            return Ok(value);
+            let Some(entry) = registration.entry else {
+                operation.blocking_state = Some(BlockingState::Timeout.as_str().to_string());
+                operation.touch();
+                store.save(&operation)?;
+                let mut value = report.failure(
+                    LaunchStage::Registration,
+                    BlockingState::Timeout,
+                    format!(
+                        "{dcc_type} was launched (pid {pid}) but did not register within {:?}",
+                        request.timeout
+                    ),
+                    json!({
+                        "launch_plan": plan.summary(),
+                        "pid": pid,
+                        "attempts": registration.attempts,
+                        "unbound_instances": registration.unbound_instances,
+                        "other_project_instances": registration.other_project_instances,
+                    }),
+                );
+                // The host is running even though readiness was never reached,
+                // so the operator needs the pid to inspect or stop it.
+                value["pid"] = Value::from(pid);
+                value["launched"] = Value::Bool(true);
+                value["owned"] = Value::Bool(true);
+                return Ok(value);
+            };
+            (entry, false, registration.attempts, None)
         }
-        Reuse::None => {}
-    }
-
-    // ── Stage: launch ───────────────────────────────────────────────────────
-    let child = match spawn_host(&plan, &dcc_type, &project, &operation_id) {
-        Ok(child) => child,
-        Err(error) => {
-            return Ok(report.failure(
-                LaunchStage::Launch,
-                BlockingState::LaunchFailed,
-                format!("spawning {} failed: {error}", plan.executable.display()),
-                json!({
-                    "launch_plan": plan.summary(),
-                    "os_error": error.to_string(),
-                }),
-            ));
-        }
-    };
-    let pid = child.id();
-    drop(child);
-
-    operation.launched = true;
-    operation.owned = true;
-    operation.pid = Some(pid);
-    operation.touch();
-    store.save(&operation)?;
-
-    // ── Stage: registration ─────────────────────────────────────────────────
-    let registration = wait_for_registration(
-        &request.registry_dir,
-        &dcc_type,
-        &project,
-        &operation_id,
-        Some(pid),
-        request.timeout,
-        request.interval,
-    )
-    .await?;
-
-    let Some(entry) = registration.entry else {
-        operation.blocking_state = Some(BlockingState::Timeout.as_str().to_string());
-        operation.touch();
-        store.save(&operation)?;
-        let mut value = report.failure(
-            LaunchStage::Registration,
-            BlockingState::Timeout,
-            format!(
-                "{dcc_type} was launched (pid {pid}) but did not register within {:?}",
-                request.timeout
-            ),
-            json!({
-                "launch_plan": plan.summary(),
-                "pid": pid,
-                "attempts": registration.attempts,
-                "unbound_instances": registration.unbound_instances,
-                "other_project_instances": registration.other_project_instances,
-            }),
-        );
-        // The host is running even though readiness was never reached, so the
-        // operator needs the pid to inspect or stop it.
-        value["pid"] = Value::from(pid);
-        value["launched"] = Value::Bool(true);
-        value["owned"] = Value::Bool(true);
-        return Ok(value);
     };
 
     operation.instance_id = Some(entry.instance_id.to_string());
@@ -340,16 +348,20 @@ pub async fn start_instance(request: StartInstanceRequest) -> anyhow::Result<Val
     operation.touch();
     store.save(&operation)?;
 
-    Ok(report.terminal(
+    let mut value = report.terminal(
         &entry,
-        false,
+        reused,
         blocking,
         ready,
         &plan,
         &operation,
-        registration.attempts,
+        attempts,
         readiness.as_ref(),
-    ))
+    );
+    if let Some(converged) = converged {
+        value["converged_on_operation_id"] = converged.map(Value::String).unwrap_or(Value::Null);
+    }
+    Ok(value)
 }
 
 /// Resolve the operation an operator wants to stop, guarded by lifecycle
@@ -460,6 +472,8 @@ enum Reuse {
         owning_operation: Option<LifecycleOperation>,
     },
     Ambiguous(Vec<String>),
+    /// Project instances that accepted a stop and have not exited yet.
+    Stopping(Vec<String>),
 }
 
 /// `instance_hint` is the caller's `--instance-id`: it narrows convergence to
@@ -495,6 +509,20 @@ fn find_reusable(
         .collect();
     if matched.is_empty() {
         return Ok(Reuse::None);
+    }
+    let stopping: Vec<String> = matched
+        .iter()
+        .filter(|entry| store.is_stopping(&entry.instance_id))
+        .map(|entry| {
+            format!(
+                "{}:{}",
+                entry.dcc_type,
+                local_instance::instance_short(entry)
+            )
+        })
+        .collect();
+    if !stopping.is_empty() {
+        return Ok(Reuse::Stopping(stopping));
     }
 
     let routable: Vec<ServiceEntry> = matched

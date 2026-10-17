@@ -13,8 +13,11 @@ use serde::{Deserialize, Serialize};
 
 use crate::domain::start_instance::{
     LIFECYCLE_DIR_NAME, LIFECYCLE_INDEX_FILE, LIFECYCLE_OPERATION_SCHEMA_VERSION,
-    LifecycleOperation,
+    LifecycleOperation, unix_now_secs,
 };
+
+/// Holds one file per instance that accepted a stop, named by its id.
+const STOPPING_DIR_NAME: &str = "stopping";
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 struct OperationIndex {
@@ -104,6 +107,30 @@ impl LifecycleStore {
             }
         }
         Ok(None)
+    }
+
+    /// Record that `instance_id` accepted a stop. The host keeps its live row
+    /// until it exits, so `start-instance` must wait it out, not reuse it.
+    // ponytail: markers are never pruned (instance ids are never reused);
+    // one small file per accepted stop, like the operation records here.
+    pub fn mark_stopping(&self, instance_id: &uuid::Uuid) -> anyhow::Result<()> {
+        let path = self.stopping_path(instance_id);
+        if let Some(dir) = path.parent() {
+            std::fs::create_dir_all(dir)
+                .with_context(|| format!("creating stop marker dir {}", dir.display()))?;
+        }
+        std::fs::write(&path, unix_now_secs().to_string())
+            .with_context(|| format!("writing stop marker {}", path.display()))
+    }
+
+    pub fn is_stopping(&self, instance_id: &uuid::Uuid) -> bool {
+        self.stopping_path(instance_id).is_file()
+    }
+
+    fn stopping_path(&self, instance_id: &uuid::Uuid) -> PathBuf {
+        self.dir
+            .join(STOPPING_DIR_NAME)
+            .join(instance_id.to_string())
     }
 
     fn operation_path(&self, operation_id: &str) -> PathBuf {

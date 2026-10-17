@@ -469,6 +469,200 @@ async fn instance_bound_to_another_project_is_never_reused() {
     assert!(operation.launched);
 }
 
+// ── Stop, then start again ─────────────────────────────────────────────────
+
+/// A host that accepts every safe-stop and reports itself ready. Returns the
+/// port it listens on.
+async fn spawn_host_fixture() -> u16 {
+    use axum::Json;
+    use axum::http::StatusCode;
+    use axum::routing::{get, post};
+    let app = axum::Router::new()
+        .route(
+            "/safe-stop",
+            post(|| async { (StatusCode::ACCEPTED, Json(json!({"stopping": true}))) }),
+        )
+        .route(
+            "/v1/readyz",
+            get(|| async {
+                Json(json!({"ready": true, "readiness": {
+                    "process": true, "dcc": true, "skill_catalog": true, "dispatcher": true,
+                }}))
+            }),
+        );
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let port = listener.local_addr().unwrap().port();
+    tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
+    port
+}
+
+/// `meshy-dcc stop-instance` as the CLI runs it on this computer.
+async fn stop(registry: &Path, entry: &ServiceEntry) -> Value {
+    use crate::application::control_plane::DccControlPlane;
+    use crate::application::gateway_profile::GatewayTarget;
+    use crate::domain::rest::{Endpoint, StopInstanceRequest};
+    DccControlPlane::new(
+        GatewayTarget::Local,
+        Endpoint::new("http://127.0.0.1:9"),
+        registry.to_path_buf(),
+        false,
+    )
+    .stop_instance(StopInstanceRequest {
+        dcc_type: entry.dcc_type.clone(),
+        instance_id: entry.instance_id.to_string(),
+        expected_owner: None,
+        expected_session: None,
+        operation_id: None,
+        discard_unsaved: false,
+    })
+    .await
+    .unwrap()
+}
+
+/// A host keeps its live row for a while after accepting a stop (it saves and
+/// quits). Godot 10-18: a start right then reused that row and said ready,
+/// and the next call found no instance.
+#[tokio::test]
+async fn start_after_an_accepted_stop_launches_a_fresh_host_once_the_old_one_exits() {
+    let port = spawn_host_fixture().await;
+    let dir = tempfile::tempdir().unwrap();
+    let (executable, flag) = noop_executable();
+    let project = project_with_plan(dir.path(), "MyProject", &argv_for(&executable, flag));
+    let registry = dir.path().join("registry");
+    let binding = project.display().to_string();
+    let safe_stop = format!("http://127.0.0.1:{port}/safe-stop");
+    let old = register(
+        &registry,
+        "unity",
+        port,
+        &[
+            ("meshy_dcc_project", &binding),
+            ("safe_stop_url", &safe_stop),
+        ],
+    );
+
+    assert_eq!(stop(&registry, &old).await["stopping"], true);
+
+    // The old host exits shortly after; the new one registers once launched.
+    let host_registry = registry.clone();
+    let host_project = project.clone();
+    let old_key = old.key();
+    tokio::spawn(async move {
+        tokio::time::sleep(Duration::from_millis(300)).await;
+        registry_handle(&host_registry)
+            .deregister(&old_key)
+            .unwrap();
+        let store = LifecycleStore::new(&host_registry);
+        while !store
+            .find_owned("unity", &host_project)
+            .unwrap()
+            .is_some_and(|operation| operation.launched)
+        {
+            tokio::time::sleep(Duration::from_millis(20)).await;
+        }
+        register(
+            &host_registry,
+            "unity",
+            port,
+            &[("meshy_dcc_project", &host_project.display().to_string())],
+        );
+    });
+
+    let mut request = request(&project, &registry, 5_000);
+    request.wait_ready = true;
+    let value = start_instance(request).await.unwrap();
+
+    assert_eq!(value["reused"], false, "{value}");
+    assert_eq!(value["launched"], true);
+    assert_ne!(value["instance_id"], old.instance_id.to_string());
+    assert_eq!(value["ready"], true);
+}
+
+#[tokio::test]
+async fn a_stopping_instance_that_never_exits_is_reported_not_reused() {
+    let port = spawn_host_fixture().await;
+    let dir = tempfile::tempdir().unwrap();
+    let (executable, flag) = noop_executable();
+    let project = project_with_plan(dir.path(), "MyProject", &argv_for(&executable, flag));
+    let registry = dir.path().join("registry");
+    let safe_stop = format!("http://127.0.0.1:{port}/safe-stop");
+    let old = register(
+        &registry,
+        "unity",
+        port,
+        &[
+            ("meshy_dcc_project", &project.display().to_string()),
+            ("safe_stop_url", &safe_stop),
+        ],
+    );
+    stop(&registry, &old).await;
+
+    let value = start_instance(request(&project, &registry, 300))
+        .await
+        .unwrap();
+
+    assert_eq!(value["ok"], false, "{value}");
+    assert_eq!(value["ready"], false);
+    assert_eq!(value["stage"], "reuse");
+    assert_eq!(value["blocking_state"], "timeout");
+    assert_eq!(
+        value["diagnostics"]["stopping"][0],
+        format!("unity:{}", local_instance::instance_short(&old))
+    );
+    // Nothing was launched next to the host that is still closing.
+    assert!(
+        LifecycleStore::new(&registry)
+            .find_owned("unity", &project)
+            .unwrap()
+            .is_none()
+    );
+}
+
+#[tokio::test]
+async fn reuse_with_wait_ready_probes_the_instance_before_claiming_ready() {
+    // A port nothing listens on: the row looks dispatch-ready, the host is not.
+    let closed = std::net::TcpListener::bind("127.0.0.1:0")
+        .unwrap()
+        .local_addr()
+        .unwrap()
+        .port();
+    let dir = tempfile::tempdir().unwrap();
+    let (executable, flag) = noop_executable();
+    let project = project_with_plan(dir.path(), "MyProject", &argv_for(&executable, flag));
+    let registry = dir.path().join("registry");
+    register(
+        &registry,
+        "unity",
+        closed,
+        &[("meshy_dcc_project", &project.display().to_string())],
+    );
+
+    let mut closed_request = request(&project, &registry, 1_000);
+    closed_request.wait_ready = true;
+    let value = start_instance(closed_request).await.unwrap();
+
+    assert_eq!(value["reused"], true);
+    assert_eq!(value["ready"], false, "{value}");
+    assert_eq!(value["stage"], "readiness");
+
+    // And a host that answers readyz is reported ready, with its readiness.
+    let port = spawn_host_fixture().await;
+    let other = project_with_plan(dir.path(), "Other", &argv_for(&executable, flag));
+    register(
+        &registry,
+        "unity",
+        port,
+        &[("meshy_dcc_project", &other.display().to_string())],
+    );
+    let mut ready_request = request(&other, &registry, 3_000);
+    ready_request.wait_ready = true;
+    let value = start_instance(ready_request).await.unwrap();
+
+    assert_eq!(value["reused"], true);
+    assert_eq!(value["ready"], true, "{value}");
+    assert_eq!(value["readiness"]["dispatcher"], true);
+}
+
 // ── Blocking-state classification ──────────────────────────────────────────
 
 #[tokio::test]
