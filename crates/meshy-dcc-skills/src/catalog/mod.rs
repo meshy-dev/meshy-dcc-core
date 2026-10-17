@@ -47,8 +47,10 @@ pub use persistence::{
 };
 pub use types::{SkillDetail, SkillEntry, SkillState, SkillSummary};
 
+#[cfg(test)]
+use execute::execute_script;
 pub use execute::resolve_tool_script;
-use execute::{ScriptExecutorFn, execute_script};
+use execute::{ScriptExecutorFn, ScriptProcesses, execute_script_tracked};
 
 #[cfg(feature = "stub-gen")]
 use pyo3_stub_gen_derive::gen_stub_pyclass;
@@ -137,6 +139,9 @@ pub struct SkillCatalog {
     /// register one of these via [`with_in_process_executor`](Self::with_in_process_executor)
     /// so that `maya.cmds`, `bpy`, `hou`, etc. are available to the scripts.
     pub(super) script_executor: RwLock<Option<Arc<ScriptExecutorFn>>>,
+    /// Skill scripts running as child processes (subprocess mode), so a
+    /// stopping server can terminate them.
+    pub(super) script_processes: Arc<ScriptProcesses>,
     /// Optional adapter policy hook applied before a skill registers tools.
     pub(super) load_transform: RwLock<Option<Arc<SkillLoadTransformFn>>>,
     /// Optional observer called after tools are registered and the catalog state is loaded.

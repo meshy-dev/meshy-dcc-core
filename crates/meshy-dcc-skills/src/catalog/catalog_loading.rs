@@ -569,8 +569,14 @@ impl SkillCatalog {
                         executor(script_path_owned.clone(), params, context.clone())
                     });
                 } else {
+                    let processes = self.script_processes.clone();
                     dispatcher.register_handler(&action_name_clone, move |params| {
-                        execute_script(&script_path_owned, params, Some(dcc_owned.as_str()))
+                        execute_script_tracked(
+                            &script_path_owned,
+                            params,
+                            Some(dcc_owned.as_str()),
+                            &processes,
+                        )
                     });
                 }
             }
@@ -634,8 +640,14 @@ impl SkillCatalog {
                             executor(script_path_owned.clone(), params, context.clone())
                         });
                     } else {
+                        let processes = self.script_processes.clone();
                         dispatcher.register_handler(&action_name_clone, move |params| {
-                            execute_script(&script_path_owned, params, Some(dcc_owned.as_str()))
+                            execute_script_tracked(
+                                &script_path_owned,
+                                params,
+                                Some(dcc_owned.as_str()),
+                                &processes,
+                            )
                         });
                     }
                 }

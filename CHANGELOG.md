@@ -267,6 +267,10 @@ and is not runtime-compatible with it. Attribution stays in `LICENSE` and
 - `components ensure dcc-cua` downloads from the upstream `dcc-mcp/dcc-cua`
   releases again; the rename had pointed it at a repository that does not
   exist.
+- Stopping a server now ends the skill scripts it is running as child
+  processes, together with every process they started, and the waiting call
+  returns a `CANCELLED: …` error. They used to run on after the stop and
+  could write files after it.
 
 ### Removed
 

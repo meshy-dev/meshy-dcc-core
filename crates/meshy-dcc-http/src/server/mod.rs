@@ -176,6 +176,9 @@ pub type LiveMeta = Arc<RwLock<LiveMetaInner>>;
 pub struct McpServerHandle {
     shutdown_tx: watch::Sender<bool>,
     jobs: Arc<crate::job::JobManager>,
+    /// Skill scripts running as child processes; terminated on shutdown so
+    /// they cannot keep writing after the server stopped.
+    script_processes: Arc<meshy_dcc_skills::catalog::execute::ScriptProcesses>,
     /// JoinHandle for the serve task when running in
     /// [`ServerSpawnMode::Ambient`] mode.
     join: Option<JoinHandle<()>>,
@@ -208,6 +211,9 @@ const PERSISTENCE_SHUTDOWN_TIMEOUT: Duration = Duration::from_millis(250);
 impl McpServerHandle {
     /// Gracefully shut down the server and wait for it to stop.
     pub async fn shutdown(mut self) {
+        // End running skill scripts first, so their calls (and jobs) finish
+        // as cancelled while the listener and persistence are still up.
+        self.terminate_script_processes();
         // Stop persistence before dropping the listener. Async job tasks can
         // outlive the HTTP server and must not retain the SQLite ownership
         // lease into the next process incarnation.
@@ -254,7 +260,18 @@ impl McpServerHandle {
 
     /// Signal shutdown without waiting.
     pub fn signal_shutdown(&self) {
+        self.terminate_script_processes();
         let _ = self.shutdown_tx.send(true);
+    }
+
+    fn terminate_script_processes(&self) {
+        let terminated = self.script_processes.terminate_all();
+        if terminated > 0 {
+            tracing::warn!(
+                terminated,
+                "server stopping: terminated running skill scripts and their child processes"
+            );
+        }
     }
 }
 
@@ -564,6 +581,9 @@ impl McpHttpServer {
         let catalog = self
             .catalog
             .unwrap_or_else(|| Arc::new(SkillCatalog::new(self.registry.clone())));
+        // A restart (gateway promotion) runs scripts on the same catalog again.
+        let script_processes = catalog.script_processes();
+        script_processes.reopen();
 
         let sessions = SessionManager::new();
 
@@ -888,6 +908,7 @@ impl McpHttpServer {
         Ok(McpServerHandle {
             shutdown_tx,
             jobs,
+            script_processes,
             join,
             serve_thread,
             port,
