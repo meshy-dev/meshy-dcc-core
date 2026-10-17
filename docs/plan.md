@@ -121,10 +121,15 @@ ORM 打包图要按 glTF 约定取通道：G = roughness，B = metallic。现有
 | Blender | `meshy-dcc-blender`，本地已建，真机验证过 | 基于 0.2.0 core 重建；Meshy 导入/PBR、3D 打印 skill | R1 首个 |
 | Unity | `meshy-dcc-unity`，本地已建，真机验证过（6000.4.10f1） | 按工程安装、自带 Python 的 sidecar；Meshy 模型导入/PBR 材质 skill | R1 |
 | Godot | `meshy-dcc-godot`，本地已建，真机验证过（4.7.2） | 按工程安装、自带 Python 的 sidecar；Meshy GLB 导入与导入就绪、PBR 读回 | R1 |
-| ZBrush | 待建（需 2026.1+） | 补导入格式与保存 | R2 |
 | Unreal | `meshy-dcc-unreal`，本地已建，真机验证过（5.7.2） | 按工程安装，安装时用本机工具链编译 C++ 编辑器模块，安装器自带 Python；Meshy GLB/FBX 导入、FBX 贴图组转 PBR 材质、读回与渲染截图 | R2 |
-| Roblox | 新做 | Studio 插件 + core 桥接（传输方式待验证）；资产走 Open Cloud | R2 |
-| Maya、3ds Max、Houdini、Cinema 4D、Marmoset、Substance 3D Painter / Designer、Mari、OpenUSD、Katana、MotionBuilder、SketchUp、FreeCAD、OpenSCAD、Material Maker、Photoshop | 待建 | 改造为 Meshy adapter；本机无宿主的只做构建与单测 | R2+ |
+| OpenSCAD | `meshy-dcc-openscad` 0.1.0，真机验证过（2026.10.15 快照） | 按项目安装、自带 Python 的 sidecar 调 OpenSCAD 命令行；导出后读回；Meshy STL 加打印底座 | day-0 |
+| Roblox | `meshy-dcc-roblox` 0.1.0（新写），experimental，真机待用户同意 | Studio 插件作 WebSocket 客户端连包内 sidecar，按 place 路由；GLB 经 EditableMesh 重建（默认只活在会话里） | day-0 |
+| Houdini | `meshy-dcc-houdini` 0.1.0，experimental（本机无宿主） | 用户偏好 `packages/` 下一个包文件指向解开的包，`uiready.py` 自启；safe stop 读 `hasUnsavedChanges` | day-0 |
+| Substance 3D Painter | `meshy-dcc-substance3d-painter` 0.1.0，experimental | 用户 profile 的 `python/startup` 放一个 loader；主线程派发 | day-0 |
+| Cinema 4D | `meshy-dcc-c4d` 0.1.0，experimental | 上游是 headless：每次操作起授权的 `c4dpy` 改项目文件夹里的 `.c4d`，不进 GUI | day-0 |
+| 3ds Max | `meshy-dcc-3dsmax` 0.1.0，experimental，只有 Windows 包 | 用户 startup 目录的启动脚本 + 3ds Max 自带 Python 跑进程内 server | day-0 |
+| Maya、ZBrush、FreeCAD、Material Maker | day-0 进行中 | 同上做法 | day-0 |
+| Marmoset、Substance 3D Designer、Mari、OpenUSD、Katana、MotionBuilder、SketchUp、Photoshop | 待建 | 改造为 Meshy adapter；本机无宿主的只做构建与单测，标 experimental | 以后 |
 | Omniverse | 新做 | Kit 扩展加载 wheel；参考 Send To 版 Kit 扩展 | 暂缓 |
 
 只有真实 OS × 宿主 × adapter 验证通过的组合才进入支持矩阵。

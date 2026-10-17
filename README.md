@@ -27,7 +27,13 @@ Meshy model from generation through every app it touches.
   unsaved unless the user agrees to discard them). The editor needs Xcode and
   its Metal toolchain on macOS, and the build an Xcode the engine accepts.
 
-Other hosts are not in the support matrix yet.
+- OpenSCAD 2026.10.15 snapshot: per-project install, start-instance, writing
+  and validating a model, STL export read back, a Meshy STL stood on a print
+  base, and the same STL again after a restart.
+
+Built and tested without the host itself, so marked experimental and outside
+the support matrix: 3ds Max (Windows only), Cinema 4D, Houdini, Roblox Studio
+and Substance 3D Painter. Other hosts are not in the support matrix yet.
 
 ## Install
 

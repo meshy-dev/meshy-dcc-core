@@ -24,6 +24,10 @@ const FILES: &[(&str, &str)] = &[
         include_str!("../../../../skills/meshy-dcc/SKILL.md"),
     ),
     (
+        "references/3dsmax.md",
+        include_str!("../../../../skills/meshy-dcc/references/3dsmax.md"),
+    ),
+    (
         "references/authoring.md",
         include_str!("../../../../skills/meshy-dcc/references/authoring.md"),
     ),
@@ -32,12 +36,32 @@ const FILES: &[(&str, &str)] = &[
         include_str!("../../../../skills/meshy-dcc/references/blender.md"),
     ),
     (
+        "references/c4d.md",
+        include_str!("../../../../skills/meshy-dcc/references/c4d.md"),
+    ),
+    (
         "references/connectors.md",
         include_str!("../../../../skills/meshy-dcc/references/connectors.md"),
     ),
     (
         "references/godot.md",
         include_str!("../../../../skills/meshy-dcc/references/godot.md"),
+    ),
+    (
+        "references/houdini.md",
+        include_str!("../../../../skills/meshy-dcc/references/houdini.md"),
+    ),
+    (
+        "references/openscad.md",
+        include_str!("../../../../skills/meshy-dcc/references/openscad.md"),
+    ),
+    (
+        "references/roblox.md",
+        include_str!("../../../../skills/meshy-dcc/references/roblox.md"),
+    ),
+    (
+        "references/substance3d-painter.md",
+        include_str!("../../../../skills/meshy-dcc/references/substance3d-painter.md"),
     ),
     (
         "references/unity.md",

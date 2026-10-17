@@ -1,6 +1,6 @@
 ---
 name: meshy-dcc
-description: Work inside a creator's running DCC application through the local meshy-dcc CLI - find the live instance, discover and load its tools, call them, and read the scene back. Use for scene edits and for importing Meshy-generated models into a DCC project. Supported today - Blender, Unity, Godot and Unreal.
+description: Work inside a creator's running DCC application through the local meshy-dcc CLI - find the live instance, discover and load its tools, call them, and read the scene back. Use for scene edits and for importing Meshy-generated models into a DCC project. Supported today - Blender, Unity, Godot, Unreal and OpenSCAD; experimental - 3ds Max, Cinema 4D, Houdini, Roblox Studio and Substance 3D Painter.
 ---
 
 # Meshy DCC
@@ -15,6 +15,17 @@ you choose. No MCP connector is involved.
 - Unity 6 (6000.4). Read [the Unity reference](references/unity.md) before Unity work.
 - Godot 4.7. Read [the Godot reference](references/godot.md) before Godot work.
 - Unreal Engine 5.7. Read [the Unreal reference](references/unreal.md) before Unreal work.
+- OpenSCAD (2026.10 snapshot). Read [the OpenSCAD reference](references/openscad.md) before OpenSCAD work.
+
+**Experimental**, built and tested without the app itself. Tell the user that before relying
+on one, and read back every change:
+
+- 3ds Max 2025+, Windows only. Read [the 3ds Max reference](references/3dsmax.md).
+- Cinema 4D 2023+, headless: it edits `.c4d` files in a project folder, not the open app.
+  Read [the Cinema 4D reference](references/c4d.md).
+- Houdini 20.5+. Read [the Houdini reference](references/houdini.md).
+- Roblox Studio. Read [the Roblox reference](references/roblox.md).
+- Substance 3D Painter 8.1+. Read [the Substance 3D Painter reference](references/substance3d-painter.md).
 
 For any other host, tell the user it is not supported yet instead of improvising.
 

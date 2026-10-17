@@ -11,6 +11,7 @@ import maya from '../../assets/product/dcc/Maya-color.svg';
 import max from '../../assets/product/dcc/3DSMax-color.svg';
 import omniverse from '../../assets/product/dcc/Omniverse-color.svg';
 import roblox from '../../assets/product/dcc/roblox-white.svg';
+import zbrush from '../../assets/product/dcc/ZBrush-color.svg';
 import claudeCode from '../../assets/product/agents/claudecode-color.svg';
 import codex from '../../assets/product/agents/codex-color.svg';
 import cursor from '../../assets/product/agents/cursor.svg';
@@ -73,6 +74,7 @@ export const DCC_LOGOS: Record<string, Logo> = {
   '3dsmax': { src: max },
   omniverse: { src: omniverse },
   roblox: { src: roblox, mono: true },
+  zbrush: { src: zbrush },
 };
 
 /// Minimum host versions the shipped connectors support.
@@ -81,6 +83,11 @@ export const DCC_REQUIREMENTS: Record<string, string> = {
   unity: 'Unity 2018.4+',
   godot: 'Godot 4.4+',
   unreal: 'Unreal Engine 5.0+',
+  houdini: 'Houdini 20.5+',
+  substance3d_painter: 'Substance 3D Painter 8.1+',
+  openscad: 'OpenSCAD 2021.01, 2026.09–10 snapshots',
+  c4d: 'Cinema 4D 2023+',
+  '3dsmax': '3ds Max 2025+',
 };
 
 export const AGENT_LOGOS: Record<string, Logo> = {

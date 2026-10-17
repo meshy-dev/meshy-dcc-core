@@ -13,6 +13,12 @@ const DESCRIPTIONS: Record<string, MessageKey> = {
   unity: 'product.connectors.desc.unity',
   godot: 'product.connectors.desc.godot',
   unreal: 'product.connectors.desc.unreal',
+  houdini: 'product.connectors.desc.houdini',
+  substance3d_painter: 'product.connectors.desc.substance3d_painter',
+  openscad: 'product.connectors.desc.openscad',
+  c4d: 'product.connectors.desc.c4d',
+  roblox: 'product.connectors.desc.roblox',
+  '3dsmax': 'product.connectors.desc.3dsmax',
 };
 
 function installCommand(view: ConnectorView, t: T): string {
