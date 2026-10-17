@@ -82,6 +82,7 @@ class TestSkillPathsPy37Lite:
 
     def test_get_local_skills_dir_uses_home_slug(self, monkeypatch: pytest.MonkeyPatch) -> None:
         _force_core_unavailable(monkeypatch)
+        monkeypatch.delenv("MESHY_DCC_DATA_DIR", raising=False)
         from meshy_dcc_core._runtime.skill_paths import get_local_skills_dir
 
         result = get_local_skills_dir("Maya")

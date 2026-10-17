@@ -10,6 +10,8 @@ from typing import Any
 from typing import Iterable
 from typing import Optional
 
+from meshy_dcc_core.constants import ENV_DATA_DIR
+
 
 def env_flag(
     name: str,
@@ -50,4 +52,14 @@ def env_path(name: str, default: Optional[Any] = None) -> Optional[Path]:
     return Path(value).expanduser()
 
 
-__all__ = ["env_flag", "env_float", "env_int", "env_path"]
+def meshy_dcc_state_root() -> Path:
+    """Return ``~/.meshy-dcc``, or ``MESHY_DCC_DATA_DIR`` when it is set.
+
+    The data-root override keeps per-DCC state (local skills, checkpoints,
+    loaded state, materialized scripts) out of the home directory for tests
+    and relocated installs; unset, the documented ``~/.meshy-dcc`` stays.
+    """
+    return env_path(ENV_DATA_DIR) or Path("~").expanduser() / ".meshy-dcc"
+
+
+__all__ = ["env_flag", "env_float", "env_int", "env_path", "meshy_dcc_state_root"]

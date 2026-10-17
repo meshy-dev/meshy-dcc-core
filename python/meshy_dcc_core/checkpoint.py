@@ -63,6 +63,7 @@ from meshy_dcc_core import json_dumps
 from meshy_dcc_core import json_loads
 from meshy_dcc_core.constants import ENV_CHECKPOINT_DIR
 from meshy_dcc_core.constants import ENV_CHECKPOINT_IN_MEMORY
+from meshy_dcc_core.env import meshy_dcc_state_root
 
 try:  # POSIX advisory locking
     import fcntl
@@ -111,13 +112,14 @@ def _safe_segment(value: str) -> str:
 def default_checkpoint_dir() -> Path:
     """Return the base directory that holds per-DCC checkpoint files.
 
-    ``MESHY_DCC_CHECKPOINT_DIR`` wins; otherwise ``~/.meshy-dcc`` (the same base
-    :mod:`meshy_dcc_core.loaded_state_store` uses for per-DCC state).
+    ``MESHY_DCC_CHECKPOINT_DIR`` wins; otherwise ``~/.meshy-dcc`` or
+    ``MESHY_DCC_DATA_DIR`` (the same base :mod:`meshy_dcc_core.loaded_state_store`
+    uses for per-DCC state).
     """
     configured = os.environ.get(ENV_CHECKPOINT_DIR, "").strip()
     if configured:
         return Path(configured).expanduser()
-    return Path("~").expanduser() / ".meshy-dcc"
+    return meshy_dcc_state_root()
 
 
 def default_checkpoint_path(dcc_name: str = "dcc", instance_id: str | None = None) -> Path:

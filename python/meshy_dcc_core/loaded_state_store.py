@@ -37,6 +37,7 @@ import time
 from typing import Sequence
 
 from meshy_dcc_core import admin_sqlite_lane
+from meshy_dcc_core.env import meshy_dcc_state_root
 
 logger = logging.getLogger(__name__)
 
@@ -108,8 +109,7 @@ class PersistedCatalogState:
 
 def default_loaded_state_path(dcc_name: str) -> Path:
     """Return the canonical on-disk location for a DCC's loaded state."""
-    home = Path("~").expanduser()
-    return home / ".meshy-dcc" / dcc_name.lower() / "loaded.json"
+    return meshy_dcc_state_root() / dcc_name.lower() / "loaded.json"
 
 
 def _now_ms() -> int:

@@ -8,6 +8,7 @@ from pathlib import Path
 from meshy_dcc_core._runtime.core_availability import is_core_extension_available
 from meshy_dcc_core.constants import ENV_DCC_SKILL_PATHS_TEMPLATE
 from meshy_dcc_core.constants import ENV_SKILL_PATHS
+from meshy_dcc_core.env import meshy_dcc_state_root
 
 
 def skill_env_slug(dcc_name: str) -> str:
@@ -44,7 +45,7 @@ def get_local_skills_dir(dcc_name: str) -> str:
 
         return str(_impl(dcc_name))
     slug = str(dcc_name or "dcc").strip().lower() or "dcc"
-    return str(Path.home() / ".meshy-dcc" / slug / "skills")
+    return str(meshy_dcc_state_root() / slug / "skills")
 
 
 def get_skills_dir() -> str | None:

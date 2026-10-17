@@ -57,6 +57,7 @@ from meshy_dcc_core._typing import runtime_checkable
 from meshy_dcc_core.constants import ENV_EMBED_MODEL
 from meshy_dcc_core.constants import ENV_EMBED_MODEL_DIR
 from meshy_dcc_core.constants import ENV_EMBEDDING_CACHE_DIR
+from meshy_dcc_core.env import meshy_dcc_state_root
 from meshy_dcc_core.errors import MeshyDccError
 
 __all__ = [
@@ -422,10 +423,11 @@ def default_embedding_cache_path(dcc_name: str = "dcc") -> Path:
     """Return the durable embedding cache file for *dcc_name*.
 
     Layout is ``<base>/<dcc>/skill-embeddings.json`` where ``<base>`` is
-    ``MESHY_DCC_EMBEDDING_CACHE_DIR`` or ``~/.meshy-dcc``.
+    ``MESHY_DCC_EMBEDDING_CACHE_DIR`` or ``~/.meshy-dcc`` (``MESHY_DCC_DATA_DIR``
+    when set).
     """
     configured = os.environ.get(ENV_EMBEDDING_CACHE_DIR, "").strip()
-    base = Path(configured).expanduser() if configured else Path("~").expanduser() / ".meshy-dcc"
+    base = Path(configured).expanduser() if configured else meshy_dcc_state_root()
     return base / (_safe_segment(dcc_name) or "dcc") / "skill-embeddings.json"
 
 

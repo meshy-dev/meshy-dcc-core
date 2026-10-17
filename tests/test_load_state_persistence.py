@@ -61,6 +61,7 @@ def _write_skill(
 def isolated_admin_env(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     """Point HOME + admin sqlite at tmp_path so tests never touch real files."""
     monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.delenv("MESHY_DCC_DATA_DIR", raising=False)
     # Windows respects USERPROFILE; set both for cross-platform safety.
     monkeypatch.setenv("USERPROFILE", str(tmp_path))
     monkeypatch.setenv("MESHY_DCC_GATEWAY_ADMIN_DB", str(tmp_path / "admin.sqlite"))

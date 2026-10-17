@@ -24,6 +24,7 @@ from typing import Mapping
 import uuid
 
 from meshy_dcc_core.constants import ENV_SCRIPT_MATERIALIZATION_ROOT
+from meshy_dcc_core.env import meshy_dcc_state_root
 
 SCRIPT_MATERIALIZATION_ROOT_ENV = ENV_SCRIPT_MATERIALIZATION_ROOT
 DEFAULT_SCRIPT_MATERIALIZATION_ROOT = Path.home() / ".meshy-dcc"
@@ -92,14 +93,14 @@ def default_script_materialization_root(root: str | os.PathLike[str] | None = No
     """Return the configured script materialization root.
 
     ``root`` wins first, then ``MESHY_DCC_SCRIPT_MATERIALIZATION_ROOT``, then the
-    documented default ``~/.meshy-dcc``.
+    documented default ``~/.meshy-dcc`` (``MESHY_DCC_DATA_DIR`` when set).
     """
     if root is not None:
         return Path(root).expanduser()
     configured = os.environ.get(SCRIPT_MATERIALIZATION_ROOT_ENV)
     if configured:
         return Path(configured).expanduser()
-    return DEFAULT_SCRIPT_MATERIALIZATION_ROOT
+    return meshy_dcc_state_root()
 
 
 def sanitize_materialization_segment(value: str | None, *, default: str = "unknown") -> str:
