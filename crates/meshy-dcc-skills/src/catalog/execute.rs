@@ -833,10 +833,174 @@ fn attached_python_executable() -> Option<String> {
     None
 }
 
+/// Skill scripts a catalog is running as child processes.
+///
+/// Each script runs in its own process group (Unix) or Job Object (Windows),
+/// so a stopping server can end the script *and* every process it started,
+/// instead of leaving them to finish and write files after the stop. A call
+/// waiting on a terminated script returns a `CANCELLED: …` error.
+#[derive(Default)]
+pub struct ScriptProcesses {
+    state: Mutex<ScriptProcessesState>,
+}
+
+#[derive(Default)]
+struct ScriptProcessesState {
+    closed: bool,
+    next_id: u64,
+    running: HashMap<u64, ScriptTree>,
+}
+
+struct ScriptTree {
+    cancelled: Arc<AtomicBool>,
+    #[cfg(unix)]
+    process_group: i32,
+    #[cfg(windows)]
+    job: std::os::windows::io::OwnedHandle,
+}
+
+impl ScriptTree {
+    fn kill(&self) {
+        #[cfg(unix)]
+        // SAFETY: the negative PID targets only the process group created for
+        // this script; the group outlives its leader until the call reaps it.
+        unsafe {
+            libc::kill(-self.process_group, libc::SIGKILL);
+        }
+        #[cfg(windows)]
+        {
+            use std::os::windows::io::AsRawHandle;
+            use windows_sys::Win32::System::JobObjects::TerminateJobObject;
+            // SAFETY: `job` is an owned, live Job Object handle.
+            unsafe { TerminateJobObject(self.job.as_raw_handle() as _, 1) };
+        }
+    }
+}
+
+/// Deregisters a script when its call returns.
+struct ScriptGuard<'a> {
+    owner: &'a ScriptProcesses,
+    id: u64,
+    cancelled: Arc<AtomicBool>,
+}
+
+impl Drop for ScriptGuard<'_> {
+    fn drop(&mut self) {
+        self.owner.state.lock().running.remove(&self.id);
+    }
+}
+
+impl ScriptProcesses {
+    /// Kill every running script with its descendants and refuse new ones
+    /// until [`Self::reopen`]. Returns how many scripts were running.
+    pub fn terminate_all(&self) -> usize {
+        let mut state = self.state.lock();
+        state.closed = true;
+        for tree in state.running.values() {
+            tree.cancelled.store(true, Ordering::Release);
+            tree.kill();
+        }
+        state.running.len()
+    }
+
+    /// Accept scripts again (a server starting on this catalog).
+    pub fn reopen(&self) {
+        self.state.lock().closed = false;
+    }
+
+    /// Number of scripts currently running.
+    pub fn running(&self) -> usize {
+        self.state.lock().running.len()
+    }
+
+    fn spawn(
+        &self,
+        command: &mut std::process::Command,
+        script_path: &str,
+    ) -> Result<(std::process::Child, ScriptGuard<'_>), String> {
+        #[cfg(unix)]
+        std::os::unix::process::CommandExt::process_group(command, 0);
+        // Spawn under the lock so `terminate_all` cannot miss a script that
+        // starts while the server is stopping.
+        let mut state = self.state.lock();
+        if state.closed {
+            return Err(format!(
+                "CANCELLED: the server is stopping, so skill script '{script_path}' was not started"
+            ));
+        }
+        let child = command
+            .spawn()
+            .map_err(|e| format!("Failed to spawn '{script_path}': {e}"))?;
+        // ponytail: the job is assigned right after spawn, not from a
+        // suspended start; a script would have to start a child within
+        // microseconds of launch to escape it.
+        #[cfg(windows)]
+        let job = match script_job(&child) {
+            Ok(job) => job,
+            Err(e) => {
+                let mut child = child;
+                let _ = child.kill();
+                let _ = child.wait();
+                return Err(format!("Failed to own '{script_path}' process tree: {e}"));
+            }
+        };
+        let cancelled = Arc::new(AtomicBool::new(false));
+        let tree = ScriptTree {
+            cancelled: cancelled.clone(),
+            #[cfg(unix)]
+            process_group: child.id() as i32,
+            #[cfg(windows)]
+            job,
+        };
+        state.next_id += 1;
+        let id = state.next_id;
+        state.running.insert(id, tree);
+        Ok((
+            child,
+            ScriptGuard {
+                owner: self,
+                id,
+                cancelled,
+            },
+        ))
+    }
+}
+
+#[cfg(windows)]
+fn script_job(child: &std::process::Child) -> std::io::Result<std::os::windows::io::OwnedHandle> {
+    use std::os::windows::io::{AsRawHandle, FromRawHandle, OwnedHandle};
+    use windows_sys::Win32::System::JobObjects::{AssignProcessToJobObject, CreateJobObjectW};
+
+    // SAFETY: null name/security pointers request an unnamed Job Object.
+    let job = unsafe { CreateJobObjectW(std::ptr::null(), std::ptr::null()) };
+    if job.is_null() {
+        return Err(std::io::Error::last_os_error());
+    }
+    // SAFETY: `job` is a fresh handle owned from here on.
+    let job = unsafe { OwnedHandle::from_raw_handle(job as _) };
+    // SAFETY: both handles are live for the duration of the call.
+    if unsafe { AssignProcessToJobObject(job.as_raw_handle() as _, child.as_raw_handle() as _) }
+        == 0
+    {
+        return Err(std::io::Error::last_os_error());
+    }
+    Ok(job)
+}
+
+#[cfg(test)]
 pub(crate) fn execute_script(
+    script_path: &str,
+    params: serde_json::Value,
+    skill_dcc: Option<&str>,
+) -> Result<serde_json::Value, String> {
+    execute_script_tracked(script_path, params, skill_dcc, &ScriptProcesses::default())
+}
+
+pub(crate) fn execute_script_tracked(
     script_path: &str,
     mut params: serde_json::Value,
     skill_dcc: Option<&str>,
+    processes: &ScriptProcesses,
 ) -> Result<serde_json::Value, String> {
     use std::io::Write;
     use std::process::{Command, Stdio};
@@ -1038,9 +1202,7 @@ pub(crate) fn execute_script(
         command.env("PYTHONIOENCODING", "utf-8");
         command.env("PYTHONUTF8", "1");
     }
-    let mut child = command
-        .spawn()
-        .map_err(|e| format!("Failed to spawn '{script_path}': {e}"))?;
+    let (mut child, guard) = processes.spawn(&mut command, script_path)?;
 
     // Write full params JSON to stdin so scripts can also do json.load(sys.stdin)
     if let Some(mut stdin) = child.stdin.take() {
@@ -1055,6 +1217,13 @@ pub(crate) fn execute_script(
     let stdout = String::from_utf8_lossy(&output.stdout);
     let stderr = String::from_utf8_lossy(&output.stderr);
 
+    if !output.status.success() && guard.cancelled.load(Ordering::Acquire) {
+        return Err(format!(
+            "CANCELLED: the server stopped while skill script '{script_path}' was running; \
+             it and the processes it started were terminated, so its changes may be \
+             incomplete. Read the result back before retrying."
+        ));
+    }
     if !output.status.success() {
         let code = output.status.code().unwrap_or(-1);
         let detail = if stderr.is_empty() {

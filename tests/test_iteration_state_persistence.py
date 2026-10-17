@@ -51,6 +51,7 @@ class TestDurableCheckpointPath:
 
     def test_default_dir_falls_back_to_user_profile(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.delenv(ENV_CHECKPOINT_DIR, raising=False)
+        monkeypatch.delenv("MESHY_DCC_DATA_DIR", raising=False)
         assert default_checkpoint_dir() == Path("~").expanduser() / ".meshy-dcc"
 
     def test_dcc_name_is_sanitised(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:

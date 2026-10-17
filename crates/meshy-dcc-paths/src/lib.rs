@@ -14,6 +14,10 @@
 //! All helpers are infallible from the API perspective (return
 //! [`FilesystemError`]) and create the directory as a side-effect.
 //!
+//! When [`ENV_DATA_DIR`] is set, config, data, log and state resolve to that
+//! directory instead (cache to its `cache/`), so tests and relocated installs
+//! leave the user's home untouched. `MESHY_DCC_LOG_DIR` still wins for logs.
+//!
 //! Skill-domain path resolution (search-path env vars, scope-aware
 //! discovery, `copy_skill_to_*_dir`) lives in
 //! [`meshy-dcc-skills`](https://docs.rs/meshy-dcc-skills) — this crate is
@@ -25,6 +29,23 @@ use std::path::{Path, PathBuf};
 pub const APP_NAME: &str = "meshy-dcc";
 /// Application author identifier (exposed to Python consumers).
 pub const APP_AUTHOR: &str = "meshy-dcc";
+/// Overrides the `meshy-dcc` data root (the CLI's adapters and installs live
+/// there too).
+pub const ENV_DATA_DIR: &str = "MESHY_DCC_DATA_DIR";
+/// Overrides the log directory.
+pub const ENV_LOG_DIR: &str = "MESHY_DCC_LOG_DIR";
+
+fn env_dir(name: &str) -> Option<PathBuf> {
+    std::env::var_os(name)
+        .filter(|value| !value.is_empty())
+        .map(PathBuf::from)
+}
+
+/// The `MESHY_DCC_DATA_DIR` root, when set.
+#[must_use]
+pub fn data_dir_override() -> Option<PathBuf> {
+    env_dir(ENV_DATA_DIR)
+}
 
 /// Structured error type for filesystem operations.
 #[derive(Debug)]
@@ -86,6 +107,23 @@ impl From<FilesystemError> for pyo3::PyErr {
 // ── Internal PathBuf helpers (no String↔PathBuf round-trips) ──
 
 fn platform_dir_path(dir_type: &str) -> Result<PathBuf, FilesystemError> {
+    platform_dir_under(dir_type, data_dir_override())
+}
+
+fn platform_dir_under(
+    dir_type: &str,
+    data_root: Option<PathBuf>,
+) -> Result<PathBuf, FilesystemError> {
+    let dir = match (data_root, dir_type) {
+        (Some(root), "config" | "data" | "log" | "state") => root,
+        (Some(root), "cache") => root.join("cache"),
+        _ => platform_base(dir_type)?.join(APP_NAME),
+    };
+    std::fs::create_dir_all(&dir)?;
+    Ok(dir)
+}
+
+fn platform_base(dir_type: &str) -> Result<PathBuf, FilesystemError> {
     let base = match dir_type {
         "config" => dirs::config_dir(),
         "data" => dirs::data_dir(),
@@ -94,11 +132,7 @@ fn platform_dir_path(dir_type: &str) -> Result<PathBuf, FilesystemError> {
         "documents" => dirs::document_dir(),
         _ => return Err(FilesystemError::UnknownDirType(dir_type.to_string())),
     };
-    let dir = base
-        .ok_or_else(|| FilesystemError::PlatformDirNotFound(dir_type.to_string()))?
-        .join(APP_NAME);
-    std::fs::create_dir_all(&dir)?;
-    Ok(dir)
+    base.ok_or_else(|| FilesystemError::PlatformDirNotFound(dir_type.to_string()))
 }
 
 fn data_dir_path() -> Result<PathBuf, FilesystemError> {
@@ -138,15 +172,25 @@ pub fn get_data_dir() -> Result<String, FilesystemError> {
     get_platform_dir("data")
 }
 
-/// Get log directory.
+/// Get log directory: `MESHY_DCC_LOG_DIR`, else the log root's `log/`.
 ///
 /// # Errors
 /// Returns [`FilesystemError`] if the platform dir cannot be determined or directory creation fails.
 #[must_use = "this returns the directory path and also creates it as a side effect"]
 pub fn get_log_dir() -> Result<String, FilesystemError> {
-    let dir = platform_dir_path("log")?.join("log");
+    log_dir_under(env_dir(ENV_LOG_DIR), data_dir_override()).map(|dir| path_to_string(&dir))
+}
+
+fn log_dir_under(
+    log_dir: Option<PathBuf>,
+    data_root: Option<PathBuf>,
+) -> Result<PathBuf, FilesystemError> {
+    let dir = match log_dir {
+        Some(dir) => dir,
+        None => platform_dir_under("log", data_root)?.join("log"),
+    };
     std::fs::create_dir_all(&dir)?;
-    Ok(path_to_string(&dir))
+    Ok(dir)
 }
 
 /// Get DCC-specific tools directory.
@@ -202,6 +246,32 @@ mod tests {
     #[test]
     fn test_get_platform_dir_state() {
         assert!(get_platform_dir("state").is_ok());
+    }
+
+    #[test]
+    fn data_dir_override_roots_every_platform_dir() {
+        let root = std::env::temp_dir().join(format!("meshy-dcc-paths-{}", std::process::id()));
+        for dir_type in ["config", "data", "log", "state"] {
+            assert_eq!(
+                platform_dir_under(dir_type, Some(root.clone())).unwrap(),
+                root
+            );
+        }
+        assert_eq!(
+            platform_dir_under("cache", Some(root.clone())).unwrap(),
+            root.join("cache")
+        );
+        assert_eq!(
+            log_dir_under(None, Some(root.clone())).unwrap(),
+            root.join("log")
+        );
+        let explicit = root.join("explicit-log");
+        assert_eq!(
+            log_dir_under(Some(explicit.clone()), Some(root.clone())).unwrap(),
+            explicit
+        );
+        assert!(platform_dir_under("invalid_type", Some(root.clone())).is_err());
+        std::fs::remove_dir_all(&root).unwrap();
     }
 
     #[test]

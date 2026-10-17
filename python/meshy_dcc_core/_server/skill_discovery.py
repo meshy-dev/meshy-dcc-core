@@ -21,6 +21,7 @@ from meshy_dcc_core.constants import ENV_DCC_SKILL_PATHS_TEMPLATE
 from meshy_dcc_core.constants import ENV_DISABLE_DEFAULT_SKILL_PATHS
 from meshy_dcc_core.constants import ENV_MARKETPLACE_INSTALL_ROOT
 from meshy_dcc_core.constants import ENV_SKILL_PATHS
+from meshy_dcc_core.env import meshy_dcc_state_root
 from meshy_dcc_core.hotreload import DccSkillHotReloader
 from meshy_dcc_core.skill import _get_bundled_skill_discovery_paths
 from meshy_dcc_core.skills.builtin import register_all_builtin_skills
@@ -40,7 +41,7 @@ except ImportError:
         return _split_skill_paths(os.environ.get(env_name, ""))
 
     def get_local_skills_dir(dcc_name: str) -> str:
-        return str(Path.home() / ".meshy-dcc" / dcc_name.lower() / "skills")
+        return str(meshy_dcc_state_root() / dcc_name.lower() / "skills")
 
     def get_skill_paths_from_env() -> list[str]:
         return _split_skill_paths(os.environ.get(ENV_SKILL_PATHS, ""))

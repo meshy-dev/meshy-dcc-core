@@ -267,6 +267,21 @@ and is not runtime-compatible with it. Attribution stays in `LICENSE` and
 - `components ensure dcc-cua` downloads from the upstream `dcc-mcp/dcc-cua`
   releases again; the rename had pointed it at a repository that does not
   exist.
+- Stopping a server now ends the skill scripts it is running as child
+  processes, together with every process they started, and the waiting call
+  returns a `CANCELLED: …` error. They used to run on after the stop and
+  could write files after it.
+- `gateway start|stop|status|ensure` and `gateway daemon …` without
+  `--host`/`--port` act on the gateway the other commands use (`--base-url`,
+  `MESHY_DCC_BASE_URL`), not always 127.0.0.1:19765. All commands also take
+  the local gateway's port from `MESHY_DCC_GATEWAY_PORT` when neither a base
+  URL nor a remote profile is chosen.
+- With `MESHY_DCC_DATA_DIR` set, an adapter server writes everything under
+  it: logs, the jobs database and host-error log in `log/` (unless
+  `MESHY_DCC_LOG_DIR` is set), the gateway's admin database (unless
+  `MESHY_DCC_GATEWAY_ADMIN_DB` is set), and the local skills folder, checkpoints,
+  loaded-skill state, materialized scripts and embedding cache in
+  `<dcc>/…` instead of `~/.meshy-dcc`. Unset, nothing moves.
 
 ### Removed
 

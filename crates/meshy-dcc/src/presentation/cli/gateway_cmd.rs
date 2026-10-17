@@ -107,11 +107,36 @@ pub(crate) fn gateway_endpoint_for_command(
     }
 }
 
+/// Host and port the gateway subcommands act on when `--host`/`--port` are
+/// omitted: the local gateway every other command talks to, so `--base-url`,
+/// `MESHY_DCC_BASE_URL` and `MESHY_DCC_GATEWAY_PORT` reach `gateway stop`
+/// and `gateway status` too. A remote target falls back to the local default.
+pub(crate) struct GatewayAddress {
+    host: String,
+    port: u16,
+}
+
+impl GatewayAddress {
+    pub(crate) fn for_base_url(base_url: &str) -> Self {
+        let (host, port) = gateway_ctrl::local_auto_gateway_target(&Endpoint::new(base_url))
+            .unwrap_or_else(|| ("127.0.0.1".to_string(), 19765));
+        Self { host, port }
+    }
+
+    fn resolve(&self, host: Option<String>, port: Option<u16>) -> (String, u16) {
+        (
+            host.unwrap_or_else(|| self.host.clone()),
+            port.unwrap_or(self.port),
+        )
+    }
+}
+
 pub(crate) async fn run_gateway_cmd(
-    _base_url: &str,
+    base_url: &str,
     action: GatewayAction,
     profile_path: &std::path::Path,
 ) -> anyhow::Result<Value> {
+    let address = GatewayAddress::for_base_url(base_url);
     match action {
         GatewayAction::Register { url, name } => {
             gateway_profile::register_profile(profile_path, name, url)
@@ -119,10 +144,10 @@ pub(crate) async fn run_gateway_cmd(
         GatewayAction::List => gateway_profile::list_profiles(profile_path),
         GatewayAction::Set { name } => gateway_profile::set_current_profile(profile_path, name),
         GatewayAction::Daemon { action } => {
-            gateway_ctrl::run_gateway_daemon(gateway_daemon_request(action)).await
+            gateway_ctrl::run_gateway_daemon(gateway_daemon_request(action, &address)).await
         }
         GatewayAction::Ensure(args) => {
-            let request = gateway_ctrl::GatewayDaemonStartRequest::from(args);
+            let request = start_request(args, &address);
             let reg = request
                 .registry_dir
                 .clone()
@@ -143,16 +168,20 @@ pub(crate) async fn run_gateway_cmd(
             Ok(serde_json::to_value(result)?)
         }
         GatewayAction::Start(args) => {
-            gateway_ctrl::run_gateway_daemon(gateway_ctrl::GatewayDaemonRequest::Start(args.into()))
-                .await
+            gateway_ctrl::run_gateway_daemon(gateway_ctrl::GatewayDaemonRequest::Start(
+                start_request(args, &address),
+            ))
+            .await
         }
         GatewayAction::Stop(args) => {
-            gateway_ctrl::run_gateway_daemon(gateway_ctrl::GatewayDaemonRequest::Stop(args.into()))
-                .await
+            gateway_ctrl::run_gateway_daemon(gateway_ctrl::GatewayDaemonRequest::Stop(
+                stop_request(args, &address),
+            ))
+            .await
         }
         GatewayAction::Status(args) => {
             gateway_ctrl::run_gateway_daemon(gateway_ctrl::GatewayDaemonRequest::Status(
-                args.into(),
+                status_request(args, &address),
             ))
             .await
         }
@@ -161,53 +190,64 @@ pub(crate) async fn run_gateway_cmd(
 
 pub(crate) fn gateway_daemon_request(
     action: GatewayDaemonAction,
+    address: &GatewayAddress,
 ) -> gateway_ctrl::GatewayDaemonRequest {
     match action {
-        GatewayDaemonAction::Start(args) => gateway_ctrl::GatewayDaemonRequest::Start(args.into()),
+        GatewayDaemonAction::Start(args) => {
+            gateway_ctrl::GatewayDaemonRequest::Start(start_request(args, address))
+        }
         GatewayDaemonAction::Restart(args) => gateway_ctrl::GatewayDaemonRequest::Restart {
-            start: args.start.into(),
+            start: start_request(args.start, address),
             stop_timeout_secs: args.stop_timeout_secs,
         },
-        GatewayDaemonAction::Stop(args) => gateway_ctrl::GatewayDaemonRequest::Stop(args.into()),
+        GatewayDaemonAction::Stop(args) => {
+            gateway_ctrl::GatewayDaemonRequest::Stop(stop_request(args, address))
+        }
         GatewayDaemonAction::Status(args) => {
-            gateway_ctrl::GatewayDaemonRequest::Status(args.into())
+            gateway_ctrl::GatewayDaemonRequest::Status(status_request(args, address))
         }
     }
 }
 
-impl From<GatewayStartArgs> for gateway_ctrl::GatewayDaemonStartRequest {
-    fn from(args: GatewayStartArgs) -> Self {
-        Self {
-            host: args.host,
-            port: args.port,
-            name: args.name,
-            registry_dir: args.registry_dir,
-            remote_host: args.remote_host,
-            remote_port: args.remote_port,
-            gateway_idle_timeout_secs: args.gateway_idle_timeout_secs,
-            gateway_bin: args.gateway_bin,
-            wait_timeout_secs: args.wait_timeout_secs,
-        }
+fn start_request(
+    args: GatewayStartArgs,
+    address: &GatewayAddress,
+) -> gateway_ctrl::GatewayDaemonStartRequest {
+    let (host, port) = address.resolve(args.host, args.port);
+    gateway_ctrl::GatewayDaemonStartRequest {
+        host,
+        port,
+        name: args.name,
+        registry_dir: args.registry_dir,
+        remote_host: args.remote_host,
+        remote_port: args.remote_port,
+        gateway_idle_timeout_secs: args.gateway_idle_timeout_secs,
+        gateway_bin: args.gateway_bin,
+        wait_timeout_secs: args.wait_timeout_secs,
     }
 }
 
-impl From<GatewayStopArgs> for gateway_ctrl::GatewayDaemonStopRequest {
-    fn from(args: GatewayStopArgs) -> Self {
-        Self {
-            host: args.host,
-            port: args.port,
-            registry_dir: args.registry_dir,
-            wait_timeout_secs: args.wait_timeout_secs,
-        }
+fn stop_request(
+    args: GatewayStopArgs,
+    address: &GatewayAddress,
+) -> gateway_ctrl::GatewayDaemonStopRequest {
+    let (host, port) = address.resolve(args.host, args.port);
+    gateway_ctrl::GatewayDaemonStopRequest {
+        host,
+        port,
+        registry_dir: args.registry_dir,
+        wait_timeout_secs: args.wait_timeout_secs,
     }
 }
 
-impl From<GatewayStatusArgs> for gateway_ctrl::GatewayDaemonStatusRequest {
-    fn from(args: GatewayStatusArgs) -> Self {
-        Self {
-            host: args.host,
-            port: args.port,
-            registry_dir: args.registry_dir,
-        }
+fn status_request(
+    args: GatewayStatusArgs,
+    address: &GatewayAddress,
+) -> gateway_ctrl::GatewayDaemonStatusRequest {
+    let (host, port) = address.resolve(args.host, args.port);
+    gateway_ctrl::GatewayDaemonStatusRequest {
+        host,
+        port,
+        registry_dir: args.registry_dir,
     }
 }

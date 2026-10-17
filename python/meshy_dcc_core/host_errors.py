@@ -26,6 +26,7 @@ from typing import Iterator
 from typing import Optional
 
 from ._version_util import package_version
+from .constants import ENV_DATA_DIR
 from .constants import ENV_DISABLE_FILE_LOGGING
 from .constants import ENV_LOG_DIR
 
@@ -44,6 +45,9 @@ def _default_log_dir() -> Path:
     configured = os.environ.get(ENV_LOG_DIR)
     if configured:
         return Path(configured)
+    data_dir = os.environ.get(ENV_DATA_DIR)
+    if data_dir:
+        return Path(data_dir) / "log"
     if sys.platform == "win32":
         base = os.environ.get("LOCALAPPDATA") or str(Path.home() / "AppData" / "Local")
     elif sys.platform == "darwin":

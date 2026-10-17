@@ -31,15 +31,19 @@ pub fn get_skills_dir(dcc_name: Option<&str>) -> Result<String, FilesystemError>
 /// Get the local developer skill directory under `~/.meshy-dcc`.
 ///
 /// For a DCC-scoped server this returns `~/.meshy-dcc/{dcc}/skills`.
-/// Without a DCC name it returns `~/.meshy-dcc/skills`.
+/// Without a DCC name it returns `~/.meshy-dcc/skills`. With
+/// `MESHY_DCC_DATA_DIR` set, that directory replaces `~/.meshy-dcc`.
 ///
 /// # Errors
 /// Returns [`FilesystemError`] if the user's home directory cannot be determined.
 #[must_use = "this returns the local developer skill directory path; the directory is not created"]
 pub fn get_local_skills_dir(dcc_name: Option<&str>) -> Result<String, FilesystemError> {
-    let mut dir = dirs::home_dir()
-        .ok_or_else(|| FilesystemError::PlatformDirNotFound("home".to_string()))?
-        .join(".meshy-dcc");
+    let mut dir = match meshy_dcc_paths::data_dir_override() {
+        Some(root) => root,
+        None => dirs::home_dir()
+            .ok_or_else(|| FilesystemError::PlatformDirNotFound("home".to_string()))?
+            .join(".meshy-dcc"),
+    };
     if let Some(dcc) = dcc_name.map(str::trim).filter(|dcc| !dcc.is_empty()) {
         dir = dir.join(dcc.to_lowercase()).join("skills");
     } else {
@@ -373,13 +377,10 @@ mod tests {
     #[test]
     fn test_get_local_skills_dir_with_dcc() {
         let path = get_local_skills_dir(Some("BLENDER")).unwrap();
-        assert!(path.contains(".meshy-dcc"), "path={path}");
-        assert!(path.contains("blender"), "path={path}");
-        assert!(path.ends_with(&format!(
-            "{}blender{}skills",
-            std::path::MAIN_SEPARATOR,
-            std::path::MAIN_SEPARATOR
-        )));
+        // `~/.meshy-dcc`, or `MESHY_DCC_DATA_DIR` when the run sets it.
+        let root = meshy_dcc_paths::data_dir_override()
+            .unwrap_or_else(|| dirs::home_dir().unwrap().join(".meshy-dcc"));
+        assert_eq!(PathBuf::from(&path), root.join("blender").join("skills"));
     }
 
     #[test]

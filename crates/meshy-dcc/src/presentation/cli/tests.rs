@@ -1008,8 +1008,8 @@ fn gateway_endpoint_for_command_ensures_gateway_for_agent_control_commands() {
             DEFAULT_BASE_URL,
             &Command::Gateway {
                 action: Some(GatewayAction::Status(GatewayStatusArgs {
-                    host: "127.0.0.1".to_string(),
-                    port: 19765,
+                    host: None,
+                    port: None,
                     registry_dir: None,
                 })),
                 daemon: default_gateway_daemon_args(),
@@ -1327,6 +1327,55 @@ fn gateway_daemon_restart_defaults_to_persistent_daemon() {
 
     assert_eq!(restart.start.gateway_idle_timeout_secs, 0);
     assert_eq!(restart.stop_timeout_secs, 10);
+}
+
+/// `gateway stop`/`status` act on the gateway every other command uses, so a
+/// test's `MESHY_DCC_BASE_URL` or `MESHY_DCC_GATEWAY_PORT` never reaches the
+/// user's 19765.
+#[test]
+fn gateway_stop_and_status_follow_the_cli_gateway() {
+    use super::gateway_cmd::{GatewayAddress, gateway_daemon_request};
+    use crate::application::gateway_ctrl::GatewayDaemonRequest;
+
+    let target = |argv: &[&str], base_url: &str| {
+        let Command::Gateway {
+            action: Some(GatewayAction::Daemon { action }),
+            ..
+        } = Args::parse_from(argv).command
+        else {
+            panic!("expected a gateway daemon command");
+        };
+        match gateway_daemon_request(action, &GatewayAddress::for_base_url(base_url)) {
+            GatewayDaemonRequest::Stop(request) => (request.host, request.port),
+            GatewayDaemonRequest::Status(request) => (request.host, request.port),
+            other => panic!("unexpected request {other:?}"),
+        }
+    };
+    let stop = ["meshy-dcc", "gateway", "daemon", "stop"];
+    let status = ["meshy-dcc", "gateway", "daemon", "status"];
+
+    let base_url = "http://127.0.0.1:19883";
+    assert_eq!(target(&stop, base_url), ("127.0.0.1".to_string(), 19883));
+    assert_eq!(target(&status, base_url), ("127.0.0.1".to_string(), 19883));
+
+    let from_port_env = default_base_url(Some("19884"));
+    assert_eq!(from_port_env, "http://127.0.0.1:19884");
+    assert_eq!(target(&stop, &from_port_env).1, 19884);
+
+    assert_eq!(default_base_url(None), DEFAULT_BASE_URL);
+    assert_eq!(default_base_url(Some("not-a-port")), DEFAULT_BASE_URL);
+    assert_eq!(target(&status, "https://gateway.example:443").1, 19765);
+    let explicit = [
+        "meshy-dcc",
+        "gateway",
+        "daemon",
+        "stop",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "19885",
+    ];
+    assert_eq!(target(&explicit, base_url), ("0.0.0.0".to_string(), 19885));
 }
 
 /// `AmbiguousReuse` tells the operator to pass `--instance-id`, so the flag has

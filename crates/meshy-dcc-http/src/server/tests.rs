@@ -714,3 +714,69 @@ fn update_live_extras_merges_values_and_keeps_null_as_tombstone() {
         "unrelated extras must survive"
     );
 }
+
+// A standalone adapter runs skill scripts as child processes. Stopping the
+// server must end a running script and what it started (here a background
+// child that writes a second later), and the waiting call must say CANCELLED.
+#[cfg(unix)]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn shutdown_cancels_running_skill_script_and_its_children() {
+    let dir = tempfile::tempdir().unwrap();
+    let script = dir.path().join("late.sh");
+    std::fs::write(
+        &script,
+        "dir=\"$2\"\n( sleep 1; echo late > \"$dir/late.txt\" ) &\n: > \"$dir/ready\"\nwait\n",
+    )
+    .unwrap();
+    let mut config = McpHttpConfig::default();
+    config.server.port = 0;
+    config.gateway.gateway_port = 0;
+    let server = McpHttpServer::new(Arc::new(ToolRegistry::new()), config);
+    let catalog = server.catalog().unwrap().clone();
+    catalog.add_skill(meshy_dcc_models::SkillMetadata {
+        name: "stop-probe".to_string(),
+        description: "stop probe".to_string(),
+        dcc: "python".to_string(),
+        scripts: vec![script.to_string_lossy().into_owned()],
+        ..Default::default()
+    });
+    catalog.load_skill("stop-probe").unwrap();
+    let handle = server.start().await.unwrap();
+
+    let url = format!("http://127.0.0.1:{}/mcp", handle.port);
+    let request = serde_json::json!({
+        "jsonrpc": "2.0", "id": 1, "method": "tools/call",
+        "params": {"name": "stop_probe__late", "arguments": {"dir": dir.path()}},
+    });
+    let call = tokio::spawn(async move {
+        reqwest::Client::new()
+            .post(url)
+            .header("Accept", "application/json, text/event-stream")
+            .header("MCP-Protocol-Version", "2025-06-18")
+            .json(&request)
+            .send()
+            .await
+            .unwrap()
+            .json::<serde_json::Value>()
+            .await
+            .unwrap()
+    });
+    let deadline = Instant::now() + Duration::from_secs(10);
+    while !dir.path().join("ready").exists() {
+        assert!(Instant::now() < deadline, "script never started");
+        tokio::time::sleep(Duration::from_millis(10)).await;
+    }
+
+    handle.shutdown().await;
+    let body = tokio::time::timeout(Duration::from_secs(5), call)
+        .await
+        .expect("the waiting call returns once the script is terminated")
+        .unwrap();
+    assert_eq!(body["result"]["isError"], true, "{body}");
+    assert!(body.to_string().contains("CANCELLED"), "{body}");
+    tokio::time::sleep(Duration::from_millis(1500)).await;
+    assert!(
+        !dir.path().join("late.txt").exists(),
+        "late write after stop"
+    );
+}

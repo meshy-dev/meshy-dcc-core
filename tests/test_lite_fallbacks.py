@@ -144,6 +144,7 @@ def test_server_and_skill_helpers_fallback_without_core(monkeypatch, tmp_path) -
     assert cfg.job_recovery == "requeue"
 
     monkeypatch.setenv("MESHY_DCC_SKILL_PATHS", os.pathsep.join([str(tmp_path / "a"), str(tmp_path / "b")]))
+    monkeypatch.delenv("MESHY_DCC_DATA_DIR", raising=False)
     assert skill_discovery.get_skill_paths_from_env() == [str(tmp_path / "a"), str(tmp_path / "b")]
     assert skill_discovery.get_local_skills_dir("maya").endswith(str(Path(".meshy-dcc") / "maya" / "skills"))
     assert skill_discovery.get_skills_dir("maya").endswith(str(Path(".meshy-dcc") / "skills" / "maya"))

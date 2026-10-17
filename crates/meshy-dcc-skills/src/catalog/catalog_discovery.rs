@@ -94,6 +94,7 @@ impl SkillCatalog {
             dispatcher: None,
             event_bus: EventBus::new(),
             script_executor: RwLock::new(None),
+            script_processes: Arc::default(),
             load_transform: RwLock::new(None),
             after_load_hook: RwLock::new(None),
             after_unload_hook: RwLock::new(None),
@@ -118,6 +119,7 @@ impl SkillCatalog {
             dispatcher: Some(dispatcher),
             event_bus,
             script_executor: RwLock::new(None),
+            script_processes: Arc::default(),
             load_transform: RwLock::new(None),
             after_load_hook: RwLock::new(None),
             after_unload_hook: RwLock::new(None),
@@ -126,6 +128,11 @@ impl SkillCatalog {
             active_groups: DashSet::new(),
             dcc_shards: DashMap::new(),
         }
+    }
+
+    /// Skill scripts this catalog is running as child processes.
+    pub fn script_processes(&self) -> Arc<execute::ScriptProcesses> {
+        self.script_processes.clone()
     }
 
     /// Attach a dispatcher after construction (builder-style).
