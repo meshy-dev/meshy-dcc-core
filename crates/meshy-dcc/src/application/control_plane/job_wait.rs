@@ -162,6 +162,29 @@ pub(super) fn job_owner_exited_result(
     })
 }
 
+pub(super) fn job_instance_offline_result(
+    owner: &str,
+    job_id: &str,
+    status: &str,
+    instance_id: &str,
+    error: &anyhow::Error,
+    last_result: Value,
+) -> Value {
+    json!({
+        "success": false,
+        "error": format!("instance {instance_id} stopped while waiting for {owner} job {job_id}; the job's outcome is unknown"),
+        "job_id": job_id,
+        "job_id_owner": owner,
+        "status": status,
+        "instance_id": instance_id,
+        "tracking_status": "instance_offline",
+        "last_poll_error": job_poll_error_value(error),
+        "job_not_resubmitted": true,
+        "recommended_next_action": "Start the instance again and read the scene or files back to see what the job changed before running the operation again.",
+        "last_result": last_result,
+    })
+}
+
 pub(super) fn job_id_mismatch_result(
     owner: &str,
     expected_job_id: &str,

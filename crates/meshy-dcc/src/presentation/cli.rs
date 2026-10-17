@@ -275,7 +275,12 @@ async fn run_with_args(args: Args) -> anyhow::Result<()> {
     let profile_path = gateway_profile::default_profile_path();
     let profile_store = gateway_profile::GatewayProfileStore::load(&profile_path)?;
     let gateway_target = profile_store.resolve(gateway.as_deref(), base_url.as_deref())?;
-    let endpoint = gateway_target.endpoint_or_default(DEFAULT_BASE_URL);
+    let endpoint = gateway_target.endpoint_or_default(
+        base_url
+            .as_deref()
+            .filter(|value| !value.trim().is_empty())
+            .unwrap_or(DEFAULT_BASE_URL),
+    );
     let base_url = endpoint.base_url.clone();
     let control = DccControlPlane::new(
         gateway_target.clone(),
