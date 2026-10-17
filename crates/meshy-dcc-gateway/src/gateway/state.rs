@@ -420,7 +420,54 @@ impl GatewayState {
 
     pub async fn live_instances_async(&self) -> Vec<ServiceEntry> {
         self.prune_expired_http_instances();
+        self.promote_ready_booting().await;
         self.discovery().live_instances_async().await
+    }
+
+    /// Probe Booting rows now rather than at the next health tick (up to 5 s
+    /// away), so a call made as soon as `start-instance` reports ready is
+    /// routed instead of refused. Same rule as the health task: ready means
+    /// Available.
+    async fn promote_ready_booting(&self) {
+        let booting = self
+            .registry
+            .list_all_async()
+            .await
+            .unwrap_or_default()
+            .into_iter()
+            .filter(|e| {
+                e.status == ServiceStatus::Booting
+                    && e.port != 0
+                    && !e.is_stale(self.stale_timeout)
+                    && !crate::gateway::is_own_instance(e, &self.own_host, self.own_port)
+            });
+        futures::future::join_all(booting.map(|entry| async move {
+            let url = format!("http://{}:{}/mcp", entry.host, entry.port);
+            let (report, outcome) = crate::gateway::backend_client::probe_mcp_readiness_once(
+                &self.http_client,
+                &url,
+                Duration::from_secs(1),
+            )
+            .await;
+            if let Some(report) = report {
+                self.instance_diagnostics
+                    .record_readiness(entry.instance_id, report);
+            }
+            if outcome.is_ready()
+                && self
+                    .registry
+                    .update_status_if_unchanged_async(entry.clone(), ServiceStatus::Available)
+                    .await
+                    .unwrap_or(false)
+            {
+                tracing::info!(
+                    dcc_type = %entry.dcc_type,
+                    instance_id = %entry.instance_id,
+                    "Readiness probe green on request — marked Available"
+                );
+            }
+        }))
+        .await;
     }
 
     /// Return every parseable registry row that an operator-facing tool

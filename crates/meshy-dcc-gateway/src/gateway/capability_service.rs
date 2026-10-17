@@ -943,9 +943,9 @@ async fn refresh_instance_bounded(
 /// correct. Existing snapshots are served immediately; when stale, their
 /// refresh runs in the background (stale-while-revalidate).
 pub async fn refresh_search_backends(gs: &GatewayState, query: &SearchQuery) {
-    let reg = &gs.registry;
     let reachable_instances: Vec<_> = gs
-        .live_instances(reg)
+        .live_instances_async()
+        .await
         .into_iter()
         .filter(|entry| {
             gs.policy.allows_dcc(&entry.dcc_type)
@@ -1418,9 +1418,9 @@ async fn refresh_all_live_backends_inner(
     reason: RefreshReason,
     reuse_recent_periodic: bool,
 ) {
-    let reg = &gs.registry;
     let instances: Vec<_> = gs
-        .live_instances(reg)
+        .live_instances_async()
+        .await
         .into_iter()
         .filter(|entry| gs.policy.allows_dcc(&entry.dcc_type) && safe_discovery_target(entry))
         .filter(|e| {
