@@ -173,7 +173,7 @@ core 修复（分支 `windows/build`）：
 | Unreal 5.7.4 | ✅ VS 2022 编模块 88–90 s（带空格路径；112 字符工程路径正常）；⚠️ 中文工程路径 UBT/MSVC 编不过（Unreal 自身限制），安装器报 20 并附日志、已回滚 | ✅ 45 s | ✅ 中文源路径 GLB → Nanite StaticMesh + 材质 + 3 张贴图；inspect_model、capture_model | ❌→✅ 移动/挂接 actor 不置脏，safe stop 放行并丢掉了未保存的移动（已修）；修复后 stop 被拒、discard 后重开为已保存值 | ✅ 4 s | ✅；编辑器开着时装新文件 → 回滚 exit 30 ✅ |
 | Houdini 21.0.440 FX（自定义目录） | ❌→✅ 路径里没有版本号（已修：读 houdini.exe 版本资源）；偏好隔离 | ✅ 26 s，`uiready.py` 自启，Houdini 自带 Python 加载 MSVC `_core.pyd` | ❌→✅ GLB 走 File SOP 根本读不了却报成功（已修：改用 GLTF SOP，读不了即失败）；MaterialX PBR 接 Meshy 贴图并 assign | ✅ 中文 .hip；有未保存时 stop 被拒、保存后放行；discard；重开读回几何与材质 | ✅ `hou.exit` 2 s 无保存框 | ✅ uninstall `removed`；用户 Documents 未动 |
 | Roblox Studio 0.743（启动时从 0.710 自更新） | ✅ 插件写入 Studio 本地 Plugins | ⚠️ 首次自更新 + 登录超过等待（reference 已写）；之后 13–14 s | ✅ Meshy GLB → 9998 三角、四张贴图 | ✅ stop 总是 unsaved_changes（按设计）；discard 1–2 s；重开后导入的模型消失（按设计） | ✅ | ✅ `uninstall --plugin` 删除插件；无 AutoSaves |
-| ZBrush 2026.2.1 | ⛔ 拒绝安装：Windows 报 ZBrush.exe Authenticode `HashMismatch`（签名者是 Maxon，但文件内容被改过）；adapter 的签名门禁按设计工作 | — | — | — | — | 需要完好的 Maxon 签名安装才能测 |
+| ZBrush 2026.2.1 | ⛔ 签名门禁按设计拒绝：本机 ZBrush.exe Authenticode `HashMismatch`（签名者 Maxon，内容被改过）；经用户同意，仅测试时替换签名探测（不改代码）后安装 | ⚠️ 首次启动 ZBrush 经 Explorer 自我重启、丢掉 `-script`，start-instance 超时；之后 16–66 s ✅ | ❌→✅ `get_session_info` 总是失败（已修）；Meshy OBJ 导入 9998 面；`list` 原为 zbrush@unknown（已修） | ✅ 中文 .zpr；再次保存 `FILE_EXISTS`；save_tool；不带 discard 的 stop 被拒（按设计）；open_project 读回 | ✅ 1 s | ✅ 只有工程的 `.meshy-dcc` |
 | Maya、3ds Max、Cinema 4D、Substance 3D Painter | 本机未安装，未测 | | | | | |
 
 adapter 修复（`meshy-dcc-adapters`，未 push）：
@@ -183,6 +183,8 @@ adapter 修复（`meshy-dcc-adapters`，未 push）：
 - `windows/unity` `5ab4e43`：从 Unity Hub 记录找编辑器；修正一条假设构建机不是 Windows 的测试。
 - `windows/houdini` `26ef06c`（从 houdini.exe 读版本）、`c601fc8`（glTF 用 GLTF SOP；读不了的文件算失败并清掉空容器）。
 - `windows/unreal` `73cf335`：`set_actor_transform`、`attach_actor` 先 `modify()`，否则 safe stop 会丢掉未保存的修改（与平台无关）。
+- `windows/zbrush` `38f0f51`：ZBrush 在 `-script` 返回后从脚本全局里删掉 `__file__`，Windows 上桥靠 UI 定时器继续服务，之后用到 `__file__` 的请求
+  （`get_session_info`）都失败；改为加载时取路径。sidecar 导入不了 `zbrush.commands`，版本总是 unknown；改由桥启动 sidecar 时传入（与平台无关）。
 
 其他发现（未修）：
 
@@ -198,6 +200,7 @@ adapter 修复（`meshy-dcc-adapters`，未 push）：
 
 1. 支持矩阵：上表 ✅ 的 Windows × 宿主组合（OpenSCAD、FreeCAD、Material Maker、Blender、Godot、Unity、Unreal、Houdini、Roblox Studio）可以进；
    其中 Material Maker、Godot、Unity、Unreal、Houdini 依赖上面的 adapter 修复，合并并重新打包、回填 catalog sha 之后才成立。Houdini 是第一次在真机上跑，可去掉 experimental。
+   ZBrush 的功能链路在 Windows 上走通了，但本机 ZBrush.exe 签名不完好、安装靠测试替换；在一台签名完好的 ZBrush 上复跑安装一步之前，建议仍保持 experimental。
 2. Godot 在 Windows 上要不要加 `dcc_paths`（winget、Steam 位置）并在 project_steps 传 `{dcc_path}`；Material Maker 要不要加 winget 位置的 glob。
 3. Houdini 在 agent 环境（`HOME` 由终端设置）里的安装位置：照 Houdini 规则（现状），还是 Windows 上只认用户持久环境里的 `HOME`，并让 launch 用同一规则。
 4. 发布前给 Windows exe 做代码签名（Smart App Control 开着的机器会直接拦未签名程序；本机关闭，未能实测）。
