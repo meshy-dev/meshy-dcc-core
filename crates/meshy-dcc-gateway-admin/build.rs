@@ -61,7 +61,9 @@ fn run_npm_or_vx(admin_ui: &Path, npm_args: &[&str]) -> Result<(), String> {
         }
     }
 
-    let status = Command::new("npm")
+    // npm is a batch script on Windows, and Command only appends `.exe`.
+    let npm = if cfg!(windows) { "npm.cmd" } else { "npm" };
+    let status = Command::new(npm)
         .args(npm_args)
         .current_dir(admin_ui)
         .stdout(Stdio::inherit())
