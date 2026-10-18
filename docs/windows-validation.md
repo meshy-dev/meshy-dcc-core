@@ -128,4 +128,77 @@ python -m http.server 8765 --bind 127.0.0.1 --directory <builds>     # 另一个
 
 ## 结果
 
-（Windows session 在这里追加。）
+### 第一轮（2026-10-18）
+
+环境：Windows 11 Home China 10.0.26200 x64；VS 2022 Community 17.13（MSVC 14.43、Win SDK 22621）；Rust 1.95.0；
+Node 22；官方 CPython 3.11.9；Git Bash。用户目录本身带中文；测试工程放在带空格和中文的目录。
+隔离：registry、data、admin DB、gateway 端口都指到测试目录；Blender 用 `BLENDER_USER_RESOURCES`，Houdini 用 `HOUDINI_USER_PREF_DIR`。
+包用本机构建的 win_amd64 wheel 打，经本地 catalog 与 loopback 包服务安装。
+
+#### 第一关：core
+
+| 检查 | 结果 |
+|---|---|
+| `build_release.sh`（Git Bash + MSVC） | ❌→✅ 三处 Windows 问题，修在 `windows/build`（见下） |
+| `cargo test -p meshy-dcc` | ✅ 450 passed、9 ignored；两个自动起 gateway 的测试修复前各跑 600 s 以上（见下），修复后 3 s / 7 s |
+| `--version`、`doctor` | ✅；本地构建无 MOTW，加 Zone.Identifier 后从终端运行不弹 SmartScreen；本机 Smart App Control 关闭，Defender 无检出 |
+| gateway start / health / status / stop | ✅ 只绑 127.0.0.1（不触发防火墙）、无控制台窗口、stop 后进程与端口都释放、无残留进程 |
+| `ui` | ✅ 打开默认浏览器 `/admin`；四种语言切换；连接器页列出 23 个宿主（发布前全部"即将推出"，experimental 角标在此状态下看不到） |
+| wheel | ✅ 官方 MSVC CPython 3.11 venv 中 `import meshy_dcc_core` 加载 MSVC 版 `_core.pyd`；`pip install` 要加 `--no-deps`（元数据依赖未发布的 `meshy-dcc-server`，与平台无关） |
+| `agent-skill`（只看计划） | ✅ 识别 8 个 agent；路径分隔符混用（`.agents/skills\meshy-dcc`），仅显示问题 |
+| 带空格、中文、`&`、`%` 的目录 | ✅ 同目录找到 gateway、自动起 gateway、管道不挂、stop 干净 |
+| `install-cli.ps1` | ✅ PowerShell 5.1 语法检查通过，纯 ASCII、无 BOM |
+
+core 修复（分支 `windows/build`）：
+
+- `ccdd2bb` 原生 Windows 构建：admin UI 的 `build.rs` 直接起 `npm`（Windows 上是 `npm.cmd`，构建在编译前就失败，CI 的 windows-latest 同样会失败）；
+  `build_release.sh` 调 `python3`（Windows 的 Python 没有）；aws-lc 的 C 断言把 CARGO_HOME 绝对路径（含用户名，窄、宽字符串，且用 8.3 短路径编译）
+  编进 exe 和 `_core.pyd`，改为给 MSVC 传 `/d1trimfile`；scrub 在 Windows 上也查 8.3 短路径和 UTF-16（原先 CI 的 `C:\Users\RUNNER~1` 会漏检）。
+- `ae45b12` **自动起的 gateway、start-instance 起的 DCC 继承调用方的 stdout/stderr 管道**：Windows 子进程继承父进程所有可继承句柄，
+  agent 读 `meshy-dcc list` 的输出要等到 gateway 退出（实测 10 分钟以上，agent 侧直接超时）。CLI 启动时把自己的标准句柄设为不可继承，
+  detached 启动点（gateway-ensure、sidecar daemon）同样处理；回归测试在输出 60 s 不关时失败。
+
+#### 第二关：连接器
+
+14 个 adapter 在 Windows 上都能用 `build_release.py --platform windows-x64` 打包；scrub 无本机路径。adapter 修复都在 `meshy-dcc-adapters` 的 `windows/<宿主>` 分支。
+
+| 宿主（版本） | 1 安装 | 2 启动 | 3 调用、导入、读回 | 4 保存、停止、重开 | 5 停止 | 6 卸载、残留 |
+|---|---|---|---|---|---|---|
+| OpenSCAD 2021.01 | ✅ `dcc_paths` 命中 | ✅ 4 s | ✅ Meshy STL 写成 50 mm 圆底座、导出 STL、渲染 PNG | ✅ 文件即保存；重开 inspect_source | ✅ | ✅ 用户目录无残留 |
+| FreeCAD 1.1.4 | ✅ glob 不区分大小写，命中 `freecad.exe` | ✅ 3 s，pythonw 无窗口 | ✅ 中文名文档、导入 Meshy GLB（9998 面，m→mm，Y-up→Z-up） | ✅ | ✅ | ✅ 无残留 |
+| Material Maker 1.7（winget zip） | ✅ 需 `--dcc-path`（`DCC_PATH_REQUIRED` 提示清楚） | ✅ | ❌→✅ 每次写图都报 WinError 32、版本为 unknown（修复见下）；Meshy 底色 + 法线导出 Godot 2048² | ✅ | ✅ | ✅ Material Maker 自己写 `%APPDATA%\material_maker_2` |
+| Blender 5.1 | ✅ `--dcc-path`（自定义目录） | ✅ 5 s | ✅ 中文路径 GLB；PBR 四路贴图都连上 | ✅ 中文 .blend；未保存时 stop 被拒（exit 7）；discard 后重开读回正确；`list` 的 scene 心跳后更新 | ✅ | ✅ 被占用的 `_core.pyd` 由 Blender 改名 `.~stale~`、下次启动删除；用户配置未动 |
+| Godot 4.7.2（winget zip） | ⚠️ 需设 `MESHY_DCC_GODOT_EXECUTABLE`（Windows 可执行名永远不叫 godot）；preflight 原因被吞（已修） | ✅ 13 s；sidecar 由编辑器起、无窗口 | ❌→✅ 每个 session 调用与 safe stop 都失败（`D:\` 与 `D:/` 字符串比较，已修）；导入后 StandardMaterial3D 三路贴图 | ✅ 有未保存时 stop 被拒；discard；重开读回 | ✅ 2 s；宿主被杀后 sidecar 1 s 退出 | ⚠️ Remove 表漏了 `[autoload] MeshyDccRuntimePeer`（已补）；Godot 首启写 `%APPDATA%\Godot`、`%LOCALAPPDATA%\Godot` |
+| Unity 2022.3.55f1c1（编辑器在另一盘、Hub 手动定位） | ❌→✅ 只找 Program Files（已修：读 Hub 的 editors-v2.json） | ✅ 27 s | ✅ FBX；Meshy 底色 + 法线（PNG）→ Standard 材质 verified | ✅ 中文场景名；dirty 时 stop 被拒；discard；重开读回 | ✅ | ✅ packages-lock 留一条 `ai.meshy` 记录（下次 resolve 清掉）；Unity 把工程加入最近列表 |
+| Unreal 5.7.4 | ✅ VS 2022 编模块 88–90 s（带空格路径；112 字符工程路径正常）；⚠️ 中文工程路径 UBT/MSVC 编不过（Unreal 自身限制），安装器报 20 并附日志、已回滚 | ✅ 45 s | ✅ 中文源路径 GLB → Nanite StaticMesh + 材质 + 3 张贴图；inspect_model、capture_model | ❌→✅ 移动/挂接 actor 不置脏，safe stop 放行并丢掉了未保存的移动（已修）；修复后 stop 被拒、discard 后重开为已保存值 | ✅ 4 s | ✅；编辑器开着时装新文件 → 回滚 exit 30 ✅ |
+| Houdini 21.0.440 FX（自定义目录） | ❌→✅ 路径里没有版本号（已修：读 houdini.exe 版本资源）；偏好隔离 | ✅ 26 s，`uiready.py` 自启，Houdini 自带 Python 加载 MSVC `_core.pyd` | ❌→✅ GLB 走 File SOP 根本读不了却报成功（已修：改用 GLTF SOP，读不了即失败）；MaterialX PBR 接 Meshy 贴图并 assign | ✅ 中文 .hip；有未保存时 stop 被拒、保存后放行；discard；重开读回几何与材质 | ✅ `hou.exit` 2 s 无保存框 | ✅ uninstall `removed`；用户 Documents 未动 |
+| Roblox Studio 0.743（启动时从 0.710 自更新） | ✅ 插件写入 Studio 本地 Plugins | ⚠️ 首次自更新 + 登录超过等待（reference 已写）；之后 13–14 s | ✅ Meshy GLB → 9998 三角、四张贴图 | ✅ stop 总是 unsaved_changes（按设计）；discard 1–2 s；重开后导入的模型消失（按设计） | ✅ | ✅ `uninstall --plugin` 删除插件；无 AutoSaves |
+| ZBrush 2026.2.1 | ⛔ 拒绝安装：Windows 报 ZBrush.exe Authenticode `HashMismatch`（签名者是 Maxon，但文件内容被改过）；adapter 的签名门禁按设计工作 | — | — | — | — | 需要完好的 Maxon 签名安装才能测 |
+| Maya、3ds Max、Cinema 4D、Substance 3D Painter | 本机未安装，未测 | | | | | |
+
+adapter 修复（`meshy-dcc-adapters`，未 push）：
+
+- `windows/material-maker` `32da5f3`：`mkstemp()` 的描述符没关，Windows 上无法删除/替换暂存文件（16 个已有测试在 Windows 上因此失败）；版本从 exe 版本资源读。
+- `windows/godot` `456c2b3`（preflight 失败说明原因）、`09ae50f`（start-instance 工程路径按 Windows 规则比较）、`6c86fb6`（插件把 Godot 版本交给 sidecar，`list` 不再是 godot@unknown，与平台无关）。
+- `windows/unity` `5ab4e43`：从 Unity Hub 记录找编辑器；修正一条假设构建机不是 Windows 的测试。
+- `windows/houdini` `26ef06c`（从 houdini.exe 读版本）、`c601fc8`（glTF 用 GLTF SOP；读不了的文件算失败并清掉空容器）。
+- `windows/unreal` `73cf335`：`set_actor_transform`、`attach_actor` 先 `modify()`，否则 safe stop 会丢掉未保存的修改（与平台无关）。
+
+其他发现（未修）：
+
+- Claude Code 等 agent 的进程环境带 `HOME`，Houdini 规则先认 `HOME`：agent 装的包文件落在 `~\houdiniX.Y`，从开始菜单启动的 Houdini 看不到
+  （start-instance 起的 Houdini 继承同一 `HOME`，能用）。本次用户目录里出现的 `~\houdini21.0\houdini.env` 就是在这种环境里跑 Houdini 自带工具产生的。
+- adapter 运行时在真实家目录建 `~\.meshy-dcc\<host>\skills`（空目录），不跟 `MESHY_DCC_DATA_DIR`；每次 CLI 运行在 `%APPDATA%\update\meshy-dcc\installations\` 写锁文件；
+  `cargo test` 往真实 `%LOCALAPPDATA%\meshy-dcc` 写 admin DB 与更新缓存。
+- `doctor` 的 `gateway.status` 不跟 `MESHY_DCC_GATEWAY_PORT`；Roblox 刚启动时 `list` 显示 `roblox@unknown`，首次 session 后才填上版本；
+  Unity 重启后第一个调用报"可能被模态框挡住"，实为编辑器仍在忙；OpenSCAD 2021.01 两次导出的 STL 面序不同（大小相同）。
+- 只在 Windows 构建机上失败的测试：Houdini（建符号链接要权限、macOS 包启动器无执行位）、Unreal（用 POSIX `Build.sh` 假装构建）；发布在 macOS runner 上打包，不受影响。
+
+待决定：
+
+1. 支持矩阵：上表 ✅ 的 Windows × 宿主组合（OpenSCAD、FreeCAD、Material Maker、Blender、Godot、Unity、Unreal、Houdini、Roblox Studio）可以进；
+   其中 Material Maker、Godot、Unity、Unreal、Houdini 依赖上面的 adapter 修复，合并并重新打包、回填 catalog sha 之后才成立。Houdini 是第一次在真机上跑，可去掉 experimental。
+2. Godot 在 Windows 上要不要加 `dcc_paths`（winget、Steam 位置）并在 project_steps 传 `{dcc_path}`；Material Maker 要不要加 winget 位置的 glob。
+3. Houdini 在 agent 环境（`HOME` 由终端设置）里的安装位置：照 Houdini 规则（现状），还是 Windows 上只认用户持久环境里的 `HOME`，并让 launch 用同一规则。
+4. 发布前给 Windows exe 做代码签名（Smart App Control 开着的机器会直接拦未签名程序；本机关闭，未能实测）。
+5. Unreal：中文等非 ASCII 工程路径编不过模块，reference 是否写明。

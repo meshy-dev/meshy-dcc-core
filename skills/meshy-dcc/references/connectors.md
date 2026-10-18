@@ -33,7 +33,7 @@ There is no uninstall command. With the user's go-ahead and the host closed:
 |---|---|
 | Blender | Run `<Blender executable> --command extension remove user_default.meshy_dcc_blender` (on macOS the executable is `Blender.app/Contents/MacOS/Blender`) |
 | Unity | The project's `Packages/ai.meshy.dcc` and `.meshy-dcc` folders |
-| Godot | The project's `addons/meshy_dcc_godot` and `.meshy-dcc` folders, and `res://addons/meshy_dcc_godot/plugin.cfg` from `[editor_plugins] enabled` in `project.godot` |
+| Godot | The project's `addons/meshy_dcc_godot` and `.meshy-dcc` folders; in `project.godot`, `res://addons/meshy_dcc_godot/plugin.cfg` from `[editor_plugins] enabled` and the `MeshyDccRuntimePeer` line from `[autoload]` |
 | Unreal | The project's `Plugins/MeshyDccUnreal` and `.meshy-dcc` folders |
 | OpenSCAD | The project's `.meshy-dcc` folder |
 | Material Maker | The material folder's `.meshy-dcc` folder |
