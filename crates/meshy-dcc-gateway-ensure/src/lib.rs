@@ -353,6 +353,31 @@ pub fn gateway_ready_timeout_message(
 
 // ── Spawn ──────────────────────────────────────────────────────────────────
 
+/// Keep this process's stdin/stdout/stderr out of the children it spawns.
+///
+/// A Windows child inherits every inheritable handle of its parent, not only
+/// the stdio it is given, so a detached child (gateway, DCC) would hold the
+/// caller's output pipes open and a caller that reads to EOF (an agent) waits
+/// until that child exits. `Stdio::inherit` still works: it duplicates the
+/// handle for the child. No-op elsewhere (Unix fds are close-on-exec).
+pub fn keep_std_handles_from_children() {
+    #[cfg(windows)]
+    {
+        use std::os::windows::io::AsRawHandle;
+        use windows_sys::Win32::Foundation::{HANDLE_FLAG_INHERIT, SetHandleInformation};
+
+        let handles = [
+            std::io::stdin().as_raw_handle(),
+            std::io::stdout().as_raw_handle(),
+            std::io::stderr().as_raw_handle(),
+        ];
+        for handle in handles.into_iter().filter(|handle| !handle.is_null()) {
+            // SAFETY: a std handle of this process, or a value the call rejects.
+            unsafe { SetHandleInformation(handle, HANDLE_FLAG_INHERIT, 0) };
+        }
+    }
+}
+
 /// Spawn a detached gateway process from the given `exe` binary.
 ///
 /// Returns the child process ID. The caller is responsible for resolving the
@@ -398,6 +423,7 @@ pub fn spawn_detached_gateway_with_context(
         const CREATE_NEW_PROCESS_GROUP: u32 = 0x0000_0200;
         cmd.creation_flags(CREATE_NO_WINDOW | DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP);
     }
+    keep_std_handles_from_children();
 
     let child = cmd
         .spawn()

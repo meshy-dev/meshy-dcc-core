@@ -6,6 +6,9 @@ use meshy_dcc::presentation::output::{ErrorEnvelope, ExitCode, OutputWriter};
 
 #[tokio::main]
 async fn main() {
+    // Gateways and DCCs this command starts outlive it; on Windows they would
+    // otherwise keep the caller's output pipes open.
+    meshy_dcc_gateway_ensure::keep_std_handles_from_children();
     let cancelled = Arc::new(AtomicBool::new(false));
     let cancelled_clone = cancelled.clone();
 
