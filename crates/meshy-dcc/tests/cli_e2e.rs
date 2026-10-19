@@ -1931,7 +1931,9 @@ fn dcc_types_lists_release_catalog_without_a_gateway() {
         .find(|entry| entry["dcc_type"] == "blender")
         .unwrap();
     assert_eq!(blender["adapters"][0]["name"], "meshy-dcc-blender");
-    assert_eq!(blender["adapters"][0]["catalog_install_available"], false);
+    assert_eq!(blender["adapters"][0]["catalog_install_available"], true);
+    let c4d = types.iter().find(|entry| entry["dcc_type"] == "c4d").unwrap();
+    assert_eq!(c4d["adapters"][0]["catalog_install_available"], false);
 }
 
 #[test]

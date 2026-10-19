@@ -1219,22 +1219,27 @@ mod tests {
             }
         }
         let listing = service.dcc_types(None).unwrap();
-        let blender = listing
-            .dcc_types
-            .iter()
-            .find(|entry| entry.dcc_type == "blender")
-            .unwrap();
-        assert_eq!(blender.adapters[0].name, "meshy-dcc-blender");
-        assert!(!blender.adapters[0].catalog_install_available);
+        let listed = |dcc_type: &str| {
+            listing
+                .dcc_types
+                .iter()
+                .find(|entry| entry.dcc_type == dcc_type)
+                .unwrap()
+                .adapters[0]
+                .clone()
+        };
+        assert_eq!(listed("blender").name, "meshy-dcc-blender");
+        assert!(listed("blender").catalog_install_available);
+        assert!(!listed("c4d").catalog_install_available);
         let entry = entries
             .iter()
-            .find(|entry| entry.name == "meshy-dcc-blender")
+            .find(|entry| entry.name == "meshy-dcc-c4d")
             .unwrap();
         assert!(entry.policy.as_ref().unwrap().reason.is_some());
 
         let error = service
             .plan(InstallRequest {
-                dcc_type: "blender".into(),
+                dcc_type: "c4d".into(),
                 version: None,
                 catalog_path: None,
                 python: None,
@@ -1247,13 +1252,16 @@ mod tests {
         assert!(matches!(
             error,
             InstallError::Plan(InstallPlanError::NotAvailable { name, reason: Some(_) })
-                if name == "meshy-dcc-blender"
+                if name == "meshy-dcc-c4d"
         ));
     }
 
     #[test]
     fn bundled_entries_plan_or_report_not_available() {
-        let entries = meshy_dcc_catalog::load_from_str(BUNDLED_CATALOG).unwrap();
+        // As the service plans them: narrowed to this platform's build.
+        let entries = InstallService::new(PathBuf::from("__missing_meshy_dcc_catalog__.yml"))
+            .catalog_entries(None)
+            .unwrap();
         for entry in &entries {
             let result = InstallPlanner::plan(
                 &entries,

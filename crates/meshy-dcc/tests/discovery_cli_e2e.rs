@@ -23,12 +23,12 @@ fn dcc_types_distinguishes_catalog_support_from_zero_live_instances() {
     let registry = TempDir::new().unwrap();
     let registry_s = registry.path().to_string_lossy().to_string();
     let value = run_json_with_env(
-        &["--output", "json", "dcc-types", "--dcc-type", "blender"],
+        &["--output", "json", "dcc-types", "--dcc-type", "c4d"],
         &[("MESHY_DCC_REGISTRY_DIR", registry_s.as_str())],
     );
 
     assert_eq!(value["schema_version"], 1);
-    assert_eq!(value["dcc_type"], "blender");
+    assert_eq!(value["dcc_type"], "c4d");
     assert_eq!(value["live_instances"], 0);
     assert_eq!(value["public_adapter"], "present");
     assert_eq!(value["released_catalog"], "present");
@@ -45,8 +45,8 @@ fn dcc_types_distinguishes_catalog_support_from_zero_live_instances() {
         value["uncertainties"],
         serde_json::json!(["version", "custom_fork", "real_host"])
     );
-    // The Meshy Blender adapter is cataloged but not published, so there is
-    // nothing to install yet: report the catalog's reason, run nothing.
+    // The Meshy Cinema 4D adapter is cataloged but not released, so there is
+    // nothing to install: report the catalog's reason, run nothing.
     assert_eq!(value["failure_stage"], "catalog_policy");
     assert_eq!(value["failure_reason"], "ADAPTER_NOT_AVAILABLE");
     assert_eq!(value["next_action"]["id"], "report_unavailable");
@@ -56,7 +56,7 @@ fn dcc_types_distinguishes_catalog_support_from_zero_live_instances() {
         value["next_action"]["reason"]
             .as_str()
             .unwrap()
-            .contains("not published yet")
+            .contains("not supported in this release")
     );
     assert_eq!(value["next_action"]["instructions_url"], Value::Null);
 
@@ -93,13 +93,13 @@ fn targeted_decision_uses_the_bundled_release_catalog_not_cwd() {
     std::fs::write(
         cwd.path().join("meshy-dcc-catalog.yml"),
         r#"entries:
-  - name: private-blender
-    description: Private Blender adapter
-    dcc: [blender]
+  - name: private-c4d
+    description: Private Cinema 4D adapter
+    dcc: [c4d]
     tags: [adapter]
     install:
       type: pip
-      pip_package: private-blender
+      pip_package: private-c4d
       instructions_url: https://private.invalid/secret/install
 "#,
     )
@@ -108,7 +108,7 @@ fn targeted_decision_uses_the_bundled_release_catalog_not_cwd() {
     let output = cli_command()
         .current_dir(cwd.path())
         .env("MESHY_DCC_REGISTRY_DIR", registry.path())
-        .args(["--output", "json", "dcc-types", "--dcc-type", "blender"])
+        .args(["--output", "json", "dcc-types", "--dcc-type", "c4d"])
         .output()
         .unwrap();
     assert!(
@@ -120,7 +120,7 @@ fn targeted_decision_uses_the_bundled_release_catalog_not_cwd() {
 
     assert_eq!(value["public_adapter"], "present");
     assert_eq!(value["released_catalog"], "present");
-    // The cwd entry is installable; the bundled Meshy one is not published yet.
+    // The cwd entry is installable; the bundled Meshy one is not released.
     assert_eq!(value["next_action"]["id"], "report_unavailable");
     assert_eq!(value["next_action"]["instructions_url"], Value::Null);
     assert!(!value.to_string().contains("private.invalid"));
@@ -167,14 +167,14 @@ fn plan_only_install_uses_the_bundled_release_catalog_not_cwd() {
     std::fs::write(
         cwd.path().join("meshy-dcc-catalog.yml"),
         r#"entries:
-  - name: private-blender
-    description: Private Blender adapter
-    dcc: [blender]
+  - name: private-c4d
+    description: Private Cinema 4D adapter
+    dcc: [c4d]
     tags: [adapter]
     url: https://private.invalid/secret/repository
     install:
       type: pip
-      pip_package: private-blender
+      pip_package: private-c4d
 "#,
     )
     .unwrap();
@@ -186,11 +186,11 @@ fn plan_only_install_uses_the_bundled_release_catalog_not_cwd() {
             "--non-interactive",
             "install",
             "--dcc-type",
-            "blender",
+            "c4d",
         ])
         .output()
         .unwrap();
-    // The cwd entry would plan; the bundled Meshy Blender entry is not published yet.
+    // The cwd entry would plan; the bundled Meshy Cinema 4D entry is not released.
     assert!(!output.status.success());
     let combined = format!(
         "{}{}",
@@ -198,8 +198,8 @@ fn plan_only_install_uses_the_bundled_release_catalog_not_cwd() {
         String::from_utf8_lossy(&output.stderr)
     );
 
-    assert!(combined.contains("'meshy-dcc-blender' is not available for installation"));
-    assert!(!combined.contains("private-blender"));
+    assert!(combined.contains("'meshy-dcc-c4d' is not available for installation"));
+    assert!(!combined.contains("private-c4d"));
     assert!(!combined.contains("private.invalid"));
 }
 
