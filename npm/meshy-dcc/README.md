@@ -1,9 +1,14 @@
 # meshy-dcc
 
 Turn your DCC instances into one creation pipeline, powered by Meshy and your
-agent. Meshy DCC Core gives your agent one entry point to every Blender, Unity,
-Godot and Unreal instance you have open: each call goes to the exact instance,
-tools load as skills on demand, and every change is read back.
+agent. Meshy DCC Core gives your agent one entry point to the 3D apps you have
+open (Blender, Unity, Godot, Unreal Engine, Maya, 3ds Max, Houdini, Substance
+3D Painter, ZBrush, Roblox Studio, FreeCAD, OpenSCAD and Material Maker): each
+call goes to the exact instance, tools load as skills on demand, and every
+change is read back.
+
+Documentation and supported versions:
+[docs.meshy.ai](https://docs.meshy.ai/en/webapp/plugins/meshy-dcc/introduction)
 
 ```sh
 npm install -g meshy-dcc
