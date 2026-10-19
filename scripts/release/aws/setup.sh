@@ -4,6 +4,9 @@
 # only the main branches of meshy-dev/meshy-dcc-core and
 # meshy-dev/meshy-dcc-adapters (whose release workflow copies adapter builds to
 # the CDN) can assume through GitHub OIDC, and the npm token in Secrets Manager.
+# The repositories use GitHub's immutable OIDC subjects, which carry the owner
+# and repository IDs (repo:meshy-dev@<id>/<repo>@<id>:ref:...); see
+# `gh api repos/meshy-dev/<repo>/actions/oidc/customization/sub`.
 #
 #   AWS_PROFILE=SRE-133081291590 scripts/release/aws/setup.sh
 #   AWS_PROFILE=SRE-133081291590 scripts/release/aws/setup.sh --npm-token < token-file

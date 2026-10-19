@@ -11,6 +11,8 @@
         "StringEquals": {
           "token.actions.githubusercontent.com:aud": "sts.amazonaws.com",
           "token.actions.githubusercontent.com:sub": [
+            "repo:meshy-dev@160386200/meshy-dcc-core@1381158595:ref:refs/heads/main",
+            "repo:meshy-dev@160386200/meshy-dcc-adapters@1416726096:ref:refs/heads/main",
             "repo:meshy-dev/meshy-dcc-core:ref:refs/heads/main",
             "repo:meshy-dev/meshy-dcc-adapters:ref:refs/heads/main"
           ]
