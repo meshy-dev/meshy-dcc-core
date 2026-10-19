@@ -20,6 +20,9 @@ name: release
 # It expires after seven days, so it is refreshed daily (see the catalog job);
 # run the workflow with no tag to publish it right away, for example after an
 # adapter release.
+#
+# dry_run builds both platforms from main for the given tag's version and
+# publishes nothing (no GitHub Release needed); the builds stay as run artifacts.
 
 on:
   workflow_dispatch:
@@ -27,6 +30,10 @@ on:
       tag:
         description: "Release tag, e.g. v0.2.0; empty publishes only the install catalog"
         required: false
+      dry_run:
+        description: "Build from main for this tag's version; publish nothing"
+        type: boolean
+        default: false
   schedule:
     - cron: "17 3 * * *"
 
@@ -40,7 +47,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with:
-          ref: ${{ inputs.tag }}
+          ref: ${{ inputs.dry_run && github.sha || inputs.tag }}
 
       - name: The workspace version matches the tag
         env:
@@ -53,6 +60,7 @@ jobs:
           fi
 
       - name: The GitHub Release exists
+        if: ${{ !inputs.dry_run }}
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ inputs.tag }}
@@ -77,7 +85,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with:
-          ref: ${{ inputs.tag }}
+          ref: ${{ inputs.dry_run && github.sha || inputs.tag }}
 
       # The Rust toolchain comes from rust-toolchain.toml.
       - uses: actions/setup-node@v5
@@ -113,6 +121,7 @@ jobs:
 
   publish:
     needs: build
+    if: ${{ !inputs.dry_run }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -121,7 +130,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with:
-          ref: ${{ inputs.tag }}
+          ref: ${{ inputs.dry_run && github.sha || inputs.tag }}
       - uses: actions/setup-node@v5
         with:
           node-version: 22
@@ -214,7 +223,7 @@ jobs:
     # meshy-dcc trusts the catalog only when signed from main. The daily
     # refresh starts once the repository variable INSTALL_CATALOG_REFRESH is
     # "on" (set at launch); runs started by hand always publish.
-    if: github.ref == 'refs/heads/main' && (github.event_name != 'schedule' || vars.INSTALL_CATALOG_REFRESH == 'on')
+    if: github.ref == 'refs/heads/main' && !inputs.dry_run && (github.event_name != 'schedule' || vars.INSTALL_CATALOG_REFRESH == 'on')
     runs-on: ubuntu-latest
     concurrency: install-catalog
     permissions:
