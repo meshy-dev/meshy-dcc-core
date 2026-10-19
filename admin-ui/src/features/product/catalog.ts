@@ -83,15 +83,15 @@ export const DCC_REQUIREMENTS: Record<string, string> = {
   unity: 'Unity 2018.4+',
   godot: 'Godot 4.4+',
   unreal: 'Unreal Engine 5.0+',
-  maya: 'Maya 2025+',
+  maya: 'Maya 2023+',
   zbrush: 'ZBrush 2026.1+',
-  freecad: 'FreeCAD 1.0+',
+  freecad: 'FreeCAD 1.0–1.1',
   'material-maker': 'Material Maker 1.7+',
   houdini: 'Houdini 20.5+',
-  substance3d_painter: 'Substance 3D Painter 8.1+',
+  substance3d_painter: 'Substance 3D Painter 10.0+',
   openscad: 'OpenSCAD 2021.01, 2026.09–10 snapshots',
   c4d: 'Cinema 4D 2023+',
-  '3dsmax': '3ds Max 2025+',
+  '3dsmax': '3ds Max 2023+',
 };
 
 export const AGENT_LOGOS: Record<string, Logo> = {

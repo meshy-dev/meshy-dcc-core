@@ -1,6 +1,6 @@
 # Maya
 
-Adapter `meshy-dcc-maya`, for Maya 2025 and later on macOS and Windows.
+Adapter `meshy-dcc-maya`, for Maya 2023 and later on macOS and Windows.
 
 - `meshy-dcc install --dcc-type maya` writes one file, `meshy_dcc_maya.mod`, into the user's
   Maya modules folder. Every Maya the user starts afterwards loads the adapter, and each Maya

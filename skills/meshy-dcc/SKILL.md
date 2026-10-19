@@ -20,9 +20,9 @@ you choose. No MCP connector is involved.
 - [FreeCAD](references/freecad.md) 1.0 and 1.1
 - [Roblox Studio](references/roblox.md): imported models last for the Studio session only.
 - [Houdini](references/houdini.md) 20.5+
-- [Maya](references/maya.md) 2025+
-- [3ds Max](references/3dsmax.md) 2025+, Windows only.
-- [Substance 3D Painter](references/substance3d-painter.md) 8.1+
+- [Maya](references/maya.md) 2023+
+- [3ds Max](references/3dsmax.md) 2023+, Windows only.
+- [Substance 3D Painter](references/substance3d-painter.md) 10.0+
 - [ZBrush](references/zbrush.md) 2026.1+, only when started with `start-instance`.
 
 Cinema 4D is not supported in this release.

@@ -1,11 +1,11 @@
 # Substance 3D Painter
 
-Adapter `meshy-dcc-substance3d-painter`, for Substance 3D Painter 8.1 and later on macOS and
+Adapter `meshy-dcc-substance3d-painter`, for Substance 3D Painter 10.0 and later on macOS and
 Windows.
 
 - The adapter is a startup plugin in the user's Painter profile
   (`Documents/Adobe/Adobe Substance 3D Painter/python/startup/`). Its server starts with Painter,
-  and each Painter process is one instance. Painter 8.1 or later (Python 3.9+).
+  and each Painter process is one instance. Painter 8.1 to 9.x load the plugin, but the PBR layer tools need 10.0.
 - Install once per machine, with no `--project`. A Painter that was already running loads the
   adapter only after a restart. `start-instance` still needs `--project` (any folder; Painter
   opens no project from it).

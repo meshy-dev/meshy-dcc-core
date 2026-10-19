@@ -188,7 +188,7 @@ entries:
           - ["{package_dir}/bin/meshy-dcc-zbrush", "setup-project", "{project}", "--dcc-path", "{dcc_path}", "--json"]
 
   - name: "meshy-dcc-roblox"
-    description: "Meshy DCC adapter for Roblox Studio: place tree, instance edits and Meshy GLB import (experimental)"
+    description: "Meshy DCC adapter for Roblox Studio: place tree, instance edits and Meshy GLB import"
     dcc: ["roblox"]
     url: "https://www.meshy.ai"
     tags: ["adapter", "meshy", "roblox"]
@@ -221,7 +221,7 @@ entries:
           - ["{package_dir}/python/bin/python3.11", "-I", "-m", "meshy_dcc_roblox", "install", "--project", "{project}"]
 
   - name: "meshy-dcc-maya"
-    description: "Meshy DCC adapter for Autodesk Maya 2025 and 2026: scene, import, materials, rendering and save tools (experimental)"
+    description: "Meshy DCC adapter for Autodesk Maya 2023+: scene, import, materials, rendering and save tools"
     dcc: ["maya"]
     url: "https://www.meshy.ai"
     tags: ["adapter", "meshy", "maya"]
@@ -265,7 +265,7 @@ entries:
         launch: ["{executable}"]
 
   - name: "meshy-dcc-3dsmax"
-    description: "Meshy DCC adapter for 3ds Max 2025+ on Windows: scene, FBX import, Physical materials and render tools (experimental)"
+    description: "Meshy DCC adapter for 3ds Max 2023+ on Windows: scene, FBX import, Physical materials and render tools"
     dcc: ["3dsmax"]
     url: "https://www.meshy.ai"
     tags: ["adapter", "meshy", "3dsmax"]
@@ -304,7 +304,7 @@ entries:
       reason: "The Meshy Omniverse adapter is planned."
 
   - name: "meshy-dcc-houdini"
-    description: "Meshy DCC adapter for SideFX Houdini 20.5+: scene, node graph, geometry, import, materials and render tools (experimental)"
+    description: "Meshy DCC adapter for SideFX Houdini 20.5+: scene, node graph, geometry, import, materials and render tools"
     dcc: ["houdini"]
     url: "https://www.meshy.ai"
     tags: ["adapter", "meshy", "houdini"]
@@ -393,7 +393,7 @@ entries:
       reason: "The Meshy Marmoset Toolbag adapter is planned."
 
   - name: "meshy-dcc-substance3d-painter"
-    description: "Meshy DCC adapter for Substance 3D Painter 8.1+ (experimental): projects from meshes, PBR layers, mesh-map baking and texture export"
+    description: "Meshy DCC adapter for Substance 3D Painter 10.0+: projects from meshes, PBR layers, mesh-map baking and texture export"
     dcc: ["substance3d_painter"]
     url: "https://www.meshy.ai"
     tags: ["adapter", "meshy", "substance3d-painter"]

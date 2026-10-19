@@ -1,6 +1,6 @@
 # 3ds Max
 
-Adapter `meshy-dcc-3dsmax`, for 3ds Max 2025 and later; 3ds Max runs on Windows only.
+Adapter `meshy-dcc-3dsmax`, for 3ds Max 2023 and later; 3ds Max runs on Windows only.
 
 - The adapter starts with 3ds Max from a startup script, and each 3ds Max process is one
   `3dsmax` instance. Tools run on 3ds Max's main thread; a long render or a modal dialog

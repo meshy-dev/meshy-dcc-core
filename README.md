@@ -14,18 +14,18 @@ Documentation: [docs.meshy.ai](https://docs.meshy.ai/en/webapp/plugins/meshy-dcc
 
 | App | Versions |
 |---|---|
-| Blender | 4.5 – 5.1 |
-| Unity | 2018.4 – 6000.4 |
+| Blender | 4.5 – 5.2 |
+| Unity | 2018.4 – 6000.5 |
 | Godot | 4.4 – 4.7 |
-| Unreal Engine | 5.0 – 5.7 |
-| Maya | 2025 – 2027 |
-| 3ds Max | 2025 – 2027 |
-| Houdini | 20.5 – 21.0 |
-| Substance 3D Painter | 8.1 – 12.1 |
+| Unreal Engine | 5.0 – 5.8 |
+| Maya | 2023 – 2027 |
+| 3ds Max | 2023 – 2027 |
+| Houdini | 20.5 – 22.0 |
+| Substance 3D Painter | 10.0 – 12.1 |
 | ZBrush | 2026.1 – 2026.2 |
 | Roblox Studio | current release |
 | FreeCAD | 1.0 – 1.1 |
-| OpenSCAD | 2021.01 – 2026.10 |
+| OpenSCAD | 2021.01; 2026.09 – 2026.10 snapshots |
 | Material Maker | 1.7 |
 
 On macOS (Apple Silicon) and Windows x64; 3ds Max on Windows only.
