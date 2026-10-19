@@ -552,6 +552,7 @@ fn configure_detached_command(cmd: &mut Command) {
     const DETACHED_PROCESS: u32 = 0x0000_0008;
     const CREATE_NEW_PROCESS_GROUP: u32 = 0x0000_0200;
     cmd.creation_flags(CREATE_NO_WINDOW | DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP);
+    meshy_dcc_gateway_ensure::keep_std_handles_from_children();
 }
 
 #[cfg(not(any(unix, windows)))]

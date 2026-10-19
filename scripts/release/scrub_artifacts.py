@@ -54,13 +54,30 @@ def scrub_wheel(wheel, repo):
 def leaks(path, needles):
     found = []
     data = path.read_bytes()
-    found += [f"{path.name}: {n.decode()}" for n in needles if n in data]
+    found += [f"{path.name}: {label}" for label, n in needles.items() if n in data]
     if path.suffix in (".whl", ".zip"):
         with zipfile.ZipFile(path) as z:
             for info in z.infolist():
                 member = z.read(info)
-                found += [f"{path.name}!{info.filename}: {n.decode()}" for n in needles if n in member]
+                found += [f"{path.name}!{info.filename}: {label}" for label, n in needles.items() if n in member]
     return found
+
+
+def path_needles(*paths):
+    """Each path as UTF-8; on Windows also its 8.3 short form (C code built
+    from short paths keeps them) and UTF-16 (wide strings in binaries)."""
+    forms = set(paths)
+    if os.name == "nt":
+        import ctypes
+
+        for path in paths:
+            buf = ctypes.create_unicode_buffer(32768)
+            if ctypes.windll.kernel32.GetShortPathNameW(path, buf, len(buf)):
+                forms.add(buf.value)
+    needles = {form: form.encode() for form in forms}
+    if os.name == "nt":
+        needles.update({f"{form} (UTF-16)": form.encode("utf-16-le") for form in forms})
+    return needles
 
 
 def main(repo_root, out_dir):
@@ -68,7 +85,7 @@ def main(repo_root, out_dir):
     out = Path(out_dir)
     for wheel in sorted(out.glob("*.whl")):
         print(f"{wheel.name}: rewrote {scrub_wheel(wheel, repo)} SBOM file(s)")
-    needles = [repo, os.environ["HOME"].encode()]
+    needles = path_needles(repo.decode(), os.environ["HOME"])
     found = [hit for path in sorted(out.iterdir()) if path.is_file() for hit in leaks(path, needles)]
     if found:
         sys.exit("build-machine paths left in release artifacts:\n  " + "\n  ".join(found))
