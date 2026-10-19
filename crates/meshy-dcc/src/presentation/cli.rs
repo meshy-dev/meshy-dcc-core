@@ -400,8 +400,8 @@ async fn run_with_args(args: Args) -> anyhow::Result<()> {
             let overrides = parse_adapter_python(&adapter_python)?;
             let value = run_doctor(doctor.request_with_adapter_probes(
                 registry_dir,
-                Some(gateway_host),
-                Some(gateway_port),
+                gateway_host,
+                gateway_port,
                 overrides,
                 adapter_catalog,
             ))

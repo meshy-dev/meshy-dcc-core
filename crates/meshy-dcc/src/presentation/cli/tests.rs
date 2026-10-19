@@ -935,8 +935,8 @@ fn gateway_endpoint_for_command_ensures_gateway_for_agent_control_commands() {
             DEFAULT_BASE_URL,
             &Command::Doctor {
                 registry_dir: None,
-                gateway_host: "127.0.0.1".to_string(),
-                gateway_port: 19765,
+                gateway_host: None,
+                gateway_port: None,
                 adapter_python: Vec::new(),
                 adapter_catalog: None,
             },
@@ -1327,6 +1327,47 @@ fn gateway_daemon_restart_defaults_to_persistent_daemon() {
 
     assert_eq!(restart.start.gateway_idle_timeout_secs, 0);
     assert_eq!(restart.stop_timeout_secs, 10);
+}
+
+/// `doctor` probes the gateway every other command uses unless `--gateway-host`
+/// or `--gateway-port` name another, so a test's `MESHY_DCC_GATEWAY_PORT` is
+/// not reported as the user's 19765.
+#[test]
+fn doctor_probes_the_cli_gateway_by_default() {
+    use crate::application::doctor::DoctorContext;
+    use crate::application::gateway_profile::GatewayProfileStore;
+
+    let probe = |argv: &[&str]| {
+        let Command::Doctor {
+            gateway_host,
+            gateway_port,
+            ..
+        } = Args::parse_from(argv).command
+        else {
+            panic!("expected doctor");
+        };
+        let context = DoctorContext::new(
+            std::path::PathBuf::from("profiles.json"),
+            GatewayProfileStore::default(),
+            GatewayTarget::Local,
+            None,
+            true,
+            false,
+            &Endpoint::new(default_base_url(Some("19884"))),
+        )
+        .expect("doctor context");
+        let request = context.request(None, gateway_host, gateway_port);
+        (request.gateway_host, request.gateway_port)
+    };
+
+    assert_eq!(
+        probe(&["meshy-dcc", "doctor"]),
+        ("127.0.0.1".to_string(), 19884)
+    );
+    assert_eq!(
+        probe(&["meshy-dcc", "doctor", "--gateway-port", "19885"]).1,
+        19885
+    );
 }
 
 /// `gateway stop`/`status` act on the gateway every other command uses, so a
