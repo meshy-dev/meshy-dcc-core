@@ -201,7 +201,7 @@ jobs:
             --macos-arm64 artifacts/release-macos-arm64/out \
             --windows-x86_64 artifacts/release-windows-x86_64/out
           # Platform packages first, so `meshy-dcc` never points at missing ones.
-          for tarball in npm-out/meshy-ai-*.tgz npm-out/meshy-dcc-*.tgz; do
+          for tarball in ./npm-out/meshy-ai-*.tgz ./npm-out/meshy-dcc-*.tgz; do
             name="$(tar -xzOf "$tarball" package/package.json | node -p 'JSON.parse(require("fs").readFileSync(0)).name')"
             if npm view "$name@$version" version > /dev/null 2>&1; then
               echo "$name@$version is already on npm; skipping"
