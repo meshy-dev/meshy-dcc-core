@@ -1,7 +1,7 @@
 # OpenSCAD
 
-Verified with the OpenSCAD 2026.10.15 snapshot, macOS arm64, with adapter
-`meshy-dcc-openscad` 0.1.0. The Windows package has not run on Windows yet.
+Verified with the OpenSCAD 2026.10.15 snapshot (macOS arm64) and OpenSCAD 2021.01
+(Windows x64), with adapter `meshy-dcc-openscad` 0.1.0.
 
 - OpenSCAD has no embedded Python. The instance is the adapter process, which
   runs the `openscad` command line once per call; no OpenSCAD window opens.

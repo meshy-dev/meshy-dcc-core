@@ -1,10 +1,11 @@
 # ZBrush
 
-Not verified on a real host yet; experimental. Adapter `meshy-dcc-zbrush` 0.1.0, for ZBrush
-2026.1 and later on macOS arm64 and Windows x64. Install was checked against a ZBrush 2026.2
-installation without starting it; launch, calls, save, reopen and stop ran against a stand-in
-for ZBrush. What ZBrush itself does with each command is read from the adapter's source and
-Maxon's SDK documentation, not observed.
+Verified on ZBrush 2026.2.1 on Windows 11, with adapter `meshy-dcc-zbrush` 0.1.0, built for
+ZBrush 2026.1 and later on macOS arm64 and Windows x64 (the macOS build has not run in
+ZBrush): start, session info, a Meshy OBJ import, save, reopen and stop. Install checks that
+ZBrush is signed by Maxon and refuses one that is not; the first start after install can
+restart ZBrush through Explorer and lose the script, so if `start-instance` times out, run it
+again.
 
 - The adapter installs per project folder: the folder that holds the work (models to import,
   saved `.zpr` and `.ztl` files). Nothing goes into the ZBrush installation or its settings.

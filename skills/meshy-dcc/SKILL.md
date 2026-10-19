@@ -1,6 +1,6 @@
 ---
 name: meshy-dcc
-description: Work inside a creator's running DCC application through the local meshy-dcc CLI - find the live instance, discover and load its tools, call them, and read the scene back. Use for scene edits and for importing Meshy-generated models into a DCC project. Supported today - Blender, Unity, Godot, Unreal, OpenSCAD, Material Maker, FreeCAD and Roblox Studio; experimental - 3ds Max, Cinema 4D, Houdini, Maya, Substance 3D Painter and ZBrush.
+description: Work inside a creator's running DCC application through the local meshy-dcc CLI - find the live instance, discover and load its tools, call them, and read the scene back. Use for scene edits and for importing Meshy-generated models into a DCC project. Supported today - Blender, Unity, Godot, Unreal, OpenSCAD, Material Maker, FreeCAD, Roblox Studio, Houdini, Maya, 3ds Max, Substance 3D Painter and ZBrush.
 ---
 
 # Meshy DCC
@@ -9,28 +9,26 @@ description: Work inside a creator's running DCC application through the local m
 the machine; the CLI lists them, searches their tools and runs a tool inside the instance
 you choose. No MCP connector is involved.
 
-**Supported now**, on macOS (arm64):
+**Supported now**, verified in the app on the platforms noted (macOS arm64, Windows x64):
 
-- Blender 5.0. Read [the Blender reference](references/blender.md) before Blender work.
-- Unity 6 (6000.4). Read [the Unity reference](references/unity.md) before Unity work.
-- Godot 4.7. Read [the Godot reference](references/godot.md) before Godot work.
-- Unreal Engine 5.7. Read [the Unreal reference](references/unreal.md) before Unreal work.
-- OpenSCAD (2026.10 snapshot). Read [the OpenSCAD reference](references/openscad.md) before OpenSCAD work.
-- Material Maker 1.7. Read [the Material Maker reference](references/material-maker.md) before Material Maker work.
-- FreeCAD 1.1. Read [the FreeCAD reference](references/freecad.md) before FreeCAD work.
-- Roblox Studio 0.743. Imported models last for the Studio session only. Read
-  [the Roblox reference](references/roblox.md) before Roblox work.
+- Blender: 5.0 macOS, 5.1 Windows. Read [the Blender reference](references/blender.md) before Blender work.
+- Unity: 6000.4 macOS, 2022.3 Windows. Read [the Unity reference](references/unity.md) before Unity work.
+- Godot 4.7: macOS, Windows. Read [the Godot reference](references/godot.md) before Godot work.
+- Unreal Engine 5.7: macOS, Windows. Read [the Unreal reference](references/unreal.md) before Unreal work.
+- OpenSCAD: 2026.10 snapshot macOS, 2021.01 Windows. Read [the OpenSCAD reference](references/openscad.md) before OpenSCAD work.
+- Material Maker 1.7: macOS, Windows. Read [the Material Maker reference](references/material-maker.md) before Material Maker work.
+- FreeCAD 1.1: macOS, Windows. Read [the FreeCAD reference](references/freecad.md) before FreeCAD work.
+- Roblox Studio 0.743: macOS, Windows. Imported models last for the Studio session only.
+  Read [the Roblox reference](references/roblox.md) before Roblox work.
+- Houdini 21: Windows. Read [the Houdini reference](references/houdini.md) before Houdini work.
+- Maya 2027: Windows. Read [the Maya reference](references/maya.md) before Maya work.
+- 3ds Max 2027: Windows only (there is no macOS 3ds Max). Read [the 3ds Max reference](references/3dsmax.md) before 3ds Max work.
+- Substance 3D Painter 12.1: Windows. Read [the Substance 3D Painter reference](references/substance3d-painter.md) before Painter work.
+- ZBrush 2026.2: Windows, only when started with `start-instance`. Read [the ZBrush reference](references/zbrush.md) before ZBrush work.
 
-**Experimental**, built and tested without the app itself. Tell the user that before relying
-on one, and read back every change:
-
-- 3ds Max 2025+, Windows only. Read [the 3ds Max reference](references/3dsmax.md).
-- Cinema 4D 2023+, headless: it edits `.c4d` files in a project folder, not the open app.
-  Read [the Cinema 4D reference](references/c4d.md).
-- Houdini 20.5+. Read [the Houdini reference](references/houdini.md).
-- Maya 2025+. Read [the Maya reference](references/maya.md).
-- Substance 3D Painter 8.1+. Read [the Substance 3D Painter reference](references/substance3d-painter.md).
-- ZBrush 2026.1+, only when started with `start-instance`. Read [the ZBrush reference](references/zbrush.md).
+Houdini, Maya, Substance 3D Painter and ZBrush also install on macOS, but their macOS builds
+have not run in the app yet: tell the user that, and read back every change. Cinema 4D is not
+supported in this release.
 
 For any other host, tell the user it is not supported yet instead of improvising.
 

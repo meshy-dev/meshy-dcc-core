@@ -8,42 +8,36 @@ engines: install connectors once, route every call to the exact running
 instance, and load capabilities as skills on demand, so one agent can carry a
 Meshy model from generation through every app it touches.
 
-**Status: 0.2.0, early development.** Verified so far on macOS arm64:
+**Status: 0.2.0, first release.** Every connector below ran end to end in the
+app on the platforms shown: install, start-instance, a Meshy model brought in
+and read back, save and reopen, and stop (refused while work is unsaved unless
+the user agrees to discard it).
 
-- Blender 5.0.1: list, search, load-skill, describe, call and readback, plus
-  host-package install, start-instance and consent-gated stop.
-- Unity 6000.4.10f1: per-project install, start-instance, FBX import and
-  instantiate with readback, a PBR material built from a Meshy texture set
-  (Built-in Standard), save and reopen, and stop (refused while scenes are
-  unsaved unless the user agrees to discard them).
-- Godot 4.7.2: per-project install, start-instance, import of a textured
-  Meshy GLB with mesh and PBR material readback, save and reopen, and stop
-  (refused while scenes or scripts are unsaved unless the user agrees to
-  discard them).
-- Unreal Engine 5.7.2: per-project install that builds the plugin's C++
-  editor module, start-instance, import of a Meshy GLB and of a Meshy FBX
-  whose texture set becomes a PBR material, readback, save and reopen, a
-  rendered capture, native tools, and stop (refused while maps or assets are
-  unsaved unless the user agrees to discard them). The editor needs Xcode and
-  its Metal toolchain on macOS, and the build an Xcode the engine accepts.
+| App | macOS arm64 | Windows x64 |
+|---|---|---|
+| Blender | 5.0.1 | 5.1 |
+| Unity | 6000.4.10f1 | 2022.3.55f1c1 |
+| Godot | 4.7.2 | 4.7.2 |
+| Unreal Engine | 5.7.2 | 5.7.4 |
+| OpenSCAD | 2026.10.15 snapshot | 2021.01 |
+| Material Maker | 1.7 | 1.7 |
+| FreeCAD | 1.1.4 | 1.1.4 |
+| Roblox Studio | 0.743 | 0.743 |
+| Houdini | not run yet | 21.0.440 |
+| Maya | not run yet | 2027.2 |
+| 3ds Max | no macOS version | 2027 |
+| Substance 3D Painter | not run yet | 12.1.5 |
+| ZBrush | not run yet | 2026.2.1 |
 
-- OpenSCAD 2026.10.15 snapshot: per-project install, start-instance, writing
-  and validating a model, STL export read back, a Meshy STL stood on a print
-  base, and the same STL again after a restart.
-- Material Maker 1.7: per-folder install, start-instance, a material graph
-  built and edited around a Meshy texture, PBR texture export read back, and
-  the same graph and byte-identical textures after a restart.
-- Roblox Studio 0.743: per-place install, start-instance, scene edits read
-  back, a Meshy GLB rebuilt as a textured MeshPart, Luau once the user allows
-  it, save and reopen, and stop. Imported models last for the Studio session
-  only (Roblox does not save them with a place yet).
-- FreeCAD 1.1.4: per-project install, start-instance, import of a Meshy GLB
-  with mesh readback, a saved copy, reopen after a restart, and stop (refused
-  while a call runs unless the user agrees to cancel it).
-
-Built and tested without the host itself, so marked experimental and outside
-the support matrix: 3ds Max (Windows only), Cinema 4D, Houdini, Maya,
-Substance 3D Painter and ZBrush. Other hosts are not in the support matrix yet.
+- Roblox Studio: imported models last for the Studio session only (Roblox
+  does not save them with a place yet).
+- Unreal Engine builds the plugin's C++ module at install: Xcode and its Metal
+  toolchain on macOS, Visual Studio 2022 on Windows.
+- Material Maker: the connector works on the graph files and runs Material
+  Maker for exports; it does not drive an open Material Maker window.
+- Cinema 4D is not supported in this release.
+- The Windows programs are not code-signed yet, so SmartScreen or Smart App
+  Control may stop them.
 
 ## Install
 

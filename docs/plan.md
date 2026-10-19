@@ -125,13 +125,13 @@ ORM 打包图要按 glTF 约定取通道：G = roughness，B = metallic。现有
 | OpenSCAD | `meshy-dcc-openscad` 0.1.0，真机验证过（2026.10.15 快照） | 按项目安装、自带 Python 的 sidecar 调 OpenSCAD 命令行；导出后读回；Meshy STL 加打印底座 | day-0 |
 | Material Maker | `meshy-dcc-material-maker` 0.1.0，真机验证过（1.7） | 按材质文件夹安装的 sidecar 直接编辑 `.ptex`，导出时调官方 `--export-material`（会短暂抢前台） | day-0 |
 | Roblox | `meshy-dcc-roblox` 0.1.0（新写），真机验证过（Studio 0.743；导入的模型只活在会话里） | Studio 插件作 WebSocket 客户端连包内 sidecar，按 place 路由；GLB 经 EditableMesh 重建（默认只活在会话里） | day-0 |
-| Houdini | `meshy-dcc-houdini` 0.1.0，experimental（本机无宿主） | 用户偏好 `packages/` 下一个包文件指向解开的包，`uiready.py` 自启；safe stop 读 `hasUnsavedChanges` | day-0 |
-| Substance 3D Painter | `meshy-dcc-substance3d-painter` 0.1.0，experimental | 用户 profile 的 `python/startup` 放一个 loader；主线程派发 | day-0 |
-| Cinema 4D | `meshy-dcc-c4d` 0.1.0，experimental | 上游是 headless：每次操作起授权的 `c4dpy` 改项目文件夹里的 `.c4d`，不进 GUI | day-0 |
-| 3ds Max | `meshy-dcc-3dsmax` 0.1.0，experimental，只有 Windows 包 | 用户 startup 目录的启动脚本 + 3ds Max 自带 Python 跑进程内 server | day-0 |
+| Houdini | `meshy-dcc-houdini` 0.1.0，真机：Windows 21.0.440（macOS 未跑） | 用户偏好 `packages/` 下一个包文件指向解开的包，`uiready.py` 自启；safe stop 读 `hasUnsavedChanges` | day-0 |
+| Substance 3D Painter | `meshy-dcc-substance3d-painter` 0.1.0，真机：Windows 12.1.5（macOS 未跑） | 用户 profile 的 `python/startup` 放一个 loader；主线程派发 | day-0 |
+| Cinema 4D | `meshy-dcc-c4d` 0.1.0，**本期不支持**（Windows 上 `c4dpy` 启动即崩，未能实测） | 上游是 headless：每次操作起授权的 `c4dpy` 改项目文件夹里的 `.c4d`，不进 GUI | day-0 |
+| 3ds Max | `meshy-dcc-3dsmax` 0.1.0，真机：Windows 2027（只有 Windows 包） | 用户 startup 目录的启动脚本 + 3ds Max 自带 Python 跑进程内 server | day-0 |
 | FreeCAD | `meshy-dcc-freecad` 0.1.0，真机验证过（1.1.4） | 按项目安装的服务每次调用起 FreeCADCmd（safe mode，不写用户目录）；Meshy GLB 转 Mesh::Feature 读回 | day-0 |
-| Maya | `meshy-dcc-maya` 0.1.0，experimental | 用户 modules 目录一个 `.mod` 指向解开的包；Meshy FBX 导入建 standardSurface（G=roughness、B=metalness） | day-0 |
-| ZBrush | `meshy-dcc-zbrush` 0.1.0，experimental（本机企业限制不能启动） | 按项目：`ZBrush -script <包内 bridge>`，只认 start-instance 启动的；每次启动一个 token；OBJ 导入、.zpr/.ztl 存取 | day-0 |
+| Maya | `meshy-dcc-maya` 0.1.0，真机：Windows 2027.2（macOS 未跑） | 用户 modules 目录一个 `.mod` 指向解开的包；Meshy FBX 导入建 standardSurface（G=roughness、B=metalness） | day-0 |
+| ZBrush | `meshy-dcc-zbrush` 0.1.0，真机：Windows 2026.2.1（macOS 本机企业限制不能启动） | 按项目：`ZBrush -script <包内 bridge>`，只认 start-instance 启动的；每次启动一个 token；OBJ 导入、.zpr/.ztl 存取 | day-0 |
 | Marmoset、Substance 3D Designer、Mari、OpenUSD、Katana、MotionBuilder、SketchUp、Photoshop | 待建 | 改造为 Meshy adapter；本机无宿主的只做构建与单测，标 experimental | 以后 |
 | Omniverse | 新做 | Kit 扩展加载 wheel；参考 Send To 版 Kit 扩展 | 暂缓 |
 

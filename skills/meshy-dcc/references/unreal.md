@@ -1,7 +1,9 @@
 # Unreal
 
-Verified on Unreal Engine 5.7.2, macOS arm64, with adapter `meshy-dcc-unreal` 0.1.0. Unreal
-Engine 5.0 or newer only; Unreal Engine 4 is not supported.
+Verified on Unreal Engine 5.7.2 (macOS arm64) and 5.7.4 (Windows x64), with adapter
+`meshy-dcc-unreal` 0.1.0. Unreal Engine 5.0 or newer only; Unreal Engine 4 is not supported.
+On Windows the module does not build when the project path has non-ASCII characters (an
+Unreal limit); install says so and rolls back, so suggest an ASCII path.
 
 - The adapter is a project plugin, `Plugins/MeshyDccUnreal`: a C++ editor module plus a
   Python layer on the editor's own Python. `list` shows the editor's PID as the instance `pid`.

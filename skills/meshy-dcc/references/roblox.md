@@ -1,7 +1,7 @@
 # Roblox Studio
 
-Verified on Roblox Studio 0.743, macOS arm64, with adapter `meshy-dcc-roblox` 0.1.0;
-Windows not run yet.
+Verified on Roblox Studio 0.743 on macOS arm64 and Windows x64, with adapter
+`meshy-dcc-roblox` 0.1.0.
 
 - The adapter is a Studio plugin plus a sidecar. `meshy-dcc install --dcc-type roblox
   --project <dir>` needs a directory holding exactly one place file (`.rbxl` or

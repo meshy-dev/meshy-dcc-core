@@ -1,8 +1,8 @@
 # Cinema 4D
 
-Not verified on a real host yet; experimental. Adapter `meshy-dcc-c4d` 0.1.0 was run
-end to end on macOS arm64 only against a stand-in `c4dpy` (not Cinema 4D), so the
-lifecycle below is checked, but what Cinema 4D itself does is not.
+Not supported in this release: the connector is not installable. On the one Windows machine
+tried, Cinema 4D's `c4dpy` crashed on start, so adapter `meshy-dcc-c4d` 0.1.0 was never
+checked against Cinema 4D. If the user asks for Cinema 4D, say it is not supported yet.
 
 - The adapter never runs inside the Cinema 4D GUI. Its service runs in the package's own
   Python and starts Cinema 4D's licensed headless `c4dpy` once for every operation.

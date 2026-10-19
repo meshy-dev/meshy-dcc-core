@@ -1,7 +1,7 @@
 # Substance 3D Painter
 
-Experimental. Adapter `meshy-dcc-substance3d-painter` 0.1.0. Checked on one real Painter, 12.1.5
-on Windows 11: install, start, a project from a Meshy GLB, a five-map PBR layer, save, stop,
+Verified on Substance 3D Painter 12.1.5 on Windows 11, with adapter
+`meshy-dcc-substance3d-painter` 0.1.0 (the macOS build has not run in Painter). Checked: install, start, a project from a Meshy GLB, a five-map PBR layer, save, stop,
 reopen, export, uninstall. Anything else here is read from the adapter's source.
 
 - The adapter is a startup plugin in the user's Painter profile

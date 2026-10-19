@@ -1,7 +1,7 @@
 # Material Maker
 
-Verified on Material Maker 1.7, macOS arm64, with adapter `meshy-dcc-material-maker`
-0.1.0. The Windows package has not run on a real host yet.
+Verified on Material Maker 1.7 on macOS arm64 and Windows x64, with adapter
+`meshy-dcc-material-maker` 0.1.0.
 
 - Material Maker has no plug-in interface. The adapter is a sidecar bound to one
   project folder of material graphs (`.ptex`); `start-instance` starts the

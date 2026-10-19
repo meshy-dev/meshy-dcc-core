@@ -1,6 +1,8 @@
 # Godot
 
-Verified on Godot 4.7.2, macOS arm64, with adapter `meshy-dcc-godot` 0.1.0.
+Verified on Godot 4.7.2 on macOS arm64 and Windows x64, with adapter `meshy-dcc-godot` 0.1.0.
+On Windows the editor executable is never named `godot`: set `MESHY_DCC_GODOT_EXECUTABLE`
+to it (or put it on `PATH` under that name) before install and start.
 
 - The adapter has two parts:
   - the EditorPlugin, copied into each project's `addons/meshy_dcc_godot` and enabled in

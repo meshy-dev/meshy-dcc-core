@@ -1,7 +1,14 @@
 # Houdini
 
-Not verified on a real host yet; experimental. Adapter `meshy-dcc-houdini` 0.1.0 for
-Houdini 20.5+; everything below is read from the adapter source, not observed in Houdini.
+Verified on Houdini 21.0.440 on Windows 11, with adapter `meshy-dcc-houdini` 0.1.0, built for
+Houdini 20.5 and later (the macOS build has not run in Houdini). Checked: install, start, a
+Meshy GLB with a MaterialX PBR material, save, stop, reopen, uninstall; the rest is read from
+the adapter source.
+
+- Houdini looks for its preferences under `HOME` first. When the agent's environment sets
+  `HOME` (common on Windows), install writes into `$HOME/houdini<X.Y>`: a Houdini started
+  with `start-instance` reads it, one started from the Start menu does not. Tell the user
+  when they plan to open Houdini themselves.
 
 - `meshy-dcc install --dcc-type houdini` writes one package file,
   `meshy_dcc_houdini.json`, into that Houdini version's user preferences
@@ -22,7 +29,7 @@ Houdini 20.5+; everything below is read from the adapter source, not observed in
 |---|---|
 | `houdini-scene` | `get_scene_info`, `list_obj_nodes`, `list_child_nodes`, `get_node_info`, `inspect_selection` (read-only) |
 | `houdini-scene-edit` | `save_scene`, `open_scene`, `new_scene`, `find_nodes`, `get_bounding_box` |
-| `houdini-interchange` | `probe_file`, `import_geometry` (File SOP: bgeo, OBJ, FBX, Alembic, USD; **not** glTF/GLB), `export_fbx`, `export_usd` |
+| `houdini-interchange` | `probe_file`, `import_geometry` (bgeo, OBJ, FBX, Alembic, USD; glTF/GLB through the GLTF SOP; a file it cannot read fails the call), `export_fbx`, `export_usd` |
 | `houdini-import-to-scene` | `import_to_scene` (takes an asset descriptor, `{"asset_id", "variants": [{"local_path"}]}`; GLB/glTF, OBJ, USD materials become `principledshader` nodes in `/mat`) |
 | `houdini-materials` | `build_materialx_pbr` (base color, roughness, metallic, normal textures; color maps `srgb_texture`, data maps `Raw`), `assign_material` |
 | `houdini-nodes` | `create_node`, `set_node_parms`, `connect_nodes`, `cook_node` |
