@@ -1,8 +1,9 @@
 # 3ds Max
 
-Not verified on a real host yet; experimental. Adapter `meshy-dcc-3dsmax` 0.1.0, built for
-3ds Max 2025 and 2026 on Windows (3ds Max has no macOS version). What follows is read from
-the adapter's source; nothing here has been run inside 3ds Max.
+Experimental. Adapter `meshy-dcc-3dsmax` 0.1.0, built for 3ds Max 2025 and 2026 on Windows
+(3ds Max has no macOS version). Checked on one real 3ds Max, 2027 on Windows 11: install,
+start, a Meshy FBX with its maps on a Physical material, save, stop, reopen, uninstall.
+Anything else here is read from the adapter's source.
 
 - The adapter starts with 3ds Max from a startup script, and each 3ds Max process is one
   `3dsmax` instance. Tools run on 3ds Max's main thread; a long render or a modal dialog
@@ -29,7 +30,8 @@ meshy-dcc install --dcc-type 3dsmax --execute --json
   - `startup_script_foreign`: a file of the same name that the installer did not write;
     pass the path on to the user.
 - The adapter starts the next time 3ds Max starts, or with
-  `meshy-dcc start-instance --dcc-type 3dsmax --wait-ready --yes`.
+  `meshy-dcc start-instance --dcc-type 3dsmax --project <folder> --wait-ready --yes`
+  (`--project` is required; 3ds Max opens no scene from it).
 
 ## Tools used most
 
@@ -54,20 +56,22 @@ the plain `<name>.png` unassigned. Wire the texture set slot by slot instead:
 3. `apply_material` with `node_names` from `created_nodes`, then `inspect_material`.
 
 Each write is checked by reading it back. A slot the material does not expose fails the
-call instead of reporting success. These steps leave three things unhandled, and all three
-are untested:
+call instead of reporting success.
 
-- The Send To plugin sets the bump amount (`bump_map_amt`) to 1.0 after wiring a normal
-  map; these steps leave the default.
-- Meshy normal maps are OpenGL style (green up). 3ds Max may expect green down.
-- The Send To plugin opens the roughness and metallic maps with gamma 1.0 (linear data);
-  `assign_bitmap_texture` leaves 3ds Max's default.
+- Normal, roughness, metallic and other data maps are opened as data (OCIO's data colour
+  space; gamma 1.0 in the older gamma workflow). Colour maps follow 3ds Max's input rules,
+  sRGB for PNG and JPEG. `assign_bitmap_texture` sets this only when it opens the file, so
+  wire a map again with the tool rather than changing it by hand.
+- A normal map on a Physical material gets the full bump amount (`bump_map_amt` 1.0), as
+  the Send To plugin does.
+- Meshy normal maps are OpenGL style (green up). Whether 3ds Max expects green down is
+  untested.
 
 ## Saving and unsaved work
 
 - `get_scene_status` returns `current_file_path` (empty when never saved) and `dirty`
-  (3ds Max's own flag). Whether `dirty` catches every change made through tools is
-  untested.
+  (3ds Max's own flag). Every tool that is not read-only runs as one undo step, which is
+  what sets that flag; Python run in the session some other way may not set it.
 - `save_scene` saves to the current file and fails with `current_scene_has_no_path` if
   there is none. `save_scene_as` takes an absolute `.max` `file_path`, and also `overwrite`
   for a file that already exists. Both read the saved path back.
