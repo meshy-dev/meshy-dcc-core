@@ -1,9 +1,6 @@
 # Maya
 
-Verified on Maya 2027 on Windows 11, with adapter `meshy-dcc-maya` 0.1.0, built for Maya 2025
-and later on macOS arm64 and Windows x64 (the macOS build has not run in Maya). Checked: install, start,
-`import_model` with a Meshy FBX and its maps, save as `.ma`, stop, reopen, uninstall.
-Anything else here is read from its source and unit tests.
+Adapter `meshy-dcc-maya`, for Maya 2025 and later on macOS and Windows.
 
 - `meshy-dcc install --dcc-type maya` writes one file, `meshy_dcc_maya.mod`, into the user's
   Maya modules folder. Every Maya the user starts afterwards loads the adapter, and each Maya

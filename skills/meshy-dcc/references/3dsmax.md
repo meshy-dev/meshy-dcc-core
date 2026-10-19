@@ -1,9 +1,6 @@
 # 3ds Max
 
-Verified on 3ds Max 2027 on Windows 11 (3ds Max has no macOS version), with adapter
-`meshy-dcc-3dsmax` 0.1.0, built for 3ds Max 2025 and later. Checked: install,
-start, a Meshy FBX with its maps on a Physical material, save, stop, reopen, uninstall.
-Anything else here is read from the adapter's source.
+Adapter `meshy-dcc-3dsmax`, for 3ds Max 2025 and later; 3ds Max runs on Windows only.
 
 - The adapter starts with 3ds Max from a startup script, and each 3ds Max process is one
   `3dsmax` instance. Tools run on 3ds Max's main thread; a long render or a modal dialog

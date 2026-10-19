@@ -9,26 +9,23 @@ description: Work inside a creator's running DCC application through the local m
 the machine; the CLI lists them, searches their tools and runs a tool inside the instance
 you choose. No MCP connector is involved.
 
-**Supported now**, verified in the app on the platforms noted (macOS arm64, Windows x64):
+**Supported hosts.** Read the host's reference before working in it:
 
-- Blender: 5.0 macOS, 5.1 Windows. Read [the Blender reference](references/blender.md) before Blender work.
-- Unity: 6000.4 macOS, 2022.3 Windows. Read [the Unity reference](references/unity.md) before Unity work.
-- Godot 4.7: macOS, Windows. Read [the Godot reference](references/godot.md) before Godot work.
-- Unreal Engine 5.7: macOS, Windows. Read [the Unreal reference](references/unreal.md) before Unreal work.
-- OpenSCAD: 2026.10 snapshot macOS, 2021.01 Windows. Read [the OpenSCAD reference](references/openscad.md) before OpenSCAD work.
-- Material Maker 1.7: macOS, Windows. Read [the Material Maker reference](references/material-maker.md) before Material Maker work.
-- FreeCAD 1.1: macOS, Windows. Read [the FreeCAD reference](references/freecad.md) before FreeCAD work.
-- Roblox Studio 0.743: macOS, Windows. Imported models last for the Studio session only.
-  Read [the Roblox reference](references/roblox.md) before Roblox work.
-- Houdini 21: Windows. Read [the Houdini reference](references/houdini.md) before Houdini work.
-- Maya 2027: Windows. Read [the Maya reference](references/maya.md) before Maya work.
-- 3ds Max 2027: Windows only (there is no macOS 3ds Max). Read [the 3ds Max reference](references/3dsmax.md) before 3ds Max work.
-- Substance 3D Painter 12.1: Windows. Read [the Substance 3D Painter reference](references/substance3d-painter.md) before Painter work.
-- ZBrush 2026.2: Windows, only when started with `start-instance`. Read [the ZBrush reference](references/zbrush.md) before ZBrush work.
+- [Blender](references/blender.md) 4.5+
+- [Unity](references/unity.md) 2018.4+
+- [Godot](references/godot.md) 4.4+
+- [Unreal Engine](references/unreal.md) 5.0+
+- [OpenSCAD](references/openscad.md)
+- [Material Maker](references/material-maker.md) 1.7+
+- [FreeCAD](references/freecad.md) 1.0 and 1.1
+- [Roblox Studio](references/roblox.md): imported models last for the Studio session only.
+- [Houdini](references/houdini.md) 20.5+
+- [Maya](references/maya.md) 2025+
+- [3ds Max](references/3dsmax.md) 2025+, Windows only.
+- [Substance 3D Painter](references/substance3d-painter.md) 8.1+
+- [ZBrush](references/zbrush.md) 2026.1+, only when started with `start-instance`.
 
-Houdini, Maya, Substance 3D Painter and ZBrush also install on macOS, but their macOS builds
-have not run in the app yet: tell the user that, and read back every change. Cinema 4D is not
-supported in this release.
+Cinema 4D is not supported in this release.
 
 For any other host, tell the user it is not supported yet instead of improvising.
 

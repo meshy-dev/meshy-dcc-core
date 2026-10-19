@@ -1,8 +1,7 @@
 # Cinema 4D
 
-Not supported in this release: the connector is not installable. On the one Windows machine
-tried, Cinema 4D's `c4dpy` crashed on start, so adapter `meshy-dcc-c4d` 0.1.0 was never
-checked against Cinema 4D. If the user asks for Cinema 4D, say it is not supported yet.
+Cinema 4D is not supported in this release: the connector is not installable. If the user
+asks for Cinema 4D, say it is not supported yet.
 
 - The adapter never runs inside the Cinema 4D GUI. Its service runs in the package's own
   Python and starts Cinema 4D's licensed headless `c4dpy` once for every operation.

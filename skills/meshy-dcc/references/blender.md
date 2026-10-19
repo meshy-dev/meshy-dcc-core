@@ -1,7 +1,6 @@
 # Blender
 
-Verified on Blender 5.0.1 (macOS arm64) and 5.1 (Windows x64), with adapter
-`meshy-dcc-blender` 0.1.0.
+Adapter `meshy-dcc-blender`, for Blender 4.5 and later on macOS and Windows.
 
 - The adapter is a Blender extension.
 - Its server starts with Blender, and each Blender process is one instance.

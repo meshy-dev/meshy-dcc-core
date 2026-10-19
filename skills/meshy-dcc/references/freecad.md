@@ -1,8 +1,7 @@
 # FreeCAD
 
-Verified on FreeCAD 1.1.4 on macOS arm64 and Windows x64, with adapter `meshy-dcc-freecad`
-0.1.0. The adapter accepts FreeCAD 1.0.x and 1.1.x
-and refuses other versions.
+Adapter `meshy-dcc-freecad`, on macOS and Windows. It accepts FreeCAD 1.0.x and 1.1.x and
+refuses other versions.
 
 - The adapter is a headless service, not a FreeCAD plugin. No FreeCAD window opens, and
   nothing is installed into FreeCAD or its preferences.

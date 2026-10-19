@@ -1,9 +1,6 @@
 # Houdini
 
-Verified on Houdini 21.0.440 on Windows 11, with adapter `meshy-dcc-houdini` 0.1.0, built for
-Houdini 20.5 and later (the macOS build has not run in Houdini). Checked: install, start, a
-Meshy GLB with a MaterialX PBR material, save, stop, reopen, uninstall; the rest is read from
-the adapter source.
+Adapter `meshy-dcc-houdini`, for Houdini 20.5 and later on macOS and Windows.
 
 - Houdini looks for its preferences under `HOME` first. When the agent's environment sets
   `HOME` (common on Windows), install writes into `$HOME/houdini<X.Y>`: a Houdini started

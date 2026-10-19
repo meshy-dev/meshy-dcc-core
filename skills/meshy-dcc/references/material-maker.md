@@ -1,14 +1,14 @@
 # Material Maker
 
-Verified on Material Maker 1.7 on macOS arm64 and Windows x64, with adapter
-`meshy-dcc-material-maker` 0.1.0.
+Adapter `meshy-dcc-material-maker`, for Material Maker 1.7 and later on macOS and Windows.
 
 - Material Maker has no plug-in interface. The adapter is a sidecar bound to one
   project folder of material graphs (`.ptex`); `start-instance` starts the
   sidecar, not the Material Maker window. `list` shows the folder as `scene`.
-- The tools edit `.ptex` files directly. Only an export runs Material Maker, which
-  briefly opens and takes focus while it renders (a few seconds; the first export
-  after installing Material Maker takes longer).
+- The tools edit `.ptex` files directly, not an open Material Maker window (see
+  below). Material Maker runs only for an export, which briefly opens it and
+  takes focus while it renders (a few seconds; the first export after installing
+  Material Maker takes longer), and for `open_in_material_maker`.
 - Paths are relative to the project folder; nothing outside it is read or written.
 
 ## Set up a folder
@@ -29,7 +29,7 @@ only `.meshy-dcc/` in the folder.
 
 | Skill | Tools |
 |---|---|
-| `material-maker-materials` | `get_status`, `get_graph`, `list_node_types`, `inspect_project` (read-only); `create_material`, `edit_graph`, `export_material` |
+| `material-maker-materials` | `get_status`, `get_graph`, `list_node_types`, `inspect_project` (read-only); `create_material`, `edit_graph`, `export_material`; `open_in_material_maker` (shows the user) |
 
 - `get_status` lists the bundled examples (`bricks`, `rusted_metal`, `wood`, ...),
   the export targets and the Material Maker version.
@@ -62,6 +62,23 @@ Give the call `--timeout-secs 300`; the CLI default of 30 s can be too short.
   exporting again.
 - Exporting the same saved graph again gives byte-identical files.
 
+## The user's Material Maker window
+
+A Material Maker window does not see the agent's edits: it does not reload a
+`.ptex` changed on disk and keeps showing what it loaded, and saving there
+overwrites the agent's change.
+
+- Before changing a graph, ask the user whether it is open in Material Maker.
+  If it is, ask them to save what they want to keep and close it, and wait.
+- Never edit a graph while the user is editing it.
+- After exporting, `open_in_material_maker` with `path` opens the graph in a new
+  Material Maker window for the user and returns at once with its `pid`. It
+  never touches a Material Maker the user already has open, and the window stays
+  open after `stop-instance`. On macOS it can open behind the app in front (with
+  Stage Manager, in the side strip): tell the user it is there.
+- To change that graph again, ask the user to close the window first, then open
+  it again afterwards.
+
 ## Meshy textures
 
 An `image` node brings a project image into a graph:
@@ -72,6 +89,5 @@ normal input exports the Meshy base color with a normal map derived from it.
 ## Saving and unsaved work
 
 Every edit is saved when it is made, so there is never unsaved work and
-`stop-instance` always stops the sidecar. Material Maker does not reload a file
-changed on disk: if the user has the same `.ptex` open in Material Maker, ask
-them to close it first, or their next save there overwrites the edit.
+`stop-instance` always stops the sidecar. It does not close windows opened with
+`open_in_material_maker`; those belong to the user.

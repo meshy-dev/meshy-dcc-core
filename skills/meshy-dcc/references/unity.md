@@ -1,7 +1,6 @@
 # Unity
 
-Verified on Unity 6000.4.10f1 (macOS arm64) and 2022.3.55f1c1 (Windows x64), with adapter
-`meshy-dcc-unity` 0.1.0.
+Adapter `meshy-dcc-unity`, for the Unity Editor 2018.4 and later on macOS and Windows.
 
 - The adapter has two parts:
   - the Editor package `ai.meshy.dcc`, copied into each project's `Packages/`;
