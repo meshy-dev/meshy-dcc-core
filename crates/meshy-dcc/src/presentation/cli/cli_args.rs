@@ -74,12 +74,14 @@ pub(crate) enum Command {
         /// FileRegistry directory to inspect. Defaults to core's shared registry path.
         #[arg(long)]
         registry_dir: Option<PathBuf>,
-        /// Gateway host to probe without starting it.
-        #[arg(long, default_value = "127.0.0.1")]
-        gateway_host: String,
-        /// Gateway port to probe without starting it.
-        #[arg(long, default_value = "19765")]
-        gateway_port: u16,
+        /// Gateway host to probe without starting it. Defaults to the gateway the
+        /// other commands use.
+        #[arg(long)]
+        gateway_host: Option<String>,
+        /// Gateway port to probe without starting it. Defaults to the gateway the
+        /// other commands use (`--base-url`, `MESHY_DCC_GATEWAY_PORT`, else 19765).
+        #[arg(long)]
+        gateway_port: Option<u16>,
         /// Probe one adapter's importability in a specific interpreter.
         ///
         /// Repeatable, `<dcc_type>=<python>`, e.g. `maya=/usr/autodesk/maya2026/bin/mayapy`.
