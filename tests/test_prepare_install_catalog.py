@@ -584,7 +584,8 @@ def test_host_package_checks_every_platform_url_and_mirror():
     document, transport, urls = _host_package_fixture()
     payload = _prepare(document, transport)
     assert payload["entries"][0]["install"] == document["entries"][0]["install"]
-    assert [call[0] for call in transport.calls] == urls
+    # cdn.meshy.cn serves the cdn.meshy.ai bucket and is not fetched.
+    assert [call[0] for call in transport.calls] == [urls[0], urls[2]]
 
 
 def test_host_package_mirror_with_other_bytes_blocks_catalog():

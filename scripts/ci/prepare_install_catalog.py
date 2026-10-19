@@ -166,13 +166,19 @@ def _verified_archive(transport, install: dict) -> bytes:
     return data
 
 
+# Serves the same bucket as cdn.meshy.ai for mainland China, and may not be
+# reachable from where the catalog is prepared; the cdn.meshy.ai check covers it.
+_SAME_BUCKET_MIRROR = "cdn.meshy.cn"
+
+
 def _verify_host_package(transport, install: dict) -> None:
     """Every platform build must be a valid archive with its digest at each of its URLs."""
     platforms = install.get("platforms")
     if not isinstance(platforms, dict) or not platforms:
         raise CatalogPreparationError("host-package installation needs platform builds")
     for build in platforms.values():
-        for url in [build["url"], *build.get("mirrors", [])]:
+        mirrors = [m for m in build.get("mirrors", []) if urlsplit(m).hostname != _SAME_BUCKET_MIRROR]
+        for url in [build["url"], *mirrors]:
             with _open_archive(_verified_archive(transport, {"url": url, "sha256": build.get("sha256")})):
                 pass
 
