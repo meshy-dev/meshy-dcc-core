@@ -24,7 +24,8 @@ and is not runtime-compatible with it. Attribution stays in `LICENSE` and
 - One version line, 0.2.0. The separate internal compatibility version is
   gone, and gateway election compares Meshy components only.
 - The bundled install catalog lists only Meshy adapters, 23 hosts in all. An
-  entry stays `not_available` until its adapter is published.
+  entry stays `not_available` until its adapter is published; the signed
+  catalog makes the published ones installable.
 - The catalog is refreshed from `cdn.meshy.ai/meshy-dcc-core/catalog/`, or
   the same object on cdn.meshy.cn when cdn.meshy.ai cannot be reached, and
   must carry a Meshy signature. While the feed is unpublished, the CDN's 403
@@ -91,6 +92,17 @@ and is not runtime-compatible with it. Attribution stays in `LICENSE` and
 
 ### Added
 
+- Connectors for 13 hosts in the bundled catalog, installable once their
+  builds are published: Blender, Unity, Godot, Unreal Engine, OpenSCAD,
+  Material Maker, FreeCAD, Roblox Studio, Houdini, Maya, 3ds Max (Windows
+  only), Substance 3D Painter and ZBrush. Cinema 4D is listed but not
+  installable in this release.
+- The release workflow publishes the signed install catalog
+  (`catalog/install-catalog.json` on the CDN): run without a tag to publish
+  it alone, and daily once `INSTALL_CATALOG_REFRESH` is on. Every installable
+  build is downloaded from each of its URLs and checked first.
+- A catalog entry tagged `experimental` is reported as
+  `"experimental": true` by `dcc-types` and marked on the Connectors page.
 - `skills/meshy-dcc`: the agent Skill for the `meshy-dcc` CLI. It covers
   choosing an instance, finding and loading tools, calling them, reading the
   scene back and handing off Meshy models.
@@ -224,6 +236,32 @@ and is not runtime-compatible with it. Attribution stays in `LICENSE` and
 
 ### Fixed
 
+- Each adapter version is extracted into its own directory. CDN file names
+  carry no version, so an update used to replace the files of the running
+  version, and on Windows failed on a loaded `_core.pyd`.
+- An instance's heartbeat no longer cancels the gateway's status write, which
+  could leave a ready instance `booting` (invisible to `list` and `call`).
+  A request that reaches a `booting` instance probes it at once, so calls
+  right after `start-instance` succeed.
+- The gateway index keeps the tools of a DCC type with a hyphen
+  (`material-maker`): its job status tool and preloaded skills used to drop
+  out, so `call --wait` timed out.
+- `call --wait` reports a stopped instance instead of retrying until its
+  timeout; image detection reads MCP content blocks only; `--gateway local`
+  reads the local registry even with `MESHY_DCC_BASE_URL` set.
+- Stopping a server ends the skill scripts it started, with their child
+  processes; their calls return `CANCELLED`.
+- `gateway start`, `stop`, `status` and `doctor` find the gateway the other
+  commands use (`MESHY_DCC_BASE_URL`, `MESHY_DCC_GATEWAY_PORT`) instead of
+  assuming 19765.
+- `start-instance` right after a stop waits for the host to exit and starts a
+  new one; it used to reuse the closing host and report it ready.
+- A tool that reports `success: false` is a tool result (`GENERAL_ERROR`,
+  exit 1) instead of a backend failure (`UNAVAILABLE`, exit 3).
+- Windows: the release build runs natively (admin UI `npm.cmd`, `python`,
+  no build-machine paths from aws-lc's asserts), and the CLI and the gateway
+  it starts no longer hand their standard handles to child processes, which
+  kept an agent reading `meshy-dcc list` waiting for minutes.
 - Adding or removing a skill path, or installing, updating or uninstalling a
   marketplace package, now makes the open apps re-scan their skill folders.
   The standalone gateway only refreshed its own index, so the apps saw the
