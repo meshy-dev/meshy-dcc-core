@@ -52,7 +52,9 @@ when it is not running (it says so on stderr). `start-instance`, `stop-instance`
   `instance_not_found` or a host's `unsaved_changes`. Codes: `INVALID_INPUT` and
   `NOT_FOUND` (exit 2, change the request), `UNAVAILABLE` (exit 3, may work later),
   `TIMEOUT` (exit 4), `CONFLICT` (exit 7, the target refuses in its current state, for
-  example a skill that is not loaded yet), `GENERAL_ERROR` (exit 1).
+  example a skill that is not loaded yet), `GENERAL_ERROR` (exit 1; also a tool that ran
+  and reported `success: false`, whose result is still on stdout: its `message` says what
+  to change).
 - A `next_action.command` in a result is complete; run it as it is.
 - If `meshy-dcc` is not on PATH, or the gateway cannot start, stop and tell the user.
 

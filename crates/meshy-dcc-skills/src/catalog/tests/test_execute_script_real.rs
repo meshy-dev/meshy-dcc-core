@@ -431,6 +431,33 @@ exit 3
     );
 }
 
+/// `meshy_dcc_core.skill.run_main` prints the `success: false` envelope and
+/// exits 1: the tool refused, it did not crash. That is a tool result, as on
+/// the in-process path; only a script killed mid-way stays an error.
+#[cfg(unix)]
+#[test]
+fn test_real_structured_failure_with_nonzero_exit_is_a_tool_result() {
+    if skip_real_exec("bash") {
+        return;
+    }
+    let refusal = r#"{"success": false, "message": "Error: target must be one of: Blender", "error": "MaterialMakerError"}"#;
+    let (_dir, script) = write_script(
+        "refuse.sh",
+        &format!("echo 'log line' 1>&2\necho '{refusal}'\nexit 1\n"),
+    );
+    let result = execute_script(script.to_str().unwrap(), serde_json::json!({}), None)
+        .expect("a structured success:false result must come back as the tool's result");
+    assert_eq!(
+        result,
+        serde_json::from_str::<serde_json::Value>(refusal).unwrap()
+    );
+
+    let (_dir, killed) = write_script("killed.sh", &format!("echo '{refusal}'\nkill -9 $$\n"));
+    let err = execute_script(killed.to_str().unwrap(), serde_json::json!({}), None)
+        .expect_err("a script killed by a signal stays an error");
+    assert!(err.contains("exited with code -1"), "got: {err}");
+}
+
 // ── Batch (.bat) — Windows only ────────────────────────────────────────────
 
 #[cfg(windows)]
