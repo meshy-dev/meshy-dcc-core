@@ -1225,6 +1225,17 @@ pub(crate) fn execute_script_tracked(
         ));
     }
     if !output.status.success() {
+        // `meshy_dcc_core.skill.run_main` prints a `success: false` result and
+        // exits 1: the tool ran and refused (bad arguments, say). Return that
+        // as the tool's result, as the in-process executor does, so the caller
+        // fixes the request instead of reading a backend outage. A signal,
+        // a traceback or any other output stays an error.
+        if output.status.code().is_some()
+            && let Ok(result) = serde_json::from_str::<serde_json::Value>(stdout.trim())
+            && result.get("success") == Some(&serde_json::Value::Bool(false))
+        {
+            return Ok(result);
+        }
         let code = output.status.code().unwrap_or(-1);
         let detail = if stderr.is_empty() {
             stdout.trim().to_string()
