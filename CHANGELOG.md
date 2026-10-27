@@ -7,14 +7,16 @@ one version line.
 
 ### Upgrading from 0.2.0
 
-The update from 0.2.0 still runs 0.2.0's update code, so the fixes below take
-effect only after it:
+The 0.2.0 gateway cannot apply its own update, so `meshy-dcc update apply`
+leaves it on 0.2.0. Install 0.2.1 again instead, which replaces both the CLI
+and the gateway:
 
-1. Run `meshy-dcc update apply --yes`. The next command may exit with no
-   output; run it again.
-2. Run `meshy-dcc update apply --yes` a second time. This one also updates
-   `meshy-dcc-server`.
-3. Run `meshy-dcc gateway restart` to start the updated gateway.
+- macOS: `curl -fsSL https://cdn.meshy.ai/meshy-dcc-core/install.sh | bash`
+- Windows: run `meshy-dcc gateway daemon stop` first, then
+  `irm https://cdn.meshy.ai/meshy-dcc-core/install.ps1 | iex`
+- npm: `npm install -g meshy-dcc@latest`
+
+Then run `meshy-dcc gateway daemon restart` so the gateway runs 0.2.1.
 
 ### Added
 
