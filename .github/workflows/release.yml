@@ -174,7 +174,7 @@ jobs:
         with:
           path: artifacts
 
-      - uses: aws-actions/configure-aws-credentials@cbe3b392738ccf3f987d68400dafcf4b0624a56c # v6.2.4
+      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
         with:
           aws-region: us-west-2
           role-to-assume: arn:aws:iam::133081291590:role/meshy-dcc-github-deploy
@@ -290,7 +290,7 @@ jobs:
         with:
           path: artifacts
 
-      - uses: aws-actions/configure-aws-credentials@cbe3b392738ccf3f987d68400dafcf4b0624a56c # v6.2.4
+      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
         with:
           aws-region: us-west-2
           role-to-assume: arn:aws:iam::133081291590:role/meshy-dcc-github-deploy
@@ -375,7 +375,7 @@ jobs:
           json.dump({"catalog": catalog, "attestation": bundle}, open("catalog/install-catalog.json", "w", encoding="utf-8"))
           PY
 
-      - uses: aws-actions/configure-aws-credentials@cbe3b392738ccf3f987d68400dafcf4b0624a56c # v6.2.4
+      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
         with:
           aws-region: us-west-2
           role-to-assume: arn:aws:iam::133081291590:role/meshy-dcc-github-deploy
