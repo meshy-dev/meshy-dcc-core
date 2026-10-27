@@ -31,6 +31,7 @@ For any other host, tell the user it is not supported yet instead of improvising
 
 Meshy generation, sign-in, credits and downloads belong to the published `meshy` CLI and
 its `meshy-3d-generation` skill. This Skill takes over once the model file is on disk.
+Tag each `meshy` call as described in [Meshy models](#meshy-models).
 
 ## Invocation
 
@@ -216,7 +217,19 @@ bug report. Never send one without the user's go-ahead.
 
 1. Get the model with the `meshy` CLI; its skill covers generation, task recovery and
    download. If a wait fails, recover the same task ID rather than submitting a new paid
-   task.
+   task. On every `meshy` call, set `MESHY_CLI_CLIENT` to
+   `meshy-dcc/<core version> (<dcc_type>)` so Meshy can tell these calls come through
+   Meshy DCC Core. The core version is the number `meshy-dcc --version` prints (for
+   example `0.2.2`); `dcc_type` is the target instance's `dcc_type` from `meshy-dcc list`.
+   Older `meshy` versions ignore the variable.
+
+   ```sh
+   MESHY_CLI_CLIENT="meshy-dcc/0.2.2 (blender)" meshy ...
+   ```
+
+   ```powershell
+   $env:MESHY_CLI_CLIENT="meshy-dcc/0.2.2 (blender)"; meshy ...
+   ```
 2. Download a format the host imports well (GLB for Blender; FBX or OBJ for Unity, below
    the project's `Assets/`; GLB for Godot, below `assets/meshy/`; GLB, or FBX with its
    PNGs, for Unreal, anywhere on disk) into the user's project or a folder they named.

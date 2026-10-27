@@ -68,6 +68,12 @@ Connectors live in [meshy-dcc-adapters](https://github.com/meshy-dev/meshy-dcc-a
 Meshy generation and your Meshy account stay with
 [`meshy-cli`](https://www.npmjs.com/package/meshy-cli).
 
+## Usage telemetry
+
+Meshy DCC Core sends anonymous, aggregate usage counts once a day. Turn it off
+with `meshy-dcc telemetry off` or `DO_NOT_TRACK=1`. See
+[docs/telemetry.md](docs/telemetry.md) for every field.
+
 ## Build
 
 Requires Rust 1.95.

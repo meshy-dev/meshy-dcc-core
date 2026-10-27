@@ -60,9 +60,18 @@ each one on a real host before porting it as a Rust test.
 - Preserve user scenes and files, reject path and symlink escapes, protect
   credentials, and report unknown outcomes instead of replaying mutations.
 - Do not add Meshy API calls, OAuth, download logic or a second auth store.
-- Besides installs and updates, the only data that leaves the machine is a bug
-  report the user sends with `meshy-dcc report` (or **Send** in the window) after
-  seeing it. Its intake (`scripts/reports/`) holds no GitHub credentials.
+- Besides installs and updates, two things leave the machine. A bug report, sent
+  only when the user runs `meshy-dcc report --yes` (or clicks **Send** in the
+  window) after seeing it; its intake (`scripts/reports/`) holds no GitHub
+  credentials. And anonymous usage telemetry (`docs/telemetry.md`): on by
+  default, off with `meshy-dcc telemetry off`, `DO_NOT_TRACK=1`,
+  `MESHY_DCC_TELEMETRY=0` or in CI. The gateway posts one aggregate event a day
+  to Meshy's PostHog: counts, versions, OS, host types and known skill names
+  only, never arguments, outputs, paths, scene/project/instance names, IDs or
+  prompts. The CLI only appends local counters. Its random install ID never
+  goes into a bug report or the `MESHY_CLI_CLIENT` tag. Any new field must be
+  added to `docs/telemetry.md` and the leak test in
+  `crates/meshy-dcc-gateway/src/gateway/telemetry.rs`.
 - Only list OS × host × adapter combinations in the support matrix after a real
   host check passes; a mock or loopback fixture is not host support.
 
