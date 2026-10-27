@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Copy a release to the Meshy CDN bucket (s3://meshy-cdn/meshy-dcc-core/).
 
-  sync_cdn.py --version 0.2.0 --release-dir <dir> [--install-script <file> ...]
+  sync_cdn.py --version 0.2.0 --release-dir <dir> [--install-script <file> ...] [--files-only]
 
 Uses the AWS CLI with the credentials of the release role (the workflow
 assumes it through GitHub OIDC). cdn.meshy.ai and cdn.meshy.cn both serve
@@ -13,6 +13,9 @@ this bucket.
 - Install scripts go to ``meshy-dcc-core/<name>`` with ``no-cache``.
 - ``latest.txt`` is written last, ``no-cache``, and only for a stable version
   at least as new as the one it names.
+- ``--files-only`` uploads the release files and stops: install scripts and
+  ``latest.txt`` stay as they are, so the upgrade smoke test can fetch the new
+  manifest while installers still get the previous release.
 
 Every name is checked against the CDN naming rules (lowercase letters,
 digits, hyphens, one extension) before anything is uploaded.
@@ -83,6 +86,7 @@ def main() -> int:
     parser.add_argument("--version", required=True)
     parser.add_argument("--release-dir", type=Path, required=True)
     parser.add_argument("--install-script", type=Path, action="append", default=[])
+    parser.add_argument("--files-only", action="store_true")
     args = parser.parse_args()
 
     files = sorted(p for p in args.release_dir.iterdir() if p.is_file())
@@ -93,6 +97,8 @@ def main() -> int:
     prefix = f"{ROOT}/{cdn_version_dir(args.version)}"
     for path in files:
         put_once(path, f"{prefix}/{path.name}")
+    if args.files_only:
+        return 0
     for path in args.install_script:
         put_uncached(path, f"{ROOT}/{path.name}")
 
