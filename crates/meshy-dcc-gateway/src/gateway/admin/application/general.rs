@@ -14,6 +14,7 @@ fn traffic_export_filename() -> &'static str {
 
 /// `GET /admin` — serve the inline HTML dashboard.
 pub async fn handle_admin_ui() -> impl IntoResponse {
+    crate::gateway::telemetry::bump("window_opened");
     let mut resp = axum::response::Html(ADMIN_HTML).into_response();
     resp.headers_mut().insert(
         header::CACHE_CONTROL,

@@ -259,6 +259,19 @@ async fn run_with_args(args: Args) -> anyhow::Result<()> {
     let writer = OutputWriter::new(output_format(&command, output).map_err(anyhow::Error::msg)?);
     // Installed agent Skills follow the CLI version, however the CLI was updated.
     crate::application::agent_skill::refresh_installed();
+    // Usage telemetry: say once what is collected and how to turn it off.
+    if !matches!(
+        &command,
+        Command::Telemetry { .. } | Command::Gateway { action: None, .. }
+    ) && !crate::application::update::is_background_refresh()
+        && meshy_dcc_gateway::telemetry::take_notice("cli")
+    {
+        let _ = writer.diagnostic(&format!(
+            "{} {}",
+            meshy_dcc_gateway::telemetry::NOTICE,
+            meshy_dcc_gateway::telemetry::DOCS_URL
+        ));
+    }
     let explicit_update_command = matches!(&command, Command::Update { .. });
     let marketplace_update_check = (!crate::application::update::is_background_refresh()
         && !crate::application::update::update_checks_turned_off())
@@ -402,6 +415,9 @@ async fn run_with_args(args: Args) -> anyhow::Result<()> {
         }
         Command::Report(args) => {
             let value = args.run(&control, &doctor).await?;
+            if value["status"] == "sent" {
+                meshy_dcc_gateway::telemetry::bump("bug_report");
+            }
             if super::report_cmd::did_not_send(&value) {
                 failed = true;
                 exit_code = ExitCode::Unavailable;
@@ -436,6 +452,7 @@ async fn run_with_args(args: Args) -> anyhow::Result<()> {
                 instance_id,
                 limit,
             };
+            meshy_dcc_gateway::telemetry::bump("search");
             control.search(request).await?
         }
         Command::Describe { tool_slug } => control.describe(tool_slug).await?,
@@ -999,6 +1016,13 @@ async fn run_with_args(args: Args) -> anyhow::Result<()> {
             };
             let value = agent_skill::run(&targets, args.remove, args.execute)?;
             failed = value["failed"] == true;
+            if args.execute && !args.remove && !failed {
+                for agent in targets.iter().flat_map(|t| &t.agents) {
+                    if agent != "custom" {
+                        meshy_dcc_gateway::telemetry::bump(&format!("agent:{agent}"));
+                    }
+                }
+            }
             if writer.format() == OutputFormat::Human {
                 print!("{}", agent_skill::human_summary(&value));
                 if failed {
@@ -1009,6 +1033,7 @@ async fn run_with_args(args: Args) -> anyhow::Result<()> {
             value
         }
         Command::Components { action } => super::components_cmd::run(action).await?,
+        Command::Telemetry { action } => super::telemetry_cmd::run(&base_url, action).await?,
         Command::Update { action } => {
             let result = super::update_cmd::run(&base_url, action).await?;
             failed = result.failed;

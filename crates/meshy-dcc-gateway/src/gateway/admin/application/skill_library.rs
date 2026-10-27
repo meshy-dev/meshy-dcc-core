@@ -298,6 +298,16 @@ fn marketplace_skills() -> BTreeMap<String, Vec<DiskSkill>> {
         .collect()
 }
 
+/// Names of the skills installed from the marketplace (usage telemetry sends
+/// only these and bundled names).
+pub(crate) fn marketplace_skill_names() -> Vec<String> {
+    marketplace_skills()
+        .into_values()
+        .flatten()
+        .map(|skill| skill.name)
+        .collect()
+}
+
 /// `GET /admin/api/skill-library`
 pub async fn handle_skill_library(State(s): State<AdminState>) -> Response {
     let per_instance = list_skills_by_instance(&s.gateway).await;

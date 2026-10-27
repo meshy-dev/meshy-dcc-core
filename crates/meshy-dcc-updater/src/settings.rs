@@ -49,6 +49,24 @@ pub fn set_update_check(enabled: bool) -> anyhow::Result<()> {
     Ok(())
 }
 
+/// Another boolean setting in the same file (for example `telemetry`).
+pub fn get_bool(key: &str, default: bool) -> bool {
+    read().get(key).and_then(Value::as_bool).unwrap_or(default)
+}
+
+/// Set another boolean setting, keeping the rest of the file.
+pub fn set_bool(key: &str, value: bool) -> anyhow::Result<()> {
+    let path = settings_path();
+    let mut settings = read();
+    settings.insert(key.into(), Value::Bool(value));
+    let dir = path.parent().unwrap_or(std::path::Path::new("."));
+    std::fs::create_dir_all(dir)?;
+    let mut file = tempfile::NamedTempFile::new_in(dir)?;
+    serde_json::to_writer_pretty(&mut file, &settings)?;
+    file.persist(&path)?;
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

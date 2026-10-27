@@ -1183,19 +1183,20 @@ pub(crate) async fn start_gateway_tasks(
 
             // 5. Build AdminState with audit log and trace log attached.
             let sqlite_reader = sqlite_lane.as_ref().map(|l| l.reader());
-            Some(
-                crate::gateway::admin::state::AdminState::new(gw_state.clone())
-                    .with_audit_log(audit_log)
-                    .with_trace_log(trace_log, sqlite_reader)
-                    .with_skill_paths_snapshot(admin_persist.skill_paths_snapshot)
-                    .with_admin_sqlite_lane(sqlite_lane.clone())
-                    .with_skill_paths_reload(admin_persist.skill_paths_reload.clone())
-                    .with_remote_listener(
-                        remote_listener
-                            .as_ref()
-                            .and_then(|listener| listener.local_addr().ok()),
-                    ),
-            )
+            let admin_state = crate::gateway::admin::state::AdminState::new(gw_state.clone())
+                .with_audit_log(audit_log)
+                .with_trace_log(trace_log, sqlite_reader)
+                .with_skill_paths_snapshot(admin_persist.skill_paths_snapshot)
+                .with_admin_sqlite_lane(sqlite_lane.clone())
+                .with_skill_paths_reload(admin_persist.skill_paths_reload.clone())
+                .with_remote_listener(
+                    remote_listener
+                        .as_ref()
+                        .and_then(|listener| listener.local_addr().ok()),
+                );
+            // Anonymous daily usage rollup; a no-op while telemetry is off.
+            crate::gateway::telemetry::spawn(admin_state.clone(), yield_rx.clone());
+            Some(admin_state)
         } else {
             None
         };
