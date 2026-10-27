@@ -5,11 +5,13 @@ use crate::application::package_manager::PackageManagerMarker;
 use crate::domain::rest::Endpoint;
 
 mod cache;
+mod gateway_restart;
 
 pub use cache::{
     cached_cli_update, is_background_refresh, just_applied_status, record_cli_update,
     spawn_cli_update_refresh, update_checks_turned_off,
 };
+pub use gateway_restart::restart_local_gateway;
 
 /// Installed binary name; the crate keeps its upstream package name.
 pub const CLI_BINARY_NAME: &str = "meshy-dcc";
@@ -240,7 +242,8 @@ fn update_policy(binary_name: &str, manager: Option<&str>) -> Value {
         "apply_supported_by_this_command": apply_supported,
         "apply_command": apply_supported.then_some("meshy-dcc update apply --yes"),
         "staged_for_next_launch": true,
-        "running_server_restarted": false,
+        // `update apply` restarts the local gateway unless told not to.
+        "running_server_restarted": apply_supported,
         "managed_by_package_manager": manager,
     })
 }
@@ -307,7 +310,7 @@ mod tests {
             payload["update_policy"]["apply_command"],
             "meshy-dcc update apply --yes"
         );
-        assert_eq!(payload["update_policy"]["running_server_restarted"], false);
+        assert_eq!(payload["update_policy"]["running_server_restarted"], true);
     }
 
     #[test]

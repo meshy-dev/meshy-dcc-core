@@ -163,6 +163,22 @@ fn output_format(command: &Command, output: Option<OutputFormat>) -> Result<Outp
     }
 }
 
+/// Commands an agent runs dozens of times per task. They never wait on the
+/// network for the marketplace check; other commands still show its notice.
+/// The CLI update notice stays on: it reads a cache and refreshes it in a
+/// detached process.
+fn is_hot_command(command: &Command) -> bool {
+    matches!(
+        command,
+        Command::Call { .. }
+            | Command::CallBatch { .. }
+            | Command::Search { .. }
+            | Command::Describe { .. }
+            | Command::List
+            | Command::LoadSkill { .. }
+    )
+}
+
 fn apply_staged_update() -> bool {
     // Apply any staged binary update before running commands (CLI restart
     // is the user's next invocation after `update apply`). The updater
@@ -273,7 +289,8 @@ async fn run_with_args(args: Args) -> anyhow::Result<()> {
         ));
     }
     let explicit_update_command = matches!(&command, Command::Update { .. });
-    let marketplace_update_check = (!crate::application::update::is_background_refresh()
+    let marketplace_update_check = (!is_hot_command(&command)
+        && !crate::application::update::is_background_refresh()
         && !crate::application::update::update_checks_turned_off())
     .then(|| tokio::spawn(check_marketplace_updates()));
 

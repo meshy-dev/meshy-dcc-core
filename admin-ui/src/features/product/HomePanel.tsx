@@ -1,7 +1,7 @@
 import { useState } from 'react';
 
 import type { HealthPayload, InstanceRow, Panel } from '../../admin-types';
-import { useUpdateCheck } from './api';
+import { RestartTimeout, errorMessage, useUpdateCheck, useUpdateNow } from './api';
 import { MESHY_ICON, PRODUCT_NAME, WEBSITE_URL, dccName } from './catalog';
 import {
   appLabel,
@@ -176,6 +176,7 @@ function Overview({ t, data, onNavigate, onRecheck, onShowStart }: {
   const { health, instances } = data;
   const version = health?.version;
   const update = useUpdateCheck(version);
+  const updateNow = useUpdateNow();
   const service = health?.service;
   const counts = toneCounts(instances);
   const stuck = instances.find((row) => instanceTone(row) === 'notResponding');
@@ -196,6 +197,24 @@ function Overview({ t, data, onNavigate, onRecheck, onShowStart }: {
     : service?.started_by && service.started_by !== 'gateway'
       ? t('product.overview.uptime.startedBy', { app: dccName(service.started_by) })
       : t('product.overview.uptime.idle', { seconds: service?.idle_timeout_secs ?? 30 });
+  const checkNote = update.isError
+    ? t('product.installed.checkFailed')
+    : update.data?.update_available
+      ? t('product.installed.available', { product: PRODUCT_NAME, version: update.data.latest_version ?? '' })
+      : update.data
+        ? t('product.installed.upToDate')
+        : '';
+  const updateNote = updateNow.isPending
+    ? t('product.installed.updatingHint', { product: PRODUCT_NAME })
+    : updateNow.error instanceof RestartTimeout
+      ? t('product.installed.updateTimeout', { product: PRODUCT_NAME, version: updateNow.error.version })
+      : updateNow.isError
+        ? t('product.installed.updateFailed', { message: errorMessage(updateNow.error) })
+        : updateNow.data?.status === 'staged'
+          ? t('product.installed.updateStaged', { app: dccName(updateNow.data.started_by ?? '') })
+          : updateNow.data?.status === 'up_to_date'
+            ? t('product.installed.upToDate')
+            : null;
   const breakdown = (Object.keys(counts) as InstanceTone[])
     .filter((tone) => counts[tone] > 0)
     .map((tone) => t(TONE_COUNT_KEY[tone], { count: counts[tone] }))
@@ -399,19 +418,18 @@ function Overview({ t, data, onNavigate, onRecheck, onShowStart }: {
               </div>
             ))}
             <div className="pd-installed-foot">
-              <button type="button" className="pd-btn sm secondary" style={{ width: '100%' }} disabled={update.isFetching}
-                onClick={() => void update.refetch()}>
+              {/* Only this computer may update it; a remote viewer gets local_only. */}
+              {update.data?.update_available && data.local ? (
+                <button type="button" className="pd-btn sm primary" style={{ width: '100%' }} disabled={updateNow.isPending}
+                  onClick={() => updateNow.mutate()}>
+                  {updateNow.isPending ? t('product.installed.updating') : t('product.installed.updateNow')}
+                </button>
+              ) : null}
+              <button type="button" className="pd-btn sm secondary" style={{ width: '100%' }}
+                disabled={update.isFetching || updateNow.isPending} onClick={() => void update.refetch()}>
                 {update.isFetching ? t('product.installed.checking') : t('product.installed.check')}
               </button>
-              <span className="pd-note">
-                {update.isError
-                  ? t('product.installed.checkFailed')
-                  : update.data?.update_available
-                    ? t('product.installed.available', { product: PRODUCT_NAME, version: update.data.latest_version ?? '' })
-                    : update.data
-                      ? t('product.installed.upToDate')
-                      : ''}
-              </span>
+              <span className="pd-note" aria-live="polite">{updateNote ?? checkNote}</span>
             </div>
           </div>
         </section>

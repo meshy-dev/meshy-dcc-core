@@ -174,6 +174,64 @@ export function useSetTelemetry() {
   });
 }
 
+/// `POST /admin/api/update`: `restarting` means the gateway is about to stop
+/// and come back as `target_version`.
+export type UpdateNowResult = {
+  ok: boolean;
+  status: 'restarting' | 'staged' | 'up_to_date';
+  target_version?: string | null;
+  started_by?: string | null;
+};
+
+// Downloads two binaries; the gateway's own ceiling is 15 minutes.
+const UPDATE_TIMEOUT_MS = 16 * 60_000;
+const RESTART_WAIT_MS = 120_000;
+
+/// Poll `readVersion` until it returns `version`; false if it never does in
+/// time. A failed read is the gateway restarting, so polling goes on.
+export async function waitForVersion(
+  readVersion: () => Promise<string | undefined>,
+  version: string,
+  { timeoutMs = RESTART_WAIT_MS, intervalMs = 1_000 } = {},
+): Promise<boolean> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    await new Promise((resolve) => setTimeout(resolve, intervalMs));
+    try {
+      if ((await readVersion()) === version) return true;
+    } catch {
+      // Still restarting.
+    }
+  }
+  return false;
+}
+
+/// The gateway did not come back with the new version in time.
+export class RestartTimeout extends Error {
+  constructor(readonly version: string) {
+    super(`the gateway did not come back as ${version}`);
+  }
+}
+
+/// "Update now": stage, wait for the restarted gateway, then reload the page
+/// so everything shows the new version.
+export function useUpdateNow() {
+  return useMutation({
+    mutationFn: async (): Promise<UpdateNowResult> => {
+      const result = await postJson<UpdateNowResult>('/update', {}, UPDATE_TIMEOUT_MS);
+      if (result.status === 'restarting' && result.target_version) {
+        const back = await waitForVersion(
+          async () => (await apiJson<{ version?: string }>('/health')).version,
+          result.target_version,
+        );
+        if (!back) throw new RestartTimeout(result.target_version);
+        window.location.reload();
+      }
+      return result;
+    },
+  });
+}
+
 /// The release check. It runs by itself only while the daily check is on;
 /// `refetch()` is the "Check for updates" button either way.
 export function useUpdateCheck(currentVersion: string | undefined) {

@@ -22,6 +22,65 @@ one version line.
 - The Skill tells agents to set `MESHY_CLI_CLIENT="meshy-dcc/<version> (<dcc_type>)"`
   on each `meshy` call, so Meshy can tell those calls apart (meshy-cli adds it
   to its User-Agent; older versions ignore it).
+- `meshy-dcc update apply --yes` restarts the local gateway after it updates
+  the CLI and the server, so the new server runs at once. It restarts only the
+  standalone gateway on this computer, never one an app started, and checks
+  that the gateway comes back with the new version. The result reports
+  `server_update` and `gateway_restart` (`restarted`, `not_needed`, `skipped`,
+  `not_running`, `failed` or `unknown`, with the old and new version).
+  `--no-restart` leaves the gateway running. The update from 0.2.1 itself is
+  done by the 0.2.1 CLI, which does not restart; run
+  `meshy-dcc gateway restart` once after it.
+- `meshy-dcc gateway restart`, the same as `gateway daemon restart`.
+- **Update now** in the window's Overview, when an update is available. It
+  shows "Updating…" while Meshy DCC Core restarts, then reloads on the new
+  version, or says why the update failed.
+- Pull requests and pushes to main run the Rust, admin UI and Python tests.
+
+### Changed
+
+- `call`, `call-batch`, `search`, `describe`, `list` and `load-skill` no longer
+  wait up to 750 ms for the marketplace update check. Other commands still
+  show its notice.
+- The server download that `update apply` starts stops after 10 minutes and
+  is reported as `unknown`, instead of waiting forever.
+- Releases: the workflow loads the built wheel and binaries on the newest
+  macOS runner, and upgrades from the previous release on macOS and Windows
+  before it writes `latest.txt`. Every action is pinned by commit.
+
+### Fixed
+
+- A main-thread tool call that timed out could still run later and change the
+  scene after the caller was told it failed (Blender, Maya, 3ds Max, Houdini,
+  Substance 3D Painter). A call that had not started is dropped; one that was
+  already running reports `status: unknown`, so read the scene back before
+  retrying, and its late finish is never reported as a success.
+- A registry reload could briefly show no instances to a concurrent reader,
+  which then reported a false "no instance".
+- Reloading skills kept only the bundled skill folders and dropped the ones the
+  connector registered.
+- An explicit `enforce_thread_affinity: false` in a skill came back as `true`.
+- `search_tools` could return twice the requested `limit`; tools and skill
+  candidates now share one page, callable tools first.
+- Search split "2D" and "3D" into two tokens, so a query such as `motion-2d`
+  missed skills described as "2D motion".
+- `meshy-dcc doctor` and `meshy-dcc gateway status` changed the registry while
+  reading it; they now only read, and `doctor` lists dead rows under
+  `inventory.dead`.
+- In windows narrower than 760 px the window's sidebar scrolled away with long
+  pages.
+- `meshy-dcc gateway stop` returned while the old gateway was still
+  registered, so a restart could wait about 30 seconds and report a failure.
+
+### Security
+
+- rmcp 2.1 (from 1.7) and PyO3 0.29 (from 0.28) fix the advisories in the MCP
+  server transport, its OAuth metadata handling and redirect headers, and in
+  PyO3's list and tuple iterators. Connectors pick this up when they are
+  rebuilt on this release. An `initialize` request whose
+  `MCP-Protocol-Version` header differs from its `protocolVersion` is now
+  refused with 400. Native builds for CPython 3.7 are no longer possible; the
+  released wheel needs Python 3.8 or later, as before.
 
 ## 0.2.1 (2026-10-27)
 
