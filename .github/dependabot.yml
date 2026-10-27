@@ -1,7 +1,8 @@
 # Weekly version updates: one grouped PR per ecosystem for minor and patch
-# releases, majors one by one. A release has to be seven days old before it is
-# proposed. Security updates do not wait and arrive as soon as an advisory is
-# published.
+# releases. Major versions are not proposed; we upgrade those on purpose (see
+# the "major dependency upgrades" issue). A release has to be seven days old
+# before it is proposed. Security updates do not wait and arrive as soon as an
+# advisory is published.
 #
 # tests/interop/mcp-2026 is left out on purpose: it pins the official MCP SDK
 # 2.0.0 as a behavior oracle (see its README).
@@ -13,6 +14,9 @@ updates:
       interval: weekly
     cooldown:
       default-days: 7
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
     groups:
       cargo:
         update-types: [minor, patch]
@@ -23,6 +27,9 @@ updates:
       interval: weekly
     cooldown:
       default-days: 7
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
     groups:
       admin-ui:
         update-types: [minor, patch]
@@ -33,6 +40,9 @@ updates:
       interval: weekly
     cooldown:
       default-days: 7
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
     groups:
       python-dev:
         update-types: [minor, patch]
@@ -43,6 +53,9 @@ updates:
       interval: weekly
     cooldown:
       default-days: 7
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
     groups:
       actions:
         update-types: [minor, patch]
