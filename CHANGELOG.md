@@ -22,6 +22,31 @@ one version line.
 - The Skill tells agents to set `MESHY_CLI_CLIENT="meshy-dcc/<version> (<dcc_type>)"`
   on each `meshy` call, so Meshy can tell those calls apart (meshy-cli adds it
   to its User-Agent; older versions ignore it).
+- `meshy-dcc update apply --yes` restarts the local gateway after it updates
+  the CLI and the server, so the new server runs at once. It restarts only the
+  standalone gateway on this computer, never one an app started, and checks
+  that the gateway comes back with the new version. The result reports
+  `server_update` and `gateway_restart` (`restarted`, `not_needed`, `skipped`,
+  `not_running`, `failed` or `unknown`, with the old and new version).
+  `--no-restart` leaves the gateway running. The update from 0.2.1 itself is
+  done by the 0.2.1 CLI, which does not restart; run
+  `meshy-dcc gateway restart` once after it.
+- `meshy-dcc gateway restart`, the same as `gateway daemon restart`.
+- **Update now** in the window's Overview, when an update is available. It
+  shows "Updating…" while Meshy DCC Core restarts, then reloads on the new
+  version, or says why the update failed.
+- Pull requests and pushes to main run the Rust, admin UI and Python tests.
+
+### Changed
+
+- `call`, `call-batch`, `search`, `describe`, `list` and `load-skill` no longer
+  wait up to 750 ms for the marketplace update check. Other commands still
+  show its notice.
+- The server download that `update apply` starts stops after 10 minutes and
+  is reported as `unknown`, instead of waiting forever.
+- Releases: the workflow loads the built wheel and binaries on the newest
+  macOS runner, and upgrades from the previous release on macOS and Windows
+  before it writes `latest.txt`. Every action is pinned by commit.
 
 ## 0.2.1 (2026-10-27)
 

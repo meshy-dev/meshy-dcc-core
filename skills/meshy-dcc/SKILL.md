@@ -213,6 +213,16 @@ bug report. Never send one without the user's go-ahead.
 4. Tell the user the report ID and that it becomes a public issue at the printed
    `issues_url`. On `unknown`, don't resend; it may have arrived.
 
+## Updating Meshy DCC Core
+
+When a command prints that a newer meshy-dcc is available, tell the user and ask before
+updating. After a yes, run `meshy-dcc update apply --yes`. It updates the CLI and the
+server and restarts the local gateway, so open apps reconnect; run `list` again before
+the next call. Check `gateway_restart.status` in the result: on `skipped`, `failed` or
+`unknown`, tell the user what its `message` says, and don't run the update again. Add
+`--no-restart` when the user wants the gateway left running; it then picks up the update
+on its next start, or at once with `meshy-dcc gateway restart`.
+
 ## Meshy models
 
 1. Get the model with the `meshy` CLI; its skill covers generation, task recovery and
