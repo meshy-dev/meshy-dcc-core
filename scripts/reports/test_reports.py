@@ -70,6 +70,8 @@ class IntakeTest(unittest.TestCase):
             (post(json.dumps(report(source="web")).encode()), 400),
             (post(json.dumps(report(client={"version": "0.2.1"})).encode()), 400),
             (post(json.dumps(report(findings=[{}] * 21)).encode()), 400),
+            ({**post(b"{}"), "body": "not base64!", "isBase64Encoded": True}, 400),
+            (post(b"[" * 100_000), 400),
         ]
         for event, status in cases:
             self.assertEqual(intake.handler(event, None)["statusCode"], status)
@@ -80,11 +82,14 @@ class TranscribeTest(unittest.TestCase):
     def test_scrub_removes_private_details_and_defuses_mentions(self):
         text = transcribe.scrub(
             "See /Users/alice/proj/a.blend and C:\\Users\\bob\\x, mail a@b.com, host 10.1.2.3, "
-            "id 5118889d-1b86-4ef8-8255-76cf59584d6d, key ghp_abcdefghijklmnopqrstuv, cc @octocat"
+            "id 5118889d-1b86-4ef8-8255-76cf59584d6d, key ghp_abcdefghijklmnopqrstuv, cc @octocat, "
+            "msy_abcdefghijklmnopqrstuv, \\\\fileserver\\carol, fe80::1ff:fe23:4567:890a, "
+            "x `foo @octo-org bar` y `@meshy-dev/core"
         )
-        for secret in ("alice", "bob", "a@b.com", "10.1.2.3", "5118889d", "ghp_"):
+        for secret in ("alice", "bob", "a@b.com", "10.1.2.3", "5118889d", "ghp_", "msy_", "fileserver", "fe80"):
             self.assertNotIn(secret, text)
-        self.assertIn("`@octocat`", text)
+        self.assertNotRegex(text, r"@[A-Za-z0-9]")
+        self.assertIn("@\u200boctocat", text)
 
     def test_decide_accepts_a_valid_answer_and_falls_back_safely(self):
         answer = json.dumps({"action": "duplicate", "duplicate_of": 7, "host": "blender",
@@ -102,6 +107,39 @@ class TranscribeTest(unittest.TestCase):
         for answer in ("not json", "[]", '{"action": "delete"}', '{"action": "create", "title": "x"}'):
             with self.assertRaises(transcribe.Unusable):
                 transcribe.decide(answer, set())
+
+    def test_posts_leave_pending_first_and_stop_at_the_daily_cap(self):
+        calls = []
+        stored = {"report_id": "r1", "report": report()}
+
+        def fake_run(*argv, stdin=None):
+            calls.append(argv)
+            if argv[:2] == ("aws", "s3api"):
+                return json.dumps(["pending/a.json", "pending/b.json"])
+            if argv[:2] == ("gh", "api"):
+                return json.dumps([{"body": transcribe.MARKER + "old -->"}] * (transcribe.DAILY_POST_CAP - 1))
+            if argv[:3] == ("gh", "issue", "list"):
+                return "[]"
+            if argv[:3] == ("aws", "s3", "cp"):
+                return json.dumps(stored)
+            if argv[:3] == ("gh", "issue", "create"):
+                return "https://github.com/o/r/issues/5\n"
+            return ""
+
+        answer = json.dumps({"action": "create", "host": "blender", "title": "GLB import freezes", "body": "x"})
+        os.environ.update(REPORTS_BUCKET="reports", GITHUB_REPOSITORY="o/r")
+        original = transcribe.run, transcribe.ask_model
+        transcribe.run, transcribe.ask_model = fake_run, lambda *_: answer
+        try:
+            self.assertEqual(transcribe.main(), 0)
+        finally:
+            transcribe.run, transcribe.ask_model = original
+        moves = [(call[4], call[5]) for call in calls if call[:3] == ("aws", "s3", "mv")]
+        self.assertEqual(moves, [("s3://reports/pending/a.json", "s3://reports/sending/a.json"),
+                                 ("s3://reports/sending/a.json", "s3://reports/filed/a.json")])
+        names = [call[:3] for call in calls]
+        self.assertLess(names.index(("aws", "s3", "mv")), names.index(("gh", "issue", "create")))
+        self.assertEqual(sum(call[:3] == ("aws", "s3", "cp") for call in calls), 1)
 
 
 if __name__ == "__main__":

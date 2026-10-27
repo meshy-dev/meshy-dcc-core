@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 # Create or update the bug-report intake in AWS (account 133081291590, us-west-2):
 #
-# - bucket meshy-dcc-reports-133081291590: private, encrypted, and every object
-#   is deleted 90 days after it was written;
+# - bucket meshy-dcc-reports-133081291590: private, encrypted, TLS only, and
+#   every object is deleted 90 days after it reached its current folder;
 # - Lambda meshy-dcc-report-intake (scripts/reports/intake.py) behind a public
-#   function URL, at most 5 running at once, allowed only to write pending/;
+#   function URL, at most 5 running at once, allowed only to write pending/,
+#   with logs kept 90 days;
 # - role meshy-dcc-github-reports, which only the main branch of
 #   meshy-dev/meshy-dcc-core can assume through GitHub OIDC
 #   (.github/workflows/reports.yml), to read and move reports and to read the
@@ -39,6 +40,12 @@ aws s3api put-bucket-encryption --bucket "$bucket" --server-side-encryption-conf
     '{"Rules":[{"ApplyServerSideEncryptionByDefault":{"SSEAlgorithm":"AES256"}}]}'
 aws s3api put-bucket-lifecycle-configuration --bucket "$bucket" --lifecycle-configuration \
     '{"Rules":[{"ID":"expire-reports","Status":"Enabled","Filter":{},"Expiration":{"Days":90}}]}'
+cat > "$work/bucket-policy.json" << EOF
+{"Version":"2012-10-17","Statement":[{"Sid":"TlsOnly","Effect":"Deny","Principal":"*","Action":"s3:*",
+  "Resource":["arn:aws:s3:::$bucket","arn:aws:s3:::$bucket/*"],
+  "Condition":{"Bool":{"aws:SecureTransport":"false"}}}]}
+EOF
+aws s3api put-bucket-policy --bucket "$bucket" --policy "file://$work/bucket-policy.json"
 echo "bucket $bucket is ready"
 
 # Intake function and its role.
@@ -62,6 +69,9 @@ else
 fi
 aws iam put-role-policy --role-name "$intake_role" --policy-name meshy-dcc-report-intake \
     --policy-document "file://$work/lambda-permissions.json"
+
+aws logs create-log-group --log-group-name "/aws/lambda/$function" 2> /dev/null || true
+aws logs put-retention-policy --log-group-name "/aws/lambda/$function" --retention-in-days 90
 
 (cd "$here/.." && zip -q "$work/intake.zip" intake.py)
 if aws lambda get-function --function-name "$function" > /dev/null 2>&1; then
@@ -103,9 +113,11 @@ cat > "$work/github-trust.json" << EOF
 EOF
 cat > "$work/github-permissions.json" << EOF
 {"Version":"2012-10-17","Statement":[
-  {"Sid":"ListReports","Effect":"Allow","Action":"s3:ListBucket","Resource":"arn:aws:s3:::$bucket"},
+  {"Sid":"ListReports","Effect":"Allow","Action":"s3:ListBucket","Resource":"arn:aws:s3:::$bucket",
+   "Condition":{"StringLike":{"s3:prefix":"pending/*"}}},
   {"Sid":"MoveReports","Effect":"Allow","Action":["s3:GetObject","s3:PutObject","s3:DeleteObject"],
-   "Resource":"arn:aws:s3:::$bucket/*"},
+   "Resource":["arn:aws:s3:::$bucket/pending/*","arn:aws:s3:::$bucket/sending/*",
+     "arn:aws:s3:::$bucket/filed/*","arn:aws:s3:::$bucket/rejected/*","arn:aws:s3:::$bucket/failed/*"]},
   {"Sid":"LlmKey","Effect":"Allow","Action":"secretsmanager:GetSecretValue",
    "Resource":"arn:aws:secretsmanager:$AWS_REGION:$account:secret:$secret-*"}
 ]}

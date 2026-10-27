@@ -8,7 +8,10 @@ oldest first, asks an LLM to transcribe each report into a maintainer-facing iss
 and files it in this repository with the labels ``user-report`` and ``host/<app>``,
 or comments on the open report it duplicates. The report then moves to ``filed/``,
 ``rejected/`` (not a bug report) or ``failed/`` (the model's answer was unusable
-twice). The bucket deletes every object after 90 days.
+twice). It moves to ``sending/`` before anything is posted, so a post whose
+outcome is unknown leaves it there for a person to check instead of posting it
+twice. At most 30 issues and comments a day. The bucket deletes every object
+after 90 days.
 
 A report is untrusted input. The model sees it as data, its answer is checked
 field by field (labels come from a fixed list, a duplicate must be one of the open
@@ -33,7 +36,7 @@ import urllib.error
 import urllib.request
 
 MAX_PER_RUN = 10
-DAILY_ISSUE_CAP = 30
+DAILY_POST_CAP = 30
 MAX_PROMPT_REPORT = 60_000
 MAX_TITLE = 100
 MAX_BODY = 30_000
@@ -42,6 +45,7 @@ HOSTS = (
     "roblox", "houdini", "maya", "3dsmax", "substance3d-painter", "zbrush", "core",
 )
 REPORT_LABEL = "user-report"
+MARKER = "<!-- meshy-dcc-report:"
 
 SYSTEM_PROMPT = f"""\
 You turn a user's bug report about Meshy DCC Core into a GitHub issue for its maintainers.
@@ -76,12 +80,15 @@ Answer with one JSON object and nothing else:
 PRIVATE_PATTERNS = [
     (re.compile(r"(?i)\b[a-z]:[\\/]+users[\\/]+[^\\/\s`'\"]+"), "~"),
     (re.compile(r"/(?:Users|home)/[^/\s`'\"]+"), "~"),
+    (re.compile(r"\\\\[^\\\s`'\"]+\\[^\\\s`'\"]+"), "<share>"),
     (re.compile(r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+"), "<email>"),
     (re.compile(r"\b(?:\d{1,3}\.){3}\d{1,3}\b"), "<ip>"),
+    (re.compile(r"(?i)\b(?:[0-9a-f]{1,4}:){7}[0-9a-f]{1,4}\b|\b(?:[0-9a-f]{1,4}:)+:(?:[0-9a-f]{1,4}:)*[0-9a-f]{1,4}\b"), "<ip>"),
     (re.compile(r"(?i)\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b"), "<id>"),
-    (re.compile(r"\b(?:sk-[A-Za-z0-9_-]{16,}|gh[pousr]_[A-Za-z0-9]{20,}|cdnk_[A-Za-z0-9]{16,})"), "<secret>"),
+    (re.compile(r"\b(?:sk-[A-Za-z0-9_-]{16,}|gh[pousr]_[A-Za-z0-9]{20,}|cdnk_[A-Za-z0-9]{16,}|msy_[A-Za-z0-9_-]{16,})"), "<secret>"),
 ]
-MENTION = re.compile(r"(?<![\w`])@([A-Za-z0-9][A-Za-z0-9-]*(?:/[A-Za-z0-9._-]+)?)")
+# A zero-width space after "@" stops every mention, whatever surrounds it.
+MENTION = re.compile(r"@(?=[A-Za-z0-9])")
 
 
 class Unusable(Exception):
@@ -96,7 +103,7 @@ def scrub(text: str) -> str:
     """Remove what must never reach a public issue, and defuse @mentions."""
     for pattern, replacement in PRIVATE_PATTERNS:
         text = pattern.sub(replacement, text)
-    return MENTION.sub(r"`@\1`", text)
+    return MENTION.sub("@\u200b", text)
 
 
 def decide(answer: str, open_numbers: set[int]) -> dict:
@@ -142,7 +149,7 @@ def footer(stored: dict) -> str:
         f"{plain(client.get('arch'))}, sent from the {'window' if stored['report'].get('source') == 'ui' else 'CLI'}. "
         f"Transcribed by the report bot from report `{plain(stored['report_id'])}`; "
         "the raw report is kept privately for 90 days.\n"
-        f"<!-- meshy-dcc-report:{plain(stored['report_id'])} -->"
+        f"{MARKER}{plain(stored['report_id'])} -->"
     )
 
 
@@ -160,7 +167,7 @@ def ask_model(stored: dict, open_issues: list[dict]) -> str:
                 {"role": "user", "content": f"Open user reports:\n{listing}\n\nReport:\n```json\n{report}\n```"},
             ],
         }).encode(),
-        headers={"Authorization": f"Bearer {os.environ['LLM_API_KEY']}", "Content-Type": "application/json"},
+        headers={"Authorization": f"Bearer {os.environ['LLM_API_KEY'].strip()}", "Content-Type": "application/json"},
     )
     try:
         with urllib.request.urlopen(request, timeout=120) as response:
@@ -183,9 +190,10 @@ def gh_json(*argv: str) -> list[dict]:
     return json.loads(run("gh", *argv, "--repo", os.environ["GITHUB_REPOSITORY"]))
 
 
-def move(bucket: str, key: str, folder: str) -> None:
-    run("aws", "s3", "mv", "--only-show-errors", f"s3://{bucket}/{key}",
-        f"s3://{bucket}/{folder}/{key.removeprefix('pending/')}")
+def move(bucket: str, key: str, folder: str) -> str:
+    target = f"{folder}/{key.split('/', 1)[1]}"
+    run("aws", "s3", "mv", "--only-show-errors", f"s3://{bucket}/{key}", f"s3://{bucket}/{target}")
+    return target
 
 
 def file_issue(decision: dict) -> str:
@@ -209,13 +217,20 @@ def main() -> int:
         print("no pending reports")
         return 0
 
+    repo = os.environ["GITHUB_REPOSITORY"]
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-    filed_today = len(gh_json("issue", "list", "--label", REPORT_LABEL, "--state", "all",
-                              "--search", f"created:>={today}", "--limit", "100", "--json", "number"))
+    # ponytail: counts at most 100 of today's comments, paginate if the repo gets busier.
+    comments = json.loads(run("gh", "api", f"repos/{repo}/issues/comments?since={today}T00:00:00Z&per_page=100"))
+    posted_today = sum(MARKER in (comment.get("body") or "") for comment in comments) + len(
+        gh_json("issue", "list", "--label", REPORT_LABEL, "--state", "all",
+                "--search", f"created:>={today}", "--limit", "100", "--json", "number"))
     open_issues = gh_json("issue", "list", "--label", REPORT_LABEL, "--state", "open",
                           "--limit", "100", "--json", "number,title")
 
     for key in keys:
+        if posted_today >= DAILY_POST_CAP:
+            print(f"daily cap of {DAILY_POST_CAP} issues and comments reached; the rest wait")
+            return 0
         stored = json.loads(run("aws", "s3", "cp", "--only-show-errors", f"s3://{bucket}/{key}", "-"))
         try:
             try:
@@ -234,21 +249,19 @@ def main() -> int:
         if decision["action"] == "spam":
             print(f"{key}: not a bug report; moved to rejected/")
             move(bucket, key, "rejected")
-        elif decision["action"] == "duplicate":
-            run("gh", "issue", "comment", str(decision["duplicate_of"]), "--repo", os.environ["GITHUB_REPOSITORY"],
+            continue
+        key = move(bucket, key, "sending")
+        if decision["action"] == "duplicate":
+            run("gh", "issue", "comment", str(decision["duplicate_of"]), "--repo", repo,
                 "--body-file", "-", stdin="Another user reported this.\n\n" + decision["body"] + footer(stored))
             print(f"{key}: added to #{decision['duplicate_of']}")
-            move(bucket, key, "filed")
         else:
-            if filed_today >= DAILY_ISSUE_CAP:
-                print(f"daily cap of {DAILY_ISSUE_CAP} new issues reached; the rest wait")
-                return 0
             decision["body"] += footer(stored)
             url = file_issue(decision)
-            filed_today += 1
             open_issues.append({"number": int(url.rsplit("/", 1)[-1]), "title": decision["title"]})
             print(f"{key}: filed {url}")
-            move(bucket, key, "filed")
+        posted_today += 1
+        move(bucket, key, "filed")
     return 0
 
 

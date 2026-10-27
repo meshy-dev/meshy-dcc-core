@@ -32,12 +32,12 @@ def handler(event: dict, _context: object) -> dict:
     if method != "POST":
         return reply(405, {"error": "method not allowed"})
     body = event.get("body") or ""
-    raw = base64.b64decode(body) if event.get("isBase64Encoded") else body.encode()
-    if len(raw) > MAX_BYTES:
-        return reply(413, {"error": "report too large"})
     try:
+        raw = base64.b64decode(body, validate=True) if event.get("isBase64Encoded") else body.encode()
+        if len(raw) > MAX_BYTES:
+            return reply(413, {"error": "report too large"})
         report = json.loads(raw)
-    except ValueError:
+    except (ValueError, RecursionError):
         return reply(400, {"error": "invalid report: not JSON"})
     problem = check(report)
     if problem:
