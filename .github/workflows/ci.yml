@@ -32,9 +32,16 @@ jobs:
           cache-dependency-path: admin-ui/package-lock.json
       # The Rust toolchain comes from rust-toolchain.toml.
       - run: rustup show active-toolchain
-      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+      # Only GitHub-owned and verified-creator actions are allowed in this repo.
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
-          save-if: ${{ github.ref == 'refs/heads/main' }}
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+            target
+          key: cargo-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml', 'Cargo.lock') }}
+          restore-keys: cargo-${{ runner.os }}-
       - name: cargo test -p meshy-dcc -p meshy-dcc-updater
         run: cargo test -p meshy-dcc -p meshy-dcc-updater
       - name: cargo test -p meshy-dcc-gateway --features admin
