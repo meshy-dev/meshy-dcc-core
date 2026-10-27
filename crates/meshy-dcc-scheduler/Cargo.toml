@@ -28,7 +28,7 @@ tokio = { workspace = true }
 uuid = { workspace = true }
 
 # Cron parsing + timezone-aware scheduling
-cron = "0.16"
+cron = "0.17"
 chrono = { version = "0.4", features = ["serde"] }
 chrono-tz = "0.10"
 
