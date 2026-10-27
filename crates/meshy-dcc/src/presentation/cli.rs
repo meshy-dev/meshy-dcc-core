@@ -140,7 +140,9 @@ pub struct Args {
 
 pub async fn run() -> anyhow::Result<()> {
     if apply_staged_update() {
-        return restart_after_update();
+        let error =
+            meshy_dcc_updater::relaunch_current_exe(&[("MESHY_DCC_UPDATE_JUST_APPLIED", "1")]);
+        anyhow::bail!("could not start the updated meshy-dcc: {error}");
     }
     let args = Args::parse();
     let format = output_format(&args.command, args.output);
@@ -162,15 +164,9 @@ fn output_format(command: &Command, output: Option<OutputFormat>) -> Result<Outp
 }
 
 fn apply_staged_update() -> bool {
-    // A package manager owns this binary (see application::package_manager):
-    // replacing it would undo the version the manager installed, so a staged
-    // update is left in place and never applied.
-    if crate::application::package_manager::detect().is_some() {
-        return false;
-    }
-
     // Apply any staged binary update before running commands (CLI restart
-    // is the user's next invocation after `update apply`).
+    // is the user's next invocation after `update apply`). The updater
+    // leaves a package-managed binary alone.
     match meshy_dcc_updater::Updater::apply_staged_update(
         crate::application::update::CLI_BINARY_NAME,
     ) {
@@ -226,15 +222,6 @@ fn open_in_browser(url: &str) -> bool {
         .is_ok_and(|status| status.success())
 }
 
-fn restart_after_update() -> anyhow::Result<()> {
-    let executable = std::env::current_exe()?;
-    std::process::Command::new(executable)
-        .args(std::env::args_os().skip(1))
-        .env("MESHY_DCC_UPDATE_JUST_APPLIED", "1")
-        .spawn()?;
-    Ok(())
-}
-
 async fn run_with_args(args: Args) -> anyhow::Result<()> {
     let Args {
         base_url,
@@ -273,8 +260,9 @@ async fn run_with_args(args: Args) -> anyhow::Result<()> {
     // Installed agent Skills follow the CLI version, however the CLI was updated.
     crate::application::agent_skill::refresh_installed();
     let explicit_update_command = matches!(&command, Command::Update { .. });
-    let marketplace_update_check = (!crate::application::update::is_background_refresh())
-        .then(|| tokio::spawn(check_marketplace_updates()));
+    let marketplace_update_check = (!crate::application::update::is_background_refresh()
+        && !crate::application::update::update_checks_turned_off())
+    .then(|| tokio::spawn(check_marketplace_updates()));
 
     if global_timeout_secs.is_some()
         && (command_has_distinct_per_timeout(&command, global_timeout_secs)
