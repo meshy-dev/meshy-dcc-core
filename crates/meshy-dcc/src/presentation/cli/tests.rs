@@ -1358,6 +1358,20 @@ fn gateway_restart_is_gateway_daemon_restart() {
     assert_eq!(stop_timeout_secs, 10);
 }
 
+#[test]
+fn update_apply_restarts_unless_told_not_to() {
+    let parse = |argv: &[&str]| match Args::parse_from(argv).command {
+        Command::Update {
+            action: UpdateAction::Apply { yes, no_restart },
+        } => (yes, no_restart),
+        _ => panic!("expected update apply"),
+    };
+    assert_eq!(parse(&["meshy-dcc", "update", "apply", "--yes"]), (true, false));
+    assert_eq!(
+        parse(&["meshy-dcc", "update", "apply", "--yes", "--no-restart"]),
+        (true, true)
+    );
+}
 
 /// `doctor` probes the gateway every other command uses unless `--gateway-host`
 /// or `--gateway-port` name another, so a test's `MESHY_DCC_GATEWAY_PORT` is

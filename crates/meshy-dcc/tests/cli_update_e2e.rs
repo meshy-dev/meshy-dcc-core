@@ -73,7 +73,7 @@ fn update_apply_requires_explicit_user_confirmation() {
         "meshy-dcc update apply --yes"
     );
     assert_eq!(update["update_policy"]["staged_for_next_launch"], true);
-    assert_eq!(update["update_policy"]["running_server_restarted"], false);
+    assert_eq!(update["update_policy"]["running_server_restarted"], true);
 }
 
 #[test]
@@ -100,7 +100,7 @@ fn update_apply_surfaces_check_failures_without_downloading() {
     assert_eq!(update["error"], "update_check_failed");
     assert_eq!(update["version_status"], "check_failed");
     assert_eq!(update["update_available"], false);
-    assert_eq!(update["update_policy"]["running_server_restarted"], false);
+    assert_eq!(update["update_policy"]["running_server_restarted"], true);
 }
 
 #[test]

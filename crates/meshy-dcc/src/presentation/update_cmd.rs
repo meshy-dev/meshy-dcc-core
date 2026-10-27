@@ -4,8 +4,12 @@ use serde_json::Value;
 use super::output::{ExitCode, OutputWriter};
 use crate::application::update::{
     CLI_BINARY_NAME, CLI_VERSION, UpdateService, cached_cli_update, is_background_refresh,
-    just_applied_status, record_cli_update, spawn_cli_update_refresh,
+    just_applied_status, record_cli_update, restart_local_gateway, spawn_cli_update_refresh,
 };
+
+/// Ceiling for the sibling server's download and staging.
+// ponytail: one fixed ceiling; a very slow link may need longer.
+const SERVER_STAGE_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(600);
 
 #[derive(Debug, Subcommand)]
 pub(crate) enum UpdateAction {
@@ -16,11 +20,16 @@ pub(crate) enum UpdateAction {
         #[arg(long)]
         current_version: Option<String>,
     },
-    /// Download the latest CLI version and stage it for the next launch.
+    /// Update the CLI and the server beside it to the latest release, then
+    /// restart the local gateway so the new server runs at once.
     Apply {
         /// Confirm that the user approved downloading and staging the update.
         #[arg(long)]
         yes: bool,
+        /// Leave the running gateway alone; it picks up the update on its
+        /// next start.
+        #[arg(long)]
+        no_restart: bool,
     },
 }
 
@@ -55,7 +64,7 @@ pub(crate) async fn run(
             };
             (value, exit_code)
         }
-        UpdateAction::Apply { yes } => {
+        UpdateAction::Apply { yes, no_restart } => {
             let service = UpdateService::new(base_url, CLI_BINARY_NAME, CLI_VERSION);
             let mut value = service.apply_update(yes).await?;
             let mut exit_code = match value["error"].as_str() {
@@ -66,12 +75,31 @@ pub(crate) async fn run(
             // The gateway binary beside the CLI moves to the same release,
             // whether or not the CLI itself had an update.
             if exit_code == ExitCode::Success
-                && let Some(server) = stage_sibling_server(base_url)
+                && let Some(server) = stage_sibling_server(base_url).await
             {
-                if server["status"] == "failed" {
+                if matches!(server["status"].as_str(), Some("failed" | "unknown")) {
                     exit_code = ExitCode::Unavailable;
                 }
                 value["server_update"] = server;
+            }
+            if exit_code == ExitCode::Success {
+                let restart = if no_restart {
+                    serde_json::json!({ "status": "skipped", "reason": "no_restart" })
+                } else {
+                    // The server's release when there is one, else the CLI's:
+                    // without a sibling server the CLI runs the gateway.
+                    let target = value["server_update"]["latest_version"]
+                        .as_str()
+                        .or(value["latest_version"].as_str())
+                        .map(str::to_owned);
+                    restart_local_gateway(base_url, target.as_deref()).await
+                };
+                if matches!(restart["status"].as_str(), Some("failed" | "unknown")) {
+                    exit_code = ExitCode::Unavailable;
+                }
+                value["update_policy"]["running_server_restarted"] =
+                    (restart["status"] == "restarted").into();
+                value["gateway_restart"] = restart;
             }
             (value, exit_code)
         }
@@ -86,12 +114,16 @@ pub(crate) async fn run(
 /// Stage the `meshy-dcc-server` installed beside this CLI through its own
 /// `update apply`, which checks the same gateway and verifies the download.
 /// `None` when there is no such binary or the gateway is not local.
-fn stage_sibling_server(base_url: &str) -> Option<Value> {
+async fn stage_sibling_server(base_url: &str) -> Option<Value> {
     let server = crate::application::gateway_discovery::find_in_same_dir()?;
-    stage_server_at(&server, base_url)
+    stage_server_at(&server, base_url, SERVER_STAGE_TIMEOUT).await
 }
 
-fn stage_server_at(server: &std::path::Path, base_url: &str) -> Option<Value> {
+async fn stage_server_at(
+    server: &std::path::Path,
+    base_url: &str,
+    timeout: std::time::Duration,
+) -> Option<Value> {
     let url = reqwest::Url::parse(base_url).ok()?;
     let host = url
         .host_str()?
@@ -105,11 +137,22 @@ fn stage_server_at(server: &std::path::Path, base_url: &str) -> Option<Value> {
         return None;
     }
     let port = url.port_or_known_default()?;
-    let output = std::process::Command::new(server)
+    let output = tokio::process::Command::new(server)
         .args(["update", "apply"])
         .env("MESHY_DCC_GATEWAY_PORT", port.to_string())
         .stdin(std::process::Stdio::null())
+        .kill_on_drop(true)
         .output();
+    let Ok(output) = tokio::time::timeout(timeout, output).await else {
+        // It may have staged before it was stopped; say so rather than guess.
+        return Some(serde_json::json!({
+            "status": "unknown",
+            "message": format!(
+                "meshy-dcc-server update apply did not finish within {} s",
+                timeout.as_secs()
+            ),
+        }));
+    };
     Some(match output {
         Ok(output) if output.status.success() => serde_json::from_slice(&output.stdout)
             .unwrap_or_else(|_| serde_json::json!({ "status": "unknown" })),
@@ -149,13 +192,13 @@ pub(crate) fn surface_cached_cli_update(
                         marker.upgrade_hint()
                     ),
                     None => format!(
-                        "info: meshy-dcc {current} -> {latest} is available. Ask the user before updating; after confirmation run `meshy-dcc update apply --yes`. The update activates on the next CLI launch and does not restart running servers."
+                        "info: meshy-dcc {current} -> {latest} is available. Ask the user before updating; after confirmation run `meshy-dcc update apply --yes`. It updates the CLI and the server and restarts the local gateway."
                     ),
                 };
                 writer.diagnostic(&message)?
             }
             Some("applied") => writer.diagnostic(
-                "info: the staged meshy-dcc update was applied on this launch; running servers were not restarted",
+                "info: the staged meshy-dcc update was applied on this launch",
             )?,
             _ => {}
         }
@@ -172,6 +215,8 @@ mod tests {
 
     use super::stage_server_at;
 
+    const TIMEOUT: std::time::Duration = std::time::Duration::from_secs(30);
+
     fn fake_server(dir: &std::path::Path, script: &str) -> std::path::PathBuf {
         let path = dir.join("meshy-dcc-server");
         std::fs::write(&path, format!("#!/bin/sh\n{script}\n")).unwrap();
@@ -179,32 +224,54 @@ mod tests {
         path
     }
 
-    #[test]
-    fn server_update_runs_against_the_local_gateway_port() {
+    #[tokio::test]
+    async fn server_update_runs_against_the_local_gateway_port() {
         let dir = tempfile::tempdir().unwrap();
         let server = fake_server(
             dir.path(),
             r#"[ "$1 $2" = "update apply" ] || exit 9
 printf '{"status":"staged","port":"%s"}' "$MESHY_DCC_GATEWAY_PORT""#,
         );
-        let value = stage_server_at(&server, "http://127.0.0.1:19865").unwrap();
+        let value = stage_server_at(&server, "http://127.0.0.1:19865", TIMEOUT)
+            .await
+            .unwrap();
         assert_eq!(value["status"], "staged");
         assert_eq!(value["port"], "19865");
     }
 
-    #[test]
-    fn a_failed_server_update_is_reported() {
+    #[tokio::test]
+    async fn a_failed_server_update_is_reported() {
         let dir = tempfile::tempdir().unwrap();
         let server = fake_server(dir.path(), "echo 'no gateway' >&2; exit 1");
-        let value = stage_server_at(&server, "http://localhost:19765").unwrap();
+        let value = stage_server_at(&server, "http://localhost:19765", TIMEOUT)
+            .await
+            .unwrap();
         assert_eq!(value["status"], "failed");
         assert_eq!(value["message"], "no gateway");
     }
 
-    #[test]
-    fn a_remote_gateway_never_updates_the_local_server() {
+    #[tokio::test]
+    async fn a_remote_gateway_never_updates_the_local_server() {
         let dir = tempfile::tempdir().unwrap();
         let server = fake_server(dir.path(), "exit 0");
-        assert!(stage_server_at(&server, "http://10.0.0.5:19765").is_none());
+        assert!(
+            stage_server_at(&server, "http://10.0.0.5:19765", TIMEOUT)
+                .await
+                .is_none()
+        );
+    }
+
+    #[tokio::test]
+    async fn a_server_update_that_hangs_is_stopped_and_unknown() {
+        let dir = tempfile::tempdir().unwrap();
+        let server = fake_server(dir.path(), "sleep 30");
+        let value = stage_server_at(
+            &server,
+            "http://127.0.0.1:19765",
+            std::time::Duration::from_millis(200),
+        )
+        .await
+        .unwrap();
+        assert_eq!(value["status"], "unknown");
     }
 }
