@@ -19,6 +19,10 @@ import cinema4dIcon from '../assets/dcc-icons/cinema4d.png';
 import photoshopIcon from '../assets/dcc-icons/photoshop.png';
 import zbrushIcon from '../assets/dcc-icons/zbrush.png';
 import unrealIcon from '../assets/product/dcc/Unreal-color.svg';
+import godotIcon from '../assets/product/dcc/GODOT-color.svg';
+import freecadIcon from '../assets/product/dcc/FreeCAD-color.png';
+import openscadIcon from '../assets/product/dcc/OpenSCAD-color.png';
+import materialMakerIcon from '../assets/product/dcc/MaterialMaker-color.png';
 import unityIcon from '../assets/dcc-icons/unity.png';
 import figmaIcon from '../assets/dcc-icons/figma.png';
 import nukeIcon from '../assets/dcc-icons/nuke.png';
@@ -52,6 +56,10 @@ export const DCC_ICON_MAP: Record<string, string> = {
   gimp: gimpIcon,
   inkscape: inkscapeIcon,
   krita: kritaIcon,
+  godot: godotIcon,
+  freecad: freecadIcon,
+  openscad: openscadIcon,
+  materialmaker: materialMakerIcon,
 };
 export const DCC_ICON_FALLBACK = puzzleIcon;
 
@@ -64,6 +72,7 @@ const DCC_ICON_ALIASES: Record<string, string> = {
   ue5: 'unreal',
   unrealengine: 'unreal',
   substancepainter: 'substance_painter',
+  substance3dpainter: 'substance_painter',
 };
 
 export function resolveDccIcon(dccType: string): string {
