@@ -257,6 +257,78 @@ def test_server_base_reload_refreshes_existing_skill_metadata(
     assert names == ["recommend_hdr_preset"]
 
 
+def test_bare_reload_keeps_the_roots_given_at_registration(
+    registry_dir: Path,
+    tmp_path_factory: pytest.TempPathFactory,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """``dcc_admin__reload_skills`` and the admin UI call reload with no arguments.
+
+    That used to rescan the defaults (``include_bundled=True``, no extra roots),
+    dropping the adapter's own roots and adding the bundled skills it opted out of.
+    """
+    monkeypatch.setenv("MESHY_DCC_DISABLE_DEFAULT_SKILL_PATHS", "1")
+    skill_root = tmp_path_factory.mktemp("adapter-skills")
+    _write_skill(skill_root, "adapter-rigging")
+
+    from meshy_dcc_core import DccServerBase
+    from meshy_dcc_core._server.options import DccServerOptions
+
+    opts = DccServerOptions.from_env(
+        dcc_name="maya",
+        builtin_skills_dir=tmp_path_factory.mktemp("builtin-skills"),
+        server_name="test-maya",
+        port=0,
+        gateway_port=None,
+        enable_gateway_failover=False,
+    )
+    server = DccServerBase(opts)
+    server.register_builtin_actions(extra_skill_paths=[str(skill_root)], include_bundled=False)
+
+    def _names() -> set[str]:
+        return {row["name"] if isinstance(row, dict) else row.name for row in server.list_skills()}
+
+    before = _names()
+    assert "adapter-rigging" in before
+
+    server.reload_skill_paths()
+
+    assert _names() == before  # root kept, no bundled skills added
+
+    # An explicit argument still overrides the remembered one for that call.
+    server.reload_skill_paths(extra_skill_paths=[], include_bundled=False)
+    assert "adapter-rigging" not in _names()
+
+
+def test_run_registration_roots_survive_a_bare_reload(
+    registry_dir: Path,
+    tmp_path_factory: pytest.TempPathFactory,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("MESHY_DCC_DISABLE_DEFAULT_SKILL_PATHS", "1")
+    skill_root = tmp_path_factory.mktemp("adapter-skills")
+    _write_skill(skill_root, "pipeline-rig")
+
+    from meshy_dcc_core import DccServerBase
+    from meshy_dcc_core._server.options import DccServerOptions
+
+    opts = DccServerOptions.from_env(
+        dcc_name="maya",
+        builtin_skills_dir=tmp_path_factory.mktemp("builtin-skills"),
+        server_name="test-maya",
+        port=0,
+        gateway_port=None,
+        enable_gateway_failover=False,
+    )
+    server = DccServerBase(opts)
+    server.run_registration(extra_skill_paths=[str(skill_root)], include_bundled=False)
+
+    server.reload_skill_paths()
+
+    names = {row["name"] if isinstance(row, dict) else row.name for row in server.list_skills()}
+    assert "pipeline-rig" in names
+
+
 def test_module_re_exports() -> None:
     """The public symbols are reachable from the top-level package."""
     import meshy_dcc_core
