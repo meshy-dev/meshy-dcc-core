@@ -1248,8 +1248,8 @@ mod tests {
 
         let rmcp_result = crate::rmcp_adapter::call_result_to_rmcp(&result);
         assert!(matches!(
-            &rmcp_result.content[1].raw,
-            rmcp::model::RawContent::Image(image)
+            &rmcp_result.content[1],
+            rmcp::model::ContentBlock::Image(image)
                 if image.data == "iVBORw0KGgo=" && image.mime_type == "image/png"
         ));
     }

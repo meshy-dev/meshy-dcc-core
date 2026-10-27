@@ -15,6 +15,8 @@ use std::collections::HashMap;
 use std::future::Future;
 use std::sync::Arc;
 
+// rmcp 2 deprecates MCP logging (SEP-2577); we still serve logging/setLevel for existing clients.
+#[allow(deprecated)]
 use rmcp::model::{
     CallToolRequestParams, CallToolResult as RmcpCallToolResult, CustomRequest, CustomResult,
     ErrorCode, GetPromptRequestParams, GetPromptResult as RmcpGetPromptResult, Implementation,
@@ -100,19 +102,19 @@ impl MeshyDccHandler {
 impl ServerHandler for MeshyDccHandler {
     fn get_info(&self) -> ServerInfo {
         let mut capabilities = ServerCapabilities::default();
-        capabilities.tools = Some(ToolsCapability {
-            list_changed: Some(true),
-        });
+        let mut tools = ToolsCapability::default();
+        tools.list_changed = Some(true);
+        capabilities.tools = Some(tools);
         if self.state.features.enable_resources {
-            capabilities.resources = Some(rmcp::model::ResourcesCapability {
-                subscribe: Some(true),
-                list_changed: Some(true),
-            });
+            let mut resources = rmcp::model::ResourcesCapability::default();
+            resources.subscribe = Some(true);
+            resources.list_changed = Some(true);
+            capabilities.resources = Some(resources);
         }
         if self.state.features.enable_prompts {
-            capabilities.prompts = Some(rmcp::model::PromptsCapability {
-                list_changed: Some(false),
-            });
+            let mut prompts = rmcp::model::PromptsCapability::default();
+            prompts.list_changed = Some(false);
+            capabilities.prompts = Some(prompts);
         }
         capabilities.logging = Some(serde_json::Map::new());
 
@@ -407,6 +409,7 @@ impl ServerHandler for MeshyDccHandler {
 
     // ── Logging ─────────────────────────────────────────────────────────────
 
+    #[allow(deprecated)] // MCP logging, see the import above.
     fn set_level(
         &self,
         request: SetLevelRequestParams,
@@ -425,6 +428,7 @@ impl ServerHandler for MeshyDccHandler {
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
 /// Map rmcp [`LoggingLevel`] to our [`SessionLogLevel`].
+#[allow(deprecated)] // MCP logging, see the import above.
 fn logging_level_to_session(level: LoggingLevel) -> SessionLogLevel {
     match level {
         LoggingLevel::Debug => SessionLogLevel::Debug,
