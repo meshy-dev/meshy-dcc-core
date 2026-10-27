@@ -146,7 +146,7 @@ jobs:
           role-to-assume: arn:aws:iam::133081291590:role/meshy-dcc-github-deploy
 
       # Exported as NPM_TOKEN and masked in the log.
-      - uses: aws-actions/aws-secretsmanager-get-secrets@v2
+      - uses: aws-actions/aws-secretsmanager-get-secrets@v3
         with:
           secret-ids: |
             NPM_TOKEN,meshy-dcc/release/npm-token
