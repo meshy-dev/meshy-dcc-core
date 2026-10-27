@@ -1,0 +1,48 @@
+# Weekly version updates: one grouped PR per ecosystem for minor and patch
+# releases, majors one by one. A release has to be seven days old before it is
+# proposed. Security updates do not wait and arrive as soon as an advisory is
+# published.
+#
+# tests/interop/mcp-2026 is left out on purpose: it pins the official MCP SDK
+# 2.0.0 as a behavior oracle (see its README).
+version: 2
+updates:
+  - package-ecosystem: cargo
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    groups:
+      cargo:
+        update-types: [minor, patch]
+
+  - package-ecosystem: npm
+    directory: /admin-ui
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    groups:
+      admin-ui:
+        update-types: [minor, patch]
+
+  - package-ecosystem: uv
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    groups:
+      python-dev:
+        update-types: [minor, patch]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    groups:
+      actions:
+        update-types: [minor, patch]
