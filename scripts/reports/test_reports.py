@@ -141,6 +141,33 @@ class TranscribeTest(unittest.TestCase):
         self.assertLess(names.index(("aws", "s3", "mv")), names.index(("gh", "issue", "create")))
         self.assertEqual(sum(call[:3] == ("aws", "s3", "cp") for call in calls), 1)
 
+    def test_a_response_that_is_not_a_chat_completion_stops_the_run(self):
+        class Response:
+            def __init__(self, body):
+                self.body = body
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *_):
+                return False
+
+            def read(self):
+                return self.body
+
+        os.environ.update(LLM_BASE_URL="https://models.example", LLM_MODEL="m", LLM_API_KEY="k\n")
+        original = transcribe.urllib.request.urlopen
+        try:
+            transcribe.urllib.request.urlopen = lambda *_, **__: Response(b"OK")
+            with self.assertRaises(SystemExit):
+                transcribe.ask_model({"report": report()}, [])
+            transcribe.urllib.request.urlopen = lambda *_, **__: Response(
+                b'{"choices": [{"message": {"content": null}}]}')
+            with self.assertRaises(transcribe.Unusable):
+                transcribe.ask_model({"report": report()}, [])
+        finally:
+            transcribe.urllib.request.urlopen = original
+
 
 if __name__ == "__main__":
     unittest.main()
