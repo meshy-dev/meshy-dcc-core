@@ -171,15 +171,21 @@ def ask_model(stored: dict, open_issues: list[dict]) -> str:
     )
     try:
         with urllib.request.urlopen(request, timeout=120) as response:
-            return json.load(response)["choices"][0]["message"]["content"]
+            body = response.read()
     except urllib.error.HTTPError as error:
         if error.code == 429 or error.code >= 500:
             raise Retry(f"model API returned {error.code}") from None
         raise SystemExit(f"model API returned {error.code}: {error.read()[:500]!r}")
     except (urllib.error.URLError, TimeoutError) as error:
         raise Retry(f"model API unreachable: {error}") from None
-    except (KeyError, IndexError, TypeError, ValueError) as error:
-        raise Unusable(f"unexpected model API response: {error}") from None
+    try:
+        content = json.loads(body)["choices"][0]["message"]["content"]
+    except (KeyError, IndexError, TypeError, ValueError):
+        # A wrong base URL or a broken API, not a bad answer: fail the run and keep the report pending.
+        raise SystemExit(f"model API did not return a chat completion: {body[:200]!r}") from None
+    if not isinstance(content, str):
+        raise Unusable("the model returned no text")
+    return content
 
 
 def run(*argv: str, stdin: str | None = None) -> str:
