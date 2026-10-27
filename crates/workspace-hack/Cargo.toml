@@ -186,7 +186,7 @@ slab = { version = "0.4.12" }
 smallvec = { version = "1.15.1", default-features = false, features = ["const_new"] }
 spin = { version = "0.9.8" }
 subtle = { version = "2.6.1" }
-syn = { version = "2.0.117", features = ["extra-traits", "fold", "full", "visit", "visit-mut"] }
+syn = { version = "3.0.9", features = ["extra-traits", "fold", "full", "visit", "visit-mut"] }
 sync_wrapper = { version = "1.0.2", default-features = false, features = ["futures"] }
 time = { version = "0.3.47", features = ["formatting", "local-offset", "macros", "parsing"] }
 tokio = { version = "1.52.3", features = ["full", "test-util"] }
