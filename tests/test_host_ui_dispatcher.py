@@ -265,3 +265,112 @@ def test_host_ui_outcome_shape():
     payload = host_ui_outcome("id", "main", success=True, output=1, job_id="jid")
     assert payload["request_id"] == "id"
     assert payload["job_id"] == "jid"
+
+
+def test_timed_out_queued_job_never_runs_later():
+    disp = _NoopPumpDispatcher()
+    ran = []
+
+    out = disp.submit_callable("late", lambda: ran.append(1), affinity="main", timeout_ms=1)
+
+    assert out["success"] is False
+    assert "Timeout" in out["error"]
+    assert out.get("status") != "unknown"
+    assert disp.queue_size() == 0
+    assert disp.drain_queue(budget_ms=DEFAULT_UI_JOB_TIMEOUT_MS) == (0, 0)
+    assert ran == []
+
+
+def test_timed_out_queued_job_does_not_trip_fail_fast_host_busy():
+    disp = _NoopPumpDispatcher(fail_fast_on_main_queue_busy=True)
+
+    first = disp.submit_callable("first", lambda: None, affinity="main", timeout_ms=1)
+    second = disp.submit_callable("second", lambda: None, affinity="main", timeout_ms=1)
+
+    assert first["error"] != DispatcherErrorCode.HOST_BUSY
+    assert second["error"] != DispatcherErrorCode.HOST_BUSY
+
+
+def test_pump_refuses_job_abandoned_after_it_was_dequeued():
+    # The pump popped the job, then the caller timed out before the pump claimed it.
+    disp = _NoopPumpDispatcher()
+    ran = []
+    job = HostUiJobEntry("raced", "main", lambda: ran.append(1))
+    with disp._lock:
+        disp._main_queue.append(job)
+
+    assert job.abandon() == "queued"
+
+    assert disp.drain_queue(budget_ms=DEFAULT_UI_JOB_TIMEOUT_MS) == (0, 0)
+    assert job.execute()["success"] is False
+    assert ran == []
+    assert disp.active_count() == 0
+
+
+def test_timed_out_running_job_reports_unknown_and_late_finish_is_not_a_success():
+    finished = []
+
+    class _ThreadPumpDispatcher(HostUiDispatcherBase):
+        def poke_host_pump(self) -> None:
+            threading.Thread(target=self.drain_queue, args=(DEFAULT_UI_JOB_TIMEOUT_MS,), daemon=True).start()
+
+        def on_job_finished(self, job: HostUiJobEntry) -> None:
+            finished.append(job.outcome)
+
+    disp = _ThreadPumpDispatcher()
+    started = threading.Event()
+    release = threading.Event()
+    mutated = []
+
+    def _task():
+        started.set()
+        release.wait(timeout=5.0)
+        mutated.append("scene changed")
+        return "done"
+
+    out = disp.submit_callable("running", _task, affinity="main", timeout_ms=100)
+
+    assert started.is_set()
+    assert out["success"] is False
+    assert out["status"] == "unknown"
+    assert out["error"].startswith(DispatcherErrorCode.OUTCOME_UNKNOWN)
+    assert "Read the scene back" in out["error"]
+
+    release.set()
+    deadline = time.monotonic() + 5.0
+    while not finished and time.monotonic() < deadline:
+        time.sleep(0.01)
+
+    assert mutated == ["scene changed"]  # it did run: the caller really cannot know
+    assert len(finished) == 1
+    assert finished[0]["success"] is False
+    assert finished[0]["status"] == "unknown"
+    assert finished[0]["output"] is None
+    assert disp.active_count() == 0
+    assert disp.queue_size() == 0
+
+
+def test_timed_out_running_job_is_cancelled_cooperatively():
+    class _ThreadPumpDispatcher(HostUiDispatcherBase):
+        def poke_host_pump(self) -> None:
+            threading.Thread(target=self.drain_queue, args=(DEFAULT_UI_JOB_TIMEOUT_MS,), daemon=True).start()
+
+    disp = _ThreadPumpDispatcher()
+
+    def _task():
+        for _ in range(500):
+            check_dcc_cancelled()
+            time.sleep(0.01)
+
+    job_ref = []
+    disp.on_job_started = lambda job: job_ref.append(job)  # type: ignore[method-assign]
+
+    out = disp.submit_callable("coop", _task, affinity="main", timeout_ms=100)
+
+    assert out["status"] == "unknown"
+    deadline = time.monotonic() + 5.0
+    while disp.active_count() and time.monotonic() < deadline:
+        time.sleep(0.01)
+    assert disp.active_count() == 0  # stopped at its next checkpoint, well before 5s
+    assert job_ref[0].cancelled
+    assert job_ref[0].outcome["status"] == "unknown"

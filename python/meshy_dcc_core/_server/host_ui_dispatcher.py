@@ -18,6 +18,7 @@ Type annotations use ``typing.Optional`` / ``Dict`` / … for Python 3.7
 from __future__ import annotations
 
 from collections import deque
+import contextlib
 import contextvars
 import logging
 import threading
@@ -60,6 +61,10 @@ class DispatcherErrorCode:
     TIMEOUT = "Timeout"
     HOST_BUSY = "host-busy"
     UNSUPPORTED_AFFINITY = "unsupported-affinity"
+    #: The caller stopped waiting while the job was already running on the
+    #: host thread: the scene may or may not have changed. Never a plain
+    #: failure and never a fresh success.
+    OUTCOME_UNKNOWN = "outcome-unknown"
 
 
 def normalize_affinity(affinity: str) -> str:
@@ -78,6 +83,7 @@ def host_ui_outcome(
     output: Any = None,
     error: Optional[str] = None,
     job_id: Optional[str] = None,
+    status: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Build the standard dict envelope returned by UI dispatchers."""
     payload: Dict[str, Any] = {
@@ -89,7 +95,20 @@ def host_ui_outcome(
     }
     if job_id is not None:
         payload["job_id"] = job_id
+    if status is not None:
+        payload["status"] = status
     return payload
+
+
+# Job lifecycle, advanced only under ``HostUiJobEntry._state_lock`` so the
+# host pump claiming a job and a timed-out caller abandoning it cannot both win.
+_QUEUED = "queued"
+_RUNNING = "running"
+_DONE = "done"
+#: The caller gave up before the pump claimed the job: it never runs.
+_ABANDONED = "abandoned"
+#: The caller gave up while the job was running: the outcome is unknown.
+_ORPHANED = "orphaned"
 
 
 #: Public ``ContextVar`` pointing at the running :class:`HostUiJobEntry`.
@@ -108,6 +127,7 @@ class HostUiJobEntry:
     """Per-submission state for a main-thread (or async) UI job."""
 
     __slots__ = (
+        "_state_lock",
         "affinity",
         "cancel_flag",
         "event",
@@ -117,6 +137,7 @@ class HostUiJobEntry:
         "outcome",
         "progress_token",
         "request_id",
+        "state",
         "task",
         "timeout_ms",
     )
@@ -144,6 +165,30 @@ class HostUiJobEntry:
         self.progress_token = progress_token
         self.on_complete = on_complete
         self.exception_formatter = exception_formatter
+        self.state = _QUEUED
+        self._state_lock = threading.Lock()
+
+    def try_start(self) -> bool:
+        """Claim the job for the host thread; ``False`` if its caller already gave up."""
+        with self._state_lock:
+            if self.state == _QUEUED:
+                self.state = _RUNNING
+            return self.state == _RUNNING
+
+    def abandon(self) -> str:
+        """Record that the caller stopped waiting and return the state it found.
+
+        ``queued`` jobs will never run (``try_start`` now fails). ``running``
+        jobs become orphaned: their late completion is reported as an unknown
+        outcome, never as a fresh result. ``done`` is returned unchanged.
+        """
+        with self._state_lock:
+            found = self.state
+            if found == _QUEUED:
+                self.state = _ABANDONED
+            elif found == _RUNNING:
+                self.state = _ORPHANED
+            return found
 
     def cancel(self) -> None:
         """Signal cooperative cancellation — idempotent."""
@@ -155,6 +200,14 @@ class HostUiJobEntry:
 
     def execute(self) -> Dict[str, Any]:
         """Run ``task`` on the host thread and populate ``outcome``."""
+        if not self.try_start():
+            return self.outcome or host_ui_outcome(
+                self.request_id,
+                self.affinity,
+                success=False,
+                error=DispatcherErrorCode.CANCELLED,
+                job_id=self.job_id,
+            )
         token_job = set_current_job(self)
         token_ui = current_host_ui_job.set(self)
         try:
@@ -185,6 +238,24 @@ class HostUiJobEntry:
         finally:
             reset_current_job(token_job)
             current_host_ui_job.reset(token_ui)
+        with self._state_lock:
+            late = self.state == _ORPHANED
+            if not late:
+                self.state = _DONE
+        if late:
+            logger.warning(
+                "host UI job %r finished after its caller timed out (success=%s); reporting outcome-unknown",
+                self.request_id,
+                (self.outcome or {}).get("success"),
+            )
+            self.outcome = host_ui_outcome(
+                self.request_id,
+                self.affinity,
+                success=False,
+                error=f"{DispatcherErrorCode.OUTCOME_UNKNOWN}: finished after the caller timed out",
+                job_id=self.job_id,
+                status="unknown",
+            )
         self.event.set()
         if self.on_complete is not None:
             try:
@@ -581,6 +652,9 @@ class HostUiDispatcherBase:
                         )
                         job.event.set()
                     continue
+                if not job.try_start():
+                    # The caller timed out and abandoned it before we got here.
+                    continue
                 self._active[job.request_id] = job
 
             try:
@@ -650,12 +724,35 @@ class HostUiDispatcherBase:
 
         timeout_sec = (timeout_ms or DEFAULT_UI_JOB_TIMEOUT_MS) / 1000.0
         if not job.event.wait(timeout=timeout_sec):
-            return host_ui_outcome(
-                request_id,
-                affinity,
-                success=False,
-                error=self._format_timeout_error(request_id, affinity, timeout_sec),
-            )
+            with self._lock:
+                found = job.abandon()
+                if found == _QUEUED:
+                    # Never started: take it out of the queue so it cannot
+                    # mutate the scene later or trip fail-fast host-busy.
+                    # ValueError: the pump already popped it; try_start() now refuses it.
+                    with contextlib.suppress(ValueError):
+                        self._main_queue.remove(job)
+            if found == _QUEUED:
+                return host_ui_outcome(
+                    request_id,
+                    affinity,
+                    success=False,
+                    error=self._format_timeout_error(request_id, affinity, timeout_sec),
+                )
+            if found == _RUNNING:
+                job.cancel()  # cooperative: stop at its next checkpoint
+                return host_ui_outcome(
+                    request_id,
+                    affinity,
+                    success=False,
+                    error=(
+                        f"{DispatcherErrorCode.OUTCOME_UNKNOWN}: timed out after {timeout_sec:.1f}s while the job "
+                        "was running on the host thread; it may still change the scene. "
+                        "Read the scene back before retrying."
+                    ),
+                    status="unknown",
+                )
+            # found == _DONE: it finished in the instant between wait() and abandon().
         return job.outcome or host_ui_outcome(
             request_id,
             affinity,
