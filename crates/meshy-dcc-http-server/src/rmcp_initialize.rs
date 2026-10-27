@@ -75,6 +75,8 @@ pub(crate) fn build_initialize_result_from_value(
     build_initialize_result(state, session_id, &init_params)
 }
 
+// rmcp 2 deprecates MCP logging (SEP-2577); we still serve logging/setLevel for existing clients.
+#[allow(deprecated)]
 fn server_capabilities(state: &ServerState, client_wants_delta: bool) -> ServerCapabilities {
     let mut caps = match (
         state.features.enable_resources,

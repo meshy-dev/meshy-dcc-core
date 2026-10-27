@@ -316,7 +316,9 @@ class McpClient:
         headers = dict(self._HEADERS)
         if self.session_id:
             headers["Mcp-Session-Id"] = self.session_id
-        if self.protocol_version:
+        # The header follows the negotiated version; rmcp rejects an initialize
+        # whose header disagrees with params.protocolVersion, so omit it there.
+        if self.protocol_version and body.get("method") != "initialize":
             headers["MCP-Protocol-Version"] = self.protocol_version
         if extra_headers:
             headers.update(extra_headers)
