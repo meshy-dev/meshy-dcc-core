@@ -1359,6 +1359,16 @@ fn gateway_restart_is_gateway_daemon_restart() {
 }
 
 #[test]
+fn agent_hot_commands_skip_the_marketplace_check() {
+    let hot = |argv: &[&str]| super::is_hot_command(&Args::parse_from(argv).command);
+    assert!(hot(&["meshy-dcc", "search", "--dcc-type", "blender"]));
+    assert!(hot(&["meshy-dcc", "list"]));
+    assert!(hot(&["meshy-dcc", "describe", "blender.abcd1234.tool"]));
+    assert!(!hot(&["meshy-dcc", "health"]));
+    assert!(!hot(&["meshy-dcc", "dcc-types"]));
+}
+
+#[test]
 fn update_apply_restarts_unless_told_not_to() {
     let parse = |argv: &[&str]| match Args::parse_from(argv).command {
         Command::Update {
