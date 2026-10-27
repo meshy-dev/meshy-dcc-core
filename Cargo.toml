@@ -151,7 +151,7 @@ base64 = "0.22"
 # Optional SQLite backend for JobManager persistence (issue #328). Pulled in
 # only when the `job-persist-sqlite` feature is enabled on `meshy-dcc-http`;
 # otherwise zero SQLite code compiles into the wheel.
-rusqlite = { version = "0.39", features = ["bundled"] }
+rusqlite = { version = "0.40", features = ["bundled"] }
 axum = "0.8"
 tower = "0.5"
 tower-http = "0.6"
