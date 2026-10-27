@@ -5,6 +5,17 @@ one version line.
 
 ## Unreleased
 
+### Upgrading from 0.2.0
+
+The update from 0.2.0 still runs 0.2.0's update code, so the fixes below take
+effect only after it:
+
+1. Run `meshy-dcc update apply --yes`. The next command may exit with no
+   output; run it again.
+2. Run `meshy-dcc update apply --yes` a second time. This one also updates
+   `meshy-dcc-server`.
+3. Run `meshy-dcc gateway restart` to start the updated gateway.
+
 ### Added
 
 - `meshy-dcc report --summary "..."` sends a bug report, and **Report a problem**
@@ -15,6 +26,11 @@ one version line.
   an issue labelled `user-report` in meshy-dev/meshy-dcc-core; the raw report is
   kept privately for 90 days. The Skill tells agents to offer a report when Meshy
   DCC Core itself misbehaves, and to send it only after the user agrees.
+
+### Changed
+
+- The window shows real logos for Houdini, Substance 3D Painter, FreeCAD,
+  OpenSCAD and Material Maker, and for the Pi, Amp and Kimi Code CLI agents.
 
 ### Fixed
 
