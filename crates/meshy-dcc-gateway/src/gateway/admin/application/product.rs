@@ -408,6 +408,8 @@ fn spawn_gateway_restart(s: &AdminState, base_url: &str) -> Result<(), String> {
         .arg(idle.to_string())
         .args(["--remote-host", &remote_host, "--remote-port"])
         .arg(remote_port.to_string())
+        // The successor may wait out TCP TIME_WAIT on the port, as auto-start does.
+        .args(["--wait-timeout-secs", "90"])
         .stdin(std::process::Stdio::null())
         .stdout(std::process::Stdio::null())
         .stderr(std::process::Stdio::null());

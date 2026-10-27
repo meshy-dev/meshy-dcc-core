@@ -15,7 +15,9 @@ use crate::domain::rest::Endpoint;
 
 const PROBE_TIMEOUT: Duration = Duration::from_secs(5);
 const STOP_TIMEOUT_SECS: u64 = 10;
-const START_TIMEOUT_SECS: u64 = 30;
+// As long as the CLI's auto-start waits: the successor cannot bind while the
+// port is in TCP TIME_WAIT, and takes over as a challenger once it frees.
+const START_TIMEOUT_SECS: u64 = 90;
 
 /// What `/admin/api/health` says about the running gateway.
 #[derive(Debug, Clone, PartialEq)]

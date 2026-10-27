@@ -137,11 +137,16 @@ pub async fn gateway_stop(
 
     verify_gateway_pid_ownership(args, pid)?;
     gateway_ensure::stop_process(pid)?;
-    // Wait for the health endpoint to go dark.
+    // Wait for the health endpoint to go dark and the sentinel to go away. A
+    // gateway still shutting down keeps its sentinel, and a successor that
+    // sees it waits as a challenger instead of starting. (Not process exit:
+    // a child of this CLI stays a zombie, which still looks alive on macOS.)
     let deadline = tokio::time::Instant::now() + Duration::from_secs(wait_timeout_secs);
     loop {
         tokio::time::sleep(Duration::from_millis(200)).await;
-        if !gateway_ensure::gateway_health_ok(&args.host, args.port).await {
+        if !gateway_ensure::gateway_health_ok(&args.host, args.port).await
+            && (!sentinel_holds(args, pid) || !gateway_ensure::is_process_alive(pid))
+        {
             break;
         }
         if tokio::time::Instant::now() >= deadline {
@@ -156,6 +161,18 @@ pub async fn gateway_stop(
     prune_stopped_gateway_registry(args)?;
     gateway_ensure::remove_pidfile(Some(&args.pidfile));
     Ok(gateway_status(args).await)
+}
+
+/// `pid` still has a `__gateway__` sentinel for this endpoint.
+fn sentinel_holds(args: &GatewayCtrlArgs, pid: u32) -> bool {
+    let Ok(registry) = FileRegistry::new(args.registry_dir.clone()) else {
+        return false;
+    };
+    registry.list_all().into_iter().any(|entry| {
+        entry.dcc_type == GATEWAY_SENTINEL_DCC_TYPE
+            && gateway_sentinel_targets(&entry, &args.host, args.port)
+            && gateway_sentinel_pid(&entry) == Some(pid)
+    })
 }
 
 fn prune_stopped_gateway_registry(args: &GatewayCtrlArgs) -> anyhow::Result<usize> {
