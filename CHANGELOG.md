@@ -3,6 +3,26 @@
 Meshy DCC Core release notes. Crates, the Python wheel and the product share
 one version line.
 
+## Unreleased
+
+### Added
+
+- Anonymous usage telemetry, on by default. Once a day the gateway sends one
+  aggregate event to Meshy's PostHog: versions, OS, installed connectors, live
+  instances per app and major version, tool-call counts per app, skill and
+  outcome with latency buckets, and a few counts (searches, bug reports sent,
+  agent kinds, window opened). Skills you wrote are sent as `custom`. It never
+  sends tool arguments or outputs, paths, scene or project names, IDs or
+  prompts, and asks PostHog to store no IP, location or person profile. The
+  first CLI command prints a one-time notice and the window shows a banner.
+  Turn it off with `meshy-dcc telemetry off`, the Settings switch,
+  `DO_NOT_TRACK=1` or `MESHY_DCC_TELEMETRY=0`; it is off in CI.
+  `meshy-dcc telemetry preview` prints the exact next request. Every field is
+  listed in `docs/telemetry.md`.
+- The Skill tells agents to set `MESHY_CLI_CLIENT="meshy-dcc/<version> (<dcc_type>)"`
+  on each `meshy` call, so Meshy can tell those calls apart (meshy-cli adds it
+  to its User-Agent; older versions ignore it).
+
 ## 0.2.1 (2026-10-27)
 
 ### Upgrading from 0.2.0

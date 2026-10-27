@@ -52,4 +52,20 @@ impl StatsAggregator {
         }
         compute_stats_filtered(by_id.into_values().collect(), range, filter)
     }
+
+    /// Persisted and in-memory traces started at or after `cutoff`, deduplicated.
+    pub fn traces_since(&self, cutoff: Option<std::time::SystemTime>) -> Vec<DispatchTrace> {
+        let mut by_id: HashMap<String, DispatchTrace> = HashMap::new();
+        if let Some(db) = &self.sqlite_reader {
+            for trace in db.list_traces_since(cutoff, 500_000) {
+                by_id.insert(trace.request_id.clone(), trace);
+            }
+        }
+        for trace in self.trace_log.recent(usize::MAX) {
+            if cutoff.is_none_or(|c| trace.started_at >= c) {
+                by_id.insert(trace.request_id.clone(), trace);
+            }
+        }
+        by_id.into_values().collect()
+    }
 }

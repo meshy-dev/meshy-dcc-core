@@ -290,27 +290,68 @@ pub async fn handle_report(Json(body): Json<ReportBody>) -> Response {
     }
 }
 
+/// Each field is optional; only the ones present change.
 #[derive(Debug, Deserialize)]
 pub struct SettingsBody {
-    pub update_check: bool,
+    pub update_check: Option<bool>,
+    pub telemetry: Option<bool>,
+    /// The window's telemetry banner was dismissed.
+    pub telemetry_notice_seen: Option<bool>,
 }
 
 /// `GET /admin/api/settings`: the user's preferences shared with the CLI.
+/// `telemetry` is the saved choice; `telemetry_off_reason` names what turns it
+/// off regardless of it (`DO_NOT_TRACK`, `MESHY_DCC_TELEMETRY`, `ci`, ...).
 pub async fn handle_settings() -> Response {
-    Json(json!({ "update_check": meshy_dcc_updater::settings::update_check_enabled() }))
-        .into_response()
+    use crate::gateway::telemetry;
+    let off_reason = telemetry::disabled_reason().filter(|reason| *reason != "setting");
+    Json(json!({
+        "update_check": meshy_dcc_updater::settings::update_check_enabled(),
+        "telemetry": meshy_dcc_updater::settings::get_bool(telemetry::SETTING, true),
+        "telemetry_off_reason": off_reason,
+        "telemetry_notice": telemetry::enabled() && !telemetry::notice_seen("window"),
+        "telemetry_docs": telemetry::DOCS_URL,
+    }))
+    .into_response()
 }
 
 /// `PUT /admin/api/settings`
 pub async fn handle_settings_update(Json(body): Json<SettingsBody>) -> Response {
-    match meshy_dcc_updater::settings::set_update_check(body.update_check) {
+    use crate::gateway::telemetry;
+    let mut result = Ok(());
+    if let Some(on) = body.update_check {
+        result = result.and(meshy_dcc_updater::settings::set_update_check(on));
+    }
+    if let Some(on) = body.telemetry {
+        result = result.and(telemetry::set_enabled(on));
+    }
+    // Choosing either way also answers the banner.
+    if body.telemetry_notice_seen == Some(true) || body.telemetry.is_some() {
+        telemetry::mark_notice("window");
+    }
+    match result {
         Ok(()) => handle_settings().await,
         Err(err) => error(
             StatusCode::INTERNAL_SERVER_ERROR,
             "settings_write_failed",
-            &format!("{err:#}"),
+            format!("{err:#}"),
         ),
     }
+}
+
+/// `GET /admin/api/telemetry/preview`: the exact body the next daily send
+/// would post. Sends nothing.
+pub async fn handle_telemetry_preview(
+    axum::extract::State(s): axum::extract::State<super::super::state::AdminState>,
+) -> Response {
+    use crate::gateway::telemetry;
+    Json(json!({
+        "enabled": telemetry::enabled(),
+        "disabled_reason": telemetry::disabled_reason(),
+        "host": telemetry::host(),
+        "body": telemetry::preview(&s, telemetry::now_ms()).await,
+    }))
+    .into_response()
 }
 
 #[cfg(test)]

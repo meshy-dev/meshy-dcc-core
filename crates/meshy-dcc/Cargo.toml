@@ -18,6 +18,7 @@ base64.workspace = true
 clap = { version = "4", features = ["derive", "env"] }
 meshy-dcc-catalog.workspace = true
 meshy-dcc-attestation.workspace = true
+meshy-dcc-gateway.workspace = true
 meshy-dcc-gateway-ensure.workspace = true
 meshy-dcc-jsonrpc.workspace = true
 meshy-dcc-http-server.workspace = true

@@ -2978,6 +2978,7 @@ dependencies = [
  "meshy-dcc-actions",
  "meshy-dcc-attestation",
  "meshy-dcc-catalog",
+ "meshy-dcc-gateway",
  "meshy-dcc-gateway-ensure",
  "meshy-dcc-http",
  "meshy-dcc-http-server",
@@ -3140,11 +3141,13 @@ dependencies = [
 name = "meshy-dcc-gateway"
 version = "0.2.1"
 dependencies = [
+ "anyhow",
  "axum",
  "base64 0.22.1",
  "chrono",
  "criterion",
  "dashmap",
+ "dirs",
  "futures",
  "futures-util",
  "http",

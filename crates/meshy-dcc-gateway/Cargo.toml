@@ -45,6 +45,8 @@ tracing = { workspace = true }
 thiserror = { workspace = true }
 tokio = { workspace = true, features = ["process"] }
 uuid = { workspace = true }
+dirs = { workspace = true }
+anyhow = { workspace = true }
 dashmap = { workspace = true }
 reqwest = { workspace = true }
 socket2 = { workspace = true }

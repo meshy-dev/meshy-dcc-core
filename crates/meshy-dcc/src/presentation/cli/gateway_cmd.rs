@@ -85,6 +85,10 @@ pub(crate) fn gateway_endpoint_for_command(
         | Command::WaitReady { .. }
         | Command::ReloadSkills { .. }
         | Command::StopInstance { .. } => Some(Endpoint::new(base_url)),
+        // The preview is built by the gateway from its call history.
+        Command::Telemetry {
+            action: crate::presentation::telemetry_cmd::TelemetryAction::Preview,
+        } => Some(Endpoint::new(base_url)),
         Command::Marketplace {
             action: MarketplaceAction::Install { reload: true, .. },
         }
@@ -99,6 +103,7 @@ pub(crate) fn gateway_endpoint_for_command(
         | Command::Lint(_)
         | Command::AgentSkill(_)
         | Command::Components { .. }
+        | Command::Telemetry { .. }
         | Command::Gateway { .. }
         | Command::StartInstance { dry_run: true, .. } => None,
         // `start-instance` owns the local lifecycle and never routes through

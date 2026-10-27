@@ -40,6 +40,7 @@ import {
   HomePanel,
   ProductSidebar,
   SettingsPanel,
+  TelemetryBanner,
   SkillsPanel,
   agentEntries,
   connectedInstances,
@@ -1474,6 +1475,7 @@ function App() {
         devLinks={devLinks}
       />
       <main className={PRODUCT_PANELS.has(activePanel) ? 'main-stage pd-stage' : 'main-stage'}>
+        {PRODUCT_PANELS.has(activePanel) && <TelemetryBanner t={t} local={localPage} />}
         <PanelBoundary key={activePanel} message={(message) => t('common.status.panelError', { message })}>
         {activePanel === 'home' && (
           <HomePanel t={t} data={homeData} onNavigate={(panel) => goToPanel(panel)} onRecheck={() => void workersQuery.refetch()} />

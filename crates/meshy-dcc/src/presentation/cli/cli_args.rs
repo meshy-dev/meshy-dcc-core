@@ -338,6 +338,11 @@ pub(crate) enum Command {
         #[command(subcommand)]
         action: crate::presentation::components_cmd::ComponentsAction,
     },
+    /// Anonymous usage telemetry: status, preview, on, off, reset.
+    Telemetry {
+        #[command(subcommand)]
+        action: crate::presentation::telemetry_cmd::TelemetryAction,
+    },
     /// Check for and apply gateway-controlled binary updates.
     Update {
         #[command(subcommand)]

@@ -66,6 +66,7 @@ pub mod search_telemetry;
 pub mod security;
 pub mod sse_subscriber;
 pub mod state;
+pub mod telemetry;
 pub mod tools;
 pub mod traffic;
 pub(crate) mod update_manifest;
