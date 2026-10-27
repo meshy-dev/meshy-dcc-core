@@ -114,6 +114,12 @@ Changelog = "https://github.com/meshy-dev/meshy-dcc-core/blob/main/CHANGELOG.md"
 year = ["CY2026", "py37"]
 host = "core"
 
+[tool.uv]
+# meshy-dcc-server and meshy-dcc-core-semantic are not on PyPI (the server ships
+# with each release; development uses the cargo-built binaries). Keep them out
+# of uv.lock so the dev and test extras can lock.
+exclude-dependencies = ["meshy-dcc-server", "meshy-dcc-core-semantic"]
+
 [tool.maturin]
 python-source = "python"
 module-name = "meshy_dcc_core._core"
