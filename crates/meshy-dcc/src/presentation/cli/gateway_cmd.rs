@@ -185,6 +185,13 @@ pub(crate) async fn run_gateway_cmd(
             ))
             .await
         }
+        GatewayAction::Restart(args) => {
+            gateway_ctrl::run_gateway_daemon(gateway_daemon_request(
+                GatewayDaemonAction::Restart(args),
+                &address,
+            ))
+            .await
+        }
         GatewayAction::Status(args) => {
             gateway_ctrl::run_gateway_daemon(gateway_ctrl::GatewayDaemonRequest::Status(
                 status_request(args, &address),

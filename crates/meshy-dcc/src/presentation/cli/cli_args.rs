@@ -519,6 +519,8 @@ pub(crate) enum GatewayAction {
     Start(GatewayStartArgs),
     /// Stop the running gateway (PID from pidfile).
     Stop(GatewayStopArgs),
+    /// Restart the gateway (same as `gateway daemon restart`).
+    Restart(GatewayRestartArgs),
     /// Query gateway health and process status.
     Status(GatewayStatusArgs),
 }

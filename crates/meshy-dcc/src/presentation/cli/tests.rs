@@ -1329,6 +1329,36 @@ fn gateway_daemon_restart_defaults_to_persistent_daemon() {
     assert_eq!(restart.stop_timeout_secs, 10);
 }
 
+/// Users and agents type `gateway restart`; it does what `gateway daemon restart` does.
+#[test]
+fn gateway_restart_is_gateway_daemon_restart() {
+    use super::gateway_cmd::{GatewayAddress, gateway_daemon_request};
+    use crate::application::gateway_ctrl::GatewayDaemonRequest;
+
+    let args = Args::parse_from(["meshy-dcc", "gateway", "restart", "--port", "19886"]);
+    let Command::Gateway {
+        action: Some(GatewayAction::Restart(restart)),
+        ..
+    } = args.command
+    else {
+        panic!("expected gateway restart");
+    };
+    let request = gateway_daemon_request(
+        GatewayDaemonAction::Restart(restart),
+        &GatewayAddress::for_base_url("http://127.0.0.1:19765"),
+    );
+    let GatewayDaemonRequest::Restart {
+        start,
+        stop_timeout_secs,
+    } = request
+    else {
+        panic!("expected a restart request");
+    };
+    assert_eq!((start.port, start.gateway_idle_timeout_secs), (19886, 0));
+    assert_eq!(stop_timeout_secs, 10);
+}
+
+
 /// `doctor` probes the gateway every other command uses unless `--gateway-host`
 /// or `--gateway-port` name another, so a test's `MESHY_DCC_GATEWAY_PORT` is
 /// not reported as the user's 19765.
