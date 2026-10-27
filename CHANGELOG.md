@@ -48,6 +48,40 @@ one version line.
   macOS runner, and upgrades from the previous release on macOS and Windows
   before it writes `latest.txt`. Every action is pinned by commit.
 
+### Fixed
+
+- A main-thread tool call that timed out could still run later and change the
+  scene after the caller was told it failed (Blender, Maya, 3ds Max, Houdini,
+  Substance 3D Painter). A call that had not started is dropped; one that was
+  already running reports `status: unknown`, so read the scene back before
+  retrying, and its late finish is never reported as a success.
+- A registry reload could briefly show no instances to a concurrent reader,
+  which then reported a false "no instance".
+- Reloading skills kept only the bundled skill folders and dropped the ones the
+  connector registered.
+- An explicit `enforce_thread_affinity: false` in a skill came back as `true`.
+- `search_tools` could return twice the requested `limit`; tools and skill
+  candidates now share one page, callable tools first.
+- Search split "2D" and "3D" into two tokens, so a query such as `motion-2d`
+  missed skills described as "2D motion".
+- `meshy-dcc doctor` and `meshy-dcc gateway status` changed the registry while
+  reading it; they now only read, and `doctor` lists dead rows under
+  `inventory.dead`.
+- In windows narrower than 760 px the window's sidebar scrolled away with long
+  pages.
+- `meshy-dcc gateway stop` returned while the old gateway was still
+  registered, so a restart could wait about 30 seconds and report a failure.
+
+### Security
+
+- rmcp 2.1 (from 1.7) and PyO3 0.29 (from 0.28) fix the advisories in the MCP
+  server transport, its OAuth metadata handling and redirect headers, and in
+  PyO3's list and tuple iterators. Connectors pick this up when they are
+  rebuilt on this release. An `initialize` request whose
+  `MCP-Protocol-Version` header differs from its `protocolVersion` is now
+  refused with 400. Native builds for CPython 3.7 are no longer possible; the
+  released wheel needs Python 3.8 or later, as before.
+
 ## 0.2.1 (2026-10-27)
 
 ### Upgrading from 0.2.0
