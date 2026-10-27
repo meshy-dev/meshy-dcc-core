@@ -39,7 +39,7 @@ aws s3api put-public-access-block --bucket "$bucket" --public-access-block-confi
 aws s3api put-bucket-encryption --bucket "$bucket" --server-side-encryption-configuration \
     '{"Rules":[{"ApplyServerSideEncryptionByDefault":{"SSEAlgorithm":"AES256"}}]}'
 aws s3api put-bucket-lifecycle-configuration --bucket "$bucket" --lifecycle-configuration \
-    '{"Rules":[{"ID":"expire-reports","Status":"Enabled","Filter":{},"Expiration":{"Days":90}}]}'
+    '{"Rules":[{"ID":"expire-reports","Status":"Enabled","Filter":{},"Expiration":{"Days":90}}]}' > /dev/null
 cat > "$work/bucket-policy.json" << EOF
 {"Version":"2012-10-17","Statement":[{"Sid":"TlsOnly","Effect":"Deny","Principal":"*","Action":"s3:*",
   "Resource":["arn:aws:s3:::$bucket","arn:aws:s3:::$bucket/*"],

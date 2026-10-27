@@ -22,8 +22,9 @@ use crate::domain::refusal::{Refusal, RefusalKind};
 use crate::domain::rest::FeedbackQueryRequest;
 
 pub const REPORT_SCHEMA: &str = "meshy-dcc.report.v1";
-/// Where reports go once the Meshy intake exists; `MESHY_DCC_REPORT_URL` overrides it.
-pub const REPORT_INTAKE_URL: &str = "";
+/// The Meshy report intake (scripts/reports/intake.py); `MESHY_DCC_REPORT_URL` overrides it.
+pub const REPORT_INTAKE_URL: &str =
+    "https://6beiswtbomgzf5jzot2kgws5ti0hwrcc.lambda-url.us-west-2.on.aws/";
 pub const REPORT_URL_ENV: &str = "MESHY_DCC_REPORT_URL";
 pub const MAX_SUMMARY_CHARS: usize = 4000;
 const ISSUES_URL: &str = "https://github.com/meshy-dev/meshy-dcc-core/issues?q=label%3Auser-report";
