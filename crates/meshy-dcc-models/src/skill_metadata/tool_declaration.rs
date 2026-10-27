@@ -308,15 +308,24 @@ pub struct ToolDeclaration {
     /// Enforce that runtime execution happens on the declared affinity thread.
     ///
     /// Defaults to `true` whenever the declaration explicitly provides
-    /// `thread_affinity` / `affinity`. Legacy tools that omit an affinity
-    /// contract keep the compatibility default (`false`), and explicit
-    /// `enforce_thread_affinity: false` remains an escape hatch for adapters
-    /// that intentionally flatten routing in a standalone context.
+    /// `thread_affinity` / `affinity`, and to `false` otherwise (legacy tools
+    /// that omit an affinity contract keep the compatibility default).
+    ///
+    /// An explicit `enforce_thread_affinity: false` is always honoured, as an
+    /// escape hatch for adapters that intentionally flatten routing in a
+    /// standalone context.
+    ///
+    /// The `true` half of that default is applied by the custom
+    /// [`ToolDeclaration`] deserializer below, the only path that can see
+    /// whether an affinity was declared at all.
+    ///
+    /// There is deliberately no `skip_serializing_if`: the effective default is
+    /// `true` next to an explicit affinity, so omitting a `false` would turn it
+    /// back into `true` on the next parse.
     #[serde(
         default,
         rename = "enforce_thread_affinity",
-        alias = "enforce-thread-affinity",
-        skip_serializing_if = "std::ops::Not::not"
+        alias = "enforce-thread-affinity"
     )]
     pub enforce_thread_affinity: bool,
 

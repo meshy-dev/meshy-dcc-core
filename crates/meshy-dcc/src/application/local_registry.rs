@@ -5,14 +5,33 @@
 //! via `FileRegistry::read_alive`, and formats the result like the gateway
 //! `/v1/instances` payload.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
+use meshy_dcc_transport::discovery::types::ServiceEntry;
 use serde_json::{Value, json};
 
 use crate::application::local_instance;
 
+/// Inventory for `meshy-dcc list`: live rows, and it evicts dead ones.
 pub fn list_local_instances(registry_dir: PathBuf) -> anyhow::Result<Value> {
     let (entries, evicted) = local_instance::live_dcc_entries(&registry_dir)?;
+    let mut payload = inventory(entries, &registry_dir)?;
+    payload["evicted"] = json!(evicted);
+    Ok(payload)
+}
+
+/// Strictly read-only inventory for `meshy-dcc doctor`: the live rows in the
+/// same shape as [`list_local_instances`], plus the dead rows under `dead`
+/// (summaries). Nothing is evicted, created or rewritten.
+pub fn inspect_local_instances(registry_dir: PathBuf) -> anyhow::Result<Value> {
+    let (live, dead) = local_instance::snapshot_dcc_entries(&registry_dir)?;
+    let mut payload = inventory(live, &registry_dir)?;
+    payload["read_only"] = json!(true);
+    payload["dead"] = Value::Array(dead.iter().map(local_instance::instance_summary).collect());
+    Ok(payload)
+}
+
+fn inventory(entries: Vec<ServiceEntry>, registry_dir: &Path) -> anyhow::Result<Value> {
     let mut instances: Vec<_> = entries
         .into_iter()
         .map(local_instance::instance_to_value)
@@ -28,7 +47,6 @@ pub fn list_local_instances(registry_dir: PathBuf) -> anyhow::Result<Value> {
         "instances": instances,
         "source": "local_registry",
         "registry_dir": registry_dir,
-        "evicted": evicted,
         "gateway": {
             "current": {
                 "name": "local",

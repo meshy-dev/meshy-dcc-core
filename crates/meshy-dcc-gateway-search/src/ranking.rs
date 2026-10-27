@@ -173,25 +173,41 @@ fn search_tokens_joined<'a>(tokens: impl Iterator<Item = &'a String>) -> String 
     out
 }
 
+/// Split `value` into lower-case search tokens at non-alphanumerics and at
+/// camelCase boundaries (`createSphere` -> `create`, `sphere`).
+///
+/// A capital that follows a digit starts a new token only when it begins a
+/// capitalised word (`maya2024Tool` -> `maya2024`, `tool`). Otherwise `2D` and
+/// `3D` would split into `2`, `d` while the lower-case query token stays `2d`,
+/// and a query like "motion-2d" could never match a description saying
+/// "2D motion".
 fn search_tokens(value: &str) -> Vec<String> {
     let mut tokens = Vec::new();
     let mut current = String::new();
     let mut prev_lower = false;
+    let mut prev_digit = false;
+    let mut chars = value.chars().peekable();
 
-    for ch in value.chars() {
+    while let Some(ch) = chars.next() {
         if ch.is_ascii_alphanumeric() {
-            if prev_lower && ch.is_ascii_uppercase() && !current.is_empty() {
+            let starts_word = chars.peek().is_some_and(char::is_ascii_lowercase);
+            if (prev_lower || (prev_digit && starts_word))
+                && ch.is_ascii_uppercase()
+                && !current.is_empty()
+            {
                 tokens.push(current.to_ascii_lowercase());
                 current.clear();
             }
             current.push(ch);
-            prev_lower = ch.is_ascii_lowercase() || ch.is_ascii_digit();
+            prev_lower = ch.is_ascii_lowercase();
+            prev_digit = ch.is_ascii_digit();
         } else {
             if !current.is_empty() {
                 tokens.push(current.to_ascii_lowercase());
                 current.clear();
             }
             prev_lower = false;
+            prev_digit = false;
         }
     }
 
@@ -793,6 +809,44 @@ mod tests {
         assert!(
             hit > 0,
             "prefix token match (exp→export) must contribute in relaxed path; got {hit}",
+        );
+    }
+
+    #[test]
+    fn search_tokens_keep_2d_and_3d_whole_but_still_split_camel_case() {
+        assert_eq!(search_tokens("2D motion"), ["2d", "motion"]);
+        assert_eq!(
+            search_tokens("Create 3D primitives"),
+            ["create", "3d", "primitives"]
+        );
+        assert_eq!(search_tokens("Vec3D"), ["vec3d"]);
+        assert_eq!(search_tokens("createSphere"), ["create", "sphere"]);
+        assert_eq!(search_tokens("maya2024Tool"), ["maya2024", "tool"]);
+        assert_eq!(
+            search_tokens("film-fx_cache.review"),
+            ["film", "fx", "cache", "review"]
+        );
+    }
+
+    /// The rez context-bundle fixture searches a skill by its task slug
+    /// (`motion-2d`) when only the description says "2D motion". The candidate
+    /// tokenizer used to split `2D` into `2`, `d` while the lower-case query
+    /// token stayed `2d`, so the slug never matched.
+    #[test]
+    fn hyphenated_query_matches_a_description_with_2d_in_capitals() {
+        let mut s = FuzzyScorer::new();
+        let r = rec(
+            "commercial-2d-layers",
+            "Photoshop layer checks for commercial 2D motion deliverables.",
+            Some("commercial-2d-layers"),
+            &[],
+            true,
+        );
+        assert!(s.score(&r, "motion-2d", None) > 0);
+        assert!(s.score(&r, "3d-motion", None) == 0);
+        assert!(
+            token_match_score("3d create", "Create 3D primitives in the scene.", 8, 5, 3) > 0,
+            "a reordered query must still match a candidate that says 3D"
         );
     }
 

@@ -686,3 +686,37 @@ fn test_tool_declaration_schema_null_when_omitted() {
     assert!(meta.tools[0].input_schema.is_null());
     assert!(meta.tools[0].output_schema.is_null());
 }
+
+/// `enforce_thread_affinity` defaults to `true` next to a declared affinity, so
+/// a serializer that omits `false` turns an explicit `false` into `true` on the
+/// next parse. Every form must come back unchanged after one round trip.
+#[test]
+fn enforce_thread_affinity_round_trips_through_json() {
+    for (json, expected) in [
+        (r#"{"name":"t","thread-affinity":"main"}"#, true),
+        (r#"{"name":"t","thread-affinity":"any"}"#, true),
+        (
+            r#"{"name":"t","thread-affinity":"main","enforce_thread_affinity":false}"#,
+            false,
+        ),
+        (
+            r#"{"name":"t","thread-affinity":"main","enforce_thread_affinity":true}"#,
+            true,
+        ),
+        (r#"{"name":"t"}"#, false),
+        (r#"{"name":"t","enforce_thread_affinity":true}"#, true),
+    ] {
+        let parsed: ToolDeclaration = serde_json::from_str(json).expect("parses");
+        assert_eq!(
+            parsed.enforce_thread_affinity, expected,
+            "default for {json}"
+        );
+        let serialized = serde_json::to_string(&parsed).expect("serialises");
+        let reparsed: ToolDeclaration = serde_json::from_str(&serialized).expect("reparses");
+        assert_eq!(
+            reparsed.enforce_thread_affinity, expected,
+            "round trip changed the value for {json}: {serialized}"
+        );
+        assert_eq!(reparsed, parsed, "round trip changed {json}: {serialized}");
+    }
+}

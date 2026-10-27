@@ -487,6 +487,8 @@ class DccServerBase:
         if phases is None:
             phases = get_standard_phases()
 
+        # Adapters may bypass ``register_builtin_actions``; remember the roots here too.
+        self._get_skill_discovery().remember_skill_roots(extra_skill_paths, include_bundled)
         context = RegistrationContext(
             server=self,
             extra_skill_paths=extra_skill_paths,
@@ -503,9 +505,12 @@ class DccServerBase:
     def reload_skill_paths(
         self,
         extra_skill_paths: list[str] | None = None,
-        include_bundled: bool = True,
+        include_bundled: bool | None = None,
     ) -> int:
-        """Re-discover skills after admin-UI skill paths changed (#1400)."""
+        """Re-discover skills after admin-UI skill paths changed (#1400).
+
+        Without arguments the roots passed at registration are kept.
+        """
         return self._get_skill_discovery().reload_skill_paths(
             extra_skill_paths=extra_skill_paths,
             include_bundled=include_bundled,

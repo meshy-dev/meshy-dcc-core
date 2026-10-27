@@ -302,11 +302,7 @@ pub(in crate::rmcp_tool_call_dispatch) fn handle_search_tools(
         })
     });
     let total_tool_matches = tool_hits.len();
-    let tool_hits: Vec<Value> = tool_hits
-        .into_iter()
-        .take(limit)
-        .map(|(_, hit)| hit)
-        .collect();
+    let mut tool_hits: Vec<Value> = tool_hits.into_iter().map(|(_, hit)| hit).collect();
 
     let mut skill_candidates: Vec<Value> = Vec::new();
     if include_unloaded_skills {
@@ -368,7 +364,14 @@ pub(in crate::rmcp_tool_call_dispatch) fn handle_search_tools(
 
     // `search_skills` already returns them best match first.
     let total_skill_matches = skill_candidates.len();
-    skill_candidates.truncate(limit);
+
+    // One page budget for both lists. Callable `tools` claim it first; unloaded
+    // `skill_candidates` (each needs a follow-up load_skill) fill what is left,
+    // so `returned` never exceeds `limit`. A tool that overflows the budget is
+    // dropped, not demoted into the candidate list: each list keeps its meaning.
+    let tool_kept = tool_hits.len().min(limit);
+    tool_hits.truncate(tool_kept);
+    skill_candidates.truncate(limit - tool_kept);
 
     let returned = tool_hits.len() + skill_candidates.len();
     let total_matches = total_tool_matches + total_skill_matches;
@@ -442,6 +445,106 @@ mod tests {
         assert_eq!(first["total_matches"], 3);
         assert_eq!(first["returned"], 2);
         assert_eq!(first["truncated"], true);
+    }
+
+    /// One loaded skill (callable tools) plus `unloaded` unloaded skills that
+    /// all match "scene". Returns the state for `handle_search_tools`.
+    fn scene_state(callable: &[&str], unloaded: usize) -> ServerState {
+        use meshy_dcc_models::{SkillMetadata, ToolDeclaration};
+
+        let registry = Arc::new(ToolRegistry::new());
+        let dispatcher = Arc::new(ToolDispatcher::new((*registry).clone()));
+        let catalog = Arc::new(SkillCatalog::new_with_dispatcher(
+            Arc::clone(&registry),
+            Arc::clone(&dispatcher),
+        ));
+        catalog.add_skill(SkillMetadata {
+            name: "maya-scene".to_string(),
+            description: "Maya scene operations".to_string(),
+            dcc: "maya".to_string(),
+            tools: callable
+                .iter()
+                .map(|name| ToolDeclaration {
+                    name: (*name).to_string(),
+                    description: "Inspect the Maya scene".to_string(),
+                    ..Default::default()
+                })
+                .collect(),
+            ..Default::default()
+        });
+        catalog
+            .load_skill("maya-scene")
+            .expect("loaded skill should expose its tools");
+        for index in 0..unloaded {
+            catalog.add_skill(SkillMetadata {
+                name: format!("blender-scene-{index:02}"),
+                description: "Blender scene utility".to_string(),
+                dcc: "blender".to_string(),
+                tools: vec![ToolDeclaration {
+                    name: format!("scene_helper_{index:02}"),
+                    description: "Blender scene helper".to_string(),
+                    ..Default::default()
+                }],
+                ..Default::default()
+            });
+        }
+        ServerState::builder(registry, dispatcher, catalog).build()
+    }
+
+    #[test]
+    fn search_tools_shares_one_page_budget_across_tools_and_candidates() {
+        let state = scene_state(&["inspect_scene"], 40);
+
+        let result = result_text_json(&handle_search_tools(
+            &state,
+            &json!({"query": "scene", "limit": 25}),
+        ));
+
+        let tools = result["tools"].as_array().unwrap();
+        let candidates = result["skill_candidates"].as_array().unwrap();
+        assert!(
+            tools
+                .iter()
+                .any(|tool| tool["name"].as_str().unwrap().ends_with("inspect_scene")),
+            "the callable tool must be on the first page: {tools:?}"
+        );
+        assert_eq!(
+            tools.len() + candidates.len(),
+            25,
+            "one budget, fully used, never 2 x limit"
+        );
+        assert!(!candidates.is_empty(), "candidates fill the remaining room");
+        assert_eq!(result["returned"], 25);
+        assert_eq!(result["total"], 25);
+        assert_eq!(result["total_matches"], 41);
+        assert_eq!(result["truncated"], true);
+    }
+
+    #[test]
+    fn search_tools_tight_page_keeps_callable_tools_over_candidates() {
+        let state = scene_state(&["inspect_scene_a", "inspect_scene_b"], 10);
+
+        let result = result_text_json(&handle_search_tools(
+            &state,
+            &json!({"query": "scene", "limit": 3}),
+        ));
+
+        assert_eq!(result["tools"].as_array().unwrap().len(), 2);
+        assert_eq!(result["skill_candidates"].as_array().unwrap().len(), 1);
+        assert_eq!(result["returned"], 3);
+        assert_eq!(result["total_matches"], 12);
+        assert_eq!(result["truncated"], true);
+
+        // Fewer callable tools than the budget: tools win every slot they need,
+        // and an overflowing tool is dropped, not moved into the candidate list.
+        let result = result_text_json(&handle_search_tools(
+            &state,
+            &json!({"query": "scene", "limit": 1}),
+        ));
+        assert_eq!(result["tools"].as_array().unwrap().len(), 1);
+        assert_eq!(result["skill_candidates"].as_array().unwrap().len(), 0);
+        assert_eq!(result["returned"], 1);
+        assert_eq!(result["total_matches"], 12);
     }
 
     #[test]

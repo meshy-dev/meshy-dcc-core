@@ -72,6 +72,15 @@ class SkillDiscoveryController:
 
     def __init__(self, owner: Any) -> None:
         self._owner = owner
+        # Roots the adapter registered with; a bare reload (admin UI, the
+        # ``dcc_admin__reload_skills`` tool) must rescan these, not the defaults.
+        self._configured_extra_paths: list[str] | None = None
+        self._configured_include_bundled = True
+
+    def remember_skill_roots(self, extra_paths: list[str] | None, include_bundled: bool) -> None:
+        """Record the roots registration used so :meth:`reload_skill_paths` keeps them."""
+        self._configured_extra_paths = list(extra_paths) if extra_paths is not None else None
+        self._configured_include_bundled = include_bundled
 
     # -- skill search paths ---------------------------------------------------
 
@@ -214,6 +223,7 @@ class SkillDiscoveryController:
     ) -> None:
         """Discover and (optionally) progressively load skills."""
         owner = self._owner
+        self.remember_skill_roots(extra_skill_paths, include_bundled)
         if (
             owner._dcc_dispatcher is not None or owner._standalone_main_thread
         ) and not owner._inprocess_executor_registered:
@@ -250,10 +260,18 @@ class SkillDiscoveryController:
     def reload_skill_paths(
         self,
         extra_skill_paths: list[str] | None = None,
-        include_bundled: bool = True,
+        include_bundled: bool | None = None,
     ) -> int:
-        """Re-discover skills after admin-UI skill paths changed (#1400)."""
+        """Re-discover skills after admin-UI skill paths changed (#1400).
+
+        Arguments left as ``None`` keep the roots given at registration; an
+        explicit value replaces that one setting for this call only.
+        """
         owner = self._owner
+        if extra_skill_paths is None:
+            extra_skill_paths = self._configured_extra_paths
+        if include_bundled is None:
+            include_bundled = self._configured_include_bundled
         skill_paths = self.collect_skill_search_paths(
             extra_paths=extra_skill_paths,
             include_bundled=include_bundled,

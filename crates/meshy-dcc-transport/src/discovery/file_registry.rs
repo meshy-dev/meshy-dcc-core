@@ -12,6 +12,7 @@ use std::time::{Duration, Instant, SystemTime};
 
 use dashmap::DashMap;
 use fs4::{FileExt, TryLockError};
+use parking_lot::RwLock;
 use tracing;
 
 use super::entry_patch;
@@ -84,6 +85,59 @@ fn entries_to_map(entries: impl IntoIterator<Item = ServiceEntry>) -> EntryMap {
         .into_iter()
         .map(|entry| (entry.key(), entry))
         .collect()
+}
+
+/// Whether a row's service owner or explicitly bound DCC host is gone.
+///
+/// The single liveness rule shared by [`FileRegistry::prune_dead_entries`] (which
+/// evicts) and [`FileRegistry::read_snapshot`] (which only reports), so they can
+/// never disagree about what is dead. `sentinel_dead` probes the row's sentinel
+/// lock; rows without a sentinel fall back to the owner PID.
+fn row_owner_or_host_dead(entry: &ServiceEntry, sentinel_dead: impl FnOnce(&Path) -> bool) -> bool {
+    let owner_dead = if let Some(path) = entry.sentinel_path.as_deref() {
+        sentinel_dead(path)
+    } else {
+        entry.pid.is_some_and(|p| !is_pid_alive(p))
+    };
+    let bound_host_pid = entry.host_pid.or_else(|| legacy_sidecar_host_pid(entry));
+    let host_dead = bound_host_pid.is_some_and(|p| !is_pid_alive(p));
+    owner_dead || host_dead
+}
+
+/// Probe a sentinel without writing anything: a missing file, or one nobody
+/// holds an exclusive lock on, means the owner is gone. The file is opened
+/// read-only and only ever share-locked, so this works on read-only registries.
+fn sentinel_is_dead_read_only(path: &Path) -> bool {
+    let file = match OpenOptions::new().read(true).open(path) {
+        Ok(file) => file,
+        Err(err) if err.kind() == ErrorKind::NotFound => return true,
+        Err(err) => {
+            tracing::warn!(sentinel = %path.display(), error = %err, "failed to open sentinel; assuming alive");
+            return false;
+        }
+    };
+    match FileExt::try_lock_shared(&file) {
+        Ok(()) => {
+            let _ = file.unlock();
+            true
+        }
+        Err(TryLockError::WouldBlock) => false,
+        Err(TryLockError::Error(err)) => {
+            tracing::warn!(sentinel = %path.display(), error = %err, "failed to probe sentinel; assuming alive");
+            false
+        }
+    }
+}
+
+/// The rows of `services.json`, split by whether their owner is still running.
+///
+/// Returned by [`FileRegistry::read_snapshot`].
+#[derive(Debug, Clone, Default)]
+pub struct RegistrySnapshot {
+    /// Rows whose owner and bound host are running (or cannot be proven gone).
+    pub live: Vec<ServiceEntry>,
+    /// Rows [`FileRegistry::read_alive`] would evict.
+    pub dead: Vec<ServiceEntry>,
 }
 
 fn maps_equal(left: &EntryMap, right: &EntryMap) -> bool {
@@ -177,8 +231,10 @@ fn run_before_temp_sync_hook(registry_dir: &Path, temp_path: &Path) -> std::io::
 /// the new entries without requiring a restart. This enables the gateway to discover
 /// instances registered by other processes (e.g., Maya plugin using McpHttpConfig.gateway_port).
 pub struct FileRegistry {
-    /// In-memory cache of services.
-    services: DashMap<ServiceKey, ServiceEntry>,
+    /// In-memory cache of services. Reloads publish a whole replacement map, so a
+    /// concurrent reader never sees an empty or half-rebuilt registry. File I/O
+    /// and liveness probes happen outside this lock.
+    services: RwLock<EntryMap>,
     /// Directory where registry file is stored.
     registry_dir: PathBuf,
     /// Sentinel lock files owned by entries registered in this process.
@@ -234,7 +290,7 @@ impl FileRegistry {
         ensure_registry_dir(&registry_dir)?;
 
         let registry = Self {
-            services: DashMap::new(),
+            services: RwLock::new(EntryMap::new()),
             registry_dir,
             sentinel_handles: DashMap::new(),
             last_mtime: Mutex::new(None),
@@ -274,12 +330,12 @@ impl FileRegistry {
                     *cached = None;
                     had_cached_file
                 };
-                if had_cached_file || !self.services.is_empty() {
+                if had_cached_file || !self.services.read().is_empty() {
                     tracing::warn!(
                         path = %path.display(),
                         "FileRegistry registry file missing during hot-reload; clearing in-memory snapshot"
                     );
-                    self.services.clear();
+                    self.replace_services(&[]);
                 }
                 return Ok(());
             }
@@ -591,7 +647,7 @@ impl FileRegistry {
                 entry.sentinel_path = Some(sentinel_path);
                 self.sentinel_handles.insert(key.clone(), sentinel_file);
             }
-            self.services.insert(key, entry);
+            self.services.write().insert(key, entry);
             Ok(((), true))
         })
     }
@@ -612,7 +668,7 @@ impl FileRegistry {
     ) -> TransportResult<Option<ServiceEntry>> {
         let key = observed.key();
         self.with_write_transaction(|| {
-            let unchanged = self.services.get(&key).is_some_and(|current| {
+            let unchanged = self.services.read().get(&key).is_some_and(|current| {
                 current.registered_at == observed.registered_at
                     && current.last_heartbeat == observed.last_heartbeat
             });
@@ -623,7 +679,7 @@ impl FileRegistry {
     }
 
     fn remove_entry(&self, key: &ServiceKey) -> Option<ServiceEntry> {
-        let removed = self.services.remove(key).map(|(_, entry)| entry);
+        let removed = self.services.write().remove(key);
         if let Some((_, file)) = self.sentinel_handles.remove(key) {
             let _ = file.unlock();
         }
@@ -644,16 +700,17 @@ impl FileRegistry {
 
     /// Get a service entry by key.
     pub fn get(&self, key: &ServiceKey) -> Option<ServiceEntry> {
-        self.services.get(key).map(|r| r.value().clone())
+        self.services.read().get(key).cloned()
     }
 
     /// List all instances for a given DCC type.
     pub fn list_instances(&self, dcc_type: &str) -> Vec<ServiceEntry> {
         let _ = self.reload_if_stale();
         self.services
-            .iter()
-            .filter(|r| r.value().dcc_type == dcc_type)
-            .map(|r| r.value().clone())
+            .read()
+            .values()
+            .filter(|entry| entry.dcc_type == dcc_type)
+            .cloned()
             .collect()
     }
 
@@ -664,14 +721,14 @@ impl FileRegistry {
     }
 
     fn list_all_in_memory(&self) -> Vec<ServiceEntry> {
-        self.services.iter().map(|r| r.value().clone()).collect()
+        self.services.read().values().cloned().collect()
     }
 
     /// Update heartbeat for a service.
     pub fn heartbeat(&self, key: &ServiceKey) -> TransportResult<bool> {
         self.with_write_transaction(|| {
-            let found = if let Some(mut entry) = self.services.get_mut(key) {
-                entry.value_mut().touch();
+            let found = if let Some(entry) = self.services.write().get_mut(key) {
+                entry.touch();
                 true
             } else {
                 false
@@ -683,8 +740,8 @@ impl FileRegistry {
     /// Update status for a service.
     pub fn update_status(&self, key: &ServiceKey, status: ServiceStatus) -> TransportResult<bool> {
         self.with_write_transaction(|| {
-            let found = if let Some(mut entry) = self.services.get_mut(key) {
-                entry.value_mut().status = status;
+            let found = if let Some(entry) = self.services.write().get_mut(key) {
+                entry.status = status;
                 true
             } else {
                 false
@@ -706,15 +763,16 @@ impl FileRegistry {
     ) -> TransportResult<bool> {
         let key = observed.key();
         self.with_write_transaction(|| {
-            let unchanged = self.services.get(&key).is_some_and(|current| {
+            let mut services = self.services.write();
+            let unchanged = services.get(&key).is_some_and(|current| {
                 current.registered_at == observed.registered_at
                     && current.host == observed.host
                     && current.port == observed.port
                     && current.transport_address == observed.transport_address
                     && current.status == observed.status
             });
-            if unchanged && let Some(mut entry) = self.services.get_mut(&key) {
-                entry.value_mut().status = status;
+            if unchanged && let Some(entry) = services.get_mut(&key) {
+                entry.status = status;
             }
             Ok((unchanged, unchanged))
         })
@@ -739,8 +797,7 @@ impl FileRegistry {
             let mut selected: Option<ServiceEntry> = None;
             let mut changed = false;
 
-            for mut item in self.services.iter_mut() {
-                let entry = item.value_mut();
+            for entry in self.services.write().values_mut() {
                 if entry.lease_expired(now) {
                     entry.clear_lease();
                     changed = true;
@@ -773,12 +830,12 @@ impl FileRegistry {
         owner: Option<&str>,
     ) -> TransportResult<Option<ServiceEntry>> {
         self.with_write_transaction(|| {
-            let released = if let Some(mut entry) = self.services.get_mut(key) {
-                let owner_matches = owner
-                    .is_some_and(|expected| entry.value().lease_owner.as_deref() == Some(expected));
-                if owner_matches && entry.value().lease_owner.is_some() {
-                    entry.value_mut().clear_lease();
-                    Some(entry.value().clone())
+            let released = if let Some(entry) = self.services.write().get_mut(key) {
+                let owner_matches =
+                    owner.is_some_and(|expected| entry.lease_owner.as_deref() == Some(expected));
+                if owner_matches && entry.lease_owner.is_some() {
+                    entry.clear_lease();
+                    Some(entry.clone())
                 } else {
                     None
                 }
@@ -800,10 +857,11 @@ impl FileRegistry {
         snapshot: ServiceSnapshot<'_>,
     ) -> TransportResult<bool> {
         self.with_write_transaction(|| {
-            let Some(mut entry) = self.services.get_mut(key) else {
+            let mut services = self.services.write();
+            let Some(entry) = services.get_mut(key) else {
                 return Ok((false, false));
             };
-            entry_patch::apply_snapshot(entry.value_mut(), &snapshot);
+            entry_patch::apply_snapshot(entry, &snapshot);
             Ok((true, true))
         })
     }
@@ -816,9 +874,9 @@ impl FileRegistry {
     /// on the entry instead.
     pub fn set_pid(&self, key: &ServiceKey, pid: u32) -> TransportResult<bool> {
         self.with_write_transaction(|| {
-            let found = if let Some(mut entry) = self.services.get_mut(key) {
-                entry.value_mut().pid = Some(pid);
-                entry.value_mut().touch();
+            let found = if let Some(entry) = self.services.write().get_mut(key) {
+                entry.pid = Some(pid);
+                entry.touch();
                 true
             } else {
                 false
@@ -837,17 +895,17 @@ impl FileRegistry {
         self.with_write_transaction(|| {
             let stale_keys: Vec<ServiceKey> = self
                 .services
-                .iter()
-                .filter(|r| {
-                    let e = r.value();
-                    e.dcc_type != GATEWAY_SENTINEL_DCC_TYPE && e.is_stale(timeout)
+                .read()
+                .values()
+                .filter(|entry| {
+                    entry.dcc_type != GATEWAY_SENTINEL_DCC_TYPE && entry.is_stale(timeout)
                 })
-                .map(|r| r.key().clone())
+                .map(ServiceEntry::key)
                 .collect();
 
             let count = stale_keys.len();
             for key in &stale_keys {
-                self.services.remove(key);
+                self.services.write().remove(key);
                 tracing::info!(
                     dcc_type = %key.dcc_type,
                     instance_id = %key.instance_id,
@@ -879,26 +937,19 @@ impl FileRegistry {
     /// `FileRegistry` instance.
     pub fn prune_dead_entries(&self) -> TransportResult<usize> {
         self.with_write_transaction(|| {
+            // Do not hold the cache lock across filesystem or process probes.
             let dead_keys: Vec<ServiceKey> = self
-                .services
-                .iter()
-                .filter(|r| {
-                    let entry = r.value();
-                    let owner_dead = if let Some(path) = entry.sentinel_path.as_deref() {
-                        self.sentinel_is_dead(r.key(), path)
-                    } else {
-                        entry.pid.is_some_and(|p| !is_pid_alive(p))
-                    };
-                    let bound_host_pid = entry.host_pid.or_else(|| legacy_sidecar_host_pid(entry));
-                    let host_dead = bound_host_pid.is_some_and(|p| !is_pid_alive(p));
-                    owner_dead || host_dead
+                .list_all_in_memory()
+                .into_iter()
+                .filter(|entry| {
+                    row_owner_or_host_dead(entry, |path| self.sentinel_is_dead(&entry.key(), path))
                 })
-                .map(|r| r.key().clone())
+                .map(|entry| entry.key())
                 .collect();
 
             let count = dead_keys.len();
             for key in &dead_keys {
-                let removed = self.services.remove(key).map(|(_, entry)| entry);
+                let removed = self.services.write().remove(key);
                 self.sentinel_handles.remove(key);
                 if let Some(entry) = removed
                     && let Some(path) = entry.sentinel_path
@@ -964,14 +1015,61 @@ impl FileRegistry {
         Ok((entries, evicted))
     }
 
+    /// Read `services.json` without changing anything on disk.
+    ///
+    /// Unlike [`Self::new`] + [`Self::read_alive`], this creates no directory,
+    /// takes no `services.lock`, rewrites no file, evicts nothing and
+    /// quarantines nothing: a corrupt registry is reported as an error and left
+    /// as it is. Dead rows come back in [`RegistrySnapshot::dead`] instead of
+    /// being removed. For diagnostics (`meshy-dcc doctor`) and status reads.
+    ///
+    /// The caller owns no sentinel handles, so a row owned by this very process
+    /// is classified by its lock like any other. A missing registry is empty.
+    pub fn read_snapshot(registry_dir: &Path) -> TransportResult<RegistrySnapshot> {
+        let path = registry_dir.join(REGISTRY_FILE);
+        let Some(content) = Self::read_with_retry(&path)? else {
+            return Ok(RegistrySnapshot::default());
+        };
+        if content.trim().is_empty() || Self::looks_like_zero_padded_empty_registry(&content) {
+            return Ok(RegistrySnapshot::default());
+        }
+        let entries = match parse_registry_entries(&content) {
+            Ok(entries) => entries,
+            Err(RegistryParseError::Json(e)) => {
+                return Err(TransportError::RegistryFile(format!(
+                    "{} is not valid JSON ({e}); left untouched",
+                    path.display()
+                )));
+            }
+            Err(RegistryParseError::UnsupportedSchema {
+                received,
+                supported,
+            }) => {
+                return Err(TransportError::UnsupportedServiceEntrySchemaVersion {
+                    received,
+                    supported,
+                });
+            }
+        };
+        let mut snapshot = RegistrySnapshot::default();
+        for entry in entries {
+            if row_owner_or_host_dead(&entry, sentinel_is_dead_read_only) {
+                snapshot.dead.push(entry);
+            } else {
+                snapshot.live.push(entry);
+            }
+        }
+        Ok(snapshot)
+    }
+
     /// Get the number of registered services.
     pub fn len(&self) -> usize {
-        self.services.len()
+        self.services.read().len()
     }
 
     /// Check if the registry is empty.
     pub fn is_empty(&self) -> bool {
-        self.services.is_empty()
+        self.services.read().is_empty()
     }
 
     // ── File I/O ──
@@ -1054,8 +1152,8 @@ impl FileRegistry {
             }
             match self.create_sentinel(&key) {
                 Ok((path, file)) => {
-                    if let Some(mut entry) = self.services.get_mut(&key) {
-                        entry.value_mut().sentinel_path = Some(path);
+                    if let Some(entry) = self.services.write().get_mut(&key) {
+                        entry.sentinel_path = Some(path);
                     }
                     self.sentinel_handles.insert(key, file);
                 }
@@ -1135,10 +1233,11 @@ impl FileRegistry {
     }
 
     fn replace_services(&self, entries: &[ServiceEntry]) {
-        self.services.clear();
-        for entry in entries {
-            self.services.insert(entry.key(), entry.clone());
-        }
+        let replacement = entries_to_map(entries.iter().cloned());
+        // Publish the complete snapshot in one short critical section; drop the
+        // old entries after releasing the lock, off any reader's path.
+        let previous = std::mem::replace(&mut *self.services.write(), replacement);
+        drop(previous);
     }
 
     /// Atomically write `content` to `path` using a temp file + rename.
@@ -1266,7 +1365,7 @@ impl FileRegistry {
         let current = entries_to_map(self.list_all_in_memory());
         let loaded = entries_to_map(entries.iter().cloned());
         let (added, removed) = membership_delta(&current, &loaded);
-        if entries.is_empty() && !self.services.is_empty() {
+        if entries.is_empty() && !self.services.read().is_empty() {
             tracing::warn!(
                 path = %self.registry_file_path().display(),
                 "FileRegistry registry file missing or empty; clearing in-memory snapshot"
@@ -1410,3 +1509,6 @@ mod tests;
 
 #[cfg(test)]
 mod logging_tests;
+
+#[cfg(test)]
+mod snapshot_tests;

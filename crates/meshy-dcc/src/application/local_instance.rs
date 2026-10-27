@@ -41,6 +41,26 @@ pub(crate) fn live_dcc_entries(registry_dir: &Path) -> anyhow::Result<(Vec<Servi
     let (entries, evicted) = registry
         .read_alive()
         .context("reading live local DCC instances")?;
+    Ok((dcc_rows(entries), evicted))
+}
+
+/// Read-only twin of [`live_dcc_entries`]: returns `(live, dead)` DCC rows and
+/// never writes. It does not create the registry directory or `services.lock`,
+/// evict a dead row, or quarantine a corrupt file; `meshy-dcc doctor` uses it.
+pub(crate) fn snapshot_dcc_entries(
+    registry_dir: &Path,
+) -> anyhow::Result<(Vec<ServiceEntry>, Vec<ServiceEntry>)> {
+    let snapshot = FileRegistry::read_snapshot(registry_dir).with_context(|| {
+        format!(
+            "reading local DCC FileRegistry at {} (read-only)",
+            registry_dir.display()
+        )
+    })?;
+    Ok((dcc_rows(snapshot.live), dcc_rows(snapshot.dead)))
+}
+
+/// Drop the gateway sentinel, clear expired leases in memory and sort.
+fn dcc_rows(entries: Vec<ServiceEntry>) -> Vec<ServiceEntry> {
     let now = SystemTime::now();
     let mut entries: Vec<_> = entries
         .into_iter()
@@ -54,7 +74,7 @@ pub(crate) fn live_dcc_entries(registry_dir: &Path) -> anyhow::Result<(Vec<Servi
         (left.dcc_type.as_str(), left.instance_id)
             .cmp(&(right.dcc_type.as_str(), right.instance_id))
     });
-    Ok((entries, evicted))
+    entries
 }
 
 pub(crate) fn select_entries(

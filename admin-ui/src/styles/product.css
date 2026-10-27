@@ -1513,3 +1513,36 @@ button.pd-linkbtn {
     padding-left: 0;
   }
 }
+
+/* A window 521-760px wide keeps the sidebar as a full-height left rail and
+ * scrolls only the stage (issue #8). Stacking it above a page that scrolls as
+ * a whole let it scroll away; only phone widths (520px and below) still stack.
+ * These win over the stacking rules in responsive.css and setup.css. */
+@media (min-width: 521px) and (max-width: 760px) {
+  body {
+    height: 100vh;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .app-shell {
+    display: flex;
+    flex-direction: row;
+    height: 100vh;
+    min-height: 0;
+  }
+
+  .pd-sidebar {
+    border-bottom: 0;
+    border-right: 1px solid var(--pd-line);
+    max-height: none;
+    padding: 16px 8px;
+    width: 184px;
+  }
+
+  .main-stage {
+    flex: 1 1 0;
+    min-width: 0;
+    overflow-y: auto;
+  }
+}
