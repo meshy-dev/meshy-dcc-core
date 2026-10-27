@@ -5,6 +5,8 @@
 
 > 读 `docs/windows-validation.md`，按它做 Windows 验证。先检查环境并告诉我缺什么，装软件前先问我。
 
+本轮是第二轮（0.2.2），重点在第 6 节；第 4、5 节是每轮都走的基本流程。
+
 ## 1. 背景（一屏）
 
 - **Meshy DCC Core**：一个本地 CLI（`meshy-dcc`）+ 常驻 gateway（`meshy-dcc-server`，端口 19765）+ 编进 CLI 的 agent Skill。
@@ -13,12 +15,18 @@
 - **两个仓库**（都在 `meshy-dev`，private）：
   - `meshy-dcc-core`（本仓库）：Rust core、Python wheel `meshy_dcc_core`、`meshy-dcc-catalog.yml`（内置安装目录）、release workflow。
   - `meshy-dcc-adapters`：14 个宿主的 adapter，一个宿主一个目录 `meshy-dcc-<host>/`，`scripts/build_release.py <host>` 打包。
-- **现状**：版本 0.2.0，**还没发布**（npm、CDN、GitHub Release 都没有；catalog 里全部 `not_available`）。
-  macOS arm64 上真机验证过的宿主：Blender、Unity、Godot、Unreal、OpenSCAD、Material Maker、FreeCAD、Roblox Studio
-  （Roblox 有已知限制：导入的模型不能随 place 保存）。没在真软件里跑过、标 experimental 的：Maya、3ds Max、Houdini、
-  Cinema 4D、Substance 3D Painter、ZBrush。
-- **Windows 上什么都没真跑过**。之前的 Windows 包是 macOS 上用 mingw 交叉编译的；正式发布由 CI 在 `windows-latest` 上用
-  MSVC 原生构建（`.github/workflows/release.yml` → `scripts/release/build_release.sh`）。**这次在 Windows 上原生构建，走和 CI 一样的路径。**
+- **现状**：0.2.1 已发布（2026-10-27：npm、CDN、GitHub Release）。main 上是 0.2.2 候选，版本号已是 0.2.2，还没发布。
+  13 个连接器已发布（catalog 里 `available`），0.2.2 发布后会全部用 0.2.2 的 wheel 重新打包发布。
+  第一轮 Windows 验证（2026-10-18）的结果在文末，那一轮的 core 与 adapter 修复都已合入。
+- **0.2.2 改了什么**（详见 `CHANGELOG.md` 的 Unreleased）：
+  - rmcp 2.1、PyO3 0.29 安全升级（连接器里的 MCP 服务端也换了）；
+  - 一次 `update apply --yes` 更新 CLI 和 server 并重启 gateway；`meshy-dcc gateway restart`；窗口里的"立即更新"；
+  - 超时的主线程调用不再晚执行（没开始的丢弃，已在跑的返回 `status: unknown`）；`doctor` 只读；
+  - 匿名使用统计（默认开，`docs/telemetry.md`）；bug 报告（`meshy-dcc report`、窗口里的 Report a problem）；
+  - 连接器：Maya sidecar 默认不开局域网端口、FreeCAD 子进程非零退出不写回用户文件、3ds Max `3dsmax-mesh-ops` 能加载、
+    Blender `save_scene` 读回、Houdini 导入如实报告丢失的材质。
+- 正式发布由 CI 在 `windows-latest` 上用 MSVC 原生构建（`.github/workflows/release.yml` → `scripts/release/build_release.sh`），
+  发布前 CI 还会在 Windows runner 上从上一版升级一次（`scripts/release/upgrade_smoke.sh`）。本机验证同样原生构建，走和 CI 一样的路径。
 - **目标**：找出并修掉 Windows 上的问题，给出"哪些 Windows × 宿主组合真机通过"的清单。只有真机通过的组合才进支持矩阵。
 
 ## 2. 规则（必须遵守）
@@ -30,6 +38,15 @@
   要用非默认端口时，`MESHY_DCC_GATEWAY_PORT`（gateway 监听）和 `MESHY_DCC_BASE_URL=http://127.0.0.1:<端口>`（CLI 连哪个 gateway）**两个都要设**。
   先确认 19765 上没有用户自己的 gateway（`Get-NetTCPConnection -LocalPort 19765 -State Listen`）。
 - 宿主会把偏好写进用户目录的（Documents、`%APPDATA%`、`%LOCALAPPDATA%`），测前测后列清单对比，测试产生的东西列出来给用户确认后再删。
+- **宿主的用户目录要用宿主自己的变量隔离，只改 `HOME`/`USERPROFILE` 不够**（2026-10-27 在 macOS 上，Blender 无视 HOME，
+  连接器装进了用户真实的扩展目录）：Blender `BLENDER_USER_RESOURCES`、Houdini `HOUDINI_USER_PREF_DIR`、Maya `MAYA_APP_DIR`、
+  FreeCAD `FREECAD_USER_HOME`/`FREECAD_USER_DATA`/`FREECAD_USER_TEMP`、Painter `MESHY_DCC_SUBSTANCE3D_PAINTER_PROFILE`。
+  **安装前先用宿主自己的只读探测确认它会写到哪里**（例如 Blender：
+  `blender --background --python-expr "import bpy; print(bpy.utils.resource_path('USER'))"`）。
+- **不往线上发任何数据**：release 构建的匿名统计默认开启，测试环境一律设 `MESHY_DCC_TELEMETRY=0`；
+  只在专门测统计时用 `MESHY_DCC_TELEMETRY_HOST=http://127.0.0.1:<端口>` 指向本地接收端。bug 报告用
+  `MESHY_DCC_REPORT_URL=http://127.0.0.1:<端口>/` 指向本地接收端（发到线上会生成真实的 GitHub issue）。
+- `MESHY_DCC_UPDATE_MANIFEST_URL` 指向非官方地址时不校验签名，只用于测试，不要写进任何文档给用户。
 - 装软件（DCC、工具链）前先问用户。付费软件（Maya、3ds Max、Houdini、Cinema 4D、Substance、ZBrush）只在机器上已有时测。
 - 不调用 Meshy API、不花 credits。
 
@@ -59,7 +76,7 @@ gh repo clone meshy-dev/meshy-dcc-adapters
 
 ```bash
 cd meshy-dcc-core
-scripts/release/build_release.sh out      # out/meshy-dcc.exe, out/meshy-dcc-server.exe, out/meshy_dcc_core-0.2.0-cp38-abi3-win_amd64.whl
+scripts/release/build_release.sh out      # out/meshy-dcc.exe, out/meshy-dcc-server.exe, out/meshy_dcc_core-0.2.2-cp38-abi3-win_amd64.whl
 cargo test -p meshy-dcc --no-fail-fast    # 记录 Windows 专有失败
 ```
 
@@ -119,7 +136,52 @@ python -m http.server 8765 --bind 127.0.0.1 --directory <builds>     # 另一个
 - 3ds Max（只有 Windows，若机器上有）：启动脚本写 `%LOCALAPPDATA%\Autodesk\3dsMax\<年> - 64bit\<语言>\scripts\startup\`；该用户没启动过的版本会被拒；进程内 server 与 Qt timer 主线程派发。
 - Maya / Houdini / Substance 3D Painter（若有）：用户 Documents 下的 modules / packages / python\startup，注意 OneDrive 重定向；Houdini 的 `HOME` 规则。
 
-## 6. 产出
+## 6. 第二轮：0.2.2 重点
+
+按第 4、5 节走完构建、测试和连接器六步（所有能测的宿主都要重跑：连接器里的 MCP 服务端随 wheel 换成了 rmcp 2.1），另外逐项确认：
+
+**更新：Windows 上第一次真实升级（最重要）**
+
+1. 用官方安装脚本把**已发布的 0.2.1** 装进测试目录：
+   `& ([scriptblock]::Create((irm https://cdn.meshy.ai/meshy-dcc-core/install.ps1))) -Version 0.2.1 -InstallDir <测试目录>`
+   （其余 meshy-dcc 路径照第 2 节隔离，gateway 用非默认端口）。
+2. 用第 4 节构建出的 0.2.2 做一份本地更新清单：`scripts/release/generate_update_manifest.py` 生成，下载地址改成本机 loopback 包服务，
+   再把 `MESHY_DCC_UPDATE_MANIFEST_URL` 指向它（参考 `scripts/release/upgrade_smoke.sh` 和 release workflow 的 upgrade-smoke 任务）。
+3. 在 Git Bash 里跑 `scripts/release/upgrade_smoke.sh --bin-dir <测试目录> --manifest-url <本地清单> --version 0.2.2 --port <端口>`，
+   或者手动按它的步骤走。逐项确认：
+   - `update apply --yes`（0.2.1 的代码）暂存 CLI 和 server；**之后的第一条命令有自己的输出和退出码**
+     （relaunch 在 Windows 上是等待子进程加 job object，这是第一次实测）；
+   - 0.2.1 不会重启 gateway：`meshy-dcc gateway restart` 后，`meshy-dcc --version`、`meshy-dcc-server --version` 和正在运行的 gateway
+     （`/admin/api/health` 的 version）都是 0.2.2；
+   - 运行中的 `meshy-dcc-server.exe` 被正确替换（Windows 不能覆盖运行中的 exe）；任务管理器里没有残留的旧进程；没有控制台窗口闪出。
+4. 有时间的话，再在本地改出一个 0.2.3 标签的构建、做第二份清单，测 **0.2.2 自己的** 一步更新：一次 `update apply --yes` 应该同时
+   更新两个程序并自动重启 gateway；窗口首页出现"立即更新"，点了以后显示"正在更新"，gateway 恢复后页面刷新为新版本。
+
+**core 的新行为**
+
+- `meshy-dcc gateway restart`（`gateway daemon restart` 的别名）；`gateway stop` 后立刻 `start` 不再等 30 秒。
+- 超时的主线程调用：挑一个宿主（Blender 或 Maya），调用一个慢工具并给很短的超时，结果应是 `status: unknown`（`outcome-unknown`）；
+  之后读回场景，确认场景状态和报告一致，超时后没有悄悄继续改动。
+- `doctor` 只读：起一个宿主后强杀它，`doctor` 把它列在 `inventory.dead`，registry 文件前后字节一致（Windows 的只读锁探测第一次实测）。
+- 窗口：侧边栏在窄窗口里不随长页面滚走；四种语言下新加的文案（更新、统计横幅和开关、Report a problem）没有溢出。
+
+**连接器的修复**
+
+- Maya：`MESHY_DCC_MAYA_SIDECAR=1` 且不设远程变量时，sidecar 命令行带 `--gateway-remote-port 0`，59765 没有监听；显式设了 host/port 才有。
+- 3ds Max：`load-skill 3dsmax-mesh-ops` 注册 25 个工具；`create_box` 的长宽高读回正确。
+- Houdini：导入 Meshy 导出的 USD/USDZ 和一个双材质 GLB，看 `materials_detected`、`materials_imported`、`materials_lost` 和 status 是否如实。
+- FreeCAD：写操作返回 `exit_code: 0`，新的"非零退出不写回"没有误伤正常写入。
+- Blender：`save_scene` 返回 `postcondition.verified: true`；保存到只读目录时报错且没有写出文件。
+
+**统计与报告（都发到本地接收端）**
+
+- 统计：首次运行的提示只出现一次；`meshy-dcc telemetry status|preview|off|on|reset`；窗口横幅（好的 / 关闭）和设置开关；
+  `DO_NOT_TRACK=1` 生效且设置页说明原因。在宿主上调用过几个工具后看 `telemetry preview`：`tool_calls[].skill` 应是真实的技能名
+  （例如 `blender-scene`），不应全是 `custom`（取决于连接器上报 `rankPathSource: bundled`）；预览里不能出现路径、工程名、实例 ID。
+- 报告：`meshy-dcc report --summary "..."` 只预览；加 `--yes` 发到本地接收端；窗口里的 Report a problem 走同样流程；
+  报告内容里没有本机路径、端口、PID、实例 ID、主机名。
+
+## 7. 产出
 
 - 问题：能修的在 `windows/<主题>` 分支修并加测试；修不了的写清复现步骤。
 - 结果：在本文末尾"结果"一节追加（Windows 版本、每个宿主的版本与六步结果、专项检查结论、改了什么、待决定的事）。

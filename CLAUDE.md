@@ -3,7 +3,7 @@
 ## Scope and current stage
 
 `meshy-dcc-core` is a private, independent Meshy product repository, developed
-as a submodule of `meshy-dev/meshy-integrations`. Version 0.2.1: one version
+as a submodule of `meshy-dev/meshy-integrations`. Version 0.2.2: one version
 line for crates, the Python wheel and the product.
 
 The code began as a fork of an MIT-licensed project and has fully diverged

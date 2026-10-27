@@ -9,7 +9,7 @@ import typing
 
 # ── Module metadata ──
 
-__version__: builtins.str = "0.2.1"
+__version__: builtins.str = "0.2.2"
 __author__: builtins.str = "Meshy <support@meshy.ai>"
 
 # ── Constants (registered via m.add() in src/lib.rs::register_constants) ──
