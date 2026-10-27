@@ -3,7 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { API_BASE, AdminApiError, adminJsonResponse, apiJson } from '../../admin-ui-core';
-import type { AgentsPayload, ConnectorsPayload, InstallReport, SkillLibrary, SkillReloadResult, UpdateCheck } from './model';
+import type { AgentsPayload, ConnectorsPayload, InstallReport, ReportResult, SkillLibrary, SkillReloadResult, UpdateCheck } from './model';
 
 const keys = {
   connectors: ['product', 'connectors'] as const,
@@ -16,6 +16,8 @@ const keys = {
 // Installs download and run host installers; give them the gateway's own ceiling.
 const INSTALL_TIMEOUT_MS = 11 * 60_000;
 const SKILL_TIMEOUT_MS = 70_000;
+// The CLI waits 20 s for the intake; the page waits a little longer than that.
+const REPORT_TIMEOUT_MS = 30_000;
 // Every open app re-scans its folders; a slow host can take a while.
 const RELOAD_TIMEOUT_MS = 120_000;
 
@@ -70,6 +72,23 @@ export function useInstallConnector() {
     mutationFn: (body: { dcc_type: string; project?: string; dcc_path?: string }) =>
       postJson<InstallReport>('/connectors/install', body, INSTALL_TIMEOUT_MS),
     onSettled: () => client.invalidateQueries({ queryKey: keys.connectors }),
+  });
+}
+
+/// Never throws: a refusal or a lost connection becomes a `failed` result, and
+/// a send with no answer is `unknown` because the report may have arrived.
+export function useReport() {
+  return useMutation({
+    mutationFn: async (body: { summary: string; send: boolean }): Promise<ReportResult> => {
+      try {
+        return await postJson<ReportResult>('/report', body, REPORT_TIMEOUT_MS);
+      } catch (err) {
+        // The gateway answers 502 with the CLI's own failed/unknown result.
+        const payload = err instanceof AdminApiError ? (err.payload as Partial<ReportResult> | undefined) : undefined;
+        if (payload?.status === 'failed' || payload?.status === 'unknown') return payload as ReportResult;
+        return { status: body.send && !(err instanceof AdminApiError) ? 'unknown' : 'failed', error: errorMessage(err) };
+      }
+    },
   });
 }
 

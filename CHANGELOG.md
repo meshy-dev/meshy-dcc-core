@@ -3,6 +3,19 @@
 Meshy DCC Core release notes. Crates, the Python wheel and the product share
 one version line.
 
+## Unreleased
+
+### Added
+
+- `meshy-dcc report --summary "..."` sends a bug report, and **Report a problem**
+  in the window does the same from a form. Both show the exact report first and
+  send nothing without `--yes` or a click on **Send**. A report holds the
+  description, the versions and OS, a diagnostic summary without paths or IDs,
+  and the agent error reports of the last 24 hours. A bot turns each report into
+  an issue labelled `user-report` in meshy-dev/meshy-dcc-core; the raw report is
+  kept privately for 90 days. The Skill tells agents to offer a report when Meshy
+  DCC Core itself misbehaves, and to send it only after the user agrees.
+
 ## 0.2.0 (2026-10-19)
 
 Meshy DCC Core diverges completely from the project it was forked from. It no

@@ -1,5 +1,5 @@
-//! Endpoints behind the user-facing pages of `meshy-dcc ui`: connectors and
-//! the agent Skill.
+//! Endpoints behind the user-facing pages of `meshy-dcc ui`: connectors, the
+//! agent Skill and the bug report.
 //!
 //! The work is done by the `meshy-dcc` CLI installed next to the gateway; its
 //! JSON output is the contract, so installs and Skill writes keep one
@@ -11,6 +11,7 @@
 //! - `POST /api/connectors/install` — `meshy-dcc install --execute --json`
 //! - `GET  /api/agents`             — `meshy-dcc agent-skill --agent '*'`
 //! - `POST /api/agents/skill`       — `meshy-dcc agent-skill --agent … --execute`
+//! - `POST /api/report`             — `meshy-dcc report --source ui [--yes]`
 
 use std::net::SocketAddr;
 use std::path::{Path, PathBuf};
@@ -241,6 +242,52 @@ pub async fn handle_agent_skill(Json(body): Json<AgentSkillBody>) -> Response {
         args.push("--remove".into());
     }
     respond(run_cli(&args, READ_TIMEOUT).await)
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ReportBody {
+    /// The user's own words, 1 to 4000 characters.
+    pub summary: String,
+    /// Send the report; without it the CLI only previews the payload.
+    #[serde(default)]
+    pub send: bool,
+}
+
+/// `POST /admin/api/report`: the CLI's preview or send result, as JSON.
+pub async fn handle_report(Json(body): Json<ReportBody>) -> Response {
+    // 4000 is `meshy-dcc report`'s own limit; NUL cannot be passed as an argument.
+    if body.summary.trim().is_empty()
+        || body.summary.chars().count() > 4000
+        || body.summary.contains('\0')
+    {
+        return error(
+            StatusCode::BAD_REQUEST,
+            "invalid_summary",
+            "describe the problem in 1 to 4000 characters",
+        );
+    }
+    let mut args = vec![
+        "report".to_string(),
+        "--summary".into(),
+        body.summary,
+        "--source".into(),
+        "ui".into(),
+    ];
+    if body.send {
+        args.push("--yes".into());
+    }
+    match run_cli(&args, READ_TIMEOUT).await {
+        Ok(report) => {
+            let sent = !matches!(report["status"].as_str(), Some("failed" | "unknown"));
+            let status = if sent {
+                StatusCode::OK
+            } else {
+                StatusCode::BAD_GATEWAY
+            };
+            (status, Json(report)).into_response()
+        }
+        Err(response) => response,
+    }
 }
 
 #[derive(Debug, Deserialize)]

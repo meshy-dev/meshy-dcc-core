@@ -20,4 +20,5 @@ pub mod local_instance;
 pub mod local_registry;
 pub mod marketplace;
 pub mod package_manager;
+pub mod report;
 pub mod update;

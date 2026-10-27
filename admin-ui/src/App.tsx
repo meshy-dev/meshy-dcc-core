@@ -137,6 +137,8 @@ function App() {
   const localeDetection = useMemo(() => detectBrowserLocale(localeOverride), [localeOverride]);
   const t = useMemo(() => createTranslator(localeDetection.locale), [localeDetection.locale]);
   const [activePanel, setActivePanel] = useState<Panel>(() => readPanelFromUrl());
+  // Remounts Settings from the sidebar, so a click leaves the report view it may show.
+  const [settingsVisit, setSettingsVisit] = useState(0);
   const [selectedWorkflowId, setSelectedWorkflowId] = useState<string | null>(null);
   const [statsRange, setStatsRange] = useState(() => readStatsRangeFromUrl());
   const [openApiSource, setOpenApiSource] = useState<OpenApiSource>(() => readOpenApiSourceFromUrl());
@@ -1458,7 +1460,10 @@ function App() {
       <ProductSidebar
         t={t}
         panel={activePanel}
-        onNavigate={(panel) => goToPanel(panel)}
+        onNavigate={(panel) => {
+          if (panel === 'settings') setSettingsVisit((visit) => visit + 1);
+          goToPanel(panel);
+        }}
         reachable={!healthQuery.isError}
         local={localPage}
         version={healthQuery.data?.version}
@@ -1478,6 +1483,7 @@ function App() {
         {activePanel === 'agents' && <AgentsPanel t={t} local={localPage} />}
         {activePanel === 'settings' && (
           <SettingsPanel
+            key={settingsVisit}
             t={t}
             health={healthQuery.data}
             reachable={!healthQuery.isError}
@@ -1489,7 +1495,7 @@ function App() {
             onTheme={changeTheme}
             devEnabled={devEnabled}
             onDev={changeDevEnabled}
-            onReport={() => {
+            onDebug={() => {
               changeDevEnabled(true);
               goToPanel('debug');
             }}

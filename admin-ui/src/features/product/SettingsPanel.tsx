@@ -6,6 +6,7 @@ import { LOCALE_LABELS } from '../../locale';
 import type { ThemeMode } from '../../theme';
 import { useSetUpdateCheck, useSettings, useUpdateCheck } from './api';
 import { PRODUCT_NAME, WEBSITE_URL } from './catalog';
+import { ReportPanel } from './ReportPanel';
 import { Command, ExternalLink, Icon, Switch, Tag, type T } from './ui';
 
 export function SettingsPanel(props: {
@@ -20,7 +21,7 @@ export function SettingsPanel(props: {
   onTheme: (mode: ThemeMode) => void;
   devEnabled: boolean;
   onDev: (on: boolean) => void;
-  onReport: () => void;
+  onDebug: () => void;
 }) {
   const { t, health } = props;
   const version = health?.version;
@@ -28,7 +29,10 @@ export function SettingsPanel(props: {
   const settings = useSettings();
   const setUpdateCheck = useSetUpdateCheck();
   const [remoteHelp, setRemoteHelp] = useState(false);
+  const [reporting, setReporting] = useState(false);
   const network = health?.service?.network_listener;
+
+  if (reporting) return <ReportPanel t={t} local={props.local} onBack={() => setReporting(false)} onDebug={props.onDebug} />;
 
   return (
     <div className="pd-page settings">
@@ -139,7 +143,7 @@ export function SettingsPanel(props: {
           <ExternalLink href={WEBSITE_URL} className="pd-row-link">
             {t('product.nav.website')}<Icon name="external" size={12} stroke={2} />
           </ExternalLink>
-          <button type="button" className="pd-row-link" onClick={props.onReport}>
+          <button type="button" className="pd-row-link" onClick={() => setReporting(true)}>
             {t('product.settings.report')}<span className="pd-note">{t('product.settings.reportHint')}</span>
           </button>
         </div>

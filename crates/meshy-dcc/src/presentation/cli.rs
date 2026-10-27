@@ -412,6 +412,14 @@ async fn run_with_args(args: Args) -> anyhow::Result<()> {
                 adapter_import::has_failures(value.get("adapter_imports").unwrap_or(&Value::Null));
             value
         }
+        Command::Report(args) => {
+            let value = args.run(&control, &doctor).await?;
+            if super::report_cmd::did_not_send(&value) {
+                failed = true;
+                exit_code = ExitCode::Unavailable;
+            }
+            value
+        }
         Command::List => control.list_instances().await?,
         Command::DccTypes {
             catalog,

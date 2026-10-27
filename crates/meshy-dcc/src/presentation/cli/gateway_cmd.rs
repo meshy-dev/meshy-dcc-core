@@ -72,7 +72,8 @@ pub(crate) fn gateway_endpoint_for_command(
             Some(Endpoint::new(base_url))
         }
         Command::Feedback(args) => args.requires_gateway().then_some(Endpoint::new(base_url)),
-        Command::Doctor { .. } | Command::DccTypes { .. } => None,
+        // A report reads findings only from a gateway that is already running.
+        Command::Doctor { .. } | Command::DccTypes { .. } | Command::Report(_) => None,
         Command::List
         | Command::Search { .. }
         | Command::Describe { .. }

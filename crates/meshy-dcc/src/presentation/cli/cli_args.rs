@@ -16,6 +16,7 @@ use super::record_replay::RecordReplayAction;
 use crate::presentation::feedback_cmd::FeedbackArgs;
 use crate::presentation::marketplace_cmd::MarketplaceAction;
 use crate::presentation::output::OutputFormat;
+use crate::presentation::report_cmd::ReportArgs;
 
 pub(crate) fn parse_output_format(s: &str) -> Result<OutputFormat, String> {
     OutputFormat::from_flag(s)
@@ -94,6 +95,8 @@ pub(crate) enum Command {
         #[arg(long, value_name = "PATH")]
         adapter_catalog: Option<PathBuf>,
     },
+    /// Send Meshy a bug report. Shows the exact payload; nothing is sent without --yes.
+    Report(ReportArgs),
     /// List live DCC instances from the local registry or selected gateway profile.
     List,
     /// List adapter-backed DCC types from the release catalog.
