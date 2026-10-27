@@ -147,7 +147,7 @@ socket2 = { version = "0.6", features = ["all"] }
 mdns-sd = { version = "0.20", default-features = false, features = ["async"] }
 criterion = { version = "0.8", features = ["html_reports"] }
 ipckit = { version = "0.1.7", features = ["async", "backend-interprocess"] }
-base64 = "0.22"
+base64 = "0.23"
 # Optional SQLite backend for JobManager persistence (issue #328). Pulled in
 # only when the `job-persist-sqlite` feature is enabled on `meshy-dcc-http`;
 # otherwise zero SQLite code compiles into the wheel.
