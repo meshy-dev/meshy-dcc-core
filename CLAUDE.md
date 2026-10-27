@@ -3,7 +3,7 @@
 ## Scope and current stage
 
 `meshy-dcc-core` is a private, independent Meshy product repository, developed
-as a submodule of `meshy-dev/meshy-integrations`. Version 0.2.0: one version
+as a submodule of `meshy-dev/meshy-integrations`. Version 0.2.1: one version
 line for crates, the Python wheel and the product.
 
 The code began as a fork of an MIT-licensed project and has fully diverged
@@ -60,6 +60,9 @@ each one on a real host before porting it as a Rust test.
 - Preserve user scenes and files, reject path and symlink escapes, protect
   credentials, and report unknown outcomes instead of replaying mutations.
 - Do not add Meshy API calls, OAuth, download logic or a second auth store.
+- Besides installs and updates, the only data that leaves the machine is a bug
+  report the user sends with `meshy-dcc report` (or **Send** in the window) after
+  seeing it. Its intake (`scripts/reports/`) holds no GitHub credentials.
 - Only list OS × host × adapter combinations in the support matrix after a real
   host check passes; a mock or loopback fixture is not host support.
 

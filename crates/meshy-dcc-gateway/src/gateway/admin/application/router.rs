@@ -38,7 +38,7 @@ use super::marketplace::{
 };
 use super::memory::{handle_admin_memory, handle_admin_memory_forget};
 use super::product::{
-    handle_agent_skill, handle_agents, handle_connector_install, handle_connectors,
+    handle_agent_skill, handle_agents, handle_connector_install, handle_connectors, handle_report,
     handle_settings, handle_settings_update, local_only,
 };
 use super::recordings::{
@@ -78,7 +78,7 @@ use super::skill_paths::{
 /// - `GET  /api/health`             → JSON health summary
 /// - `GET  /api/feedback`           → persisted per-instance feedback aggregation
 /// - `GET  /api/connectors`, `POST /api/connectors/install`,
-///   `GET  /api/agents`, `POST /api/agents/skill`,
+///   `GET  /api/agents`, `POST /api/agents/skill`, `POST /api/report`,
 ///   `GET|PUT /api/settings` → see `product`
 pub fn build_admin_router(state: AdminState) -> Router {
     // Changes to this computer (installs, code the apps will run, config
@@ -89,6 +89,7 @@ pub fn build_admin_router(state: AdminState) -> Router {
             routing::post(handle_connector_install),
         )
         .route("/api/agents/skill", routing::post(handle_agent_skill))
+        .route("/api/report", routing::post(handle_report))
         .route("/api/settings", routing::put(handle_settings_update))
         .route(
             "/api/skill-library/reload",

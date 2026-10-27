@@ -19,5 +19,7 @@ pub mod local_control;
 pub mod local_instance;
 pub mod local_registry;
 pub mod marketplace;
-pub mod package_manager;
+/// Lives in the updater so every binary that self-updates honours the marker.
+pub use meshy_dcc_updater::package_manager;
+pub mod report;
 pub mod update;

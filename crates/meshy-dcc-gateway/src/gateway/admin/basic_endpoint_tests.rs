@@ -796,9 +796,37 @@ mod endpoint_contracts {
     }
 
     #[tokio::test]
+    async fn report_is_local_only_and_needs_a_summary() {
+        let app = admin_router();
+        for peer in [None, Some([192, 168, 1, 9])] {
+            let (status, body) = send(
+                app.clone(),
+                post_json("/api/report", json!({"summary": "it broke"}), peer),
+            )
+            .await;
+            assert_eq!(status, StatusCode::FORBIDDEN, "{peer:?}");
+            assert_eq!(body["error"], "local_only");
+        }
+        for summary in ["", "  ", &"x".repeat(4001), "a\u{0}b"] {
+            let (status, body) = send(
+                app.clone(),
+                post_json(
+                    "/api/report",
+                    json!({"summary": summary}),
+                    Some([127, 0, 0, 1]),
+                ),
+            )
+            .await;
+            assert_eq!(status, StatusCode::BAD_REQUEST, "{summary:?}");
+            assert_eq!(body["error"], "invalid_summary");
+        }
+    }
+
+    #[tokio::test]
     async fn installs_and_config_writes_refuse_remote_peers() {
         let app = admin_router();
         for (method, uri) in [
+            ("POST", "/api/report"),
             ("POST", "/api/skill-library/reload"),
             ("PUT", "/api/settings"),
             ("POST", "/api/skill-paths"),
@@ -854,5 +882,41 @@ mod endpoint_contracts {
             body["args"],
             "--output json --non-interactive --no-auto-gateway agent-skill --agent cursor --agent codex --execute --remove"
         );
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn report_runs_the_cli_and_maps_its_outcome_to_a_status() {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = tempfile::tempdir().unwrap();
+        let cli = dir.path().join("meshy-dcc");
+        // A preview echoes the arguments; a send is refused, as with no intake.
+        std::fs::write(
+            &cli,
+            "#!/bin/sh\ncase \"$*\" in\n*--yes*) printf '{\"status\":\"failed\",\"error\":\"no intake\"}'; exit 3;;\n*) printf '{\"status\":\"preview\",\"args\":\"%s\"}' \"$*\";;\nesac\n",
+        )
+        .unwrap();
+        std::fs::set_permissions(&cli, std::fs::Permissions::from_mode(0o755)).unwrap();
+        let _guard = meshy_dcc_test_utils::EnvVarGuard::set(
+            crate::gateway::admin::application::product::CLI_BIN_ENV,
+            Some(cli.to_str().unwrap()),
+        );
+        let report = |send: bool| {
+            post_json(
+                "/api/report",
+                json!({"summary": "it broke", "send": send}),
+                Some([127, 0, 0, 1]),
+            )
+        };
+
+        let (status, body) = send(admin_router(), report(false)).await;
+        assert_eq!(status, StatusCode::OK);
+        assert_eq!(
+            body["args"],
+            "--output json --non-interactive --no-auto-gateway report --summary it broke --source ui"
+        );
+        let (status, body) = send(admin_router(), report(true)).await;
+        assert_eq!(status, StatusCode::BAD_GATEWAY);
+        assert_eq!(body["status"], "failed");
     }
 }

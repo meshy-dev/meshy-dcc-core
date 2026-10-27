@@ -197,6 +197,53 @@ test.describe('meshy-dcc ui', () => {
     expect(saved).toEqual({ update_check: false });
   });
 
+  test('a problem report is previewed first, and only that text can be sent', async ({ page }) => {
+    const calls: { summary: string; send: boolean }[] = [];
+    await page.route('**/admin/api/report', (route) => {
+      calls.push(route.request().postDataJSON());
+      return route.fallback();
+    });
+    await open(page, 'settings');
+    await page.getByRole('button', { name: /Report a problem/ }).click();
+    const text = page.getByLabel('What happened?');
+    const preview = page.getByRole('button', { name: 'Preview' });
+    const send = page.getByRole('button', { name: 'Send', exact: true });
+    await expect(preview).toBeDisabled();
+    await expect(send).toBeDisabled();
+
+    await text.fill('Blender import failed');
+    await expect(page.getByText('21 / 4000')).toBeVisible();
+    await expect(send).toBeDisabled();
+    await preview.click();
+    await expect(page.locator('.pd-report-payload pre')).toContainText('"schema": "meshy-dcc.report.v1"');
+    await expect(page.locator('.pd-report-payload summary')).toContainText('KB');
+    await expect(send).toBeEnabled();
+    await shot(page, 'report-en');
+
+    await text.fill('Blender import failed again');
+    await expect(send).toBeDisabled();
+    await expect(page.locator('.pd-report-payload')).toHaveCount(0);
+    await preview.click();
+    await expect(send).toBeEnabled();
+    await send.click();
+    await expect(page.getByRole('status')).toContainText('Report ID: 20261027T031500Z-1a2b3c4d');
+    await expect(page.getByRole('link', { name: 'View reported problems' })).toHaveAttribute('href', /label%3Auser-report$/);
+    await expect(send).toBeDisabled();
+    expect(calls).toEqual([
+      { summary: 'Blender import failed', send: false },
+      { summary: 'Blender import failed again', send: false },
+      { summary: 'Blender import failed again', send: true },
+    ]);
+
+    await page.getByRole('button', { name: '← Settings' }).click();
+    await expect(page.getByRole('heading', { name: 'Settings', level: 1 })).toBeVisible();
+
+    // Settings in the sidebar leaves the report view too.
+    await page.getByRole('button', { name: /Report a problem/ }).click();
+    await page.locator('.pd-sidebar').getByRole('button', { name: 'Settings', exact: true }).click();
+    await expect(page.getByRole('heading', { name: 'Settings', level: 1 })).toBeVisible();
+  });
+
   test('settings turn on the collapsed Developer section', async ({ page }) => {
     await open(page, 'settings');
     await shot(page, 'settings-en');

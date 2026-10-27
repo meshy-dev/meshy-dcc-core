@@ -21,8 +21,12 @@ use sha2::{Digest, Sha256};
 use thiserror::Error;
 
 pub mod meshy_release;
+pub mod package_manager;
+mod relaunch;
 pub mod settings;
 mod update_set;
+
+pub use relaunch::relaunch_current_exe;
 
 const MAX_UPDATE_BYTES: u64 = 256 * 1024 * 1024;
 
@@ -162,6 +166,9 @@ pub enum UpdateError {
 
     #[error("Refused and quarantined an invalid staged update: {reason}")]
     RejectedStagedUpdate { reason: String },
+
+    #[error("{0}")]
+    PackageManaged(String),
 
     #[error("Update download exceeds the {max_bytes}-byte safety limit")]
     DownloadTooLarge { max_bytes: u64 },
@@ -446,11 +453,16 @@ impl Updater {
     }
 
     /// Stage a manifest-verified update for replacement on the next launch.
+    ///
+    /// Refused when a package manager owns this executable.
     pub fn stage_verified_update(
         downloaded: &Path,
         binary_name: &str,
         expected_sha256: &Sha256Digest,
     ) -> Result<(), UpdateError> {
+        if let Some(marker) = package_manager::detect() {
+            return Err(UpdateError::PackageManaged(marker.blocked_message()));
+        }
         stage_verified_binary_update(binary_name, downloaded, expected_sha256.as_str())
     }
 
@@ -458,7 +470,13 @@ impl Updater {
     ///
     /// To be called at startup BEFORE the main application logic runs.
     /// Returns `true` if an update was applied, `false` if no update was staged.
+    ///
+    /// Never applies one to an executable a package manager owns: replacing it
+    /// would undo the version the manager installed.
     pub fn apply_staged_update(binary_name: &str) -> Result<bool, UpdateError> {
+        if package_manager::detect().is_some() {
+            return Ok(false);
+        }
         if quarantine_legacy_staged_update(binary_name)? {
             return Err(UpdateError::LegacyUnsignedStage);
         }

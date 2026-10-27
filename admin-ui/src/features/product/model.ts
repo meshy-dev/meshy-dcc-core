@@ -49,6 +49,13 @@ export type InstallReport = {
   steps?: { id: string; status: string; message?: string }[];
 };
 
+/// `meshy-dcc report` as the gateway returns it: a preview, the intake's
+/// receipt, or a failure (`unknown`: the request may have been received).
+export type ReportResult =
+  | { status: 'preview'; bytes: number; report: unknown }
+  | { status: 'sent'; report_id: string; issues_url: string }
+  | { status: 'failed' | 'unknown'; error: string };
+
 export type UpdateCheck = { update_available: boolean; latest_version?: string; current_version?: string };
 
 // ── Versions ──────────────────────────────────────────────────────────────────

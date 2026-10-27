@@ -92,12 +92,9 @@ pub(crate) fn apply_staged_update() -> anyhow::Result<bool> {
     }
 }
 
-/// Spawn the just-installed executable with the exact current arguments.
+/// Run the just-installed executable in place of this process, with the
+/// exact current arguments. Returns only when it could not be started.
 pub(crate) fn restart_after_update() -> anyhow::Result<()> {
-    let executable = std::env::current_exe()?;
-    let mut command = std::process::Command::new(&executable);
-    command.args(std::env::args_os().skip(1));
-    command.spawn()?;
-    tracing::info!(path = %executable.display(), "spawned updated server executable");
-    Ok(())
+    let error = meshy_dcc_updater::relaunch_current_exe(&[]);
+    anyhow::bail!("could not start the updated server executable: {error}")
 }

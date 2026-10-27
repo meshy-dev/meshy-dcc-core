@@ -1490,6 +1490,40 @@ export function adminApiMockPlugin(): Plugin {
           ];
           return send(res, 200, { status: 'partial', dcc_type: dccType, adapter_version: info.version, steps: [{ id: 'register-dcc', status: 'deferred' }] });
         }
+        if (pathname === '/report' && req.method === 'POST') {
+          // The `meshy-dcc report` JSON: a preview, or the intake's receipt once sent.
+          const body = await readJsonBody(req);
+          const summary = typeof body.summary === 'string' ? body.summary : '';
+          if (!summary || summary.length > 4000) return send(res, 400, { error: 'invalid_request', message: 'summary must be 1..4000 characters' });
+          if (body.send === true) {
+            return send(res, 200, {
+              status: 'sent',
+              report_id: '20261027T031500Z-1a2b3c4d',
+              issues_url: 'https://github.com/meshy-dev/meshy-dcc-core/issues?q=label%3Auser-report',
+            });
+          }
+          const report = {
+            schema: 'meshy-dcc.report.v1',
+            source: 'ui',
+            summary,
+            client: { version: '0.2.1', os: 'macos', arch: 'aarch64' },
+            environment: {
+              connectors: [{ dcc_type: 'blender', version: '0.1.0' }],
+              instances: [{ dcc_type: 'blender', host_version: '4.5.0', status: 'ready' }],
+            },
+            findings: [{
+              recorded_at: '2026-10-27T03:10:00Z', dcc_type: 'blender', adapter_version: '0.1.0', host_version: '4.5.0',
+              phase: 'execute', severity: 'error', tool_slug: 'blender.import_model', error_kind: 'path_not_found',
+              intent: 'Import the downloaded model', observed: 'The file could not be opened', expected: 'The model is imported',
+            }],
+          };
+          return send(res, 200, {
+            status: 'preview',
+            bytes: Buffer.byteLength(JSON.stringify(report)),
+            report,
+            send_command: ['meshy-dcc', 'report', '--summary', summary, '--yes'],
+          });
+        }
         if (pathname === '/connectors') return send(res, 200, connectorsPayload());
         if (pathname === '/settings') {
           if (req.method === 'PUT') mockSettings = { update_check: Boolean((await readJsonBody(req)).update_check) };

@@ -534,7 +534,7 @@ fn identifier_key(key: &str) -> bool {
     lower == "pid" || lower.ends_with("_pid") || lower.ends_with("_id")
 }
 
-fn sanitize_public_text(text: &str) -> String {
+pub(crate) fn sanitize_public_text(text: &str) -> String {
     let lower = text.to_ascii_lowercase();
     if contains_absolute_path(text) {
         return "[path-redacted]".to_string();
@@ -549,6 +549,30 @@ fn sanitize_public_text(text: &str) -> String {
         return "[auth-redacted]".to_string();
     }
     text.to_string()
+}
+
+/// Like [`sanitize_public_text`] for prose: only the paths and URLs in it are
+/// replaced, so the rest of the sentence stays readable. Text that mentions a
+/// credential is still replaced whole.
+pub(crate) fn sanitize_public_prose(text: &str) -> String {
+    if sanitize_public_text(text) == "[auth-redacted]" {
+        return "[auth-redacted]".to_string();
+    }
+    let mut out = String::with_capacity(text.len());
+    for piece in text.split_inclusive(char::is_whitespace) {
+        let word = piece.trim_end_matches(char::is_whitespace);
+        let space = &piece[word.len()..];
+        // URL first: `http://` would otherwise read as a drive path.
+        if contains_uri_scheme(word) {
+            out.push_str("[url]");
+        } else if contains_absolute_path(word) {
+            out.push_str("[path]");
+        } else {
+            out.push_str(word);
+        }
+        out.push_str(space);
+    }
+    out
 }
 
 fn contains_uri_scheme(text: &str) -> bool {
@@ -583,6 +607,20 @@ fn contains_absolute_path(text: &str) -> bool {
     }) || ["\\\\", "/Users/", "/home/", "/mnt/", "/studio/"]
         .iter()
         .any(|prefix| text.contains(prefix))
+        || text
+            .split(|character: char| {
+                character.is_whitespace() || "\"'`()[]<>=,;".contains(character)
+            })
+            .any(is_unix_path)
+}
+
+/// A multi-segment path from the filesystem root, such as `/var/folders/ab/x.pid`.
+fn is_unix_path(token: &str) -> bool {
+    token.strip_prefix('/').is_some_and(|rest| {
+        rest.starts_with(|character: char| {
+            character.is_alphanumeric() || "._~-$%".contains(character)
+        }) && rest.contains('/')
+    })
 }
 
 #[cfg(test)]
@@ -595,7 +633,7 @@ mod tests {
 
     use super::{
         FeedbackBundleInput, HostErrorTail, assemble_public_bundle, project_public_doctor,
-        project_public_host_event,
+        project_public_host_event, sanitize_public_prose,
     };
 
     fn finding(mode: FindingRedactionMode) -> FindingV1 {
@@ -692,6 +730,35 @@ mod tests {
         assert!(!encoded.contains("43210"));
         assert!(!encoded.contains("artist"));
         assert!(!encoded.contains("secret-value"));
+    }
+
+    #[test]
+    fn text_with_a_path_from_the_filesystem_root_is_redacted() {
+        let projected = project_public_doctor(&json!({
+            "pidfile": "/var/folders/ab/T/meshy-dcc-registry/gateway.pid",
+            "error": "File \"/opt/homebrew/lib/x.py\", line 3",
+            "route": "gateway",
+            "note": "and/or 3/4 // comment",
+        }));
+
+        assert_eq!(projected["pidfile"], "[path-redacted]");
+        assert_eq!(projected["error"], "[path-redacted]");
+        assert_eq!(projected["route"], "gateway");
+        assert_eq!(projected["note"], "and/or 3/4 // comment");
+    }
+
+    #[test]
+    fn prose_keeps_its_words_and_loses_its_paths_and_urls() {
+        assert_eq!(
+            sanitize_public_prose(
+                "import /Users/alice/chest.glb failed at\nhttp://127.0.0.1:1234/x"
+            ),
+            "import [path] failed at\n[url]"
+        );
+        assert_eq!(
+            sanitize_public_prose("retry with api_key=abc"),
+            "[auth-redacted]"
+        );
     }
 
     #[test]

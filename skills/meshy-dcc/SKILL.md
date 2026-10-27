@@ -197,6 +197,21 @@ When the user wants a tool that no skill has (a routine they repeat, a house rul
 imports), write it as a skill in their skills folder. Read
 [the authoring guide](references/authoring.md) first. Blender only for now.
 
+## Reporting a bug
+
+When Meshy DCC Core or a connector itself misbehaves (a tool fails in a way the arguments
+don't explain, a host never becomes ready, a result reads back wrong), offer to send a
+bug report. Never send one without the user's go-ahead.
+
+1. Write the summary in the user's words plus what you saw: what you asked for, what
+   happened, what you expected. Leave out file contents, prompts and anything private.
+2. Run `meshy-dcc report --summary "<summary>"`. It sends nothing; it prints the exact
+   report, with versions, a diagnostic summary and recent agent error reports.
+3. Show the user what it will send and ask. Only after a yes, run the `send_command` it
+   printed (the same command plus `--yes`).
+4. Tell the user the report ID and that it becomes a public issue at the printed
+   `issues_url`. On `unknown`, don't resend; it may have arrived.
+
 ## Meshy models
 
 1. Get the model with the `meshy` CLI; its skill covers generation, task recovery and

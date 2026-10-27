@@ -12,6 +12,11 @@ import max from '../../assets/product/dcc/3DSMax-color.svg';
 import omniverse from '../../assets/product/dcc/Omniverse-color.svg';
 import roblox from '../../assets/product/dcc/roblox-white.svg';
 import zbrush from '../../assets/product/dcc/ZBrush-color.svg';
+import houdini from '../../assets/product/dcc/Houdini-color.png';
+import painter from '../../assets/product/dcc/SubstancePainter-color.png';
+import freecad from '../../assets/product/dcc/FreeCAD-color.png';
+import openscad from '../../assets/product/dcc/OpenSCAD-color.png';
+import materialMaker from '../../assets/product/dcc/MaterialMaker-color.png';
 import claudeCode from '../../assets/product/agents/claudecode-color.svg';
 import codex from '../../assets/product/agents/codex-color.svg';
 import cursor from '../../assets/product/agents/cursor.svg';
@@ -28,6 +33,9 @@ import hermes from '../../assets/product/agents/hermesagent.svg';
 import cline from '../../assets/product/agents/cline.svg';
 import goose from '../../assets/product/agents/goose.svg';
 import antigravity from '../../assets/product/agents/antigravity-color.svg';
+import pi from '../../assets/product/agents/pi.svg';
+import amp from '../../assets/product/agents/amp-color.svg';
+import kimi from '../../assets/product/agents/kimi.svg';
 
 export const PRODUCT_NAME = 'Meshy DCC Core';
 export const PRODUCT_SHORT_NAME = 'DCC Core';
@@ -75,6 +83,11 @@ export const DCC_LOGOS: Record<string, Logo> = {
   omniverse: { src: omniverse },
   roblox: { src: roblox, mono: true },
   zbrush: { src: zbrush },
+  houdini: { src: houdini },
+  substance3d_painter: { src: painter },
+  freecad: { src: freecad },
+  openscad: { src: openscad },
+  'material-maker': { src: materialMaker },
 };
 
 /// Minimum host versions the shipped connectors support.
@@ -113,6 +126,9 @@ export const AGENT_LOGOS: Record<string, Logo> = {
   goose: { src: goose, mono: true },
   antigravity: { src: antigravity },
   'antigravity-cli': { src: antigravity },
+  pi: { src: pi, mono: true },
+  amp: { src: amp },
+  'kimi-code-cli': { src: kimi, mono: true },
 };
 
 export function dccName(dccType: string): string {

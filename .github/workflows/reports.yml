@@ -1,0 +1,67 @@
+name: reports
+
+# Turns bug reports sent with `meshy-dcc report` (or Report a problem in the
+# window) into issues labelled user-report. Reports land in a private S3 bucket
+# through the intake function (scripts/reports/intake.py); this job reads them
+# through GitHub OIDC with the AWS role meshy-dcc-github-reports, has an LLM
+# transcribe each one (scripts/reports/transcribe.py), and files it with the
+# workflow token, so the issues come from github-actions[bot]. AWS setup:
+# scripts/reports/aws/setup.sh.
+#
+# Off until the repository variable REPORTS_BOT is "on". The model defaults to
+# GitHub Models with the workflow token. To use another OpenAI-compatible API,
+# set REPORTS_LLM_BASE_URL and REPORTS_LLM_MODEL, and put its key in the AWS
+# secret meshy-dcc/reports/llm-api-key (setup.sh --llm-key) and set
+# REPORTS_LLM_KEY_SECRET to "on".
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: reports
+  cancel-in-progress: false
+
+jobs:
+  transcribe:
+    if: vars.REPORTS_BOT == 'on'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      issues: write
+      id-token: write
+      models: read
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+
+      - uses: aws-actions/configure-aws-credentials@cbe3b392738ccf3f987d68400dafcf4b0624a56c # v6.2.4
+        with:
+          aws-region: us-west-2
+          role-to-assume: arn:aws:iam::133081291590:role/meshy-dcc-github-reports
+
+      # Exported as REPORTS_LLM_KEY and masked in the log.
+      - if: vars.REPORTS_LLM_KEY_SECRET == 'on'
+        uses: aws-actions/aws-secretsmanager-get-secrets@a9a7eb4e2f2871d30dc5b892576fde60a2ecc802 # v2.0.10
+        with:
+          secret-ids: |
+            REPORTS_LLM_KEY,meshy-dcc/reports/llm-api-key
+
+      - name: Transcribe pending reports
+        env:
+          REPORTS_BUCKET: meshy-dcc-reports-133081291590
+          GH_TOKEN: ${{ github.token }}
+          LLM_BASE_URL: ${{ vars.REPORTS_LLM_BASE_URL || 'https://models.github.ai/inference' }}
+          LLM_MODEL: ${{ vars.REPORTS_LLM_MODEL || 'openai/gpt-4.1-mini' }}
+          # The workflow token goes only to GitHub Models, never to another API.
+          GITHUB_MODELS_TOKEN: ${{ !vars.REPORTS_LLM_BASE_URL && github.token || '' }}
+        run: |
+          export LLM_API_KEY="${REPORTS_LLM_KEY:-$GITHUB_MODELS_TOKEN}"
+          : "${LLM_API_KEY:?REPORTS_LLM_BASE_URL needs REPORTS_LLM_KEY_SECRET=on and the key in AWS}"
+          python3 scripts/reports/transcribe.py

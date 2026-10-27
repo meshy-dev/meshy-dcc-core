@@ -2954,7 +2954,7 @@ checksum = "6b947ae49db0d222b1dbc6b113ce7248a3fc3a6ca21b696717bfc000ba4484d8"
 
 [[package]]
 name = "meshy-dcc"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "anyhow",
  "axum",
@@ -2997,7 +2997,7 @@ dependencies = [
 
 [[package]]
 name = "meshy-dcc-actions"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "dashmap",
  "meshy-dcc-models",
@@ -3016,7 +3016,7 @@ dependencies = [
 
 [[package]]
 name = "meshy-dcc-artefact"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "chrono",
  "hex",
@@ -3036,7 +3036,7 @@ dependencies = [
 
 [[package]]
 name = "meshy-dcc-attestation"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "sha2 0.11.0",
  "sigstore-verify",
@@ -3046,7 +3046,7 @@ dependencies = [
 
 [[package]]
 name = "meshy-dcc-capture"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "image",
  "libc",
@@ -3064,7 +3064,7 @@ dependencies = [
 
 [[package]]
 name = "meshy-dcc-catalog"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "jsonschema",
  "meshy-dcc-gateway-search",
@@ -3080,7 +3080,7 @@ dependencies = [
 
 [[package]]
 name = "meshy-dcc-core"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "meshy-dcc-actions",
  "meshy-dcc-artefact",
@@ -3114,7 +3114,7 @@ dependencies = [
 
 [[package]]
 name = "meshy-dcc-db"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "meshy-dcc-models",
  "meshy-dcc-paths",
@@ -3129,7 +3129,7 @@ dependencies = [
 
 [[package]]
 name = "meshy-dcc-gateway"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "axum",
  "base64 0.22.1",
@@ -3185,7 +3185,7 @@ dependencies = [
 
 [[package]]
 name = "meshy-dcc-gateway-admin"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "axum",
  "chrono",
@@ -3207,7 +3207,7 @@ dependencies = [
 
 [[package]]
 name = "meshy-dcc-gateway-core"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "chrono",
  "meshy-dcc-gateway-search",
@@ -3222,7 +3222,7 @@ dependencies = [
 
 [[package]]
 name = "meshy-dcc-gateway-ensure"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "anyhow",
  "libc",
@@ -3239,7 +3239,7 @@ dependencies = [
 
 [[package]]
 name = "meshy-dcc-gateway-search"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "nucleo-matcher",
  "serde",
@@ -3250,7 +3250,7 @@ dependencies = [
 
 [[package]]
 name = "meshy-dcc-host"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "parking_lot",
  "pyo3",
@@ -3264,7 +3264,7 @@ dependencies = [
 
 [[package]]
 name = "meshy-dcc-host-rpc"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "async-trait",
  "futures-util",
@@ -3278,7 +3278,7 @@ dependencies = [
 
 [[package]]
 name = "meshy-dcc-http"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "axum",
  "axum-test",
@@ -3334,7 +3334,7 @@ dependencies = [
 
 [[package]]
 name = "meshy-dcc-http-py"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "meshy-dcc-actions",
  "meshy-dcc-artefact",
@@ -3358,7 +3358,7 @@ dependencies = [
 
 [[package]]
 name = "meshy-dcc-http-server"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "async-trait",
  "base64 0.22.1",
@@ -3392,7 +3392,7 @@ dependencies = [
 
 [[package]]
 name = "meshy-dcc-http-types"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "base64 0.22.1",
  "meshy-dcc-gateway-core",
@@ -3407,7 +3407,7 @@ dependencies = [
 
 [[package]]
 name = "meshy-dcc-job"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "chrono",
  "dashmap",
@@ -3426,7 +3426,7 @@ dependencies = [
 
 [[package]]
 name = "meshy-dcc-jsonrpc"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "base64 0.22.1",
  "meshy-dcc-protocols",
@@ -3438,7 +3438,7 @@ dependencies = [
 
 [[package]]
 name = "meshy-dcc-logging"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "meshy-dcc-paths",
  "parking_lot",
@@ -3456,7 +3456,7 @@ dependencies = [
 
 [[package]]
 name = "meshy-dcc-marketplace"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "meshy-dcc-attestation",
  "meshy-dcc-catalog",
@@ -3476,7 +3476,7 @@ dependencies = [
 
 [[package]]
 name = "meshy-dcc-models"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "jsonschema",
  "meshy-dcc-naming",
@@ -3495,7 +3495,7 @@ dependencies = [
 
 [[package]]
 name = "meshy-dcc-naming"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "pyo3",
  "pyo3-stub-gen",
@@ -3506,7 +3506,7 @@ dependencies = [
 
 [[package]]
 name = "meshy-dcc-paths"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "dirs",
  "pyo3",
@@ -3518,7 +3518,7 @@ dependencies = [
 
 [[package]]
 name = "meshy-dcc-process"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "ipckit",
  "meshy-dcc-models",
@@ -3539,7 +3539,7 @@ dependencies = [
 
 [[package]]
 name = "meshy-dcc-protocols"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "meshy-dcc-models",
  "parking_lot",
@@ -3554,7 +3554,7 @@ dependencies = [
 
 [[package]]
 name = "meshy-dcc-pybridge"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "meshy-dcc-pybridge-derive",
  "pyo3",
@@ -3569,7 +3569,7 @@ dependencies = [
 
 [[package]]
 name = "meshy-dcc-pybridge-derive"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -3579,7 +3579,7 @@ dependencies = [
 
 [[package]]
 name = "meshy-dcc-sandbox"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "meshy-dcc-pybridge",
  "parking_lot",
@@ -3596,7 +3596,7 @@ dependencies = [
 
 [[package]]
 name = "meshy-dcc-scheduler"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "axum",
  "bytes",
@@ -3627,7 +3627,7 @@ dependencies = [
 
 [[package]]
 name = "meshy-dcc-semantic"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "anyhow",
  "fastembed",
@@ -3639,7 +3639,7 @@ dependencies = [
 
 [[package]]
 name = "meshy-dcc-server"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "anyhow",
  "axum",
@@ -3679,7 +3679,7 @@ dependencies = [
 
 [[package]]
 name = "meshy-dcc-shm"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "bytemuck",
  "ipckit",
@@ -3699,7 +3699,7 @@ dependencies = [
 
 [[package]]
 name = "meshy-dcc-sidecar"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "anyhow",
  "axum",
@@ -3725,7 +3725,7 @@ dependencies = [
 
 [[package]]
 name = "meshy-dcc-skill-rest"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "async-trait",
  "axum",
@@ -3752,7 +3752,7 @@ dependencies = [
 
 [[package]]
 name = "meshy-dcc-skills"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "criterion",
  "dashmap",
@@ -3785,7 +3785,7 @@ dependencies = [
 
 [[package]]
 name = "meshy-dcc-skills-bench"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "criterion",
  "meshy-dcc-actions",
@@ -3800,7 +3800,7 @@ dependencies = [
 
 [[package]]
 name = "meshy-dcc-telemetry"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "opentelemetry",
  "opentelemetry-otlp",
@@ -3825,7 +3825,7 @@ dependencies = [
 
 [[package]]
 name = "meshy-dcc-test-utils"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "meshy-dcc-skill-rest",
  "serde_json",
@@ -3835,7 +3835,7 @@ dependencies = [
 
 [[package]]
 name = "meshy-dcc-transport"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "criterion",
  "dashmap",
@@ -3864,7 +3864,7 @@ dependencies = [
 
 [[package]]
 name = "meshy-dcc-tunnel-agent"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "anyhow",
  "clap",
@@ -3880,7 +3880,7 @@ dependencies = [
 
 [[package]]
 name = "meshy-dcc-tunnel-protocol"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "jsonwebtoken",
  "rmp-serde",
@@ -3893,7 +3893,7 @@ dependencies = [
 
 [[package]]
 name = "meshy-dcc-tunnel-relay"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "anyhow",
  "axum",
@@ -3916,7 +3916,7 @@ dependencies = [
 
 [[package]]
 name = "meshy-dcc-updater"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "anyhow",
  "dirs",
@@ -3929,12 +3929,13 @@ dependencies = [
  "thiserror",
  "tokio",
  "tracing",
+ "windows-sys 0.61.2",
  "workspace-hack",
 ]
 
 [[package]]
 name = "meshy-dcc-usd"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "meshy-dcc-protocols",
  "pyo3",
@@ -3950,7 +3951,7 @@ dependencies = [
 
 [[package]]
 name = "meshy-dcc-wire"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "meshy-dcc-protocols",
  "meshy-dcc-pybridge",
@@ -3965,7 +3966,7 @@ dependencies = [
 
 [[package]]
 name = "meshy-dcc-workflow"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "base64 0.22.1",
  "chrono",

@@ -3,6 +3,53 @@
 Meshy DCC Core release notes. Crates, the Python wheel and the product share
 one version line.
 
+## 0.2.1 (2026-10-27)
+
+### Upgrading from 0.2.0
+
+The update from 0.2.0 still runs 0.2.0's update code, so the fixes below take
+effect only after it:
+
+1. Run `meshy-dcc update apply --yes`. The next command may exit with no
+   output; run it again.
+2. Run `meshy-dcc update apply --yes` a second time. This one also updates
+   `meshy-dcc-server`.
+3. Run `meshy-dcc gateway restart` to start the updated gateway.
+
+### Added
+
+- `meshy-dcc report --summary "..."` sends a bug report, and **Report a problem**
+  in the window does the same from a form. Both show the exact report first and
+  send nothing without `--yes` or a click on **Send**. A report holds the
+  description, the versions and OS, a diagnostic summary without paths or IDs,
+  and the agent error reports of the last 24 hours. A bot turns each report into
+  an issue labelled `user-report` in meshy-dev/meshy-dcc-core; the raw report is
+  kept privately for 90 days. The Skill tells agents to offer a report when Meshy
+  DCC Core itself misbehaves, and to send it only after the user agrees.
+
+### Changed
+
+- The window shows real logos for Houdini, Substance 3D Painter, FreeCAD,
+  OpenSCAD and Material Maker, and for the Pi, Amp and Kimi Code CLI agents.
+
+### Fixed
+
+- The first command after a staged update now returns its own output and exit
+  status. It used to exit at once with no output and exit status 0, while the
+  updated CLI ran on unattended.
+- A gateway that applies a staged update keeps its process. Before, the first
+  start after a server update failed with "gateway process exited before it
+  became healthy".
+- `meshy-dcc update apply --yes` also updates the `meshy-dcc-server` installed
+  beside the CLI, and the gateway applies a staged update when it starts. Until
+  now the gateway kept running the version that was first installed.
+- `meshy-dcc-server` no longer updates itself when a package manager owns the
+  installation, just as the CLI already did not.
+- A package-managed CLI's update notice names the upgrade command for its
+  package manager, not `update apply`, which it refuses.
+- `MESHY_DCC_DISABLE_UPDATE_CHECK`, and `update_check: false` in settings, now
+  also turn off the marketplace update check that ran on every command.
+
 ## 0.2.0 (2026-10-19)
 
 Meshy DCC Core diverges completely from the project it was forked from. It no
