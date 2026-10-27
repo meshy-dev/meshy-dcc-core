@@ -211,9 +211,11 @@ fn live_gateway_sentinel_pid(
     args: &GatewayCtrlArgs,
     is_alive: impl Fn(u32) -> bool,
 ) -> Option<u32> {
-    let registry = FileRegistry::new(args.registry_dir.clone()).ok()?;
-    let (entries, _) = registry.read_alive().ok()?;
-    let mut pids = entries
+    // Read-only: `gateway status` and `doctor` report on the registry, they do
+    // not prune it.
+    let snapshot = FileRegistry::read_snapshot(&args.registry_dir).ok()?;
+    let mut pids = snapshot
+        .live
         .into_iter()
         .filter(|entry| entry.dcc_type == GATEWAY_SENTINEL_DCC_TYPE)
         .filter(|entry| gateway_sentinel_targets(entry, &args.host, args.port))
@@ -640,6 +642,47 @@ mod tests {
         assert_eq!(
             resolve_gateway_pid_with(&args, true, |candidate| candidate == std::process::id()),
             Some(stale_pid)
+        );
+    }
+
+    /// `gateway status` and `doctor` resolve the gateway pid from the registry;
+    /// that read must not evict the dead rows it passes over.
+    #[test]
+    fn gateway_pid_fallback_does_not_modify_the_registry() {
+        let dir = tempfile::tempdir().unwrap();
+        let args = gateway_ctrl_args(
+            "127.0.0.1".to_string(),
+            19765,
+            Some(dir.path().to_path_buf()),
+            None,
+        );
+        std::fs::write(&args.pidfile, "42").unwrap();
+        let pid = std::process::id();
+        let mut sentinel = ServiceEntry::new(GATEWAY_SENTINEL_DCC_TYPE, "127.0.0.1", 19765);
+        sentinel
+            .metadata
+            .insert("gateway_process_pid".to_string(), pid.to_string());
+        let registry = FileRegistry::new(dir.path()).unwrap();
+        registry.register(sentinel).unwrap();
+        // A ghost row: its owner pid does not exist.
+        let ghost = ServiceEntry::new("maya", "127.0.0.1", 18081).with_pid(u32::MAX);
+        let services = dir.path().join("services.json");
+        let mut rows: Vec<serde_json::Value> =
+            serde_json::from_slice(&std::fs::read(&services).unwrap()).unwrap();
+        rows.push(serde_json::to_value(&ghost).unwrap());
+        std::fs::write(&services, serde_json::to_vec_pretty(&rows).unwrap()).unwrap();
+        let before = std::fs::read(&services).unwrap();
+        let lock_before = std::fs::read(dir.path().join("services.lock")).unwrap();
+
+        assert_eq!(
+            resolve_gateway_pid_with(&args, true, |candidate| candidate == pid),
+            Some(pid)
+        );
+
+        assert_eq!(std::fs::read(&services).unwrap(), before);
+        assert_eq!(
+            std::fs::read(dir.path().join("services.lock")).unwrap(),
+            lock_before
         );
     }
 }

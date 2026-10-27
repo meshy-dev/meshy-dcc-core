@@ -87,6 +87,59 @@ fn entries_to_map(entries: impl IntoIterator<Item = ServiceEntry>) -> EntryMap {
         .collect()
 }
 
+/// Whether a row's service owner or explicitly bound DCC host is gone.
+///
+/// The single liveness rule shared by [`FileRegistry::prune_dead_entries`] (which
+/// evicts) and [`FileRegistry::read_snapshot`] (which only reports), so they can
+/// never disagree about what is dead. `sentinel_dead` probes the row's sentinel
+/// lock; rows without a sentinel fall back to the owner PID.
+fn row_owner_or_host_dead(entry: &ServiceEntry, sentinel_dead: impl FnOnce(&Path) -> bool) -> bool {
+    let owner_dead = if let Some(path) = entry.sentinel_path.as_deref() {
+        sentinel_dead(path)
+    } else {
+        entry.pid.is_some_and(|p| !is_pid_alive(p))
+    };
+    let bound_host_pid = entry.host_pid.or_else(|| legacy_sidecar_host_pid(entry));
+    let host_dead = bound_host_pid.is_some_and(|p| !is_pid_alive(p));
+    owner_dead || host_dead
+}
+
+/// Probe a sentinel without writing anything: a missing file, or one nobody
+/// holds an exclusive lock on, means the owner is gone. The file is opened
+/// read-only and only ever share-locked, so this works on read-only registries.
+fn sentinel_is_dead_read_only(path: &Path) -> bool {
+    let file = match OpenOptions::new().read(true).open(path) {
+        Ok(file) => file,
+        Err(err) if err.kind() == ErrorKind::NotFound => return true,
+        Err(err) => {
+            tracing::warn!(sentinel = %path.display(), error = %err, "failed to open sentinel; assuming alive");
+            return false;
+        }
+    };
+    match FileExt::try_lock_shared(&file) {
+        Ok(()) => {
+            let _ = file.unlock();
+            true
+        }
+        Err(TryLockError::WouldBlock) => false,
+        Err(TryLockError::Error(err)) => {
+            tracing::warn!(sentinel = %path.display(), error = %err, "failed to probe sentinel; assuming alive");
+            false
+        }
+    }
+}
+
+/// The rows of `services.json`, split by whether their owner is still running.
+///
+/// Returned by [`FileRegistry::read_snapshot`].
+#[derive(Debug, Clone, Default)]
+pub struct RegistrySnapshot {
+    /// Rows whose owner and bound host are running (or cannot be proven gone).
+    pub live: Vec<ServiceEntry>,
+    /// Rows [`FileRegistry::read_alive`] would evict.
+    pub dead: Vec<ServiceEntry>,
+}
+
 fn maps_equal(left: &EntryMap, right: &EntryMap) -> bool {
     left.len() == right.len()
         && left
@@ -889,14 +942,7 @@ impl FileRegistry {
                 .list_all_in_memory()
                 .into_iter()
                 .filter(|entry| {
-                    let owner_dead = if let Some(path) = entry.sentinel_path.as_deref() {
-                        self.sentinel_is_dead(&entry.key(), path)
-                    } else {
-                        entry.pid.is_some_and(|p| !is_pid_alive(p))
-                    };
-                    let bound_host_pid = entry.host_pid.or_else(|| legacy_sidecar_host_pid(entry));
-                    let host_dead = bound_host_pid.is_some_and(|p| !is_pid_alive(p));
-                    owner_dead || host_dead
+                    row_owner_or_host_dead(entry, |path| self.sentinel_is_dead(&entry.key(), path))
                 })
                 .map(|entry| entry.key())
                 .collect();
@@ -967,6 +1013,53 @@ impl FileRegistry {
             );
         }
         Ok((entries, evicted))
+    }
+
+    /// Read `services.json` without changing anything on disk.
+    ///
+    /// Unlike [`Self::new`] + [`Self::read_alive`], this creates no directory,
+    /// takes no `services.lock`, rewrites no file, evicts nothing and
+    /// quarantines nothing: a corrupt registry is reported as an error and left
+    /// as it is. Dead rows come back in [`RegistrySnapshot::dead`] instead of
+    /// being removed. For diagnostics (`meshy-dcc doctor`) and status reads.
+    ///
+    /// The caller owns no sentinel handles, so a row owned by this very process
+    /// is classified by its lock like any other. A missing registry is empty.
+    pub fn read_snapshot(registry_dir: &Path) -> TransportResult<RegistrySnapshot> {
+        let path = registry_dir.join(REGISTRY_FILE);
+        let Some(content) = Self::read_with_retry(&path)? else {
+            return Ok(RegistrySnapshot::default());
+        };
+        if content.trim().is_empty() || Self::looks_like_zero_padded_empty_registry(&content) {
+            return Ok(RegistrySnapshot::default());
+        }
+        let entries = match parse_registry_entries(&content) {
+            Ok(entries) => entries,
+            Err(RegistryParseError::Json(e)) => {
+                return Err(TransportError::RegistryFile(format!(
+                    "{} is not valid JSON ({e}); left untouched",
+                    path.display()
+                )));
+            }
+            Err(RegistryParseError::UnsupportedSchema {
+                received,
+                supported,
+            }) => {
+                return Err(TransportError::UnsupportedServiceEntrySchemaVersion {
+                    received,
+                    supported,
+                });
+            }
+        };
+        let mut snapshot = RegistrySnapshot::default();
+        for entry in entries {
+            if row_owner_or_host_dead(&entry, sentinel_is_dead_read_only) {
+                snapshot.dead.push(entry);
+            } else {
+                snapshot.live.push(entry);
+            }
+        }
+        Ok(snapshot)
     }
 
     /// Get the number of registered services.

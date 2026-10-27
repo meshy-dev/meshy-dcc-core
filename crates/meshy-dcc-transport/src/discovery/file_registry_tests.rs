@@ -1862,3 +1862,103 @@ fn test_legacy_python_gateway_sentinel_preserves_live_entries() {
     );
     assert!(corrupted_registry_files(dir.path()).is_empty());
 }
+
+/// Every file under `dir` (relative path -> bytes), to prove a read changed nothing.
+fn registry_dir_bytes(dir: &std::path::Path) -> std::collections::BTreeMap<String, Vec<u8>> {
+    fn walk(
+        root: &std::path::Path,
+        dir: &std::path::Path,
+        out: &mut std::collections::BTreeMap<String, Vec<u8>>,
+    ) {
+        for entry in std::fs::read_dir(dir).unwrap().filter_map(Result::ok) {
+            let path = entry.path();
+            if path.is_dir() {
+                walk(root, &path, out);
+            } else {
+                let rel = path
+                    .strip_prefix(root)
+                    .unwrap()
+                    .to_string_lossy()
+                    .into_owned();
+                out.insert(rel, std::fs::read(&path).unwrap());
+            }
+        }
+    }
+    let mut out = std::collections::BTreeMap::new();
+    walk(dir, dir, &mut out);
+    out
+}
+
+#[test]
+fn test_read_snapshot_reports_dead_rows_and_changes_nothing() {
+    let dir = tempfile::tempdir().unwrap();
+    let registry = FileRegistry::new(dir.path()).unwrap();
+
+    let live = ServiceEntry::new("maya", "127.0.0.1", 18812);
+    let live_key = live.key();
+    registry.register(live).unwrap();
+
+    // A ghost: its owner is gone, so nobody holds the sentinel lock any more.
+    let ghost = ServiceEntry::new("maya", "127.0.0.1", 18813);
+    let ghost_key = ghost.key();
+    registry.register(ghost).unwrap();
+    registry.sentinel_handles.remove(&ghost_key);
+
+    let before = registry_dir_bytes(dir.path());
+    let snapshot = FileRegistry::read_snapshot(dir.path()).unwrap();
+
+    assert_eq!(
+        snapshot
+            .live
+            .iter()
+            .map(ServiceEntry::key)
+            .collect::<Vec<_>>(),
+        vec![live_key]
+    );
+    assert_eq!(
+        snapshot
+            .dead
+            .iter()
+            .map(ServiceEntry::key)
+            .collect::<Vec<_>>(),
+        vec![ghost_key.clone()]
+    );
+    assert_eq!(
+        registry_dir_bytes(dir.path()),
+        before,
+        "read_snapshot must not write, create or remove anything"
+    );
+
+    // The evicting reader agrees about what is dead, and still evicts it.
+    let (entries, evicted) = registry.read_alive().unwrap();
+    assert_eq!(evicted, 1);
+    assert_eq!(entries.len(), 1);
+    assert!(registry.get(&ghost_key).is_none());
+}
+
+#[test]
+fn test_read_snapshot_of_missing_registry_creates_nothing() {
+    let dir = tempfile::tempdir().unwrap();
+    let missing = dir.path().join("not-created-yet");
+
+    let snapshot = FileRegistry::read_snapshot(&missing).unwrap();
+
+    assert!(snapshot.live.is_empty() && snapshot.dead.is_empty());
+    assert!(
+        !missing.exists(),
+        "read_snapshot must not create the registry dir"
+    );
+}
+
+#[test]
+fn test_read_snapshot_leaves_a_corrupt_registry_in_place() {
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::write(dir.path().join(REGISTRY_FILE), b"{ not json").unwrap();
+    let before = registry_dir_bytes(dir.path());
+
+    let err = FileRegistry::read_snapshot(dir.path()).unwrap_err();
+
+    assert!(err.to_string().contains("left untouched"), "{err}");
+    assert_eq!(registry_dir_bytes(dir.path()), before);
+    assert!(corrupted_registry_files(dir.path()).is_empty());
+}

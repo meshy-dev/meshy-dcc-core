@@ -180,3 +180,129 @@ fn doctor_adapter_imports_report_unlaunchable_interpreters() {
     assert_eq!(doctor["adapter_imports"]["failures"], 0);
     assert_eq!(doctor["status"], "ok");
 }
+
+/// Every file under `dir` (relative path -> bytes), to prove doctor changed nothing.
+fn dir_snapshot(dir: &std::path::Path) -> std::collections::BTreeMap<String, Vec<u8>> {
+    fn walk(
+        root: &std::path::Path,
+        dir: &std::path::Path,
+        out: &mut std::collections::BTreeMap<String, Vec<u8>>,
+    ) {
+        for entry in std::fs::read_dir(dir).unwrap().filter_map(Result::ok) {
+            let path = entry.path();
+            if path.is_dir() {
+                walk(root, &path, out);
+            } else {
+                let rel = path
+                    .strip_prefix(root)
+                    .unwrap()
+                    .to_string_lossy()
+                    .into_owned();
+                out.insert(rel, std::fs::read(&path).unwrap());
+            }
+        }
+    }
+    let mut out = std::collections::BTreeMap::new();
+    walk(dir, dir, &mut out);
+    out
+}
+
+/// `doctor` is the read-only view of the control plane: it reports a dead row
+/// but must not evict it, and must leave every registry file byte-identical.
+#[test]
+fn doctor_reports_dead_rows_without_touching_the_registry() {
+    let port = unused_loopback_port();
+    let port_s = port.to_string();
+    let registry = TempDir::new().unwrap();
+    let registry_s = registry.path().to_string_lossy().to_string();
+    let profiles = NamedTempFile::new().unwrap();
+    let profiles_s = profiles.path().to_string_lossy().to_string();
+    let cli_bin = env!("CARGO_BIN_EXE_meshy-dcc");
+
+    // A live row (this test process owns its sentinel lock) plus a ghost whose
+    // owner PID does not exist, written into services.json by hand.
+    let file_registry = FileRegistry::new(registry.path()).unwrap();
+    file_registry
+        .register(ServiceEntry::new("maya", "127.0.0.1", 18080))
+        .unwrap();
+    let ghost = ServiceEntry::new("blender", "127.0.0.1", 18081).with_pid(u32::MAX);
+    let ghost_id = ghost.instance_id.to_string();
+    let services = registry.path().join("services.json");
+    let mut rows: Vec<serde_json::Value> =
+        serde_json::from_slice(&std::fs::read(&services).unwrap()).unwrap();
+    rows.push(serde_json::to_value(&ghost).unwrap());
+    std::fs::write(&services, serde_json::to_vec_pretty(&rows).unwrap()).unwrap();
+    let before = dir_snapshot(registry.path());
+
+    let envs = [
+        ("MESHY_DCC_REGISTRY_DIR", registry_s.as_str()),
+        ("MESHY_DCC_GATEWAY_PROFILES_FILE", profiles_s.as_str()),
+        ("MESHY_DCC_PYTHON_EXECUTABLE", ""),
+    ];
+    let doctor = run_json_with_env(
+        &[
+            "--auto-gateway-bin",
+            cli_bin,
+            "doctor",
+            "--gateway-port",
+            &port_s,
+        ],
+        &envs,
+    );
+
+    let inventory = &doctor["local"]["inventory"];
+    assert_eq!(inventory["ok"], true);
+    assert_eq!(inventory["read_only"], true);
+    assert_eq!(inventory["total"], 1, "only the live row is an instance");
+    let dead = inventory["dead"].as_array().unwrap();
+    assert_eq!(dead.len(), 1, "the ghost is reported, not evicted");
+    assert_eq!(dead[0]["dcc_type"], "blender");
+    assert_eq!(dead[0]["instance_id"], ghost_id.as_str());
+    assert_eq!(
+        dir_snapshot(registry.path()),
+        before,
+        "doctor must leave every registry file byte-identical"
+    );
+}
+
+/// A corrupt registry is reported as an error and left for its owner to deal
+/// with: doctor must not quarantine (rename) it.
+#[test]
+fn doctor_leaves_a_corrupt_registry_in_place() {
+    let port = unused_loopback_port();
+    let port_s = port.to_string();
+    let registry = TempDir::new().unwrap();
+    let registry_s = registry.path().to_string_lossy().to_string();
+    let profiles = NamedTempFile::new().unwrap();
+    let profiles_s = profiles.path().to_string_lossy().to_string();
+    let cli_bin = env!("CARGO_BIN_EXE_meshy-dcc");
+    std::fs::write(registry.path().join("services.json"), b"{ not json").unwrap();
+    let before = dir_snapshot(registry.path());
+
+    let envs = [
+        ("MESHY_DCC_REGISTRY_DIR", registry_s.as_str()),
+        ("MESHY_DCC_GATEWAY_PROFILES_FILE", profiles_s.as_str()),
+        ("MESHY_DCC_PYTHON_EXECUTABLE", ""),
+    ];
+    let doctor = run_json_with_env(
+        &[
+            "--auto-gateway-bin",
+            cli_bin,
+            "doctor",
+            "--gateway-port",
+            &port_s,
+        ],
+        &envs,
+    );
+
+    assert_eq!(doctor["local"]["inventory"]["ok"], false);
+    assert!(
+        doctor["local"]["inventory"]["error"]
+            .as_str()
+            .unwrap()
+            .contains("left untouched"),
+        "{}",
+        doctor["local"]["inventory"]
+    );
+    assert_eq!(dir_snapshot(registry.path()), before);
+}

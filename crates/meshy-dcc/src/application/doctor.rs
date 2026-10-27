@@ -126,7 +126,7 @@ pub async fn run_doctor(request: DoctorRequest) -> anyhow::Result<Value> {
         start_opts: None,
     })
     .await;
-    let inventory = local_registry::list_local_instances(registry_dir.clone());
+    let inventory = local_registry::inspect_local_instances(registry_dir.clone());
     let adapter_imports = probe_adapters(&AdapterImportRequest {
         inventory: inventory.as_ref().ok().cloned(),
         python_overrides: request.adapter_python.clone(),
@@ -139,7 +139,8 @@ pub async fn run_doctor(request: DoctorRequest) -> anyhow::Result<Value> {
                 "ok": true,
                 "source": value.get("source").cloned().unwrap_or(Value::Null),
                 "total": value.get("total").cloned().unwrap_or(Value::Null),
-                "evicted": value.get("evicted").cloned().unwrap_or(Value::Null),
+                "read_only": true,
+                "dead": value.get("dead").cloned().unwrap_or_else(|| json!([])),
                 "registry_dir": value.get("registry_dir").cloned().unwrap_or_else(|| json!(registry_dir.clone())),
                 "direct_control": direct_control,
             })
@@ -147,7 +148,7 @@ pub async fn run_doctor(request: DoctorRequest) -> anyhow::Result<Value> {
         Err(err) => json!({
             "ok": false,
             "registry_dir": registry_dir.clone(),
-            "error": err.to_string(),
+            "error": format!("{err:#}"),
         }),
     };
 
