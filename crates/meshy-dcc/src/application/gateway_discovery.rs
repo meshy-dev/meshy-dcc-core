@@ -143,7 +143,7 @@ fn probe_binary_version(path: &std::path::Path) -> (Option<String>, Option<Strin
 
 /// Look for `meshy-dcc-server` (or `.exe` on Windows) in the same directory
 /// as the current executable.
-fn find_in_same_dir() -> Option<PathBuf> {
+pub(crate) fn find_in_same_dir() -> Option<PathBuf> {
     let current_exe = std::env::current_exe().ok()?;
     let exe_dir = current_exe.parent()?;
     let candidate = exe_dir.join(GATEWAY_BINARY_NAME_WITH_EXT);

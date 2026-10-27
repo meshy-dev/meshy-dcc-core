@@ -730,6 +730,17 @@ async fn async_main() -> anyhow::Result<()> {
     // Extract values needed by the Update subcommand before the match
     // to avoid a partial move conflict when borrowing `args` later.
     let _update_gateway_port = args.server.gateway_port;
+    // Every launch path picks up a staged update, the standalone gateway
+    // included; `update` itself runs from the binary that is installed now.
+    // A stage that cannot be applied never keeps the installed binary from
+    // starting.
+    if !matches!(args.command, Some(SubCmd::Update { .. })) {
+        match update::apply_staged_update() {
+            Ok(true) => return update::restart_after_update(),
+            Ok(false) => {}
+            Err(error) => eprintln!("warning: failed to apply staged server update: {error:#}"),
+        }
+    }
     match args.command {
         Some(SubCmd::Auto(server_args)) => run_server(server_args).await,
         Some(SubCmd::Serve(serve_args)) => run_server(serve_args.into_server_args()).await,
@@ -774,10 +785,6 @@ async fn run_server(args: ServerArgs) -> anyhow::Result<()> {
     if let (Some(path), Some(pid)) = (args.pid_cleanup_watch.clone(), args.watch_pid) {
         run_pid_cleanup_watcher(path, pid);
         return Ok(());
-    }
-
-    if update::apply_staged_update()? {
-        return update::restart_after_update();
     }
 
     // Wire up rolling-file logging by default unless --no-log-file is passed.

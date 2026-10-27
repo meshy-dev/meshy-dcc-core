@@ -3,6 +3,26 @@
 Meshy DCC Core release notes. Crates, the Python wheel and the product share
 one version line.
 
+## Unreleased
+
+### Fixed
+
+- The first command after a staged update now returns its own output and exit
+  status. It used to exit at once with no output and exit status 0, while the
+  updated CLI ran on unattended.
+- A gateway that applies a staged update keeps its process. Before, the first
+  start after a server update failed with "gateway process exited before it
+  became healthy".
+- `meshy-dcc update apply --yes` also updates the `meshy-dcc-server` installed
+  beside the CLI, and the gateway applies a staged update when it starts. Until
+  now the gateway kept running the version that was first installed.
+- `meshy-dcc-server` no longer updates itself when a package manager owns the
+  installation, just as the CLI already did not.
+- A package-managed CLI's update notice names the upgrade command for its
+  package manager, not `update apply`, which it refuses.
+- `MESHY_DCC_DISABLE_UPDATE_CHECK`, and `update_check: false` in settings, now
+  also turn off the marketplace update check that ran on every command.
+
 ## 0.2.0 (2026-10-19)
 
 Meshy DCC Core diverges completely from the project it was forked from. It no

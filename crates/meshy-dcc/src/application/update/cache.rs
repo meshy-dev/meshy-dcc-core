@@ -223,10 +223,16 @@ fn refresh_lock_path(cache: &Path) -> PathBuf {
 }
 
 fn automatic_checks_enabled() -> bool {
-    if env_truthy(DISABLE_ENV) || !meshy_dcc_updater::settings::update_check_enabled() {
+    if update_checks_turned_off() {
         return false;
     }
     !cfg!(debug_assertions) || env_truthy(FORCE_ENV)
+}
+
+/// The user turned automatic update checks off, with the environment
+/// variable or the settings file.
+pub fn update_checks_turned_off() -> bool {
+    env_truthy(DISABLE_ENV) || !meshy_dcc_updater::settings::update_check_enabled()
 }
 
 fn env_truthy(name: &str) -> bool {

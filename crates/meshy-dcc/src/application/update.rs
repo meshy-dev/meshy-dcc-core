@@ -8,7 +8,7 @@ mod cache;
 
 pub use cache::{
     cached_cli_update, is_background_refresh, just_applied_status, record_cli_update,
-    spawn_cli_update_refresh,
+    spawn_cli_update_refresh, update_checks_turned_off,
 };
 
 /// Installed binary name; the crate keeps its upstream package name.
