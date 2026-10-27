@@ -197,6 +197,46 @@ test.describe('meshy-dcc ui', () => {
     expect(saved).toEqual({ update_check: false });
   });
 
+  test('usage telemetry: a banner until answered, then a switch in Settings', async ({ page }) => {
+    const puts: Record<string, unknown>[] = [];
+    let state: Record<string, unknown> = {
+      update_check: true,
+      telemetry: true,
+      telemetry_off_reason: null,
+      telemetry_notice: true,
+      telemetry_docs: 'https://docs.meshy.ai/en/webapp/plugins/meshy-dcc/telemetry',
+    };
+    await page.route('**/admin/api/settings', (route) => {
+      if (route.request().method() === 'PUT') {
+        const body = route.request().postDataJSON() as Record<string, unknown>;
+        puts.push(body);
+        state = { ...state, ...('telemetry' in body ? { telemetry: body.telemetry } : {}), telemetry_notice: false };
+      }
+      return route.fulfill({ json: state });
+    });
+    await open(page, 'home');
+    const banner = page.getByRole('status').filter({ hasText: 'anonymous, aggregate usage statistics' });
+    await expect(banner).toBeVisible();
+    await expect(banner.getByRole('link', { name: 'What is sent' })).toHaveAttribute('href', /meshy-dcc\/telemetry$/);
+    await shot(page, 'telemetry-banner-en');
+    await banner.getByRole('button', { name: 'OK' }).click();
+    await expect(banner).toHaveCount(0);
+
+    await page.locator('.pd-sidebar').getByRole('button', { name: 'Settings', exact: true }).click();
+    const toggle = page.getByRole('switch', { name: 'Send anonymous usage statistics' });
+    await expect(toggle).toHaveAttribute('aria-checked', 'true');
+    await toggle.click();
+    await expect(toggle).toHaveAttribute('aria-checked', 'false');
+    expect(puts).toEqual([{ telemetry_notice_seen: true }, { telemetry: false }]);
+
+    // An environment override (DO_NOT_TRACK, CI, ...) wins and locks the switch.
+    state = { ...state, telemetry: true, telemetry_off_reason: 'DO_NOT_TRACK' };
+    await page.reload();
+    await expect(page.getByText('Turned off on this computer by DO_NOT_TRACK.')).toBeVisible();
+    await expect(toggle).toHaveAttribute('aria-checked', 'false');
+    await expect(toggle).toBeDisabled();
+  });
+
   test('a problem report is previewed first, and only that text can be sent', async ({ page }) => {
     const calls: { summary: string; send: boolean }[] = [];
     await page.route('**/admin/api/report', (route) => {

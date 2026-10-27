@@ -140,7 +140,16 @@ function gatewayRootUrl(path: string): string {
 
 /// Checked once per page load (it reads the release manifest online, never
 /// downloads); `refetch()` checks again.
-export type Settings = { update_check: boolean };
+export type Settings = {
+  update_check: boolean;
+  /// Anonymous usage telemetry: the saved choice, what overrides it
+  /// (`DO_NOT_TRACK`, `MESHY_DCC_TELEMETRY`, `ci`, `debug_build`), whether the
+  /// window still owes the first-run banner, and the docs page.
+  telemetry?: boolean;
+  telemetry_off_reason?: string | null;
+  telemetry_notice?: boolean;
+  telemetry_docs?: string;
+};
 
 /// Preferences shared with the CLI (`~/.meshy-dcc/settings.json`).
 export function useSettings() {
@@ -151,6 +160,16 @@ export function useSetUpdateCheck() {
   const client = useQueryClient();
   return useMutation({
     mutationFn: (on: boolean) => postJson<Settings>('/settings', { update_check: on }, 10_000, 'PUT'),
+    onSuccess: (settings) => client.setQueryData(keys.settings, settings),
+  });
+}
+
+/// Turn telemetry on or off, or dismiss its banner (either choice also dismisses it).
+export function useSetTelemetry() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (change: { telemetry: boolean } | { telemetry_notice_seen: true }) =>
+      postJson<Settings>('/settings', change, 10_000, 'PUT'),
     onSuccess: (settings) => client.setQueryData(keys.settings, settings),
   });
 }

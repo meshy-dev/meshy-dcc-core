@@ -4,7 +4,7 @@ import type { HealthPayload } from '../../admin-types';
 import { SUPPORTED_LOCALES, type SupportedLocale } from '../../i18n';
 import { LOCALE_LABELS } from '../../locale';
 import type { ThemeMode } from '../../theme';
-import { useSetUpdateCheck, useSettings, useUpdateCheck } from './api';
+import { useSetTelemetry, useSetUpdateCheck, useSettings, useUpdateCheck } from './api';
 import { PRODUCT_NAME, WEBSITE_URL } from './catalog';
 import { ReportPanel } from './ReportPanel';
 import { Command, ExternalLink, Icon, Switch, Tag, type T } from './ui';
@@ -28,6 +28,8 @@ export function SettingsPanel(props: {
   const update = useUpdateCheck(version);
   const settings = useSettings();
   const setUpdateCheck = useSetUpdateCheck();
+  const setTelemetry = useSetTelemetry();
+  const telemetryOffBy = settings.data?.telemetry_off_reason;
   const [remoteHelp, setRemoteHelp] = useState(false);
   const [reporting, setReporting] = useState(false);
   const network = health?.service?.network_listener;
@@ -118,6 +120,24 @@ export function SettingsPanel(props: {
               onChange={(on) => setUpdateCheck.mutate(on)} />
             {setUpdateCheck.isError ? <p className="pd-row-detail pd-error">{t('product.settings.saveFailed')}</p> : null}
           </div>
+          <div className="pd-row" style={{ paddingRight: 16 }}>
+            <div className="pd-row-text">
+              <span>{t('product.settings.telemetry')}</span>
+              <span className="pd-note">
+                {telemetryOffBy
+                  ? t('product.settings.telemetryOffBy', { reason: telemetryOffBy })
+                  : t('product.settings.telemetryHint')}
+                {' '}
+                <ExternalLink href={settings.data?.telemetry_docs ?? t('product.link.docs')} className="pd-a">
+                  {t('product.settings.telemetryDetails')}
+                </ExternalLink>
+              </span>
+            </div>
+            <Switch checked={!telemetryOffBy && (settings.data?.telemetry ?? false)} label={t('product.settings.telemetry')}
+              disabled={!props.local || !settings.data || Boolean(telemetryOffBy) || setTelemetry.isPending}
+              onChange={(on) => setTelemetry.mutate({ telemetry: on })} />
+            {setTelemetry.isError ? <p className="pd-row-detail pd-error">{t('product.settings.saveFailed')}</p> : null}
+          </div>
         </div>
       </section>
 
@@ -148,6 +168,28 @@ export function SettingsPanel(props: {
           </button>
         </div>
       </section>
+    </div>
+  );
+}
+
+/// First-run notice for usage telemetry, shown on this computer until the user
+/// dismisses it or turns telemetry on or off.
+export function TelemetryBanner({ t, local }: { t: T; local: boolean }) {
+  const settings = useSettings();
+  const setTelemetry = useSetTelemetry();
+  if (!local || !settings.data?.telemetry_notice) return null;
+  return (
+    <div className="pd-banner info" role="status" style={{ marginBottom: 16 }}>
+      <span>
+        {t('product.telemetry.notice')}{' '}
+        <ExternalLink href={settings.data.telemetry_docs ?? t('product.link.docs')} className="pd-a">
+          {t('product.settings.telemetryDetails')}
+        </ExternalLink>
+      </span>
+      <button type="button" className="pd-btn sm secondary" disabled={setTelemetry.isPending}
+        onClick={() => setTelemetry.mutate({ telemetry: false })}>{t('product.telemetry.turnOff')}</button>
+      <button type="button" className="pd-btn sm primary" disabled={setTelemetry.isPending}
+        onClick={() => setTelemetry.mutate({ telemetry_notice_seen: true })}>{t('product.telemetry.ok')}</button>
     </div>
   );
 }
