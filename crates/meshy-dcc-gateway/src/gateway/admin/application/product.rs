@@ -12,6 +12,8 @@
 //! - `GET  /api/agents`             — `meshy-dcc agent-skill --agent '*'`
 //! - `POST /api/agents/skill`       — `meshy-dcc agent-skill --agent … --execute`
 //! - `POST /api/report`             — `meshy-dcc report --source ui [--yes]`
+//! - `POST /api/update`             — `meshy-dcc update apply --yes --no-restart`,
+//!   then `meshy-dcc gateway restart` in a detached process
 
 use std::net::SocketAddr;
 use std::path::{Path, PathBuf};
@@ -20,12 +22,14 @@ use std::time::Duration;
 
 use axum::Json;
 use axum::body::Body;
-use axum::extract::ConnectInfo;
+use axum::extract::{ConnectInfo, State};
 use axum::http::{Request, StatusCode};
 use axum::middleware::Next;
 use axum::response::{IntoResponse, Response};
 use serde::Deserialize;
 use serde_json::{Value, json};
+
+use crate::gateway::admin::state::AdminState;
 
 /// Overrides the CLI the gateway runs (tests, unusual layouts).
 pub const CLI_BIN_ENV: &str = "MESHY_DCC_CLI_BIN";
@@ -33,6 +37,8 @@ pub const CLI_BIN_ENV: &str = "MESHY_DCC_CLI_BIN";
 const READ_TIMEOUT: Duration = Duration::from_secs(60);
 // ponytail: one fixed ceiling; downloads of a large adapter on a slow link may need more.
 const INSTALL_TIMEOUT: Duration = Duration::from_secs(600);
+// Above the CLI's own 600 s ceiling for the server download.
+const UPDATE_TIMEOUT: Duration = Duration::from_secs(900);
 
 fn error(status: StatusCode, code: &str, message: impl Into<String>) -> Response {
     (
@@ -288,6 +294,143 @@ pub async fn handle_report(Json(body): Json<ReportBody>) -> Response {
         }
         Err(response) => response,
     }
+}
+
+/// One update at a time: two would race on the same staged files.
+fn update_lock() -> &'static tokio::sync::Mutex<()> {
+    static LOCK: OnceLock<tokio::sync::Mutex<()>> = OnceLock::new();
+    LOCK.get_or_init(|| tokio::sync::Mutex::new(()))
+}
+
+/// `POST /admin/api/update`: the "Update now" button.
+///
+/// Stages the CLI and the server through the CLI, as `update apply --yes`
+/// does, then restarts this gateway from a detached `meshy-dcc gateway
+/// restart`, so this reply reaches the page before the gateway stops. The
+/// page then waits for `/admin/api/health` to report `target_version`.
+/// - `restarting` (202): staged, restart started.
+/// - `staged`: staged, but an app started this gateway, so it is not stopped.
+/// - `up_to_date`: this gateway already runs the latest release.
+/// - `update_failed` (502): the CLI's result says why; nothing was restarted.
+pub async fn handle_update(State(s): State<AdminState>) -> Response {
+    let Ok(_guard) = update_lock().try_lock() else {
+        return error(
+            StatusCode::CONFLICT,
+            "update_in_progress",
+            "an update is already running",
+        );
+    };
+    let base_url = format!("http://127.0.0.1:{}", s.gateway.own_port);
+    let args = [
+        "--base-url",
+        &base_url,
+        "update",
+        "apply",
+        "--yes",
+        "--no-restart",
+    ]
+    .map(String::from);
+    let update = match run_cli(&args, UPDATE_TIMEOUT).await {
+        Ok(update) => update,
+        Err(response) => return response,
+    };
+    let server = update["server_update"]["status"].as_str();
+    if update.get("error").is_some() || matches!(server, Some("failed" | "unknown")) {
+        let message = update["server_update"]["message"]
+            .as_str()
+            .or(update["message"].as_str())
+            .unwrap_or("the update did not finish")
+            .to_string();
+        return (
+            StatusCode::BAD_GATEWAY,
+            Json(json!({"ok": false, "error": "update_failed", "message": message, "update": update})),
+        )
+            .into_response();
+    }
+    let target = update["server_update"]["latest_version"]
+        .as_str()
+        .or(update["latest_version"].as_str())
+        .map(str::to_owned);
+    if target.as_deref() == Some(s.gateway.server_version.as_str()) {
+        return Json(json!({"ok": true, "status": "up_to_date", "update": update})).into_response();
+    }
+    // Stopping a gateway an app started would stop that app's server.
+    if s.gateway.adapter_dcc.as_deref() != Some("gateway") {
+        return Json(json!({
+            "ok": true,
+            "status": "staged",
+            "started_by": s.gateway.adapter_dcc,
+            "target_version": target,
+            "update": update,
+        }))
+        .into_response();
+    }
+    if let Err(err) = spawn_gateway_restart(&s, &base_url) {
+        return (
+            StatusCode::BAD_GATEWAY,
+            Json(json!({
+                "ok": false,
+                "error": "restart_failed",
+                "message": err,
+                "target_version": target,
+                "update": update,
+            })),
+        )
+            .into_response();
+    }
+    (
+        StatusCode::ACCEPTED,
+        Json(json!({"ok": true, "status": "restarting", "target_version": target, "update": update})),
+    )
+        .into_response()
+}
+
+/// Start `meshy-dcc gateway restart` for this gateway, with its own idle
+/// and network settings, in a process that outlives it.
+fn spawn_gateway_restart(s: &AdminState, base_url: &str) -> Result<(), String> {
+    let cli = cli_path().ok_or("meshy-dcc was not found next to the gateway")?;
+    let idle = if s.gateway.gateway_persist {
+        0
+    } else {
+        s.gateway.gateway_idle_timeout_secs
+    };
+    let (remote_host, remote_port) = s
+        .remote_listener
+        .map_or(("127.0.0.1".to_string(), 0), |addr| {
+            (addr.ip().to_string(), addr.port())
+        });
+    let mut command = std::process::Command::new(&cli);
+    command
+        .args(["--output", "json", "--non-interactive", "--base-url", base_url])
+        .args(["gateway", "restart", "--port"])
+        .arg(s.gateway.own_port.to_string())
+        .arg("--gateway-idle-timeout-secs")
+        .arg(idle.to_string())
+        .args(["--remote-host", &remote_host, "--remote-port"])
+        .arg(remote_port.to_string())
+        .stdin(std::process::Stdio::null())
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null());
+    #[cfg(unix)]
+    {
+        use std::os::unix::process::CommandExt as _;
+        // Its own process group, so stopping this gateway does not stop it.
+        command.process_group(0);
+    }
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt as _;
+        const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+        const DETACHED_PROCESS: u32 = 0x0000_0008;
+        const CREATE_NEW_PROCESS_GROUP: u32 = 0x0000_0200;
+        command.creation_flags(CREATE_NO_WINDOW | DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP);
+    }
+    let mut child = command
+        .spawn()
+        .map_err(|err| format!("could not run {}: {err}", cli.display()))?;
+    // Reap it if this gateway outlives it.
+    std::thread::spawn(move || child.wait());
+    Ok(())
 }
 
 /// Each field is optional; only the ones present change.

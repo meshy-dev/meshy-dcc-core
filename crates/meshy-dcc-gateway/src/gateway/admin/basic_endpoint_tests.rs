@@ -827,6 +827,7 @@ mod endpoint_contracts {
         let app = admin_router();
         for (method, uri) in [
             ("POST", "/api/report"),
+            ("POST", "/api/update"),
             ("POST", "/api/skill-library/reload"),
             ("PUT", "/api/settings"),
             ("POST", "/api/skill-paths"),
@@ -918,5 +919,50 @@ mod endpoint_contracts {
         let (status, body) = send(admin_router(), report(true)).await;
         assert_eq!(status, StatusCode::BAD_GATEWAY);
         assert_eq!(body["status"], "failed");
+    }
+
+    /// The test gateway was not started as the standalone service, so a
+    /// staged update is reported and the gateway is never stopped.
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn update_now_stages_through_the_cli_and_reports_failures() {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = tempfile::tempdir().unwrap();
+        let cli = dir.path().join("meshy-dcc");
+        let args_file = dir.path().join("args");
+        // A file, not an env var: EnvVarGuard holds one process-wide lock.
+        let fail_file = dir.path().join("fail");
+        std::fs::write(
+            &cli,
+            format!(
+                "#!/bin/sh\nprintf '%s' \"$*\" > '{}'\nif [ -e '{}' ]; then printf '{{\"status\":\"staged\",\"latest_version\":\"99.0.0\",\"server_update\":{{\"status\":\"failed\",\"message\":\"no gateway\"}}}}'; exit 3; fi\nprintf '{{\"status\":\"staged\",\"latest_version\":\"99.0.0\",\"server_update\":{{\"status\":\"staged\",\"latest_version\":\"99.0.0\"}}}}'\n",
+                args_file.display(),
+                fail_file.display()
+            ),
+        )
+        .unwrap();
+        std::fs::set_permissions(&cli, std::fs::Permissions::from_mode(0o755)).unwrap();
+        let _cli = meshy_dcc_test_utils::EnvVarGuard::set(
+            crate::gateway::admin::application::product::CLI_BIN_ENV,
+            Some(cli.to_str().unwrap()),
+        );
+        let update = || post_json("/api/update", json!({}), Some([127, 0, 0, 1]));
+
+        let (status, body) = send(admin_router(), update()).await;
+        assert_eq!(status, StatusCode::OK, "{body}");
+        assert_eq!(body["status"], "staged");
+        assert_eq!(body["target_version"], "99.0.0");
+        let args = std::fs::read_to_string(&args_file).unwrap();
+        assert!(
+            args.ends_with("update apply --yes --no-restart"),
+            "{args}"
+        );
+        assert!(args.contains("--base-url http://127.0.0.1:"), "{args}");
+
+        std::fs::write(&fail_file, "").unwrap();
+        let (status, body) = send(admin_router(), update()).await;
+        assert_eq!(status, StatusCode::BAD_GATEWAY);
+        assert_eq!(body["error"], "update_failed");
+        assert_eq!(body["message"], "no gateway");
     }
 }

@@ -237,6 +237,59 @@ test.describe('meshy-dcc ui', () => {
     await expect(toggle).toBeDisabled();
   });
 
+  /// Mocks a gateway on `version` that offers 0.2.2. `/admin/api/update` is
+  /// answered by `onUpdate`; health fails `restartingFor` times after it.
+  async function mockUpdate(page: Page, onUpdate: () => { status: number; json: unknown }) {
+    const state = { version: '0.2.1', restartingFor: 0, updates: 0 };
+    await page.route('**/admin/api/settings', (route) => route.fulfill({ json: { update_check: true } }));
+    await page.route('**/v1/update/check**', (route) => route.fulfill({
+      json: { update_available: state.version !== '0.2.2', current_version: state.version, latest_version: '0.2.2' },
+    }));
+    await page.route('**/admin/api/health', async (route) => {
+      if (state.restartingFor > 0) {
+        state.restartingFor -= 1;
+        return route.abort('connectionrefused');
+      }
+      const health = await (await route.fetch()).json();
+      return route.fulfill({ json: { ...health, version: state.version } });
+    });
+    await page.route('**/admin/api/update', (route) => {
+      state.updates += 1;
+      return route.fulfill(onUpdate());
+    });
+    return state;
+  }
+
+  test('update now restarts the core service and reloads on the new version', async ({ page }) => {
+    const state = await mockUpdate(page, () => {
+      state.version = '0.2.2';
+      state.restartingFor = 2;
+      return { status: 202, json: { ok: true, status: 'restarting', target_version: '0.2.2' } };
+    });
+    await open(page, 'home');
+    const versionTile = page.locator('.pd-tile').filter({ hasText: 'Version' });
+    await expect(versionTile).toContainText('0.2.1');
+    await expect(page.locator('.pd-installed-foot')).toContainText('Meshy DCC Core 0.2.2 is available');
+    await page.getByRole('button', { name: 'Update now' }).click();
+    // The page reloads once the gateway answers as 0.2.2.
+    await expect(versionTile).toContainText('0.2.2', { timeout: 15_000 });
+    await expect(page.getByRole('button', { name: 'Update now' })).toHaveCount(0);
+    expect(state.updates).toBe(1);
+  });
+
+  test('a failed update says why and changes nothing', async ({ page }) => {
+    const state = await mockUpdate(page, () => ({
+      status: 502,
+      json: { ok: false, error: 'update_failed', message: 'the download failed its checksum' },
+    }));
+    await open(page, 'home');
+    await page.getByRole('button', { name: 'Update now' }).click();
+    await expect(page.locator('.pd-installed-foot')).toContainText('Update failed: the download failed its checksum');
+    await expect(page.locator('.pd-tile').filter({ hasText: 'Version' })).toContainText('0.2.1');
+    await expect(page.getByRole('button', { name: 'Update now' })).toBeEnabled();
+    expect(state.updates).toBe(1);
+  });
+
   test('a problem report is previewed first, and only that text can be sent', async ({ page }) => {
     const calls: { summary: string; send: boolean }[] = [];
     await page.route('**/admin/api/report', (route) => {
