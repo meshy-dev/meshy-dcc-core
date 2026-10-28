@@ -696,6 +696,9 @@ pub async fn gateway_call_batch_inner(
 
     let mut results: Vec<Value> = Vec::with_capacity(calls.len());
     let mut all_ok = true;
+    // The caller's budget covers the whole batch; each step gets what is left.
+    let batch_deadline = meshy_dcc_jsonrpc::timeout_ms_from_meta(mcp_meta)
+        .map(|ms| std::time::Instant::now() + std::time::Duration::from_millis(ms));
 
     for (idx, call) in calls.iter().enumerate() {
         let item_id = call.get("id").cloned();
@@ -719,7 +722,14 @@ pub async fn gateway_call_batch_inner(
             Ok(v) => v,
             Err(msg) => return Err(msg),
         };
-        let forwarded_meta = call.get("meta").cloned().or_else(|| mcp_meta.cloned());
+        let mut forwarded_meta = call.get("meta").cloned().or_else(|| mcp_meta.cloned());
+        if let Some(deadline) = batch_deadline {
+            let left = deadline.saturating_duration_since(std::time::Instant::now());
+            forwarded_meta = meshy_dcc_jsonrpc::meta_with_timeout_ms(
+                forwarded_meta,
+                u64::try_from(left.as_millis()).unwrap_or(u64::MAX),
+            );
+        }
         let search_id = call
             .get("meta")
             .and_then(search_id_from_meta)

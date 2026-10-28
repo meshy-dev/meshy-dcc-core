@@ -47,6 +47,12 @@ pub enum ServiceErrorKind {
     NotFound,
     /// Catch-all for unexpected server failures.
     Internal,
+    /// The caller's deadline passed before the call started on the host
+    /// main thread. It never ran: nothing changed and it is safe to retry.
+    NotApplied,
+    /// The caller's deadline passed while the call was running. It may
+    /// still change the scene: read back before retrying, never replay.
+    OutcomeUnknown,
 }
 
 impl ServiceErrorKind {
@@ -68,6 +74,8 @@ impl ServiceErrorKind {
             Self::NotFound => 404,
             Self::BackendError => 502,
             Self::Internal => 500,
+            Self::NotApplied => 503,
+            Self::OutcomeUnknown => 504,
         }
     }
 }
@@ -165,6 +173,8 @@ mod tests {
             ServiceErrorKind::NotReady,
             ServiceErrorKind::NotFound,
             ServiceErrorKind::Internal,
+            ServiceErrorKind::NotApplied,
+            ServiceErrorKind::OutcomeUnknown,
         ] {
             // Every variant must produce a valid 4xx/5xx status.
             let code = kind.http_status();

@@ -670,6 +670,9 @@ pub async fn call_service(
     trace_context: Option<&TraceContext>,
     agent_context: Option<&AgentContext>,
 ) -> Result<Value, ServiceError> {
+    // ponytail: the budget restarts if a caller retries call_service after a
+    // route refresh; that retry only follows a routing error, so it is short.
+    let started = Instant::now();
     let record = describe_service(&gs.capability_index, slug)?;
     enforce_record_policy(&gs.policy, GatewayPolicyOperation::Call, &record)?;
     // Discovery-only tools (e.g. dcc_capability_manifest) must not be
@@ -745,6 +748,23 @@ pub async fn call_service(
         )
         .await
     } else {
+        let (timeout, host_ms) = call_budget(
+            gs.backend_timeout,
+            meshy_dcc_jsonrpc::timeout_ms_from_meta(meta.as_ref()),
+            started.elapsed(),
+        );
+        if host_ms == 0 {
+            let mut error = ServiceError::new(
+                "not-applied",
+                format!(
+                    "the call's deadline passed before the gateway could forward {}; \
+                     it was not sent to the host and is safe to retry",
+                    record.callable_id
+                ),
+            );
+            error.retryable = Some(true);
+            return Err(error);
+        }
         forward_tools_call(
             &gs.http_client,
             &gs.resilience,
@@ -752,11 +772,14 @@ pub async fn call_service(
             ForwardToolsCallRequest {
                 tool_name: &record.callable_id,
                 arguments: Some(arguments),
-                meta: meta_with_agent_context(meta, agent_context),
+                meta: meshy_dcc_jsonrpc::meta_with_timeout_ms(
+                    meta_with_agent_context(meta, agent_context),
+                    host_ms,
+                ),
                 request_id: Some(request_id),
                 trace_context,
                 traffic_capture: Some(&gs.traffic_capture),
-                timeout: gs.backend_timeout,
+                timeout,
             },
         )
         .await
@@ -797,16 +820,29 @@ pub async fn call_service(
             // and a 502 "backend error" would read as worth retrying.
             let refusal = backend_body
                 .as_ref()
-                .filter(|_| is_host_refusal_kind(kind))
+                .filter(|_| is_host_refusal_kind(kind) || is_deadline_kind(kind))
                 .and_then(|body| body.get("message").and_then(Value::as_str));
             let mut error = match refusal {
                 Some(message) => {
                     let mut error = ServiceError::new(kind, message);
-                    error.retryable = Some(false);
+                    // Only a call that never started is safe to repeat.
+                    error.retryable = Some(kind == "not-applied");
                     error.recommended_next_action = backend_body
                         .as_ref()
                         .and_then(|body| body.get("hint").and_then(Value::as_str))
                         .map(str::to_string);
+                    error
+                }
+                None if kind == "outcome-unknown" => {
+                    let mut error = ServiceError::new(
+                        kind,
+                        format!(
+                            "{} did not answer before the call's deadline; it may still run in \
+                             the host. Read the scene back before repeating it: {e}",
+                            record.callable_id
+                        ),
+                    );
+                    error.retryable = Some(false);
                     error
                 }
                 None => ServiceError::new(
@@ -1542,6 +1578,30 @@ fn inject_call_instance_meta(result: &mut Value, entry: &ServiceEntry) {
     dcc_obj.insert("display_id".to_string(), json!(entry.display_id()));
 }
 
+/// How long the gateway waits for the host, and the budget it forwards to it
+/// (`0` = too late to send). The caller's budget, when given, and the
+/// gateway's own call timeout both bound it; the host gets
+/// [`meshy_dcc_jsonrpc::DEADLINE_HOP_MARGIN_MS`] less so it answers first.
+fn call_budget(
+    backend_timeout: Duration,
+    caller_ms: Option<u64>,
+    elapsed: Duration,
+) -> (Duration, u64) {
+    let budget = caller_ms
+        .map(Duration::from_millis)
+        .map_or(backend_timeout, |caller| caller.min(backend_timeout));
+    let remaining = budget.saturating_sub(elapsed);
+    let host_ms = u64::try_from(remaining.as_millis())
+        .unwrap_or(u64::MAX)
+        .saturating_sub(meshy_dcc_jsonrpc::DEADLINE_HOP_MARGIN_MS);
+    (remaining, host_ms)
+}
+
+/// A host's answer to a deadline: not applied (safe to retry) or unknown.
+fn is_deadline_kind(kind: &str) -> bool {
+    matches!(kind, "not-applied" | "outcome-unknown")
+}
+
 fn backend_failure_kind(message: &str, backend_body: Option<&Value>) -> &'static str {
     if let Some(kind) = backend_body
         .and_then(|b| b.get("kind"))
@@ -1561,10 +1621,15 @@ fn backend_failure_kind(message: &str, backend_body: Option<&Value>) -> &'static
             "not-found" => return "not-found",
             "unauthorized" => return "unauthorized",
             "policy-denied" => return "policy-denied",
+            "not-applied" => return "not-applied",
+            "outcome-unknown" => return "outcome-unknown",
             _ => {}
         }
     }
-    if is_host_busy_backend_error(message) {
+    if message.contains(super::backend_client::BACKEND_TIMEOUT_MARKER) {
+        // The gateway stopped waiting while the host had the call.
+        "outcome-unknown"
+    } else if is_host_busy_backend_error(message) {
         "host-busy"
     } else if is_host_died_backend_error(message) {
         "host-died"
@@ -2231,6 +2296,42 @@ mod unit_tests {
             .is_empty(),
             "host-died instance must be removed from the gateway capability index"
         );
+    }
+
+    #[test]
+    fn deadline_outcomes_keep_their_kind_and_a_gateway_timeout_is_unknown() {
+        for kind in ["not-applied", "outcome-unknown"] {
+            assert_eq!(
+                backend_failure_kind("HTTP 5xx", Some(&json!({"kind": kind}))),
+                kind
+            );
+        }
+        let timed_out = format!(
+            "http://127.0.0.1:1/v1/call: transport error: {}operation timed out",
+            super::super::backend_client::BACKEND_TIMEOUT_MARKER
+        );
+        assert_eq!(backend_failure_kind(&timed_out, None), "outcome-unknown");
+    }
+
+    #[test]
+    fn call_budget_is_bounded_by_caller_and_gateway_and_keeps_a_margin() {
+        let gateway = Duration::from_secs(120);
+        // No caller budget (old CLI): the gateway's own timeout bounds the host.
+        assert_eq!(
+            call_budget(gateway, None, Duration::ZERO),
+            (gateway, 119_500)
+        );
+        // The caller's budget, less what the gateway already spent.
+        assert_eq!(
+            call_budget(gateway, Some(4_500), Duration::from_millis(100)),
+            (Duration::from_millis(4_400), 3_900)
+        );
+        assert_eq!(
+            call_budget(Duration::from_secs(2), Some(10_000), Duration::ZERO).1,
+            1_500
+        );
+        // Too late to start: nothing is forwarded.
+        assert_eq!(call_budget(gateway, Some(400), Duration::ZERO).1, 0);
     }
 
     #[test]

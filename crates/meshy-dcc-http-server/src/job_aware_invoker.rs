@@ -16,11 +16,13 @@ use serde_json::Value;
 ///
 /// The identifier is authoritative: callers cannot choose it, but handlers can
 /// use it to associate host-side work with the job cancellation/progress path.
+/// The caller's deadline is dropped: it bounds the pending envelope, not the job.
 pub(crate) fn attach_job_id_to_meta(meta: Option<Value>, job_id: &str) -> Option<Value> {
     let mut meta = meta.unwrap_or_else(|| Value::Object(serde_json::Map::new()));
     let Some(root) = meta.as_object_mut() else {
         return Some(serde_json::json!({ "dcc": { "jobId": job_id } }));
     };
+    root.remove(meshy_dcc_jsonrpc::TIMEOUT_MS_META_KEY);
     let dcc = root
         .entry("dcc".to_string())
         .or_insert_with(|| Value::Object(serde_json::Map::new()));

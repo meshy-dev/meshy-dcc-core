@@ -6,8 +6,9 @@ use meshy_dcc_actions::{
     DispatchError, DispatchExecutionContext, DispatchJobContext, DispatchResult,
     with_dispatch_job_context, with_execution_context,
 };
+use meshy_dcc_host::{DeadlineMiss, StartGate};
 use meshy_dcc_models::ThreadAffinity;
-use meshy_dcc_skill_rest::InvocationCancellation;
+use meshy_dcc_skill_rest::{InvocationCancellation, NOT_APPLIED_PREFIX, OUTCOME_UNKNOWN_PREFIX};
 
 use crate::executor::DccExecutorHandle;
 use crate::server_state::ServerState;
@@ -28,6 +29,23 @@ pub struct ThreadRoutingDispatch<'a> {
     pub thread_affinity: ThreadAffinity,
     pub enforce_thread_affinity: bool,
     pub standalone_main_thread_execution: bool,
+    /// The caller's remaining budget (`_meta["meshy-dcc/timeout_ms"]`). A
+    /// main-thread job that has not started when it runs out never runs.
+    pub timeout: Option<std::time::Duration>,
+}
+
+fn deadline_error(miss: DeadlineMiss, timeout: std::time::Duration) -> DispatchError {
+    let ms = timeout.as_millis();
+    DispatchError::HandlerError(match miss {
+        DeadlineMiss::NotStarted => format!(
+            "{NOT_APPLIED_PREFIX} the call's {ms} ms deadline passed before it started on the \
+             host main thread; it was not applied and is safe to retry"
+        ),
+        DeadlineMiss::OutcomeUnknown => format!(
+            "{OUTCOME_UNKNOWN_PREFIX} the call's {ms} ms deadline passed while it was running on \
+             the host main thread; it may still change the scene. Read the scene back before retrying"
+        ),
+    })
 }
 
 fn with_optional_job_context<R>(
@@ -40,6 +58,7 @@ fn with_optional_job_context<R>(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 async fn run_on_main_thread(
     executor: &DccExecutorHandle,
     dispatcher: meshy_dcc_actions::ToolDispatcher,
@@ -48,12 +67,16 @@ async fn run_on_main_thread(
     meta: Option<Value>,
     exec_ctx: DispatchExecutionContext,
     cancellation: Option<InvocationCancellation>,
+    timeout: Option<std::time::Duration>,
 ) -> Result<DispatchResult, DispatchError> {
     let job_context = cancellation
         .as_ref()
         .map(InvocationCancellation::dispatch_job_context);
     let tool_name = resolved_name.clone();
-    let task = Box::new(move || {
+    // Claiming the job on the main thread and timing it out here settle one
+    // gate, so a job either starts or is dropped, never both.
+    let gate = StartGate::new();
+    let task = gate.guard(move || {
         with_optional_job_context(job_context, || {
             with_execution_context(exec_ctx, || {
                 meshy_dcc_actions::with_thread_affinity(ThreadAffinity::Main, || {
@@ -62,12 +85,22 @@ async fn run_on_main_thread(
             })
         })
     });
+    let not_started = || deadline_error(DeadlineMiss::NotStarted, timeout.unwrap_or_default());
     if let Some(cancellation) = cancellation {
         let cancel_token = cancellation.cancel_token().clone();
         let response = executor.submit_deferred_typed(&tool_name, cancel_token.clone(), task);
+        let response = match timeout {
+            Some(timeout) => gate.wait(timeout, response).await.map_err(|miss| {
+                if miss == DeadlineMiss::OutcomeUnknown {
+                    cancel_token.cancel(); // cooperative: stop at the next checkpoint
+                }
+                deadline_error(miss, timeout)
+            })?,
+            None => response.await,
+        };
         let outcome = response
-            .await
-            .map_err(|_| DispatchError::HandlerError("CANCELLED".to_string()))??;
+            .map_err(|_| DispatchError::HandlerError("CANCELLED".to_string()))?
+            .ok_or_else(not_started)??;
         let meshy_dcc_actions::DispatchResult {
             action,
             output: raw_output,
@@ -82,10 +115,17 @@ async fn run_on_main_thread(
             validation_skipped,
         })
     } else {
-        let outcome = executor
-            .execute_typed(task)
-            .await
-            .map_err(|e| DispatchError::HandlerError(e.to_string()))??;
+        let response = executor.execute_typed(task);
+        let response = match timeout {
+            Some(timeout) => gate
+                .wait(timeout, response)
+                .await
+                .map_err(|miss| deadline_error(miss, timeout))?,
+            None => response.await,
+        };
+        let outcome = response
+            .map_err(|e| DispatchError::HandlerError(e.to_string()))?
+            .ok_or_else(not_started)??;
         let meshy_dcc_actions::DispatchResult {
             action,
             output: raw_output,
@@ -196,6 +236,7 @@ async fn dispatch_action_with_thread_routing_inner(
         thread_affinity,
         enforce_thread_affinity,
         standalone_main_thread_execution,
+        timeout,
     } = request;
     let executor_present = executor.is_some();
     let standalone_main =
@@ -229,6 +270,7 @@ async fn dispatch_action_with_thread_routing_inner(
             meta,
             exec_ctx,
             cancellation,
+            timeout,
         )
         .await
     } else {
@@ -253,6 +295,7 @@ pub(super) async fn execute_threaded_dispatch(
     meta: Option<Value>,
     thread_affinity: ThreadAffinity,
     enforce_thread_affinity: bool,
+    timeout: Option<std::time::Duration>,
 ) -> Result<Value, String> {
     dispatch_action_with_thread_routing(ThreadRoutingDispatch {
         dispatcher: state.dispatcher.as_ref().clone(),
@@ -263,6 +306,7 @@ pub(super) async fn execute_threaded_dispatch(
         thread_affinity,
         enforce_thread_affinity,
         standalone_main_thread_execution: state.features.standalone_main_thread_execution,
+        timeout,
     })
     .await
     .map(|r| r.output)

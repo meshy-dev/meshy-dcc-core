@@ -287,6 +287,41 @@ pub(crate) fn dispatch_err_result(tool_name: &str, msg: impl Into<String>) -> Ca
             meta: None,
         };
     }
+    for (prefix, code, status, retryable, hint) in [
+        (
+            meshy_dcc_skill_rest::NOT_APPLIED_PREFIX,
+            "NOT_APPLIED",
+            "not_applied",
+            true,
+            "The call never ran on the host; it is safe to retry.",
+        ),
+        (
+            meshy_dcc_skill_rest::OUTCOME_UNKNOWN_PREFIX,
+            "OUTCOME_UNKNOWN",
+            "unknown",
+            false,
+            "Read the scene back before repeating the call.",
+        ),
+    ] {
+        // The dispatch error arrives as "handler error: <PREFIX> ...".
+        if let Some(at) = err_msg.find(prefix) {
+            let envelope = ToolCallErrorEnvelope::new("instance", code, &err_msg[at..])
+                .with_hint(hint)
+                .with_details(json!({
+                    "reason": code.to_ascii_lowercase(),
+                    "status": status,
+                    "retryable": retryable,
+                }));
+            return CallToolResult {
+                content: vec![ToolContent::Text {
+                    text: envelope.to_json(),
+                }],
+                structured_content: serde_json::from_str::<Value>(&envelope.to_json()).ok(),
+                is_error: true,
+                meta: None,
+            };
+        }
+    }
     if err_msg.contains("no handler registered") {
         let envelope = ToolCallErrorEnvelope::new(
             "instance",

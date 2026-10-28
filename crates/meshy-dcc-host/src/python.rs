@@ -86,6 +86,14 @@ fn dispatch_error_to_py(err: DispatchError) -> PyErr {
             DispatchErrorPy::new_err("dropped: job result channel was dropped before delivery")
         }
         DispatchError::Panic(msg) => DispatchErrorPy::new_err(format!("panic: {msg}")),
+        DispatchError::DeadlineNotStarted => DispatchErrorPy::new_err(format!(
+            "not-applied: {}",
+            DispatchError::DeadlineNotStarted
+        )),
+        DispatchError::DeadlineOutcomeUnknown => DispatchErrorPy::new_err(format!(
+            "outcome-unknown: {}",
+            DispatchError::DeadlineOutcomeUnknown
+        )),
         DispatchError::QueueOverloaded {
             depth,
             capacity,

@@ -31,6 +31,8 @@ pub(crate) mod ops;
 pub(crate) mod probe;
 pub(crate) mod urls;
 
+pub(crate) use http::BACKEND_TIMEOUT_MARKER;
+
 #[cfg(test)]
 pub(crate) use probe::probe_mcp_health;
 #[allow(unused_imports)]

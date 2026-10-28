@@ -169,6 +169,7 @@ impl DccControlPlane {
         meta: Option<Value>,
         timeout: Duration,
     ) -> anyhow::Result<Value> {
+        let meta = meshy_dcc_jsonrpc::meta_with_timeout_ms(meta, host_budget_ms(timeout));
         let direct_local = self.uses_direct_local();
         if !direct_local
             && self.transport == TransportMode::Mcp
@@ -561,9 +562,17 @@ impl DccControlPlane {
             .map_or(true, |entries| !entries.is_empty())
     }
 
-    pub async fn call_batch(&self, body: Value, timeout: Duration) -> anyhow::Result<Value> {
+    pub async fn call_batch(&self, mut body: Value, timeout: Duration) -> anyhow::Result<Value> {
         if self.transport == TransportMode::Mcp {
             anyhow::bail!("--transport mcp does not support REST-only batch calls yet");
+        }
+        if let Some(object) = body.as_object_mut() {
+            let meta = object.remove("meta").filter(|meta| !meta.is_null());
+            if let Some(meta) =
+                meshy_dcc_jsonrpc::meta_with_timeout_ms(meta, host_budget_ms(timeout))
+            {
+                object.insert("meta".to_string(), meta);
+            }
         }
         // Local mode owns and auto-starts the machine gateway, so batches use
         // its REST endpoint even though single calls can take the direct MCP path.
@@ -750,6 +759,14 @@ fn stop_runs_locally(target: &GatewayTarget, request: &StopInstanceRequest) -> b
     }
 }
 
+/// The budget this CLI hands downstream: its own request timeout less a
+/// margin, so the host gives up (and says whether the call ran) before we do.
+fn host_budget_ms(timeout: Duration) -> u64 {
+    u64::try_from(timeout.as_millis())
+        .unwrap_or(u64::MAX)
+        .saturating_sub(meshy_dcc_jsonrpc::DEADLINE_HOP_MARGIN_MS)
+}
+
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;
@@ -887,6 +904,8 @@ mod tests {
             result["request"]["meta"]["agent_context"]["session_id"],
             "task-42"
         );
+        // The host gets the CLI's timeout less a margin, so it answers first.
+        assert_eq!(result["request"]["meta"]["meshy-dcc/timeout_ms"], 1500);
 
         let stats = control
             .stats(StatsRequest {

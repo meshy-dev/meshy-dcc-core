@@ -132,7 +132,10 @@ meshy-dcc call SLUG --json-file args.json
   and compare it with what you intended.
 - **Unknown outcomes:** keep `request_id`. If a call times out, is interrupted or returns
   something malformed, the outcome is unknown. Read the scene back and do not repeat the
-  write.
+  write. The one exception is `details.reason` `not_applied` with `retryable: true`: the
+  call's `--timeout-secs` ran out while it waited for the host, so it never ran and may be
+  sent again. `outcome_unknown` (`retryable: false`) means it was running and may still
+  change the scene.
 - **Long and async tools:** raise `--timeout-secs` for long sync tools. An async tool
   returns a job; `--wait` polls that same job until it finishes, so don't resubmit it.
   With `--wait`, `structuredContent.status` is the job's final state and
