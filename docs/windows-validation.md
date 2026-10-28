@@ -340,7 +340,7 @@ upgrade-smoke 会因此失败、挡住 0.2.2 发布。修复：备份仍被占�
 - 统计：首次提示只出现一次；`telemetry status|preview|off|on|reset` 正常，状态落在隔离的 settings 目录；`DO_NOT_TRACK=1` 时设置页写明原因、开关置灰、
   横幅不出现；横幅"好"之后刷新不再出现；设置开关写入 settings。预览里只有版本、OS、连接器类型、按大版本的实例数、计数和匿名安装 ID，没有路径、名称、实例 ID。
 - ❌ 13 个宿主共 222 次调用，`tool_calls[].skill` 全是 `custom`：连接器的内置技能上报 `rankPathSource: explicit_arg`（不是 `bundled`），
-  而统计只认 `bundled`；另外"已知技能"只取发送那一刻在线实例的能力索引，每天发送时宿主多半已关。
+  而统计只认 `bundled`。已知技能会并入 `state.json` 持久保存，但来源不是 `bundled` 的一个也进不去。
 - 报告：CLI `report` 只预览、`--yes` 发出，窗口 Report a problem 同样流程；两份报告里都没有主机名、用户名、本机路径、端口、PID、实例 ID 或安装 ID。
 
 #### 第二关：连接器（全部用 0.2.2 wheel 重新打包，MCP 服务端为 rmcp 2.1）
@@ -399,7 +399,7 @@ upgrade-smoke 会因此失败、挡住 0.2.2 发布。修复：备份仍被占�
 1. 支持矩阵：Blender、FreeCAD、OpenSCAD、Material Maker、Godot、Unity、Unreal、Houdini、Roblox Studio、Maya 2027、3ds Max 2027、
    Substance 3D Painter 12.1.5 在 Windows 上第二轮六步走通；3ds Max 与 Houdini 的结论依赖上面的修复。ZBrush 因启动被 Note 挡住，仍不建议进矩阵。
 2. 0.2.2 发布前必须合入 core #37，否则 Windows 的 upgrade-smoke 失败、用户的一步更新也会失败。
-3. 统计的技能名：让适配器把自带技能目录标成 `bundled`，还是统计接受适配器的路径来源；"已知技能"是否持久化（`state.json` 已有 `known_skills` 字段）。
+3. 统计的技能名：让适配器把自带技能目录标成 `bundled`，还是统计也接受适配器自己注册的路径来源（要保证用户自写技能的名字不会外泄）。
 4. 主线程调用的超时是否传给宿主，让排队未开始的调用在调用方超时后被丢弃。
 5. ZBrush 安全停止的退出方式；Maya sidecar 模式要不要保留。
 6. Houdini 多材质绑定与贴图；Unreal schema 是否统一加 `additionalProperties: false`。
