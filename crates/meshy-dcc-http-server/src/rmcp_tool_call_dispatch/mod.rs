@@ -246,6 +246,9 @@ async fn dispatch_registry_tool(
         None,
         action_meta.thread_affinity,
         action_meta.enforce_thread_affinity,
+        call_meta
+            .and_then(|meta| meta.timeout_ms)
+            .map(std::time::Duration::from_millis),
     )
     .await;
 

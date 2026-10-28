@@ -59,7 +59,7 @@ use std::future::Future;
 use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::sync::Arc;
 use std::sync::Once;
-use std::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU8, AtomicU64, AtomicUsize, Ordering};
 use std::time::{Duration, Instant};
 
 use parking_lot::Mutex;
@@ -106,6 +106,15 @@ pub enum DispatchError {
     /// panic message rendered with `format!("{payload:?}")`.
     #[error("job panicked on the main thread: {0}")]
     Panic(String),
+    /// The deadline passed before the job started on the main thread. The
+    /// job never runs: nothing was applied and the call is safe to retry.
+    #[error("deadline passed before the job started on the main thread; it was not applied")]
+    DeadlineNotStarted,
+    /// The deadline passed while the job was running. It cannot be
+    /// interrupted, so whether it changed anything is unknown; its late
+    /// result is discarded, never delivered as a success.
+    #[error("deadline passed while the job was running on the main thread; outcome unknown")]
+    DeadlineOutcomeUnknown,
 }
 
 /// Outcome of a single [`DccDispatcher::tick`] call.
@@ -219,9 +228,137 @@ pub trait DccDispatcherExt: DccDispatcher {
         let raw = self.post_boxed(boxed_job);
         PostHandle::downcasting::<R>(raw)
     }
+
+    /// Post `job` and wait at most `timeout` for it.
+    ///
+    /// A job still queued when `timeout` passes never runs
+    /// ([`DispatchError::DeadlineNotStarted`]). A job already running cannot
+    /// be stopped: the call returns [`DispatchError::DeadlineOutcomeUnknown`]
+    /// and the job's late result is dropped.
+    fn post_with_deadline<F, R>(
+        &self,
+        job: F,
+        timeout: Duration,
+    ) -> impl Future<Output = Result<R, DispatchError>> + Send + 'static
+    where
+        F: FnOnce() -> R + Send + 'static,
+        R: Send + 'static,
+    {
+        let gate = StartGate::new();
+        let handle = self.post(gate.guard(job));
+        async move {
+            match gate.wait(timeout, handle).await {
+                Ok(Ok(Some(value))) => Ok(value),
+                Ok(Err(error)) => Err(error),
+                // `None` only comes from a job whose caller already gave up.
+                Ok(Ok(None)) | Err(DeadlineMiss::NotStarted) => {
+                    Err(DispatchError::DeadlineNotStarted)
+                }
+                Err(DeadlineMiss::OutcomeUnknown) => Err(DispatchError::DeadlineOutcomeUnknown),
+            }
+        }
+    }
 }
 
 impl<T: DccDispatcher + ?Sized> DccDispatcherExt for T {}
+
+// ── Deadlines ───────────────────────────────────────────────────────
+
+const GATE_QUEUED: u8 = 0;
+const GATE_RUNNING: u8 = 1;
+const GATE_DONE: u8 = 2;
+/// The caller gave up before the main thread claimed the job: it never runs.
+const GATE_ABANDONED: u8 = 3;
+/// The caller gave up while the job was running: the outcome is unknown.
+const GATE_ORPHANED: u8 = 4;
+
+/// Why a job with a deadline delivered no result.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DeadlineMiss {
+    /// The deadline passed before the job started. It never runs.
+    NotStarted,
+    /// The deadline passed while the job was running. It may still change
+    /// the scene; read it back before retrying.
+    OutcomeUnknown,
+}
+
+/// One job's lifecycle, shared by the main thread that claims it and the
+/// caller that times it out. Both move it with a single atomic transition, so
+/// exactly one of them wins: a job either starts or is abandoned, never both.
+#[derive(Clone, Default)]
+pub struct StartGate(Arc<AtomicU8>);
+
+impl StartGate {
+    /// A gate for one not-yet-started job.
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Wrap `job` so it runs only if it claims the gate before the caller
+    /// gives up. Returns `None` instead of running, and `None` for a job that
+    /// finished after its caller gave up, so a late result is never reported.
+    pub fn guard<F, R>(&self, job: F) -> impl FnOnce() -> Option<R> + Send + 'static
+    where
+        F: FnOnce() -> R + Send + 'static,
+        R: Send + 'static,
+    {
+        let state = Arc::clone(&self.0);
+        move || {
+            if state
+                .compare_exchange(
+                    GATE_QUEUED,
+                    GATE_RUNNING,
+                    Ordering::AcqRel,
+                    Ordering::Acquire,
+                )
+                .is_err()
+            {
+                tracing::debug!("main-thread job dropped: its caller's deadline passed first");
+                return None;
+            }
+            let value = job();
+            if state
+                .compare_exchange(GATE_RUNNING, GATE_DONE, Ordering::AcqRel, Ordering::Acquire)
+                .is_err()
+            {
+                tracing::warn!(
+                    "main-thread job finished after its caller's deadline; \
+                     its result is dropped and the call stays outcome-unknown"
+                );
+                return None;
+            }
+            Some(value)
+        }
+    }
+
+    /// Await `result` for at most `timeout`, then settle the gate: a job that
+    /// has not started is abandoned, a running one is orphaned. A job that
+    /// finished at the same instant still delivers its result.
+    pub async fn wait<T>(
+        &self,
+        timeout: Duration,
+        result: impl Future<Output = T>,
+    ) -> Result<T, DeadlineMiss> {
+        let mut result = std::pin::pin!(result);
+        if let Ok(value) = tokio::time::timeout(timeout, &mut result).await {
+            return Ok(value);
+        }
+        let settled =
+            self.0
+                .fetch_update(Ordering::AcqRel, Ordering::Acquire, |state| match state {
+                    GATE_QUEUED => Some(GATE_ABANDONED),
+                    GATE_RUNNING => Some(GATE_ORPHANED),
+                    _ => None,
+                });
+        match settled {
+            Ok(GATE_QUEUED) => Err(DeadlineMiss::NotStarted),
+            Ok(_) => Err(DeadlineMiss::OutcomeUnknown),
+            // Done: the result is already on its way.
+            Err(_) => Ok(result.await),
+        }
+    }
+}
 
 /// Handle to a posted job. Awaiting it yields the job's return value
 /// once the main thread ticks, or [`DispatchError`] on failure.
@@ -1349,5 +1486,114 @@ mod tests {
         assert_eq!(post.pending, 0);
         assert!(post.oldest_wait_ms.is_none());
         assert!(post.wait_p50_ms.is_some(), "percentiles populated");
+    }
+
+    /// A job whose deadline passes while it is still queued never runs, and
+    /// its caller hears "not started" (safe to retry).
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn queued_job_past_its_deadline_is_dropped_and_never_runs() {
+        let d = Arc::new(QueueDispatcher::new());
+        let ran = Arc::new(AtomicBool::new(false));
+        let flag = ran.clone();
+        let call = d.post_with_deadline(
+            move || flag.store(true, Ordering::SeqCst),
+            Duration::from_millis(20),
+        );
+        let error = call.await.unwrap_err();
+        assert!(
+            matches!(error, DispatchError::DeadlineNotStarted),
+            "{error:?}"
+        );
+        // The pump reaches it later: it is skipped, not run.
+        d.tick(16);
+        assert!(!ran.load(Ordering::SeqCst));
+    }
+
+    /// A job running when its deadline passes reports an unknown outcome, and
+    /// its late completion is never delivered as a success.
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn running_job_past_its_deadline_is_unknown_and_never_late_success() {
+        let d = Arc::new(QueueDispatcher::new());
+        let (started_tx, started_rx) = std::sync::mpsc::channel();
+        let finished = Arc::new(AtomicBool::new(false));
+        let done = finished.clone();
+        let call = d.post_with_deadline(
+            move || {
+                started_tx.send(()).unwrap();
+                std::thread::sleep(Duration::from_millis(150));
+                done.store(true, Ordering::SeqCst);
+                "late"
+            },
+            Duration::from_millis(50),
+        );
+        let pump = d.clone();
+        let main = std::thread::spawn(move || pump.tick(16));
+        started_rx.recv().unwrap();
+        let error = call.await.unwrap_err();
+        assert!(
+            matches!(error, DispatchError::DeadlineOutcomeUnknown),
+            "{error:?}"
+        );
+        main.join().unwrap();
+        assert!(
+            finished.load(Ordering::SeqCst),
+            "a running job is never interrupted"
+        );
+    }
+
+    /// A job that finishes in time delivers its result.
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn job_within_its_deadline_delivers_its_result() {
+        let d = Arc::new(QueueDispatcher::new());
+        let call = d.post_with_deadline(|| 7_u8, Duration::from_secs(5));
+        let pump = d.clone();
+        std::thread::spawn(move || {
+            std::thread::sleep(Duration::from_millis(10));
+            pump.tick(16);
+        });
+        assert_eq!(call.await.unwrap(), 7);
+    }
+
+    /// The pump claiming a job and the caller timing it out race on one
+    /// atomic: every job either ran and delivered, ran and is unknown, or
+    /// never ran. Never "not started" for a job that ran.
+    #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+    async fn pump_and_deadline_race_safely() {
+        let d = Arc::new(QueueDispatcher::new());
+        let stop = Arc::new(AtomicBool::new(false));
+        let pump = d.clone();
+        let pumping = stop.clone();
+        let main = std::thread::spawn(move || {
+            while !pumping.load(Ordering::SeqCst) {
+                pump.tick(4);
+                std::thread::yield_now();
+            }
+        });
+        let mut calls = Vec::new();
+        for i in 0..400_u64 {
+            let ran = Arc::new(AtomicBool::new(false));
+            let flag = ran.clone();
+            let call = d.post_with_deadline(
+                move || flag.store(true, Ordering::SeqCst),
+                Duration::from_micros(i % 50),
+            );
+            calls.push(tokio::spawn(async move { (call.await, ran) }));
+        }
+        for call in calls {
+            let (outcome, ran) = call.await.unwrap();
+            match outcome {
+                Ok(()) | Err(DispatchError::DeadlineOutcomeUnknown) => {
+                    assert!(ran.load(Ordering::SeqCst))
+                }
+                Err(DispatchError::DeadlineNotStarted) => {
+                    // Let the pump reach the abandoned job, then prove it was skipped.
+                    tokio::time::sleep(Duration::from_millis(20)).await;
+                    assert!(!ran.load(Ordering::SeqCst));
+                }
+                Err(other) => panic!("unexpected {other:?}"),
+            }
+        }
+        stop.store(true, Ordering::SeqCst);
+        main.join().unwrap();
     }
 }

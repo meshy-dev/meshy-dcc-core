@@ -60,7 +60,10 @@ impl ThreadRoutedInvoker {
         let affinity = action_meta.thread_affinity;
         let enforce = action_meta.enforce_thread_affinity;
 
+        let timeout = meshy_dcc_jsonrpc::timeout_ms_from_meta(meta.as_ref())
+            .map(std::time::Duration::from_millis);
         let request = ThreadRoutingDispatch {
+            timeout,
             dispatcher: dispatcher.as_ref().clone(),
             executor: Some(&executor),
             resolved_name: &action,

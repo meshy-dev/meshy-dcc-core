@@ -1156,6 +1156,11 @@ impl DispatcherInvoker {
     }
 }
 
+/// Handler-error prefix: the caller's deadline passed before the job started.
+pub const NOT_APPLIED_PREFIX: &str = "NOT_APPLIED:";
+/// Handler-error prefix: the caller's deadline passed while the job ran.
+pub const OUTCOME_UNKNOWN_PREFIX: &str = "OUTCOME_UNKNOWN:";
+
 /// Map [`DispatchError`] to REST [`ServiceError`] — shared by [`DispatcherInvoker`]
 /// and thread-routed HTTP invoke so `/v1/call` status codes stay aligned.
 #[must_use]
@@ -1223,6 +1228,16 @@ pub fn dispatch_error_to_service_error(err: DispatchError) -> ServiceError {
             ServiceError::new(ServiceErrorKind::HostBusy, m).with_hint(
                 "retry after a short backoff or route the call to another live DCC instance",
             )
+        }
+        DispatchError::HandlerError(m) if m.starts_with(NOT_APPLIED_PREFIX) => {
+            ServiceError::new(ServiceErrorKind::NotApplied, m)
+                .with_hint("The call never ran on the host; it is safe to retry.")
+                .with_context(serde_json::json!({"status": "not_applied", "applied": false}))
+        }
+        DispatchError::HandlerError(m) if m.starts_with(OUTCOME_UNKNOWN_PREFIX) => {
+            ServiceError::new(ServiceErrorKind::OutcomeUnknown, m)
+                .with_hint("Read the scene back before repeating the call.")
+                .with_context(serde_json::json!({"status": "unknown"}))
         }
         DispatchError::HandlerError(m) if m == "CANCELLED" => {
             ServiceError::new(ServiceErrorKind::BackendError, m)

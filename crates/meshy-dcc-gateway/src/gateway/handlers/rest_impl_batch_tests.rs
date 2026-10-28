@@ -62,6 +62,7 @@ async fn spawn_echo_backend() -> (u16, tokio::sync::oneshot::Sender<()>) {
                             "text": format!("called {slug} successfully")
                         }],
                         "isError": false,
+                        "received_meta": body.get("meta"),
                         "request_id": request_id
                     }))
                 },
@@ -326,7 +327,74 @@ async fn gateway_rest_v1_call_batch_mixed_success_failure_continues_on_error() {
     assert_eq!(results[2]["ok"], true);
     assert!(results[2].get("result").is_some());
 
+    deadline_reaches_each_step_and_a_spent_budget_is_not_sent(&client, gateway_port, &good_slug)
+        .await;
+
     // Cleanup
     let _ = shutdown_tx.send(());
     let _ = server.await;
+}
+
+/// The caller's budget reaches the host as remaining milliseconds, less the
+/// gateway's margin; a batch shares one budget; a spent budget sends nothing.
+async fn deadline_reaches_each_step_and_a_spent_budget_is_not_sent(
+    client: &reqwest::Client,
+    gateway_port: u16,
+    slug: &str,
+) {
+    let key = meshy_dcc_jsonrpc::TIMEOUT_MS_META_KEY;
+    let base = format!("http://127.0.0.1:{gateway_port}");
+    let body: Value = client
+        .post(format!("{base}/v1/call_batch"))
+        .header("Accept", "application/json")
+        .json(&json!({
+            "calls": [
+                {"tool_slug": slug, "arguments": {}},
+                {"tool_slug": slug, "arguments": {}, "meta": {"other": 1}},
+            ],
+            "meta": {key: 10_000},
+        }))
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    let forwarded: Vec<u64> = (0..2)
+        .map(|i| {
+            body["results"][i]["result"]["received_meta"][key]
+                .as_u64()
+                .unwrap_or_else(|| panic!("step {i} carries no deadline: {body:#}"))
+        })
+        .collect();
+    assert!(
+        forwarded[0] <= 9_500 && forwarded[0] > 8_000,
+        "{forwarded:?}"
+    );
+    assert!(forwarded[1] <= forwarded[0], "{forwarded:?}");
+
+    // No caller budget: the gateway's own call timeout still bounds the host.
+    let body: Value = client
+        .post(format!("{base}/v1/call"))
+        .header("Accept", "application/json")
+        .json(&json!({"tool_slug": slug, "arguments": {}}))
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    assert!(body["received_meta"][key].as_u64().is_some(), "{body:#}");
+
+    let response = client
+        .post(format!("{base}/v1/call"))
+        .header("Accept", "application/json")
+        .json(&json!({"tool_slug": slug, "arguments": {}, "meta": {key: 100}}))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(response.status(), 503);
+    let body: Value = response.json().await.unwrap();
+    assert_eq!(body["error"]["kind"], "not-applied", "{body:#}");
+    assert_eq!(body["error"]["retryable"], true, "{body:#}");
 }

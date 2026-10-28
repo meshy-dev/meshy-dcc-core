@@ -352,6 +352,7 @@ mod admission_tests {
                             r#async: explicit_async,
                             ..Default::default()
                         }),
+                        timeout_ms: None,
                     };
                     let config = async_dispatch_config(Some(&meta), &action);
                     assert_eq!(config.is_some(), execution.is_deferred() || explicit_async);

@@ -61,6 +61,38 @@ pub struct CallToolMeta {
     /// polluting the top-level `_meta` namespace which is spec-reserved.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub dcc: Option<CallToolMetaDcc>,
+    /// Milliseconds the caller still waits for this call ([`TIMEOUT_MS_META_KEY`]).
+    /// A main-thread job that has not started when it runs out never runs.
+    #[serde(
+        rename = "meshy-dcc/timeout_ms",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub timeout_ms: Option<u64>,
+}
+
+/// `_meta` (MCP) or `meta` (REST) key carrying the caller's remaining budget in
+/// milliseconds. Each hop forwards what is left minus [`DEADLINE_HOP_MARGIN_MS`],
+/// so the host gives up before its caller and clock skew never matters.
+pub const TIMEOUT_MS_META_KEY: &str = "meshy-dcc/timeout_ms";
+
+/// What each hop keeps back from the budget it forwards.
+pub const DEADLINE_HOP_MARGIN_MS: u64 = 500;
+
+/// The caller's remaining budget from a `meta` / `_meta` object, if any.
+#[must_use]
+pub fn timeout_ms_from_meta(meta: Option<&Value>) -> Option<u64> {
+    meta?.get(TIMEOUT_MS_META_KEY)?.as_u64()
+}
+
+/// Set the remaining budget on a `meta` object, creating it when absent.
+/// A non-object `meta` is left alone.
+#[must_use]
+pub fn meta_with_timeout_ms(meta: Option<Value>, timeout_ms: u64) -> Option<Value> {
+    let mut meta = meta.unwrap_or_else(|| Value::Object(serde_json::Map::new()));
+    if let Some(object) = meta.as_object_mut() {
+        object.insert(TIMEOUT_MS_META_KEY.to_string(), Value::from(timeout_ms));
+    }
+    Some(meta)
 }
 
 /// meshy-dcc-core specific `_meta.dcc` block on a `tools/call` request.
@@ -220,6 +252,24 @@ mod tests {
     /// `meshy_dcc_protocols::ToolAnnotations`. The wire form must remain the
     /// camelCase shape historically emitted by `tools/list`, with `None`
     /// fields fully omitted (not serialised as `null`).
+    #[test]
+    fn call_meta_carries_the_caller_deadline_under_its_namespaced_key() {
+        let meta: CallToolMeta =
+            serde_json::from_value(json!({"meshy-dcc/timeout_ms": 4500, "progressToken": 1}))
+                .unwrap();
+        assert_eq!(meta.timeout_ms, Some(4500));
+        let wire = meta_with_timeout_ms(Some(json!({"other": true})), 4000).unwrap();
+        assert_eq!(timeout_ms_from_meta(Some(&wire)), Some(4000));
+        assert_eq!(wire["other"], true);
+        // Absent key: no deadline, as from an old gateway.
+        assert_eq!(
+            serde_json::from_value::<CallToolMeta>(json!({}))
+                .unwrap()
+                .timeout_ms,
+            None
+        );
+    }
+
     #[test]
     fn mcp_tool_annotations_wire_form_is_camelcase_with_skipped_nones() {
         let ann = McpToolAnnotations {

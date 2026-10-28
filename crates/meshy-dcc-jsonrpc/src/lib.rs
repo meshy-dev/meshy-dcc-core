@@ -91,8 +91,9 @@ pub use skills::{
 pub use sse::{decode_cursor, encode_cursor, format_sse_event};
 pub use standard_headers::{decode_mcp_header_value, encode_mcp_header_value, mcp_name_source};
 pub use tools::{
-    CallToolMeta, CallToolMetaDcc, CallToolParams, CallToolResult, ListToolsResult, McpTool,
-    McpToolAnnotations, ToolContent, coerce_tool_arguments_object,
+    CallToolMeta, CallToolMetaDcc, CallToolParams, CallToolResult, DEADLINE_HOP_MARGIN_MS,
+    ListToolsResult, McpTool, McpToolAnnotations, TIMEOUT_MS_META_KEY, ToolContent,
+    coerce_tool_arguments_object, meta_with_timeout_ms, timeout_ms_from_meta,
 };
 
 // ── Protocol-version negotiation + session/header/method constants ─────────

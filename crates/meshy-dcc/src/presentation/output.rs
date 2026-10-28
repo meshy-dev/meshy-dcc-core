@@ -236,15 +236,17 @@ pub fn error_envelope(error: &anyhow::Error) -> ErrorEnvelope {
                     .or_insert_with(|| Value::String(kind.replace('-', "_")));
             }
             details.insert("http_status".into(), Value::from(status.as_u16()));
+            // A call the host may still be running must not be repeated.
+            let outcome_unknown =
+                details.get("reason").and_then(Value::as_str) == Some("outcome_unknown");
             ErrorEnvelope::new(
                 exit_code_to_error_code(exit_code),
                 peer_message.unwrap_or(message),
                 exit_code,
             )
-            .with_retryable(matches!(
-                exit_code,
-                ExitCode::Unavailable | ExitCode::Timeout
-            ))
+            .with_retryable(
+                !outcome_unknown && matches!(exit_code, ExitCode::Unavailable | ExitCode::Timeout),
+            )
             .with_details(Value::Object(details))
         }
         // A tool call that timed out here can still run in the host, so its
@@ -295,9 +297,16 @@ pub(crate) fn failure_envelope(value: &Value, exit_code: ExitCode) -> ErrorEnvel
     let message = text(&["/message", "/error/message", "/_meta/dcc.error/message"])
         .unwrap_or("command failed")
         .to_string();
-    let reason = text(&["/context/reason", "/reason", "/error/reason"])
-        .unwrap_or("command_failed")
-        .to_string();
+    let reason = text(&[
+        "/context/reason",
+        "/reason",
+        "/error/reason",
+        "/details/reason",
+    ])
+    .unwrap_or("command_failed")
+    .to_string();
+    // The host dropped the call before it started: repeating it is safe.
+    let not_applied = reason == "not_applied";
 
     let mut details = Map::new();
     details.insert("reason".to_string(), Value::String(reason));
@@ -326,6 +335,7 @@ pub(crate) fn failure_envelope(value: &Value, exit_code: ExitCode) -> ErrorEnvel
     }
 
     ErrorEnvelope::new(exit_code_to_error_code(exit_code), message, exit_code)
+        .with_retryable(not_applied)
         .with_details(Value::Object(details))
 }
 

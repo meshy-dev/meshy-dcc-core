@@ -70,6 +70,9 @@ pub(super) async fn rest_post(
     rest_post_with_trace_context(client, url, body, timeout, None, None).await
 }
 
+/// In a backend error, marks that the gateway stopped waiting for the host.
+pub(crate) const BACKEND_TIMEOUT_MARKER: &str = "timed out waiting for the backend: ";
+
 /// Issue a `POST` with optional W3C Trace Context propagation headers.
 pub(super) async fn rest_post_with_trace_context(
     client: &reqwest::Client,
@@ -102,16 +105,24 @@ pub(super) async fn rest_post_with_trace_context(
         }
     }
 
-    let resp = request
-        .send()
-        .await
-        .map_err(|e| format!("{url}: transport error: {e}"))?;
+    let resp = request.send().await.map_err(|e| {
+        let timed_out = if e.is_timeout() {
+            BACKEND_TIMEOUT_MARKER
+        } else {
+            ""
+        };
+        format!("{url}: transport error: {timed_out}{e}")
+    })?;
 
     let status = resp.status();
-    let body = resp
-        .text()
-        .await
-        .map_err(|e| format!("{url}: invalid JSON response: {e}"))?;
+    let body = resp.text().await.map_err(|e| {
+        let timed_out = if e.is_timeout() {
+            BACKEND_TIMEOUT_MARKER
+        } else {
+            ""
+        };
+        format!("{url}: invalid JSON response: {timed_out}{e}")
+    })?;
     if expected_request_id.is_none() && !status.is_success() {
         return Err(format!("{url}: HTTP {status}: {body}"));
     }

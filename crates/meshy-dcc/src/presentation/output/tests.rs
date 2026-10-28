@@ -231,3 +231,42 @@ async fn a_timed_out_tool_call_is_unknown_not_retryable() {
         "a read that timed out may be retried"
     );
 }
+
+fn gateway_error(status: u16, kind: &str) -> anyhow::Error {
+    anyhow::Error::new(crate::infra::http::HttpError::Status {
+        status: reqwest::StatusCode::from_u16(status).unwrap(),
+        body: serde_json::json!({"error": {"kind": kind, "message": kind}}).to_string(),
+    })
+}
+
+#[test]
+fn a_call_dropped_before_it_started_is_retryable_an_unknown_one_is_not() {
+    let not_applied = error_envelope(&gateway_error(503, "not-applied"));
+    assert!(not_applied.error.retryable);
+    assert_eq!(
+        not_applied.error.details.as_ref().unwrap()["reason"],
+        "not_applied"
+    );
+    let unknown = error_envelope(&gateway_error(504, "outcome-unknown"));
+    assert!(!unknown.error.retryable);
+    assert_eq!(
+        unknown.error.details.as_ref().unwrap()["reason"],
+        "outcome_unknown"
+    );
+}
+
+#[test]
+fn a_direct_call_dropped_before_it_started_is_retryable() {
+    for (code, retryable) in [("NOT_APPLIED", true), ("OUTCOME_UNKNOWN", false)] {
+        let value = serde_json::json!({"result": {"isError": true, "structuredContent": {
+            "layer": "instance", "code": code, "message": "deadline passed",
+            "details": {"reason": code.to_ascii_lowercase()},
+        }}});
+        let envelope = failure_envelope(&value, ExitCode::GeneralError);
+        assert_eq!(envelope.error.retryable, retryable, "{code}");
+        assert_eq!(
+            envelope.error.details.as_ref().unwrap()["reason"],
+            code.to_ascii_lowercase()
+        );
+    }
+}

@@ -65,9 +65,20 @@ one version line.
   staged server update itself before it starts the gateway.
 - A main-thread tool call that timed out could still run later and change the
   scene after the caller was told it failed (Blender, Maya, 3ds Max, Houdini,
-  Substance 3D Painter). A call that had not started is dropped; one that was
-  already running reports `status: unknown`, so read the scene back before
-  retrying, and its late finish is never reported as a success.
+  Substance 3D Painter). The caller's deadline now reaches the host: `call` and
+  `call --batch` send their `--timeout-secs` (less a margin) as
+  `meshy-dcc/timeout_ms` in the call's `meta`, and the gateway forwards what is
+  left, bounded by its own call timeout. The Rust main-thread dispatcher (GUI
+  Blender and Maya) drops a call that has not started by then: it reports
+  `details.reason` `not_applied` with `retryable: true`. A call already
+  running reports `outcome_unknown` with `retryable: false`, so read the
+  scene back before retrying, and its late finish is never reported as a
+  success. A gateway that stops waiting for the host also reports
+  `outcome_unknown`. The Python dispatcher (hosts without the Rust one) does
+  not see this deadline: it drops an unstarted call, and reports a running one
+  as `status: unknown`, when its own wait (the tool's timeout hint, 30 s by
+  default) runs out. Connectors built on 0.2.0 or 0.2.1 ignore the deadline
+  and behave as before.
 - A registry reload could briefly show no instances to a concurrent reader,
   which then reported a false "no instance".
 - Reloading skills kept only the bundled skill folders and dropped the ones the

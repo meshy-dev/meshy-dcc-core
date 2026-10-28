@@ -78,6 +78,9 @@ impl MeshyDccHandler {
                 if p.progress_token.is_none() {
                     p.progress_token = f.progress_token;
                 }
+                if p.timeout_ms.is_none() {
+                    p.timeout_ms = f.timeout_ms;
+                }
                 match (&mut p.dcc, f.dcc) {
                     (None, fd) => p.dcc = fd,
                     (Some(pd), Some(fd)) => {
