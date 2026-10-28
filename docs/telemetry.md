@@ -70,9 +70,38 @@ event name starts with `meshy_dcc_`.
 | `window_opened` | Whether the window was opened |
 
 `dcc_type` is one of the host types in the bundled catalog, otherwise `other`.
-`skill` is sent only when the skill came with a connector (bundled) or from the
-marketplace; any other skill, including ones you wrote, is sent as `custom`.
 Versions that do not look like version numbers are sent as `other`.
+
+#### When a skill name is sent
+
+`skill` carries a skill's name only when the skill came with a connector or
+from the marketplace; every other skill is sent as `custom`.
+
+- **Connector skill.** The skill's folder lies inside the package folder an
+  installed connector was extracted to. The install receipt records that
+  folder (`package_dir`); the gateway asks the running app which folder it
+  loaded each skill from, resolves symbolic links, `..`, Windows `\\?\` and
+  short (8.3) names on both sides, ignores case on Windows and macOS (not on
+  Linux), and requires the skill folder to be strictly inside the package
+  folder, compared folder by folder (`pkg-old` is not inside `pkg`).
+- **Marketplace skill.** Installed from the Meshy marketplace.
+- **Everything else is `custom`**, whatever registered it: your own skill
+  folders, project folders, `~/.meshy-dcc/<app>/skills`, a folder added in the
+  window, or an explicit path that is not under a connector package. A folder
+  that cannot be resolved counts as `custom`.
+
+Only the names that qualify are kept (in `state.json`, so a name still counts
+when the app is closed at rollup time). Folder paths are never kept or sent.
+
+Not recognized, so their skills are `custom`:
+
+- Blender. Its connector is a Blender extension that Blender itself unpacks
+  into its own extensions folder, so the install receipt has no package folder
+  to compare with.
+- Connectors installed before the receipt recorded `package_dir`, until they
+  are installed again (`meshy-dcc install`).
+- An app that opens and closes between two hourly checks, since the gateway
+  has to ask it while it runs.
 
 ### Lifecycle events
 
@@ -92,6 +121,9 @@ names, Meshy account data.
 - Tool calls: the call history the gateway already keeps for `meshy-dcc stats`
   (its SQLite store, plus the in-memory buffer).
 - Instances: the gateway's live instance list. Connectors: the install receipts.
+- Skill names: the folder each running app loaded a skill from (its own
+  `get_skill_info`), checked against the package folders in the install
+  receipts.
 - Searches, bug reports, agent installs, window opened: one line each in
   `~/.meshy-dcc/telemetry/counters.log`, appended by the CLI or gateway. The CLI
   never touches the network for telemetry.

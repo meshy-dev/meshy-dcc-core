@@ -11,7 +11,10 @@ one version line.
   aggregate event to Meshy's PostHog: versions, OS, installed connectors, live
   instances per app and major version, tool-call counts per app, skill and
   outcome with latency buckets, and a few counts (searches, bug reports sent,
-  agent kinds, window opened). Skills you wrote are sent as `custom`. It never
+  agent kinds, window opened). A skill is named only when it came with an
+  installed connector (its folder is inside the connector's package folder,
+  which the install receipt records) or from the marketplace; every other
+  skill, including ones you wrote, is sent as `custom`. It never
   sends tool arguments or outputs, paths, scene or project names, IDs or
   prompts, and asks PostHog to store no IP, location or person profile. The
   first CLI command prints a one-time notice and the window shows a banner.
