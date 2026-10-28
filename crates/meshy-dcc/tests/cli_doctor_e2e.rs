@@ -182,6 +182,8 @@ fn doctor_adapter_imports_report_unlaunchable_interpreters() {
 }
 
 /// Every file under `dir` (relative path -> bytes), to prove doctor changed nothing.
+/// A sentinel `.lock` is compared by length only: its owner holds an exclusive
+/// lock, which on Windows refuses every read, even from this process.
 fn dir_snapshot(dir: &std::path::Path) -> std::collections::BTreeMap<String, Vec<u8>> {
     fn walk(
         root: &std::path::Path,
@@ -198,7 +200,12 @@ fn dir_snapshot(dir: &std::path::Path) -> std::collections::BTreeMap<String, Vec
                     .unwrap()
                     .to_string_lossy()
                     .into_owned();
-                out.insert(rel, std::fs::read(&path).unwrap());
+                let bytes = if path.extension().is_some_and(|ext| ext == "lock") {
+                    std::fs::metadata(&path).unwrap().len().to_le_bytes().to_vec()
+                } else {
+                    std::fs::read(&path).unwrap()
+                };
+                out.insert(rel, bytes);
             }
         }
     }
