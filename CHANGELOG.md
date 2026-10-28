@@ -69,6 +69,9 @@ one version line.
   `inventory.dead`.
 - In windows narrower than 760 px the window's sidebar scrolled away with long
   pages.
+- In windows narrower than about 760 px, an agent whose skills folder is
+  shared with several other agents widened the Agents page, which then
+  scrolled sideways.
 - `meshy-dcc gateway stop` returned while the old gateway was still
   registered, so a restart could wait about 30 seconds and report a failure.
 
