@@ -50,6 +50,15 @@ one version line.
 
 ### Fixed
 
+- Windows: updating a program that is running reported a failure after the
+  files had already been swapped, because Windows does not let a running
+  program delete its own old copy. The first command after `update apply` ran
+  the old CLI with a warning, `update apply --yes` reported
+  `gateway_restart: failed` and left `*.meshy-dcc-backup` files, and
+  **Update now** in the window gave up after two minutes. The old copy is now
+  removed on a later start. After the update from 0.2.1, one
+  `meshy-dcc gateway restart` starts the new server: the CLI applies the
+  staged server update itself before it starts the gateway.
 - A main-thread tool call that timed out could still run later and change the
   scene after the caller was told it failed (Blender, Maya, 3ds Max, Houdini,
   Substance 3D Painter). A call that had not started is dropped; one that was
