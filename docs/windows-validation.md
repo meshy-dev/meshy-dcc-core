@@ -291,3 +291,115 @@ adapter 修复（`meshy-dcc-adapters`，未 push）：
 3. Houdini 在 agent 环境（`HOME` 由终端设置）里的安装位置：照 Houdini 规则（现状），还是 Windows 上只认用户持久环境里的 `HOME`，并让 launch 用同一规则。
 4. 发布前给 Windows exe 做代码签名（Smart App Control 开着的机器会直接拦未签名程序；本机关闭，未能实测）。
 5. Unreal：中文等非 ASCII 工程路径编不过模块，reference 是否写明。
+
+### 第二轮（2026-10-28，0.2.2 候选）
+
+环境同第一轮（同一台机器、同一批宿主版本；Roblox Studio 启动时自更新到 0.745）。core 为 main（含第一轮全部修复），adapters 为 main。
+隔离：registry、data、admin DB、更新缓存、marketplace、settings/统计目录（`MESHY_DCC_SETTINGS_FILE`）、gateway 端口都指到测试目录；
+宿主用各自的变量隔离（Blender、Maya、Houdini、Painter），测试工程在带空格和中文的目录。统计开着但指向本机接收端，bug 报告也发到本机接收端。
+
+#### 第一关：core
+
+| 检查 | 结果 |
+|---|---|
+| `build_release.sh`（Git Bash + MSVC） | ✅ 一次通过，scrub 无本机路径 |
+| `cargo test -p meshy-dcc` | ❌→✅ 470 通过、1 失败、9 忽略。失败的是测试本身：`dir_snapshot` 读了测试进程自己独占加锁的 sentinel，Windows 的锁是强制的（os error 33）；改为锁文件只比长度后通过（core #38） |
+| `--version`、`doctor` | ✅ doctor 1 s，只读 |
+| gateway | ✅ 只绑 127.0.0.1、`--remote-port 0`、无窗口；`gateway restart` 3.4 s；stop 后立即 start 1.9 s（不再等 30 s） |
+| `ui` | ✅ 四种语言在 1399 px 和 701 px 下新文案都不溢出；窄窗口侧边栏固定不动。❌→✅ 窄窗口 Agent 页：共享文件夹的长路径卡片撑出横向滚动（core #40） |
+| wheel | ✅ 官方 CPython 3.11.9 venv 加载 `_core.pyd` |
+| `agent-skill`（只看计划） | ✅ 8 个 agent、7 个目标；分隔符混用仍在（第一轮已记） |
+| 带空格、中文、`&`、`%` 的目录 | ✅ |
+
+#### 第二轮重点：更新
+
+| 检查 | 结果 |
+|---|---|
+| 0.2.1 → 0.2.2（`upgrade_smoke.sh`，本地清单） | ❌→✅ `update apply` 正常暂存；之后第一条命令有自己的 JSON 和退出码 0；但 `gateway restart` 后运行中的 gateway 仍是 0.2.1（磁盘上已是 0.2.2）。修复后一次 restart 即为 0.2.2 |
+| 0.2.2 → 0.2.3（一次 `update apply --yes`） | ❌→✅ 原版：exit 3，`gateway_restart: failed`（"still runs 0.2.2"），安装目录留下两个 `.meshy-dcc-backup`。修复版：第一条命令直接以新版重启，gateway 自动重启为 0.2.3，无残留 |
+| 窗口"立即更新"（0.2.2 → 0.2.3） | ❌→✅ 原版：停在"正在更新…"约 3 分钟后提示"未能以 0.2.3 恢复运行，请运行 meshy-dcc gateway restart"。修复版：页面自动刷新为 0.2.3"已是最新" |
+| 运行中的 exe 替换、残留进程 | ✅ 改名 + 移入新文件可行；无残留进程。暂存文件与提交记录写在真实的 `%APPDATA%\update`（不受 `MESHY_DCC_*` 隔离），测试后约 390 MB |
+
+根因（core #37）：程序应用自己的暂存更新时，把正在运行的 exe 改名为 `.meshy-dcc-backup`、放入新文件，然后删除备份——
+在 Windows 上那正是自己的运行映像，删除被拒（os error 5），于是一次已提交的替换被报成失败，进程不再重新拉起新版本（CLI 的第一条命令同理，打印
+`failed to apply staged binary update` 后以旧版运行）。macOS 能删除运行中的文件，所以没暴露；release workflow 在 `windows-latest` 上的
+upgrade-smoke 会因此失败、挡住 0.2.2 发布。修复：备份仍被占用时留到下次 apply 清理；另外 CLI 在拉起 gateway 前替它应用暂存的 server 更新
+（这时没有进程占用该文件），让 0.2.1 的用户一次 `gateway restart` 就够。0.2.1 自己的 CLI 改不了，第一条命令的那条警告仍会出现（无害）。
+
+#### 第二轮重点：core 的新行为
+
+- `gateway restart`、stop 后立即 start：✅（见上）。
+- `doctor` 只读：✅ 起 Blender 后强杀，`doctor` 把它列在 `inventory.dead`，registry 74 个文件前后字节一致。
+- 超时的主线程调用：未能复现 `status: unknown`。Blender 5.1、Maya 2027 GUI 的工具调用都走 Rust `DccDispatcher::post`，不经过本次修的
+  Python 调度器：40 s 的主线程调用不会在 30 s 截断，排在后面的调用照常执行。`call --timeout-secs` 只是 CLI 的请求超时：调用方 5 s 后收到
+  `TIMEOUT`（exit 4，`retryable: true`），被排队的写操作约 15 s 后仍在 Blender 里执行了。已把 `call`/`call --batch` 的超时改为
+  `retryable: false`、`details.reason: outcome_unknown`（core #39）；超时不传给宿主、排队的调用不会被丢弃，待决定。
+
+#### 第二轮重点：统计与报告（都发到本机接收端）
+
+- 统计：首次提示只出现一次；`telemetry status|preview|off|on|reset` 正常，状态落在隔离的 settings 目录；`DO_NOT_TRACK=1` 时设置页写明原因、开关置灰、
+  横幅不出现；横幅"好"之后刷新不再出现；设置开关写入 settings。预览里只有版本、OS、连接器类型、按大版本的实例数、计数和匿名安装 ID，没有路径、名称、实例 ID。
+- ❌ 13 个宿主共 222 次调用，`tool_calls[].skill` 全是 `custom`：连接器的内置技能上报 `rankPathSource: explicit_arg`（不是 `bundled`），
+  而统计只认 `bundled`；另外"已知技能"只取发送那一刻在线实例的能力索引，每天发送时宿主多半已关。
+- 报告：CLI `report` 只预览、`--yes` 发出，窗口 Report a problem 同样流程；两份报告里都没有主机名、用户名、本机路径、端口、PID、实例 ID 或安装 ID。
+
+#### 第二关：连接器（全部用 0.2.2 wheel 重新打包，MCP 服务端为 rmcp 2.1）
+
+| 宿主（版本） | 1 安装 | 2 启动 | 3 调用、导入、读回 | 4 保存、停止、重开 | 5 停止 | 6 卸载、残留 |
+|---|---|---|---|---|---|---|
+| Blender 5.1 | ✅ 19 s | ✅ 9 s / 6 s | ✅ 中文路径 GLB；BaseColor、Metallic/Roughness、Normal 都连上 | ✅ `save_scene` `postcondition.verified: true`；存到只读目录报错且未写文件；stop 被拒（`unsaved_state_unknown`）；discard 1.7 s；重开读回 | ✅ | ✅ `_core.pyd` 由 Blender 改名后下次启动删除；用户配置零差异 |
+| Maya 2027.2 | ❌→✅ 包里缺 Python（见打包问题，已修）；重打后 7 s | ✅ 86 s / 65 s | ✅ FBX 9998 面，底色 sRGB、法线 Raw | ✅ `.ma` 为 Maya ASCII；stop 被拒；discard 7.5 s；重开读回 | ✅ 干净时不带 discard 6.4 s | ✅ 删 `.mod`；Maya USD 插件改写 Documents 下 `USDTemplates`（同第一轮） |
+| 3ds Max 2027 | ✅ | ✅ 72 s | ❌→✅ `create_box` 的 depth 读回为 25（见下）；`3dsmax-mesh-ops` 25 个工具 ✅；FBX + Physical 材质：法线 raw、底色 sRGB、bump 1.0 | ✅ 中文 `.max`；dirty 正确；stop 被拒；discard 7.5 s；重开读回 | ✅（按设计总需 discard） | ✅ 启动脚本与宏删除 |
+| Houdini 21.0.440 | ✅ 5 s | ✅ 62 s / 34 s | ✅ FBX + MaterialX；❌→✅ 导入材质的标量参数（metallic、roughness、opacity）从未设上（见下） | ✅ 中文 `.hip`；stop 被拒；discard 3.3 s；重开读回 | ✅ | ✅ 用户 Houdini 目录零差异 |
+| FreeCAD 1.1.4 | ✅ | ✅ 1 s | ✅ 写操作都 `exit_code: 0`（非零退出保护未误伤）；中文 GLB → Mesh::Feature 9998 面 | ✅ 每次调用即保存；重开读回 | ✅ | ✅ |
+| OpenSCAD 2021.01 | ✅ | ✅ 5 s | ✅ 打印底座、导出 STL、渲染 PNG；`up_axis: y` 时 OpenSCAD 2021 的 CGAL 求并断言失败，工具如实报错 | ✅ | ✅ | ✅ |
+| Material Maker 1.7 | ✅ 需 `--dcc-path` | ✅ 3 s | ✅ 建图、接 Meshy 底色与法线、导出 Godot 2048² | ✅ 重开 `get_graph` 一致 | ✅ | ✅ |
+| Godot 4.7.2 | ✅ | ✅ 11 s / 9 s | ✅ GLB → StandardMaterial3D 贴图 | ✅ 中文 `.tscn`；stop 被拒；discard；重开读回 | ✅ sidecar 随后退出 | ✅ Remove 表 |
+| Unity 2022.3.55f1c1 | ✅ | ✅ 38 s / 17 s | ✅ FBX + Standard 材质 verified | ✅ 中文场景；stop 被拒；discard 2.3 s；重开读回（重启后第一个调用仍报"可能被模态框挡住"，第二次成功，同第一轮） | ✅ | ✅ |
+| Unreal 5.7.4 | ✅ 165 s（编模块；工程路径无中文） | ✅ 51 s / 46 s | ✅ 中文路径 GLB → Nanite StaticMesh + 材质 | ✅ 移动 actor 置脏；stop 被拒；discard；重开为保存值 | ✅ | ✅ |
+| Roblox Studio 0.745 | ✅ | ⚠️ 首次自更新后换了进程，超时（同第一轮）；之后 19 s | ✅ GLB → 9998 三角、四张贴图 | ✅ 按设计 | ✅ | ✅ 插件删除 |
+| ZBrush 2026.2.1 | ⛔ 签名门禁按设计拒绝；测试替换探测后安装 | ❌ 每次启动都被"上次会话异常结束"提示框挡住，`-script` 不运行，超时（见下） | ✅ 关掉提示框后：OBJ 导入、中文 `.zpr` 保存 | ✅ stop 被拒（按设计） | ✅ 0.6 s | ✅ |
+| Substance 3D Painter 12.1.5 | ✅（测试 profile） | ✅ 25 s | ✅ 中文 GLB 建工程、五图 PBR 层、中文 `.spp` | ✅ dirty 时 stop 被拒；discard 6.9 s；重开读回 | ✅ | ✅ 删 loader；Painter 往真实 Documents `pycache` 写测试路径的字节码（隔离测试特有，已记） |
+
+0.2.2 连接器修复的逐项结论：Maya `MESHY_DCC_MAYA_SIDECAR=1` 时 sidecar 带 `--gateway-remote-host 127.0.0.1 --gateway-remote-port 0`、59765 无监听 ✅；
+3ds Max `3dsmax-mesh-ops` 注册 25 个工具 ✅，`create_box` 读回 ❌→✅；Houdini 的 USD/USDZ 如实报 `carrier_unreadable`、丢失 2 个 ✅，
+双材质 GLB 报 `imported 2 / lost 0` 却同时警告"材质没有导入" ❌→✅（根因是标量参数没设上）；FreeCAD ✅；Blender ✅。
+
+修复（PR）：
+
+- core #37：Windows 自更新（见上）。
+- core #38：doctor 测试读自己持锁的 sentinel。
+- core #40：窄窗口 Agent 卡片撑宽页面（CSS `min-width: 0` + Playwright 测试；用 mock 在 600 px 下验证，修复前溢出 68 px）。
+- core #39：`call` 超时改为结果未知、不可重试。
+- adapters #2：3ds Max 的 Box 没有 `depth`，pymxs 静默忽略，长度一直是默认 25；改用 `length` 并从节点读回尺寸。
+- adapters #3：`_set_first_parm` 对标量先试 `parmTuple.set(tuple(value))`，`tuple(0.5)` 抛错后直接跳到下一个参数名，标量从未设上；测试替身对标量不返回 parmTuple，掩盖了问题，已改得和 Houdini 一致。
+- adapters #4：Maya、Houdini、Painter 的打包脚本只要缓存目录存在就复用，空目录会打出不带 Python 的包（安装报"找不到路径"、exit 30）。
+
+其他发现（未修）：
+
+- ZBrush：适配器的安全停止就是 `TerminateProcess`，ZBrush 把会话记为异常结束，下次启动弹出模态 Note，`-script` 不运行，`start-instance` 必然超时；
+  超时后 `stop-instance --operation-id` 还会拒绝（"operation has not registered an instance yet"），要改用 `--instance-id --dcc-type`。ZBrush SDK 没有退出命令。
+- Maya sidecar 模式（`MESHY_DCC_MAYA_SIDECAR=1`，非默认）：找不到 `meshy-dcc-server` 时日志说回退到进程内 server，实际什么都没起，提示还让人
+  `pip install meshy-dcc-server`（该包已不发布）；设了 `MESHY_DCC_SERVER_BIN` 后实例以 `maya@unknown`、sidecar 的 PID 注册，没有 operation/project，`start-instance` 认不出、超时。
+- Houdini `import_to_scene`：多材质载体只把第一个材质绑到容器（其余建了但没绑，仍算"已导入"）；GLB 只重建标量、丢贴图，却报 `as_authored` 且无警告；
+  解码器把缺省的 `metallicFactor` 当 0（glTF 缺省为 1）。USD 里贴图驱动的 UsdPreviewSurface 被说成"没有可读的 UsdPreviewSurface"。
+- Unreal：大多数技能的 schema 没有 `additionalProperties: false`（`unreal-actors` 9 个工具都没有），传错参数名（如 `location` 而非 `location_x`）会返回成功、置脏、不动。
+- Painter：`install --dcc-type substance3d-painter`（包名）可以装，但同名的 `start-instance`/`dcc-types` 说未安装、提示"重装"；`dcc-types` 列表里的 `substance3d_painter` 正常。
+- 统计：适配器的单元测试套件会起真实 gateway，不关统计、不隔离家目录。在开发机上跑超过 10 分钟的测试（例如 3ds Max 适配器单测）时，
+  测试进程里的 gateway 会向线上 PostHog 发一条匿名统计，并写入真实的 `~\.meshy-dcc`、`%LOCALAPPDATA%\meshy-dcc\log`；本轮已发生一次。
+  跑适配器测试时应设 `MESHY_DCC_TELEMETRY=0`，测试套件最好自己关掉。
+- Unity 重启后第一个调用的错误信息仍指向"模态框"并建议 `ui-control`，实为编辑器仍在忙。
+- 打包时从 GitHub 下载 python-build-standalone 间歇性 TLS 校验失败（网络），godot、zbrush、roblox、openscad 的打包脚本每次都重新下载、没有缓存。
+- 已发布的 `install.ps1` 末尾会对真实 agent 目录执行 `agent-skill --execute` 并改用户 PATH；本文第 6 节第 1 步原样照做会写用户的 agent 目录，
+  本轮只跑了它的下载+校验部分。
+- 只在 Windows 构建机上失败的适配器单测与第一轮相同（符号链接权限、执行位）。
+
+待决定：
+
+1. 支持矩阵：Blender、FreeCAD、OpenSCAD、Material Maker、Godot、Unity、Unreal、Houdini、Roblox Studio、Maya 2027、3ds Max 2027、
+   Substance 3D Painter 12.1.5 在 Windows 上第二轮六步走通；3ds Max 与 Houdini 的结论依赖上面的修复。ZBrush 因启动被 Note 挡住，仍不建议进矩阵。
+2. 0.2.2 发布前必须合入 core #37，否则 Windows 的 upgrade-smoke 失败、用户的一步更新也会失败。
+3. 统计的技能名：让适配器把自带技能目录标成 `bundled`，还是统计接受适配器的路径来源；"已知技能"是否持久化（`state.json` 已有 `known_skills` 字段）。
+4. 主线程调用的超时是否传给宿主，让排队未开始的调用在调用方超时后被丢弃。
+5. ZBrush 安全停止的退出方式；Maya sidecar 模式要不要保留。
+6. Houdini 多材质绑定与贴图；Unreal schema 是否统一加 `additionalProperties: false`。
