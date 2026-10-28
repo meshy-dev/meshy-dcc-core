@@ -196,3 +196,38 @@ fn is_list_payload_detection() {
     let not_list = json!({"ok": true});
     assert!(!is_list_payload(&not_list));
 }
+
+/// A request to a peer that accepts the connection and never answers.
+async fn timed_out_request(path: &str) -> anyhow::Error {
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let url = format!("http://{}{path}", listener.local_addr().unwrap());
+    tokio::spawn(async move {
+        let (_socket, _) = listener.accept().await.unwrap();
+        tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+    });
+    let error = reqwest::Client::new()
+        .post(url)
+        .timeout(std::time::Duration::from_millis(200))
+        .send()
+        .await
+        .unwrap_err();
+    crate::infra::http::HttpError::Request(error).into()
+}
+
+#[tokio::test]
+async fn a_timed_out_tool_call_is_unknown_not_retryable() {
+    for path in ["/v1/call", "/v1/call_batch"] {
+        let envelope = error_envelope(&timed_out_request(path).await);
+        assert_eq!(envelope.error.code, "TIMEOUT");
+        assert!(!envelope.error.retryable, "{path}");
+        assert_eq!(
+            envelope.error.details.as_ref().unwrap()["reason"],
+            "outcome_unknown"
+        );
+    }
+    let envelope = error_envelope(&timed_out_request("/v1/instances").await);
+    assert!(
+        envelope.error.retryable,
+        "a read that timed out may be retried"
+    );
+}

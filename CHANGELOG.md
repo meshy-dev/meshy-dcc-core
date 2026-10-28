@@ -39,6 +39,10 @@ one version line.
 
 ### Changed
 
+- A `call` or `call --batch` that reaches the CLI's request timeout now reports
+  `retryable: false` with `details.reason` `outcome_unknown`: the host may
+  still run the call, so read the scene back before repeating it. It used to
+  report `retryable: true`. Other request timeouts stay retryable.
 - `call`, `call-batch`, `search`, `describe`, `list` and `load-skill` no longer
   wait up to 750 ms for the marketplace update check. Other commands still
   show its notice.

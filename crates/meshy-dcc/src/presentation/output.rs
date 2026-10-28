@@ -247,6 +247,21 @@ pub fn error_envelope(error: &anyhow::Error) -> ErrorEnvelope {
             ))
             .with_details(Value::Object(details))
         }
+        // A tool call that timed out here can still run in the host, so its
+        // outcome is unknown and repeating it may apply a write twice.
+        Some(HttpError::Request(request))
+            if request.is_timeout()
+                && request.url().is_some_and(|url| {
+                    url.path().ends_with("/v1/call") || url.path().ends_with("/v1/call_batch")
+                }) =>
+        {
+            ErrorEnvelope::new("TIMEOUT", message, ExitCode::Timeout)
+                .with_retryable(false)
+                .with_details(serde_json::json!({
+                    "reason": "outcome_unknown",
+                    "hint": "The call may still run in the host. Read the scene back before repeating it.",
+                }))
+        }
         Some(HttpError::Request(request)) if request.is_timeout() => {
             ErrorEnvelope::new("TIMEOUT", message, ExitCode::Timeout).with_retryable(true)
         }
