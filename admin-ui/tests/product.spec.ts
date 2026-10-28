@@ -177,6 +177,14 @@ test.describe('meshy-dcc ui', () => {
     await shot(page, 'agents-en');
   });
 
+  test('a long agent path does not widen the page in a narrow window', async ({ page }) => {
+    await open(page, 'agents');
+    await page.setViewportSize({ width: 600, height: 900 });
+    await expect(page.locator('.pd-agent-card').filter({ hasText: 'Codex' })).toBeVisible();
+    const overflow = await page.locator('main').evaluate((main) => main.scrollWidth - main.clientWidth);
+    expect(overflow).toBeLessThanOrEqual(1);
+  });
+
   test('the daily update check is a saved setting', async ({ page }) => {
     let saved: unknown = null;
     let checks = 0;

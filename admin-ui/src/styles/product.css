@@ -1241,6 +1241,8 @@ span.pd-stat-label {
   display: flex;
   flex: 1 1 380px;
   gap: 12px;
+  /* Lets a long path line ellipsize instead of widening the page. */
+  min-width: 0;
   padding: 14px 16px;
 }
 
