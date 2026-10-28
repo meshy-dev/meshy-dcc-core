@@ -8,7 +8,7 @@
 //! Shared primitives (health check, launch lock, spawn, pidfile, process
 //! utilities) live in `meshy-dcc-gateway-ensure`.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
 use anyhow::Context;
@@ -81,6 +81,7 @@ pub async fn ensure_gateway_running(args: &EnsureGatewayArgs) -> anyhow::Result<
             }
 
             let exe = resolve_gateway_bin(args).await?;
+            apply_staged_server_update(&exe);
             let cmd_args = ensure::gateway_command_args(
                 &args.host,
                 args.port,
@@ -185,6 +186,23 @@ fn ensure_result(
 
 async fn resolve_gateway_bin(args: &EnsureGatewayArgs) -> anyhow::Result<PathBuf> {
     gateway_discovery::resolve_gateway_bin(args.gateway_bin.as_ref()).await
+}
+
+/// Apply a staged `meshy-dcc-server` update before starting it, while no
+/// gateway runs that file. The server applies its own stage when it starts,
+/// but on Windows a 0.2.1 server cannot delete its own old image, reports the
+/// update as failed and keeps running the old version. Best effort: a stage
+/// left here is still the server's to apply.
+fn apply_staged_server_update(exe: &Path) {
+    let name = gateway_discovery::GATEWAY_BINARY_NAME;
+    if exe.file_stem().and_then(|stem| stem.to_str()) != Some(name)
+        || crate::application::package_manager::detect().is_some()
+    {
+        return;
+    }
+    if let Err(error) = meshy_dcc_updater::apply_staged_binary_update_for(name, exe) {
+        eprintln!("warning: could not apply the staged meshy-dcc-server update: {error}");
+    }
 }
 
 // ── Re-exports for convenience ──────────────────────────────────────────────

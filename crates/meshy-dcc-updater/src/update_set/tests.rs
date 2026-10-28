@@ -922,3 +922,75 @@ fn bootstrap_replaces_missing_or_stale_sibling_after_hash_check() {
     .unwrap();
     assert_eq!(std::fs::read(host).unwrap(), b"new-host");
 }
+
+/// A binary that updates itself on Windows cannot delete its old image, which
+/// is still running as the backup. The update is applied all the same, and the
+/// next apply removes the backup once that process has ended.
+#[cfg(windows)]
+#[test]
+fn self_update_succeeds_while_the_old_image_still_runs() {
+    let temp = tempfile::tempdir().unwrap();
+    let current = temp.path().join("meshy-dcc-server.exe");
+    std::fs::copy(r"C:\Windows\System32\ping.exe", &current).unwrap();
+    let mut running = std::process::Command::new(&current)
+        .args(["-n", "60", "127.0.0.1"])
+        .stdout(std::process::Stdio::null())
+        .spawn()
+        .unwrap();
+    let downloaded = write_fixture(temp.path(), "server.download", b"new-server");
+    let expected_sha256 = sha256_file(&downloaded).unwrap();
+    let target = UpdateTarget::CurrentExecutable;
+    let binary_name = unique_name("running-image");
+    stage_update_set_for_build_with_timeout(
+        &binary_name,
+        &current,
+        "1.0.0",
+        &[UpdateSetSource {
+            downloaded: &downloaded,
+            target: &target,
+            expected_sha256: &expected_sha256,
+        }],
+        UPDATE_LOCK_TIMEOUT,
+    )
+    .unwrap();
+    let backup = current.with_file_name("meshy-dcc-server.exe.meshy-dcc-backup");
+
+    let applied = apply_staged_update_set_for_build_with_timeout(
+        &binary_name,
+        &current,
+        "1.0.0",
+        UPDATE_LOCK_TIMEOUT,
+    );
+    assert!(
+        applied.unwrap(),
+        "the update applies and asks for a re-exec"
+    );
+    assert_eq!(std::fs::read(&current).unwrap(), b"new-server");
+    assert!(
+        backup.exists(),
+        "the running old image cannot be deleted yet"
+    );
+
+    running.kill().unwrap();
+    running.wait().unwrap();
+    apply_staged_update_set_for_build_with_timeout(
+        &binary_name,
+        &current,
+        "2.0.0",
+        UPDATE_LOCK_TIMEOUT,
+    )
+    .unwrap();
+    assert!(!backup.exists(), "a later apply removes the old image");
+    let root = installation_root(&binary_name, &current);
+    let leftovers: Vec<_> = std::fs::read_dir(&root)
+        .unwrap()
+        .filter_map(Result::ok)
+        .filter(|entry| {
+            entry
+                .file_name()
+                .to_string_lossy()
+                .starts_with(COMMITTED_SET_PREFIX)
+        })
+        .collect();
+    assert!(leftovers.is_empty(), "the detached set is gone");
+}

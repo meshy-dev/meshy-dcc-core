@@ -13,7 +13,7 @@ use anyhow::Context;
 use serde::Serialize;
 
 /// Gateway binary filename, platform-aware.
-const GATEWAY_BINARY_NAME: &str = "meshy-dcc-server";
+pub(crate) const GATEWAY_BINARY_NAME: &str = "meshy-dcc-server";
 
 #[cfg(windows)]
 const GATEWAY_BINARY_NAME_WITH_EXT: &str = "meshy-dcc-server.exe";

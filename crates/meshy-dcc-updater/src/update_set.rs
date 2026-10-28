@@ -870,12 +870,18 @@ fn finish_committed(pending: &Path, journal: &UpdateJournal) -> Result<(), Updat
         .ok_or_else(|| UpdateError::Stage("pending update has no parent directory".into()))?;
     let detached = root.join(format!("{COMMITTED_SET_PREFIX}{}", unique_nonce()?));
     std::fs::rename(pending, &detached)?;
-    cleanup_committed_entries(journal)?;
-    std::fs::remove_dir_all(detached)?;
+    if cleanup_committed_entries(journal)? {
+        std::fs::remove_dir_all(detached)?;
+    }
     Ok(())
 }
 
-fn cleanup_committed_entries(journal: &UpdateJournal) -> Result<(), UpdateError> {
+/// Remove what a committed set left beside its targets. Returns `false` when
+/// a backup is still in use: Windows refuses to delete the image of a running
+/// process, which is the old executable when a binary updates itself. The
+/// detached set is then kept, and a later apply removes the backup.
+fn cleanup_committed_entries(journal: &UpdateJournal) -> Result<bool, UpdateError> {
+    let mut removed_all = true;
     for entry in &journal.entries {
         remove_known_file(
             &entry.prepared,
@@ -890,10 +896,21 @@ fn cleanup_committed_entries(journal: &UpdateJournal) -> Result<(), UpdateError>
                     entry.backup.display()
                 ))
             })?;
-            remove_known_file(&entry.backup, "transaction backup", original_sha256, None)?;
+            match remove_known_file(&entry.backup, "transaction backup", original_sha256, None) {
+                Err(UpdateError::Io(error)) if cfg!(windows) && is_in_use(&error) => {
+                    removed_all = false;
+                }
+                result => result?,
+            }
         }
     }
-    Ok(())
+    Ok(removed_all)
+}
+
+/// Windows: a running image (access denied) or a file open without delete
+/// sharing (sharing violation).
+fn is_in_use(error: &std::io::Error) -> bool {
+    matches!(error.raw_os_error(), Some(5 | 32))
 }
 
 fn cleanup_committed_sets(root: &Path) -> Result<(), UpdateError> {
@@ -914,8 +931,9 @@ fn cleanup_committed_sets(root: &Path) -> Result<(), UpdateError> {
                 path.display()
             )));
         }
-        cleanup_committed_entries(&journal)?;
-        std::fs::remove_dir_all(path)?;
+        if cleanup_committed_entries(&journal)? {
+            std::fs::remove_dir_all(path)?;
+        }
     }
     Ok(())
 }
