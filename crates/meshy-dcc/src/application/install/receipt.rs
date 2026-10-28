@@ -24,6 +24,12 @@ pub struct InstallReceipt {
     /// The project the adapter went into, for per-project adapters.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub project: Option<PathBuf>,
+    /// Where the connector's package was extracted. Usage telemetry sends a
+    /// skill's name only when its folder is inside one of these. Absent for
+    /// connectors the host installs itself (Blender's extension) and for
+    /// receipts written before this field existed.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub package_dir: Option<PathBuf>,
 }
 
 fn receipts_dir() -> PathBuf {
@@ -67,6 +73,10 @@ fn record_in(
             .duration_since(std::time::UNIX_EPOCH)
             .map_or(0, |d| d.as_secs()),
         project,
+        package_dir: report
+            .package_dir
+            .as_ref()
+            .map(|p| fs::canonicalize(p).unwrap_or_else(|_| p.clone())),
     };
     let path = receipt_path(dir, &receipt.dcc_type, receipt.project.as_deref());
     let write = || -> std::io::Result<()> {
@@ -139,5 +149,28 @@ mod tests {
         assert_eq!(receipts.len(), 2);
         assert!(receipts.iter().any(|r| r.project.is_none()));
         assert!(receipts.iter().all(|r| r.adapter_version == "0.1.0"));
+    }
+
+    #[test]
+    fn records_the_extracted_package_dir_when_there_is_one() {
+        let dir = tempfile::tempdir().unwrap();
+        let package = tempfile::tempdir().unwrap();
+        let mut extracted = report("ok");
+        extracted.package_dir = Some(package.path().to_path_buf());
+        record_in(dir.path(), &extracted, None).unwrap();
+        assert_eq!(
+            list_in(dir.path())[0].package_dir.as_deref(),
+            Some(fs::canonicalize(package.path()).unwrap().as_path())
+        );
+
+        // A host-installed connector has no package dir; neither has an old receipt.
+        let other = tempfile::tempdir().unwrap();
+        record_in(other.path(), &report("ok"), None).unwrap();
+        assert_eq!(list_in(other.path())[0].package_dir, None);
+        let old: InstallReceipt = serde_json::from_str(
+            r#"{"dcc_type":"maya","adapter_version":"0.1.0","core_version":"0.2.2","installed_at":1}"#,
+        )
+        .unwrap();
+        assert_eq!(old.package_dir, None);
     }
 }

@@ -4,8 +4,9 @@
 //! the day up from what it already keeps (persisted tool-call traces, live
 //! instances, install receipts) and posts one PostHog `/batch/` request a day.
 //! Nothing here sends content: every field is a count, a version, an OS/arch,
-//! a host type, or a skill name that is bundled with a connector or installed
-//! from the marketplace (anything else is sent as `custom`).
+//! a host type, or a skill name whose folder is inside an installed connector's
+//! package folder or that was installed from the marketplace (anything else is
+//! sent as `custom`).
 //!
 //! Files live next to `settings.json` (`~/.meshy-dcc/telemetry/`):
 //! `install_id`, `counters.log` (CLI appends), `state.json` (gateway only),
@@ -263,7 +264,7 @@ pub struct State {
     pub last_rollup_ms: Option<u64>,
     #[serde(default)]
     pub last_version: Option<String>,
-    /// Bundled or marketplace skill names seen on any instance.
+    /// Connector-shipped or marketplace skill names seen on any instance.
     #[serde(default)]
     pub known_skills: BTreeSet<String>,
     /// Unsent events, one entry per day.
@@ -579,8 +580,8 @@ pub fn now_ms() -> u64 {
         .unwrap_or(0)
 }
 
-/// Installed connectors from the CLI's install receipts.
-fn installed_connectors() -> Vec<(String, String)> {
+/// The CLI's install receipts, as written (`<data dir>/installs/*.json`).
+fn receipts() -> Vec<Value> {
     let data = std::env::var_os("MESHY_DCC_DATA_DIR")
         .filter(|d| !d.is_empty())
         .map(PathBuf::from)
@@ -590,14 +591,75 @@ fn installed_connectors() -> Vec<(String, String)> {
     };
     entries
         .flatten()
-        .filter_map(|entry| {
-            let value: Value = serde_json::from_slice(&std::fs::read(entry.path()).ok()?).ok()?;
+        .filter_map(|entry| serde_json::from_slice(&std::fs::read(entry.path()).ok()?).ok())
+        .collect()
+}
+
+/// Installed connectors from the install receipts.
+fn installed_connectors() -> Vec<(String, String)> {
+    receipts()
+        .iter()
+        .filter_map(|value| {
             Some((
                 value["dcc_type"].as_str()?.to_string(),
                 value["adapter_version"].as_str()?.to_string(),
             ))
         })
         .collect()
+}
+
+/// Where each installed connector's package was extracted, from the receipts.
+/// Connectors the host installs itself (Blender) record none.
+fn package_dirs() -> Vec<PathBuf> {
+    package_dirs_of(&receipts())
+}
+
+fn package_dirs_of(receipts: &[Value]) -> Vec<PathBuf> {
+    receipts
+        .iter()
+        .filter_map(|value| value["package_dir"].as_str().map(PathBuf::from))
+        .collect()
+}
+
+/// A path as it is compared: symlinks, `..`, Windows `\\?\` and 8.3 names
+/// resolved by the file system. Lowercased on Windows and macOS, whose usual
+/// file systems ignore case; Linux keeps it. `None` when the path is gone.
+fn comparable(path: &Path) -> Option<PathBuf> {
+    let real = std::fs::canonicalize(path).ok()?;
+    if cfg!(any(windows, target_os = "macos")) {
+        Some(PathBuf::from(real.to_string_lossy().to_lowercase()))
+    } else {
+        Some(real)
+    }
+}
+
+/// The names (normalized) of the `(name, skill folder)` pairs whose folder is
+/// strictly inside one of `package_dirs`. Compared by path component, so a
+/// sibling such as `<package>-old` does not count. A folder or package that
+/// cannot be resolved does not count either.
+pub fn connector_skill_names(
+    skills: &[(String, PathBuf)],
+    package_dirs: &[PathBuf],
+) -> BTreeSet<String> {
+    let packages: Vec<PathBuf> = package_dirs.iter().filter_map(|p| comparable(p)).collect();
+    skills
+        .iter()
+        .filter(|(_, dir)| {
+            comparable(dir)
+                .is_some_and(|dir| packages.iter().any(|p| dir != *p && dir.starts_with(p)))
+        })
+        .map(|(name, _)| normalize_skill(name))
+        .collect()
+}
+
+/// The skill folder in the gateway's reply to a targeted `get_skill_info`
+/// (`{"instances":[{"result":"<the skill's detail as JSON text>"}]}`). It must
+/// be absolute: a relative path cannot be resolved from here.
+fn skill_folder_in(reply: &str) -> Option<PathBuf> {
+    let reply: Value = serde_json::from_str(reply).ok()?;
+    let detail: Value = serde_json::from_str(reply["instances"][0]["result"].as_str()?).ok()?;
+    let path = PathBuf::from(detail["skill_path"].as_str()?);
+    path.is_absolute().then_some(path)
 }
 
 /// Map a finished call to `ok`, `timeout`, `unknown` or `error`.
@@ -632,21 +694,60 @@ mod gateway_side {
     use super::*;
     use crate::gateway::admin::state::AdminState;
 
-    /// Bundled skills from the live capability index, plus marketplace ones.
-    pub fn current_known_skills(state: &AdminState) -> BTreeSet<String> {
-        let snapshot = state.gateway.capability_index.snapshot();
-        let mut known: BTreeSet<String> = snapshot
-            .records
-            .iter()
-            .filter(|r| r.rank_path_source.as_deref() == Some("bundled"))
-            .filter_map(|r| r.skill_name.as_deref().map(normalize_skill))
-            .collect();
-        known.extend(
+    /// The folder a live instance loaded a skill from, as its own
+    /// `get_skill_info` reports it (the registry rows, the capability index and
+    /// `list_skills` do not carry it). `None` when the instance does not answer.
+    async fn skill_folder(state: &AdminState, instance: uuid::Uuid, name: &str) -> Option<PathBuf> {
+        let args = json!({"skill_name": name, "instance_id": instance.to_string()});
+        let (reply, is_error) = crate::gateway::aggregator::skill_mgmt_dispatch(
+            &state.gateway,
+            "get_skill_info",
+            &args,
+        )
+        .await;
+        (!is_error).then(|| skill_folder_in(&reply)).flatten()
+    }
+
+    /// Skill names that may be sent: marketplace ones, and those a live
+    /// instance loaded from inside an installed connector's package folder.
+    /// Names in `known` are not asked about again, so after the first pass
+    /// only skills that are not connector-shipped cost a call.
+    pub async fn current_known_skills(
+        state: &AdminState,
+        known: &BTreeSet<String>,
+    ) -> BTreeSet<String> {
+        let mut found: BTreeSet<String> =
             crate::gateway::admin::application::skill_library::marketplace_skill_names()
                 .iter()
-                .map(|n| normalize_skill(n)),
-        );
-        known
+                .map(|n| normalize_skill(n))
+                .collect();
+        let packages = package_dirs();
+        if packages.is_empty() {
+            return found;
+        }
+        let listed = crate::gateway::aggregator::list_skills_by_instance(&state.gateway).await;
+        let asked: BTreeSet<(uuid::Uuid, String)> = listed
+            .into_iter()
+            .flat_map(|(instance, _, rows)| {
+                rows.unwrap_or_default()
+                    .into_iter()
+                    .filter_map(move |row| Some((instance, row.get("name")?.as_str()?.to_string())))
+            })
+            .filter(|(_, name)| !known.contains(&normalize_skill(name)))
+            .collect();
+        let folders = futures::future::join_all(
+            asked
+                .iter()
+                .map(|(instance, name)| skill_folder(state, *instance, name)),
+        )
+        .await;
+        let skills: Vec<(String, PathBuf)> = asked
+            .into_iter()
+            .zip(folders)
+            .filter_map(|((_, name), folder)| Some((name, folder?)))
+            .collect();
+        found.extend(connector_skill_names(&skills, &packages));
+        found
     }
 
     async fn input(
@@ -702,7 +803,7 @@ mod gateway_side {
     pub async fn preview(state: &AdminState, now: u64) -> Value {
         let st = State::load();
         let mut known = st.known_skills.clone();
-        known.extend(current_known_skills(state));
+        known.extend(current_known_skills(state, &st.known_skills).await);
         let input = input(
             state,
             known,
@@ -722,7 +823,8 @@ mod gateway_side {
             return None;
         }
         let mut st = State::load();
-        st.known_skills.extend(current_known_skills(state));
+        let found = current_known_skills(state, &st.known_skills).await;
+        st.known_skills.extend(found);
         if st.last_day.as_deref() == Some(day(now).as_str()) {
             st.save();
             return None;
@@ -936,6 +1038,151 @@ mod tests {
                 .iter()
                 .any(|r| r["version"] == "0.3.1")
         );
+    }
+
+    /// A skill's name leaves the machine only when its folder is inside an
+    /// installed connector's package folder; every other folder, whatever
+    /// registered it, is `custom`, and no path ever appears in the event.
+    #[test]
+    fn skill_names_are_sent_only_for_connector_package_folders() {
+        let root = tempfile::tempdir().unwrap();
+        let dir = |rel: &str| {
+            let path = root.path().join(rel);
+            std::fs::create_dir_all(&path).unwrap();
+            path
+        };
+        let package = dir("data/adapters/meshy-dcc-maya/0.1.0/pkg");
+        let shipped = dir("data/adapters/meshy-dcc-maya/0.1.0/pkg/python/skills/maya-mesh-ops");
+        // Registered with `explicit_arg`, as a connector's own skills are.
+        let user = dir("home/artist/.meshy-dcc/maya/skills/hero-rig-secret");
+        let project = dir("work/dragon-movie/skills/dragon-tools");
+        // Shares the package folder's name as a string prefix, not as a folder.
+        let sibling = dir("data/adapters/meshy-dcc-maya/0.1.0/pkg-old/skills/lookalike-skill");
+        // The package folder itself is not inside itself.
+        let itself = package.clone();
+        let missing = package.join("python/skills/gone-skill");
+
+        let mut skills = vec![
+            ("maya_mesh_ops".to_string(), shipped.clone()),
+            ("hero_rig_secret".to_string(), user),
+            ("dragon_tools".to_string(), project),
+            ("lookalike_skill".to_string(), sibling),
+            ("package_itself".to_string(), itself),
+            ("gone_skill".to_string(), missing),
+            (
+                "unresolved_skill".to_string(),
+                PathBuf::from("pkg/python/skills/x"),
+            ),
+        ];
+        #[cfg(unix)]
+        {
+            // A link inside the package that leads out of it does not count.
+            let outside = dir("home/artist/linked-secret");
+            std::os::unix::fs::symlink(&outside, package.join("python/skills/linked-secret"))
+                .unwrap();
+            skills.push((
+                "linked_secret".to_string(),
+                package.join("python/skills/linked-secret"),
+            ));
+        }
+        // The same folder spelled with another case resolves only where the
+        // file system ignores case (Windows, macOS); there it must match.
+        let upper = root
+            .path()
+            .join("DATA/adapters/meshy-dcc-maya/0.1.0/pkg/python/skills/maya-mesh-ops");
+        skills.push(("upper_case_spelling".to_string(), upper.clone()));
+
+        let packages = vec![
+            package.clone(),
+            root.path().join("data/adapters/uninstalled"),
+        ];
+        let known = connector_skill_names(&skills, &packages);
+        let mut expected = BTreeSet::from(["maya-mesh-ops".to_string()]);
+        if upper.exists() {
+            expected.insert("upper-case-spelling".to_string());
+        }
+        assert_eq!(known, expected);
+
+        // The receipts name the package folders; a host-installed connector
+        // (Blender's extension) records none.
+        let receipts = [
+            json!({"dcc_type": "maya", "adapter_version": "0.1.0", "package_dir": package}),
+            json!({"dcc_type": "blender", "adapter_version": "0.1.0"}),
+            json!({"dcc_type": "x", "adapter_version": "0.1.0", "package_dir": 7}),
+        ];
+        assert_eq!(package_dirs_of(&receipts), vec![package.clone()]);
+
+        // The event: the connector skill by name, the rest `custom`, no path.
+        let mut input = RollupInput {
+            known_skills: known,
+            window_hours: 24,
+            ..RollupInput::default()
+        };
+        for (name, _) in &skills {
+            input.calls.push(CallSample {
+                dcc_type: "maya".into(),
+                skill: Some(name.clone()),
+                outcome: "ok",
+                total_ms: 20,
+            });
+        }
+        let props = daily_properties(&input);
+        let rows = props["tool_calls"].as_array().unwrap();
+        let named: BTreeSet<&str> = rows.iter().filter_map(|r| r["skill"].as_str()).collect();
+        let mut want: BTreeSet<&str> = expected.iter().map(String::as_str).collect();
+        want.insert("custom");
+        assert_eq!(named, want);
+        let text = props.to_string();
+        for secret in [
+            "hero",
+            "secret",
+            "dragon",
+            "lookalike",
+            "artist",
+            "gone",
+            "itself",
+            "unresolved",
+            "linked",
+            "adapters",
+            "pkg",
+            "python",
+            "/",
+            "\\",
+        ] {
+            assert!(!text.contains(secret), "{secret} leaked: {text}");
+        }
+        assert!(!text.contains(root.path().to_string_lossy().as_ref()));
+    }
+
+    #[test]
+    fn the_skill_folder_comes_from_the_get_skill_info_reply() {
+        let absolute = if cfg!(windows) {
+            r"C:\pkg\skills\a"
+        } else {
+            "/pkg/skills/a"
+        };
+        let reply = |path: &str| {
+            let detail = json!({"name": "a", "skill_path": path}).to_string();
+            json!({"instances": [{"instance_id": "x", "dcc_type": "maya", "result": detail}]})
+                .to_string()
+        };
+        assert_eq!(
+            skill_folder_in(&reply(absolute)),
+            Some(PathBuf::from(absolute))
+        );
+        // Relative or empty: it cannot be resolved from the gateway.
+        assert_eq!(skill_folder_in(&reply("pkg/skills/a")), None);
+        assert_eq!(skill_folder_in(&reply("")), None);
+        // The instance does not know the skill, answers with no instance, or is not JSON.
+        assert_eq!(
+            skill_folder_in(r#"{"instances":[{"result":"Skill 'a' not found"}]}"#),
+            None
+        );
+        assert_eq!(
+            skill_folder_in(r#"{"skills":[],"total":0,"instances":[]}"#),
+            None
+        );
+        assert_eq!(skill_folder_in("backend unreachable"), None);
     }
 
     #[test]

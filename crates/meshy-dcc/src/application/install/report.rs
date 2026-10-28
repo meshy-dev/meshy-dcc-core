@@ -21,6 +21,10 @@ pub struct InstallExecutionReport {
     pub verify: InstallVerifyReport,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub error: Option<InstallExecutionError>,
+    /// Where the package was extracted, for the receipt. Never in the JSON
+    /// report: it is a local path.
+    #[serde(skip)]
+    pub package_dir: Option<std::path::PathBuf>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
@@ -122,6 +126,10 @@ pub(super) fn execution_report_for_plan(plan: &InstallPlan) -> InstallExecutionR
             failure_reason: None,
         },
         error: None,
+        package_dir: plan.steps.iter().find_map(|step| match &step.action {
+            Some(InstallStepAction::HostPackage { extract_to, .. }) => extract_to.clone(),
+            _ => None,
+        }),
     }
 }
 
@@ -149,6 +157,7 @@ pub(super) fn empty_execution_report(dcc_type: String) -> InstallExecutionReport
             failure_reason: None,
         },
         error: None,
+        package_dir: None,
     }
 }
 
