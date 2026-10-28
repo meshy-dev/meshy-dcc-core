@@ -3,7 +3,14 @@
 Meshy DCC Core release notes. Crates, the Python wheel and the product share
 one version line.
 
-## Unreleased
+## 0.2.2 (2026-10-28)
+
+### Upgrading from 0.2.1
+
+Run `meshy-dcc update apply --yes`, then `meshy-dcc gateway restart` once. The
+update from 0.2.1 is still done by the 0.2.1 CLI, which does not restart the
+gateway; from 0.2.2 on, `update apply` (and **Update now** in the window)
+restarts it for you.
 
 ### Added
 
