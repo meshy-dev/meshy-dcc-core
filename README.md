@@ -70,6 +70,8 @@ Meshy generation and your Meshy account stay with
 
 Gateway and adapter integrations use the [request metadata and deadline
 contract](docs/request-metadata.md).
+CLI clients can recover safe-stop ownership through the
+[instance lifecycle contract](docs/instance-lifecycle.md).
 
 ## Usage telemetry
 

@@ -32,9 +32,11 @@ use crate::domain::start_instance::{
     classify_blocking_state,
 };
 
+mod ownership;
 pub mod plan;
 mod store;
 
+pub(crate) use ownership::project_list_launch_ownership;
 pub use plan::{PlanResolution, missing_project_marker};
 pub use store::LifecycleStore;
 use store::binding_key;
