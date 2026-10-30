@@ -291,6 +291,22 @@ pub trait HostRpcClient: Send + Sync {
         self.call(action, args, request_id).await
     }
 
+    /// Dispatch with protocol metadata outside the tool's arguments. Bundled
+    /// transports preserve it as `_meta` in their existing request envelope.
+    /// Older implementations may use this compatible fallback and omit it;
+    /// forwarding a timeout never guarantees that the host stops execution.
+    async fn call_with_metadata(
+        &self,
+        action: &str,
+        args: serde_json::Value,
+        request_id: &str,
+        trace_context: Option<serde_json::Value>,
+        _meta: Option<serde_json::Value>,
+    ) -> Result<serde_json::Value, HostRpcError> {
+        self.call_with_trace_context(action, args, request_id, trace_context)
+            .await
+    }
+
     /// Best-effort cancellation hint for the given in-flight call.
     /// Defaults to `Ok(())` so impls that cannot cancel don't have to
     /// override.

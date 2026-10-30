@@ -135,6 +135,18 @@ impl HostRpcClient for WebSocketHostRpcClient {
         request_id: &str,
         trace_context: Option<Value>,
     ) -> Result<Value, HostRpcError> {
+        self.call_with_metadata(action, args, request_id, trace_context, None)
+            .await
+    }
+
+    async fn call_with_metadata(
+        &self,
+        action: &str,
+        args: Value,
+        request_id: &str,
+        trace_context: Option<Value>,
+        meta: Option<Value>,
+    ) -> Result<Value, HostRpcError> {
         let mut params = json!({
             "action": action,
             "args": args,
@@ -142,6 +154,9 @@ impl HostRpcClient for WebSocketHostRpcClient {
         });
         if let Some(trace_context) = trace_context {
             params["trace_context"] = trace_context;
+        }
+        if let Some(meta) = meta {
+            params["_meta"] = meta;
         }
         let request = WireRequest {
             jsonrpc: "2.0",
@@ -295,6 +310,47 @@ mod tests {
                 .unwrap();
         });
         format!("ws://{addr}")
+    }
+
+    #[tokio::test]
+    async fn websocket_metadata_stays_outside_tool_arguments() {
+        let listener = TcpListener::bind(("127.0.0.1", 0)).await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        let server = tokio::spawn(async move {
+            let (stream, _) = listener.accept().await.unwrap();
+            let mut ws = accept_async(stream).await.unwrap();
+            let request = ws.next().await.unwrap().unwrap().into_text().unwrap();
+            let body: Value = serde_json::from_str(&request).unwrap();
+            assert_eq!(body["id"], "metadata-call");
+            assert_eq!(body["params"]["request_id"], "metadata-call");
+            assert_eq!(body["params"]["args"], json!({"limit": 10}));
+            assert_eq!(body["params"]["_meta"]["meshy-dcc/timeout_ms"], 1200);
+            assert_eq!(body["params"]["trace_context"]["trace_id"], "trace-1");
+            ws.send(Message::Text(
+                json!({"id": body["id"], "result": {"ok": true}})
+                    .to_string()
+                    .into(),
+            ))
+            .await
+            .unwrap();
+        });
+        let mut client = WebSocketHostRpcClient::new();
+        client
+            .connect(&format!("ws://{addr}"), Duration::from_secs(2))
+            .await
+            .unwrap();
+        let result = client
+            .call_with_metadata(
+                "scene__inspect",
+                json!({"limit": 10}),
+                "metadata-call",
+                Some(json!({"trace_id": "trace-1"})),
+                Some(json!({"meshy-dcc/timeout_ms": 1200})),
+            )
+            .await
+            .unwrap();
+        assert_eq!(result["ok"], true);
+        server.await.unwrap();
     }
 
     #[tokio::test]

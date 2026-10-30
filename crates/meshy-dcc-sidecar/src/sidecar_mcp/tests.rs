@@ -850,3 +850,118 @@ async fn shutdown_stops_listener_quickly() {
         Ok(Ok(_)) => panic!("listener should not accept after shutdown"),
     }
 }
+
+#[tokio::test]
+async fn sidecar_forwards_metadata_and_keeps_expired_calls_off_the_rpc_channel() {
+    use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let port = listener.local_addr().unwrap().port();
+    let (frame_tx, frame_rx) = oneshot::channel();
+    let (release_tx, release_rx) = oneshot::channel();
+    let host = tokio::spawn(async move {
+        let (stream, _) = listener.accept().await.unwrap();
+        let (read, mut write) = stream.into_split();
+        let mut read = BufReader::new(read);
+        let mut line = String::new();
+        read.read_line(&mut line).await.unwrap();
+        let request: Value = serde_json::from_str(&line).unwrap();
+        frame_tx.send(request.clone()).unwrap();
+        release_rx.await.unwrap();
+        write
+            .write_all(
+                format!(
+                    "{}\n",
+                    json!({"id": request["id"], "result": {"marker": "slow"}})
+                )
+                .as_bytes(),
+            )
+            .await
+            .unwrap();
+        line.clear();
+        read.read_line(&mut line).await.unwrap();
+        let request: Value = serde_json::from_str(&line).unwrap();
+        assert_eq!(
+            request["id"], "after-timeout",
+            "expired calls must never reach RPC"
+        );
+        write
+            .write_all(
+                format!(
+                    "{}\n",
+                    json!({"id": request["id"], "result": {"marker": "next"}})
+                )
+                .as_bytes(),
+            )
+            .await
+            .unwrap();
+    });
+    let mut rpc = QtServerClient::new();
+    rpc.connect(
+        &format!("qtserver://127.0.0.1:{port}"),
+        Duration::from_secs(1),
+    )
+    .await
+    .unwrap();
+    let sidecar = spawn_listener(SidecarMcpState::new(Box::new(rpc), "test"), "127.0.0.1", 0)
+        .await
+        .unwrap();
+    let request = |id: &str, budget: u64| {
+        json!({"jsonrpc": "2.0", "id": id, "method": "tools/call", "params": {
+        "name": "scene__inspect", "arguments": {"unchanged": true}, "_meta": {
+            "agent_context": {"agent_id": "canonical"}, "meshy-dcc/timeout_ms": budget}}})
+    };
+    let expired: Value = post_mcp(&sidecar.mcp_url, request("expired", 0))
+        .await
+        .json()
+        .await
+        .unwrap();
+    assert_eq!(expired["error"]["data"]["kind"], "not-applied");
+    let client = reqwest::Client::new();
+    let url = sidecar.mcp_url.clone();
+    let slow_request = request("slow", 800);
+    let slow = tokio::spawn(async move {
+        client
+            .post(url)
+            .json(&slow_request)
+            .send()
+            .await
+            .unwrap()
+            .json::<Value>()
+            .await
+            .unwrap()
+    });
+    let frame = tokio::time::timeout(Duration::from_secs(2), frame_rx)
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(frame["params"]["args"], json!({"unchanged": true}));
+    assert_eq!(
+        frame["params"]["_meta"]["agent_context"]["agent_id"],
+        "canonical"
+    );
+    let forwarded = frame["params"]["_meta"]["meshy-dcc/timeout_ms"]
+        .as_u64()
+        .unwrap();
+    assert!(forwarded > 0 && forwarded <= 300, "{frame}");
+    let queued: Value = post_mcp(&sidecar.mcp_url, request("queued-expired", 50))
+        .await
+        .json()
+        .await
+        .unwrap();
+    assert_eq!(queued["error"]["data"]["kind"], "not-applied");
+    let slow = slow.await.unwrap();
+    assert_eq!(slow["id"], "slow");
+    assert_eq!(slow["error"]["data"]["kind"], "outcome-unknown");
+    release_tx.send(()).unwrap();
+    let next: Value = post_mcp(&sidecar.mcp_url, request("after-timeout", 5000))
+        .await
+        .json()
+        .await
+        .unwrap();
+    assert_eq!(
+        next["result"]["marker"], "next",
+        "the late RPC result must be consumed by its original task"
+    );
+    host.await.unwrap();
+    sidecar.shutdown().await;
+}

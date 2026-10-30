@@ -17,6 +17,7 @@ use crate::gateway::search_telemetry::{
     search_id_from_meta, search_id_from_payload,
 };
 
+use super::request_meta::{merge_call_meta, meta_after_elapsed};
 use super::state::GatewayState;
 use meshy_dcc_jsonrpc::coerce_tool_arguments_object;
 
@@ -473,7 +474,7 @@ pub async fn tool_call_tool(
         Ok(v) => v,
         Err(msg) => return (msg, true),
     };
-    let forwarded_meta = args.get("meta").cloned().or_else(|| meta.cloned());
+    let forwarded_meta = merge_call_meta(meta, args.get("meta"));
     let search_id = search_id_from_inputs(args, meta);
 
     let session_id = agent_context
@@ -494,7 +495,7 @@ pub async fn tool_call_tool(
         gs,
         slug,
         arguments.clone(),
-        forwarded_meta.clone(),
+        meta_after_elapsed(forwarded_meta.clone(), started_at.elapsed()),
         trace_context,
         agent_context,
     )
@@ -529,7 +530,7 @@ pub async fn tool_call_tool(
                 gs,
                 slug,
                 arguments,
-                forwarded_meta,
+                meta_after_elapsed(forwarded_meta, started_at.elapsed()),
                 trace_context,
                 agent_context,
             )
@@ -657,7 +658,8 @@ pub const MAX_CALL_TOOLS_BATCH: usize = 25;
 /// array, over limit).
 ///
 /// `mcp_meta` is optional MCP `_meta` from the outer `tools/call` envelope,
-/// applied to each batch item when that item does not supply its own `meta`.
+/// merged with each item's `meta`; caller context is preserved and budgets
+/// can only narrow. The outer budget covers the whole batch.
 pub async fn gateway_call_batch_inner(
     gs: &GatewayState,
     args: &Value,
@@ -697,8 +699,7 @@ pub async fn gateway_call_batch_inner(
     let mut results: Vec<Value> = Vec::with_capacity(calls.len());
     let mut all_ok = true;
     // The caller's budget covers the whole batch; each step gets what is left.
-    let batch_deadline = meshy_dcc_jsonrpc::timeout_ms_from_meta(mcp_meta)
-        .map(|ms| std::time::Instant::now() + std::time::Duration::from_millis(ms));
+    let batch_started = std::time::Instant::now();
 
     for (idx, call) in calls.iter().enumerate() {
         let item_id = call.get("id").cloned();
@@ -722,14 +723,8 @@ pub async fn gateway_call_batch_inner(
             Ok(v) => v,
             Err(msg) => return Err(msg),
         };
-        let mut forwarded_meta = call.get("meta").cloned().or_else(|| mcp_meta.cloned());
-        if let Some(deadline) = batch_deadline {
-            let left = deadline.saturating_duration_since(std::time::Instant::now());
-            forwarded_meta = meshy_dcc_jsonrpc::meta_with_timeout_ms(
-                forwarded_meta,
-                u64::try_from(left.as_millis()).unwrap_or(u64::MAX),
-            );
-        }
+        let remaining_meta = meta_after_elapsed(mcp_meta.cloned(), batch_started.elapsed());
+        let forwarded_meta = merge_call_meta(remaining_meta.as_ref(), call.get("meta"));
         let search_id = call
             .get("meta")
             .and_then(search_id_from_meta)
@@ -766,7 +761,7 @@ pub async fn gateway_call_batch_inner(
                         gs,
                         slug,
                         arguments,
-                        forwarded_meta,
+                        meta_after_elapsed(forwarded_meta, call_started.elapsed()),
                         child_trace_context,
                         agent_context,
                     )

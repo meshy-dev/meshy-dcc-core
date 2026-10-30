@@ -7,6 +7,23 @@ use meshy_dcc_jsonrpc::McpTool;
 use serde_json::{Value, json};
 use std::time::Duration;
 
+#[test]
+fn jsonrpc_deadline_errors_preserve_the_safe_retry_boundary() {
+    for kind in ["not-applied", "outcome-unknown"] {
+        let body = json!({"id": "request-1", "error": {"code": -32000,
+            "message": "Deadline passed", "data": {"kind": kind, "message": "Read back before repeating"}}});
+        let error = super::http::parse_jsonrpc_result(
+            "http://127.0.0.1/mcp",
+            &body.to_string(),
+            &json!("request-1"),
+        )
+        .unwrap_err()
+        .to_string();
+        let details = crate::gateway::instance_diagnostics::parse_rest_error_json(&error).unwrap();
+        assert_eq!(details["kind"], kind);
+    }
+}
+
 // ── helper used only in tests ────────────────────────────────────────
 
 fn parse_response_body(body: &str) -> Result<Value, String> {
@@ -1205,4 +1222,61 @@ fn percent_encode_uri_encodes_colons_and_slashes() {
     assert!(!encoded.contains(':'), "colon must be encoded");
     assert!(!encoded.contains('/'), "slash must be encoded");
     assert!(encoded.contains('%'), "must have percent-encoded chars");
+}
+
+#[tokio::test]
+async fn readiness_time_narrows_the_forwarded_budget_and_can_prevent_dispatch() {
+    for probe_ms in [50, 250] {
+        let received = Arc::new(parking_lot::Mutex::new(Vec::<Value>::new()));
+        let capture = received.clone();
+        let app = axum::Router::new()
+            .route(
+                "/v1/readyz",
+                axum::routing::get(move || async move {
+                    tokio::time::sleep(Duration::from_millis(probe_ms)).await;
+                    axum::Json(json!({"process": true, "dispatcher": true, "dcc": true}))
+                }),
+            )
+            .route(
+                "/mcp",
+                axum::routing::post(move |axum::Json(body): axum::Json<Value>| {
+                    let capture = capture.clone();
+                    async move {
+                        capture.lock().push(body.clone());
+                        axum::Json(json!({"id": body["id"], "result": {"ok": true}}))
+                    }
+                }),
+            );
+        let (url, stop) = spawn_fake_backend(app).await;
+        let result = call_backend_with_observability(
+            &reqwest::Client::new(), &Default::default(), &url,
+            BackendJsonRpcCallRequest {
+                method: "tools/call", params: Some(json!({"name": "scene__inspect", "arguments": {},
+                    "_meta": {"agent_context": {"agent_id": "canonical"}, "meshy-dcc/timeout_ms": 200}})),
+                request_id: Some("probe-call".into()), require_ready: true, trace_context: None,
+                traffic_capture: None, timeout: Duration::from_millis(700),
+            },
+        ).await;
+        if probe_ms == 50 {
+            result.unwrap();
+            let requests = received.lock();
+            assert_eq!(requests.len(), 1);
+            let meta = &requests[0]["params"]["_meta"];
+            assert_eq!(meta["agent_context"]["agent_id"], "canonical");
+            assert!(
+                meta["meshy-dcc/timeout_ms"].as_u64().unwrap() <= 150,
+                "{meta}"
+            );
+        } else {
+            let error = result.unwrap_err();
+            let details =
+                crate::gateway::instance_diagnostics::parse_rest_error_json(&error).unwrap();
+            assert_eq!(details["kind"], "not-applied");
+            assert!(
+                received.lock().is_empty(),
+                "readiness must not reset the deadline"
+            );
+        }
+        let _ = stop.send(());
+    }
 }

@@ -212,7 +212,11 @@ pub(super) async fn post_jsonrpc_with_trace_context(
             resilience.circuits().on_transport_failure(&circuit_key);
             let err = BackendCallError::Transport {
                 mcp_url: mcp_url.to_string(),
-                reason: e.to_string(),
+                reason: if e.is_timeout() {
+                    format!("{BACKEND_TIMEOUT_MARKER}{e}")
+                } else {
+                    e.to_string()
+                },
             };
             record_gateway_backend_error_kind(err.prometheus_error_kind());
             return Err(err);
@@ -242,7 +246,11 @@ pub(super) async fn post_jsonrpc_with_trace_context(
             resilience.circuits().on_transport_failure(&circuit_key);
             let err = BackendCallError::ReadBody {
                 mcp_url: mcp_url.to_string(),
-                reason: e.to_string(),
+                reason: if e.is_timeout() {
+                    format!("{BACKEND_TIMEOUT_MARKER}{e}")
+                } else {
+                    e.to_string()
+                },
             };
             record_gateway_backend_error_kind(err.prometheus_error_kind());
             return Err(err);
@@ -286,11 +294,19 @@ pub(super) fn parse_jsonrpc_result(
 
     if let Some(err) = parsed.get("error") {
         let code = err.get("code").and_then(Value::as_i64).unwrap_or(-1);
-        let message = err
+        let mut message = err
             .get("message")
             .and_then(Value::as_str)
             .unwrap_or("unknown error")
             .to_string();
+        if let Some(data) = err.get("data").filter(|data| {
+            matches!(
+                data.get("kind").and_then(Value::as_str),
+                Some("not-applied" | "outcome-unknown")
+            )
+        }) {
+            message = data.to_string();
+        }
         return Err(BackendCallError::Backend {
             mcp_url: mcp_url.to_string(),
             code,

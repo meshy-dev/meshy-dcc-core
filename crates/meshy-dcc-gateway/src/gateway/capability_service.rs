@@ -670,8 +670,6 @@ pub async fn call_service(
     trace_context: Option<&TraceContext>,
     agent_context: Option<&AgentContext>,
 ) -> Result<Value, ServiceError> {
-    // ponytail: the budget restarts if a caller retries call_service after a
-    // route refresh; that retry only follows a routing error, so it is short.
     let started = Instant::now();
     let record = describe_service(&gs.capability_index, slug)?;
     enforce_record_policy(&gs.policy, GatewayPolicyOperation::Call, &record)?;
@@ -721,16 +719,35 @@ pub async fn call_service(
         .map(|context| context.request_id.clone())
         .unwrap_or_else(|| Uuid::new_v4().to_string());
 
+    let (timeout, host_ms) = call_budget(
+        gs.backend_timeout,
+        meshy_dcc_jsonrpc::timeout_ms_from_meta(meta.as_ref()),
+        started.elapsed(),
+    );
+    if host_ms == 0 {
+        let mut error = ServiceError::new(
+            "not-applied",
+            format!(
+                "the call's deadline passed before the gateway could forward {}; \
+                 it was not sent to the host and is safe to retry",
+                record.callable_id
+            ),
+        );
+        error.retryable = Some(true);
+        return Err(error);
+    }
+    let forwarded_meta = meshy_dcc_jsonrpc::meta_with_timeout_ms(
+        meta_with_agent_context(meta, agent_context),
+        host_ms,
+    );
     let call_result = if is_backend_job_tool(&record.backend_tool)
         || (entry_uses_sidecar_dispatch(&entry) && !use_discovery_dispatch)
     {
-        // _meta is intentionally NOT forwarded into sidecar params.
-        // The sidecar tools/call contract expects only {name, arguments};
-        // injecting _meta at the params level leaks gateway-internal
-        // metadata into adapter tool kwargs (PIP-2420).
+        // MCP metadata belongs beside arguments, never inside tool kwargs.
         let params = json!({
             "name": &record.callable_id,
             "arguments": arguments,
+            "_meta": forwarded_meta,
         });
         call_backend_with_observability(
             &gs.http_client,
@@ -743,28 +760,11 @@ pub async fn call_service(
                 require_ready: !is_backend_job_tool(&record.backend_tool),
                 trace_context,
                 traffic_capture: Some(&gs.traffic_capture),
-                timeout: gs.backend_timeout,
+                timeout,
             },
         )
         .await
     } else {
-        let (timeout, host_ms) = call_budget(
-            gs.backend_timeout,
-            meshy_dcc_jsonrpc::timeout_ms_from_meta(meta.as_ref()),
-            started.elapsed(),
-        );
-        if host_ms == 0 {
-            let mut error = ServiceError::new(
-                "not-applied",
-                format!(
-                    "the call's deadline passed before the gateway could forward {}; \
-                     it was not sent to the host and is safe to retry",
-                    record.callable_id
-                ),
-            );
-            error.retryable = Some(true);
-            return Err(error);
-        }
         forward_tools_call(
             &gs.http_client,
             &gs.resilience,
@@ -772,10 +772,7 @@ pub async fn call_service(
             ForwardToolsCallRequest {
                 tool_name: &record.callable_id,
                 arguments: Some(arguments),
-                meta: meshy_dcc_jsonrpc::meta_with_timeout_ms(
-                    meta_with_agent_context(meta, agent_context),
-                    host_ms,
-                ),
+                meta: forwarded_meta,
                 request_id: Some(request_id),
                 trace_context,
                 traffic_capture: Some(&gs.traffic_capture),

@@ -68,6 +68,9 @@ Connectors live in [meshy-dcc-adapters](https://github.com/meshy-dev/meshy-dcc-a
 Meshy generation and your Meshy account stay with
 [`meshy-cli`](https://www.npmjs.com/package/meshy-cli).
 
+Gateway and adapter integrations use the [request metadata and deadline
+contract](docs/request-metadata.md).
+
 ## Usage telemetry
 
 Meshy DCC Core sends anonymous, aggregate usage counts once a day. Turn it off
