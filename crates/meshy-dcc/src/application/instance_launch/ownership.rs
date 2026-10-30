@@ -5,7 +5,7 @@ use std::path::Path;
 use meshy_dcc_transport::discovery::types::ServiceEntry;
 use serde_json::{Value, json};
 
-use super::{LifecycleStore, entry_metadata, entry_project, same_path};
+use super::{LifecycleStore, entry_metadata, entry_project};
 use crate::application::local_instance;
 use crate::domain::start_instance::{
     LIFECYCLE_OPERATION_SCHEMA_VERSION, OPERATION_METADATA_KEYS, PROJECT_METADATA_KEYS,
@@ -52,7 +52,7 @@ pub(crate) fn project_list_launch_ownership(registry_dir: Option<&Path>, invento
             && operation.pid.is_some()
             && operation.pid == entry.host_pid.or(entry.pid)
             && operation.dcc_type.eq_ignore_ascii_case(&entry.dcc_type)
-            && same_path(&operation.project, &project)
+            && same_project(&operation.project, &project)
         {
             row["launch"] = json!({
                 "operation_id": operation.operation_id,
@@ -90,7 +90,14 @@ fn row_matches_entry(row: &Value, entry: &ServiceEntry) -> bool {
             == entry.host_pid.or(entry.pid).map(u64::from)
         && row_metadata(row, OPERATION_METADATA_KEYS)
             == entry_metadata(entry, OPERATION_METADATA_KEYS)
-        && same_path(Path::new(project), &bound_project)
+        && same_project(Path::new(project), &bound_project)
+}
+
+fn same_project(left: &Path, right: &Path) -> bool {
+    match (std::fs::canonicalize(left), std::fs::canonicalize(right)) {
+        (Ok(left), Ok(right)) => left == right,
+        _ => false,
+    }
 }
 
 #[cfg(test)]
@@ -225,5 +232,23 @@ mod tests {
             project_list_launch_ownership(Some(fixture.root.path()), &mut inventory);
             assert!(inventory["instances"][0].get("launch").is_none(), "{field}");
         }
+    }
+
+    #[test]
+    fn inventory_requires_an_existing_canonical_project() {
+        let mut fixture = Fixture::new();
+        let missing = fixture.root.path().join("removed-project");
+        fixture
+            .entry
+            .metadata
+            .insert("meshy_dcc_project".into(), missing.display().to_string());
+        fixture._registry.register(fixture.entry.clone()).unwrap();
+        fixture.operation.project = missing;
+        LifecycleStore::new(fixture.root.path())
+            .save(&fixture.operation)
+            .unwrap();
+        let mut inventory = fixture.inventory();
+        project_list_launch_ownership(Some(fixture.root.path()), &mut inventory);
+        assert!(inventory["instances"][0].get("launch").is_none());
     }
 }
