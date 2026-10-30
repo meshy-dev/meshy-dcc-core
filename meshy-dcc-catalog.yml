@@ -102,18 +102,27 @@ entries:
           url: "https://cdn.meshy.ai/meshy-dcc-core/adapters/godot/v0-1-1/meshy-dcc-godot-macos-arm64.zip"
           sha256: "8c70c4fc08559abcf9ed4c2c5731237a025b4e5cb3b4a418d29903e6b91ac36c"
           mirrors: ["https://cdn.meshy.cn/meshy-dcc-core/adapters/godot/v0-1-1/meshy-dcc-godot-macos-arm64.zip", "https://github.com/meshy-dev/meshy-dcc-adapters/releases/download/godot-v0.1.1/meshy-dcc-godot-macos-arm64.zip"]
+          dcc_paths:
+            - "/Applications/Godot.app/Contents/MacOS/Godot"
+            - "~/Applications/Godot.app/Contents/MacOS/Godot"
         windows-x86_64:
           url: "https://cdn.meshy.ai/meshy-dcc-core/adapters/godot/v0-1-1/meshy-dcc-godot-windows-x64.zip"
           sha256: "9451c688ceff6d211969c0522271231b618509aca0e5b76baae382c1298c34b1"
           mirrors: ["https://cdn.meshy.cn/meshy-dcc-core/adapters/godot/v0-1-1/meshy-dcc-godot-windows-x64.zip", "https://github.com/meshy-dev/meshy-dcc-adapters/releases/download/godot-v0.1.1/meshy-dcc-godot-windows-x64.zip"]
+          # Godot's Windows editor is portable; other locations use --dcc-path.
+          dcc_paths:
+            - "C:/Program Files/Godot/Godot.exe"
+            - "C:/Program Files/Godot/Godot_v*_win64.exe"
+            - "~/Downloads/Godot_v*_win64.exe"
+            - "~/Downloads/Godot_v*_win64_exe/Godot_v*_win64.exe"
           host:
             extract: true
             project_steps:
-              - ["{package_dir}/python/python.exe", "-m", "meshy_dcc_godot", "install", "{project}", "--sidecar", "{package_dir}/bin/meshy-dcc-godot-sidecar.cmd", "--files-only", "--yes", "--json"]
+              - ["{package_dir}/python/python.exe", "-m", "meshy_dcc_godot", "install", "{project}", "--dcc-path", "{dcc_path}", "--sidecar", "{package_dir}/bin/meshy-dcc-godot-sidecar.cmd", "--files-only", "--yes", "--json"]
       host:
         extract: true
         project_steps:
-          - ["{package_dir}/bin/meshy-dcc-godot-sidecar", "install", "{project}", "--sidecar", "{package_dir}/bin/meshy-dcc-godot-sidecar", "--files-only", "--yes", "--json"]
+          - ["{package_dir}/bin/meshy-dcc-godot-sidecar", "install", "{project}", "--dcc-path", "{dcc_path}", "--sidecar", "{package_dir}/bin/meshy-dcc-godot-sidecar", "--files-only", "--yes", "--json"]
 
   - name: "meshy-dcc-unreal"
     description: "Meshy DCC adapter for the Unreal Editor 5.0+: Meshy GLB/FBX import with PBR materials, levels, actors, assets and materials"

@@ -1162,6 +1162,10 @@ fn copy_dir_recursive(src: &Path, dst: &Path) -> Result<(), InstallError> {
 mod recovery_tests;
 
 #[cfg(test)]
+#[path = "install/godot_catalog_tests.rs"]
+mod godot_catalog_tests;
+
+#[cfg(test)]
 mod tests {
     use super::*;
     use crate::domain::install::InstallStep;
