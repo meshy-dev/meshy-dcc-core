@@ -197,14 +197,33 @@ impl HostRpcClient for QtServerClient {
         args: Value,
         request_id: &str,
     ) -> Result<Value, HostRpcError> {
+        self.call_with_metadata(action, args, request_id, None, None)
+            .await
+    }
+
+    async fn call_with_metadata(
+        &self,
+        action: &str,
+        args: Value,
+        request_id: &str,
+        trace_context: Option<Value>,
+        meta: Option<Value>,
+    ) -> Result<Value, HostRpcError> {
+        let mut params = json!({
+            "action": action,
+            "args": args,
+            "request_id": request_id,
+        });
+        if let Some(trace_context) = trace_context {
+            params["trace_context"] = trace_context;
+        }
+        if let Some(meta) = meta {
+            params["_meta"] = meta;
+        }
         let request = WireRequest {
             id: request_id,
             method: DISPATCH_METHOD,
-            params: json!({
-                "action": action,
-                "args": args,
-                "request_id": request_id,
-            }),
+            params,
         };
         let mut wire_line = serde_json::to_vec(&request)
             .map_err(|e| HostRpcError::transport(format!("encode wire frame: {e}")))?;
@@ -716,6 +735,8 @@ mod tests {
                     "echo_action": params.get("action").cloned(),
                     "echo_args": params.get("args").cloned(),
                     "echo_request_id": params.get("request_id").cloned(),
+                    "echo_meta": params.get("_meta").cloned(),
+                    "echo_trace": params.get("trace_context").cloned(),
                 })
             }),
         );
@@ -731,7 +752,13 @@ mod tests {
             .expect("connect");
 
         let result = client
-            .call("maya_scene__list", json!({"limit": 10}), "req-1")
+            .call_with_metadata(
+                "maya_scene__list",
+                json!({"limit": 10}),
+                "req-1",
+                Some(json!({"trace_id": "trace-1"})),
+                Some(json!({"meshy-dcc/timeout_ms": 1200})),
+            )
             .await
             .expect("call");
         assert_eq!(
@@ -739,6 +766,8 @@ mod tests {
             Some(&Value::String("maya_scene__list".into()))
         );
         assert_eq!(result.get("echo_args"), Some(&json!({"limit": 10})));
+        assert_eq!(result["echo_meta"]["meshy-dcc/timeout_ms"], 1200);
+        assert_eq!(result["echo_trace"]["trace_id"], "trace-1");
         assert_eq!(
             result.get("echo_request_id"),
             Some(&Value::String("req-1".into()))

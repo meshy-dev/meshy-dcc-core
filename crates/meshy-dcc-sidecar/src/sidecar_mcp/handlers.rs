@@ -5,6 +5,7 @@ use meshy_dcc_host_rpc::HostRpcError;
 use meshy_dcc_jsonrpc::negotiate_protocol_version;
 use serde::Deserialize;
 use serde_json::{Value, json};
+use std::time::{Duration, Instant};
 
 use super::feedback::FEEDBACK_TOOL_NAME;
 use super::trace::trace_context_from_headers;
@@ -24,6 +25,8 @@ struct ToolsCallParams {
     name: String,
     #[serde(default)]
     arguments: Value,
+    #[serde(rename = "_meta", default)]
+    meta: Option<Value>,
 }
 
 pub(super) async fn handle_health(State(state): State<SidecarMcpState>) -> Response {
@@ -154,6 +157,7 @@ async fn handle_tools_call(
     id: Value,
     req: &JsonRpcRequest,
 ) -> Value {
+    let started = Instant::now();
     let params: ToolsCallParams = match req
         .params
         .clone()
@@ -198,25 +202,78 @@ async fn handle_tools_call(
         });
     }
 
-    let result = {
-        let guard = state.host_rpc.lock().await;
-        guard
-            .call_with_trace_context(
+    let budget =
+        meshy_dcc_jsonrpc::timeout_ms_from_meta(params.meta.as_ref()).map(Duration::from_millis);
+    let remaining = || budget.map(|budget| budget.saturating_sub(started.elapsed()));
+    let lock = state.host_rpc.clone().lock_owned();
+    let guard = match remaining() {
+        Some(left) => match tokio::time::timeout(left, lock).await {
+            Ok(guard) => guard,
+            Err(_) => return deadline_error(id, false),
+        },
+        None => lock.await,
+    };
+    let trace_context = trace_context_from_headers(headers, &request_id);
+    let task_id = id.clone();
+    // Retain the RPC and its lock until its correlated reply is consumed,
+    // even if the HTTP caller stops waiting. Dropping a stream read mid-call
+    // could let the next request consume this call's delayed response.
+    let task = tokio::spawn(async move {
+        let mut meta = params.meta;
+        if let Some(budget) = budget {
+            let left = budget.saturating_sub(started.elapsed());
+            let host_ms = u64::try_from(left.as_millis())
+                .unwrap_or(u64::MAX)
+                .saturating_sub(meshy_dcc_jsonrpc::DEADLINE_HOP_MARGIN_MS);
+            if host_ms == 0 {
+                return deadline_error(task_id, false);
+            }
+            meta = meshy_dcc_jsonrpc::meta_with_timeout_ms(meta, host_ms);
+        }
+        match guard
+            .call_with_metadata(
                 &params.name,
                 params.arguments,
                 &request_id,
-                trace_context_from_headers(headers, &request_id),
+                trace_context,
+                meta,
             )
             .await
+        {
+            Ok(payload) => json!({"jsonrpc": "2.0", "id": task_id, "result": payload}),
+            Err(err) => host_rpc_error_to_jsonrpc(task_id, err),
+        }
+    });
+    let result = match remaining() {
+        Some(left) => match tokio::time::timeout(left, task).await {
+            Ok(result) => result,
+            Err(_) => return deadline_error(id, true),
+        },
+        None => task.await,
     };
-
     match result {
-        Ok(payload) => json!({
-            "jsonrpc": "2.0", "id": id,
-            "result": payload
-        }),
-        Err(err) => host_rpc_error_to_jsonrpc(id, err),
+        Ok(response) => response,
+        Err(error) => host_rpc_error_to_jsonrpc(id, HostRpcError::transport(error.to_string())),
     }
+}
+
+fn deadline_error(id: Value, dispatched: bool) -> Value {
+    let (kind, message) = if dispatched {
+        (
+            "outcome-unknown",
+            "The host did not answer before the deadline and may still run the call. Read the scene back before repeating it.",
+        )
+    } else {
+        (
+            "not-applied",
+            "The deadline passed before dispatch. The call was not sent to the host and is safe to retry.",
+        )
+    };
+    json!({
+        "jsonrpc": "2.0", "id": id,
+        "error": {"code": -32000, "message": message,
+            "data": {"kind": kind, "message": message, "retryable": !dispatched}},
+    })
 }
 
 fn host_rpc_error_to_jsonrpc(id: Value, err: HostRpcError) -> Value {
@@ -239,7 +296,7 @@ fn host_rpc_error_to_jsonrpc(id: Value, err: HostRpcError) -> Value {
             "transport-error".to_string(),
             json!({"kind": "transport-error", "message": message}),
         ),
-        HostRpcError::Timeout {} => (-32000, "timeout".to_string(), json!({"kind": "timeout"})),
+        HostRpcError::Timeout {} => return deadline_error(id, true),
         HostRpcError::Cancelled {} => (
             -32000,
             "cancelled".to_string(),

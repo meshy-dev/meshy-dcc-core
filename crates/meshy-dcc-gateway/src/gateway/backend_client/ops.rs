@@ -174,10 +174,25 @@ pub async fn call_backend_with_observability(
     client: &reqwest::Client,
     resilience: &GatewayResilienceState,
     mcp_url: &str,
-    request: BackendJsonRpcCallRequest<'_>,
+    mut request: BackendJsonRpcCallRequest<'_>,
 ) -> Result<Value, String> {
+    let started = std::time::Instant::now();
+    let not_applied = BackendCallError::Http {
+        mcp_url: mcp_url.to_string(),
+        status: "503".into(),
+        body: json!({
+            "kind": "not-applied",
+            "message": "The deadline passed before dispatch. The call was not sent to the host and is safe to retry.",
+        }).to_string(),
+    }.to_string();
     if request.require_ready {
-        match probe_mcp_readiness(client, mcp_url, request.timeout).await {
+        match tokio::time::timeout(
+            request.timeout,
+            probe_mcp_readiness(client, mcp_url, request.timeout),
+        )
+        .await
+        .map_err(|_| not_applied.clone())?
+        {
             ProbeOutcome::Ready => {}
             ProbeOutcome::Booting => {
                 return Err(BackendCallError::Booting {
@@ -192,6 +207,24 @@ pub async fn call_backend_with_observability(
                 .to_string());
             }
         }
+    }
+    request.timeout = request.timeout.saturating_sub(started.elapsed());
+    if request.method == "tools/call" {
+        if let Some(params) = request.params.as_mut().and_then(Value::as_object_mut) {
+            let meta = crate::gateway::request_meta::meta_after_elapsed(
+                params.remove("_meta"),
+                started.elapsed(),
+            );
+            if meshy_dcc_jsonrpc::timeout_ms_from_meta(meta.as_ref()) == Some(0) {
+                return Err(not_applied);
+            }
+            if let Some(meta) = meta {
+                params.insert("_meta".into(), meta);
+            }
+        }
+    }
+    if request.timeout.is_zero() {
+        return Err(not_applied);
     }
 
     let id = request.request_id.unwrap_or_else(uuid_like_id);

@@ -17,11 +17,13 @@
 //! 4. Maya writes the result as a single `\n`-terminated line back
 //!    over the same socket. Empty line means "no return value".
 //!
-//! We pack `(action, args, request_id)` into a single Python call:
+//! We pack `(action, args, request_id)` into a single Python call. The frame
+//! travels as a JSON string literal decoded inside Maya, because JSON
+//! `null`/`true`/`false` are not Python names:
 //!
 //! ```python
 //! __import__('meshy_dcc_maya._sidecar', fromlist=['dispatch']).dispatch(
-//!     {"action": "...", "args": {...}, "request_id": "..."}
+//!     __import__('json').loads("{\"action\": \"...\", \"args\": {...}, \"request_id\": \"...\"}")
 //! )
 //! ```
 //!
@@ -194,6 +196,10 @@ struct WireFrame<'a> {
     action: &'a str,
     args: &'a Value,
     request_id: &'a str,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    trace_context: Option<Value>,
+    #[serde(rename = "_meta", skip_serializing_if = "Option::is_none")]
+    meta: Option<Value>,
 }
 
 #[async_trait]
@@ -233,18 +239,36 @@ impl HostRpcClient for CommandPortClient {
         args: Value,
         request_id: &str,
     ) -> Result<Value, HostRpcError> {
+        self.call_with_metadata(action, args, request_id, None, None)
+            .await
+    }
+
+    async fn call_with_metadata(
+        &self,
+        action: &str,
+        args: Value,
+        request_id: &str,
+        trace_context: Option<Value>,
+        meta: Option<Value>,
+    ) -> Result<Value, HostRpcError> {
         let frame = WireFrame {
             action,
             args: &args,
             request_id,
+            trace_context,
+            meta,
         };
         let payload_json = serde_json::to_string(&frame)
+            .map_err(|e| HostRpcError::transport(format!("encode wire frame: {e}")))?;
+        // A JSON string literal is also a valid Python string literal, and its
+        // escapes keep the expression on one line.
+        let payload_literal = serde_json::to_string(&payload_json)
             .map_err(|e| HostRpcError::transport(format!("encode wire frame: {e}")))?;
         // Single-line Python expression invoking the in-Maya dispatcher.
         // `__import__` form keeps it independent of `from … import …`
         // module-cache state inside the Maya session.
         let expression = format!(
-            "__import__('meshy_dcc_maya._sidecar', fromlist=['dispatch']).dispatch({payload_json})\n",
+            "__import__('meshy_dcc_maya._sidecar', fromlist=['dispatch']).dispatch(__import__('json').loads({payload_literal}))\n",
         );
 
         let mut guard = self.state.lock().await;
@@ -573,10 +597,12 @@ mod tests {
         assert!(client.is_alive(), "client should be alive after connect");
 
         let response = client
-            .call(
+            .call_with_metadata(
                 "maya_primitives__create_sphere",
                 serde_json::json!({"radius": 1.0}),
                 "req-test-1",
+                Some(serde_json::json!({"trace_id": "trace-1", "trace_state": null})),
+                Some(serde_json::json!({"agent_context": {"agent_id": "agent-1"}, "meshy-dcc/timeout_ms": 1200})),
             )
             .await
             .expect("call should succeed against fake server");
@@ -585,6 +611,17 @@ mod tests {
         assert_eq!(response["object_name"], "pSphere1");
 
         let request_line = request_rx.await.expect("server observed request");
+        let prefix = ".dispatch(__import__('json').loads(";
+        let start = request_line.find(prefix).unwrap() + prefix.len();
+        let literal = request_line[start..].trim().trim_end_matches("))");
+        // Maya receives a string literal, never bare JSON `null`.
+        let payload: String = serde_json::from_str(literal).unwrap();
+        let frame: Value = serde_json::from_str(&payload).unwrap();
+        assert_eq!(frame["trace_context"]["trace_state"], Value::Null);
+        assert_eq!(frame["args"], serde_json::json!({"radius": 1.0}));
+        assert_eq!(frame["_meta"]["meshy-dcc/timeout_ms"], 1200);
+        assert_eq!(frame["_meta"]["agent_context"]["agent_id"], "agent-1");
+        assert_eq!(frame["trace_context"]["trace_id"], "trace-1");
         assert!(
             request_line.contains("maya_primitives__create_sphere"),
             "wire frame must include action slug, got: {request_line:?}",
@@ -594,7 +631,7 @@ mod tests {
             "wire expression must invoke the in-Maya dispatcher, got: {request_line:?}",
         );
         assert!(
-            request_line.contains("\"radius\":1.0"),
+            payload.contains("\"radius\":1.0"),
             "wire frame must include serialised args, got: {request_line:?}",
         );
 

@@ -155,6 +155,7 @@ pub(super) async fn call_service_with_admin_trace(
         },
     );
     let dispatch_ns = now_ns();
+    let started_at = std::time::Instant::now();
     let mut result = call_service(
         gs,
         slug,
@@ -166,11 +167,12 @@ pub(super) async fn call_service_with_admin_trace(
     .await;
     if matches!(&result, Err(err) if crate::gateway::tools::call_error_needs_refresh(err)) {
         refresh_all_live_backends_now(gs, RefreshReason::Periodic).await;
+        // The retry gets what is left of the caller's budget, never a fresh one.
         result = call_service(
             gs,
             slug,
             effective_arguments,
-            meta,
+            crate::gateway::request_meta::meta_after_elapsed(meta, started_at.elapsed()),
             Some(&ctx.trace_context),
             ctx.agent_context.as_ref(),
         )

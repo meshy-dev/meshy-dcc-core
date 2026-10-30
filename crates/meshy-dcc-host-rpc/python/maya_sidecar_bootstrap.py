@@ -16,7 +16,7 @@ re-exports the dispatcher already shipped at
 binary subsequently sends per ``tools/call`` is::
 
     __import__('meshy_dcc_maya._sidecar', fromlist=['dispatch']).dispatch(
-        {"action": ..., "args": ..., "request_id": ...}
+        __import__('json').loads('{"action": ..., "args": ..., "request_id": ...}')
     )
 
 so the only thing this bootstrap needs to guarantee is that

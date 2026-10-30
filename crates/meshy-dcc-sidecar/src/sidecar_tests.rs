@@ -961,13 +961,21 @@ async fn commandport_sidecar_dispatches_tools_call_to_fake_server() {
         call_line.contains("maya_primitives__create_sphere"),
         "wire frame should include the tool slug: {call_line:?}"
     );
+    // The frame travels as a JSON string literal that Maya decodes.
+    let prefix = ".dispatch(__import__('json').loads(";
+    let start = call_line
+        .find(prefix)
+        .expect("wire expression decodes its frame")
+        + prefix.len();
+    let frame: String =
+        serde_json::from_str(call_line[start..].trim().trim_end_matches("))")).unwrap();
     assert!(
-        call_line.contains("\"radius\":2.5"),
-        "wire frame should include serialized arguments: {call_line:?}"
+        frame.contains("\"radius\":2.5"),
+        "wire frame should include serialized arguments: {frame:?}"
     );
     assert!(
-        call_line.contains("\"request_id\":\"sidecar-call-1\""),
-        "wire frame should preserve the JSON-RPC id as request_id: {call_line:?}"
+        frame.contains("\"request_id\":\"sidecar-call-1\""),
+        "wire frame should preserve the JSON-RPC id as request_id: {frame:?}"
     );
 
     child.kill().expect("kill sleep child");
