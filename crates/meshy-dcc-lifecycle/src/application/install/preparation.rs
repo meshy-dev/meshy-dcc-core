@@ -168,7 +168,14 @@ pub fn prepare_adapter(
     // Registration and live verification belong to a project session. Package
     // acquisition already verifies its checksum inside the host-package step.
     plan.steps.retain(|step| {
-        step.action.is_none() || matches!(step.action, Some(InstallStepAction::HostPackage { .. }))
+        step.action.is_none()
+            || matches!(
+                step.action,
+                Some(
+                    InstallStepAction::HostPackage { .. }
+                        | InstallStepAction::WriteLaunchPlan { .. }
+                )
+            )
     });
     plan.catalog = Some(service.catalog_provenance(catalog));
     plan = service.apply_auto_install_policy(plan);

@@ -99,3 +99,53 @@ fn missing_scan_patterns_are_unknown_not_software_absence() {
     assert_eq!(value["software"][0]["detection"], "unknown");
     assert_eq!(value["software"][0]["adapter"]["available"], false);
 }
+
+#[test]
+fn global_preparation_publishes_its_existing_launch_recipe_without_a_project() {
+    let temp = tempfile::tempdir().unwrap();
+    let registry = temp.path().join("registry");
+    let data = temp.path().join("data");
+    let _env = meshy_dcc_test_utils::EnvVarsGuard::set(&[
+        ("MESHY_DCC_DATA_DIR", data.to_str()),
+        ("MESHY_DCC_REGISTRY_DIR", registry.to_str()),
+    ]);
+    let executable = temp.path().join("host");
+    std::fs::write(&executable, "fixture executable; never launched").unwrap();
+    let catalog = temp.path().join("catalog.json");
+    std::fs::write(&catalog, json!({"entries":[{"name":"fixture-adapter","description":"fixture","dcc":["fixture"],"tags":["adapter"],"version":"1.0.0",
+        "policy":{"installation":"available"},"install":{"type":"host-package","url":"https://example.invalid/fixture.zip","sha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "host":{"extract":true,"dcc_paths":[executable],"launch":["{executable}","--fixture"]}}}]}).to_string()).unwrap();
+    let planned = prepare_adapter("fixture", None, Some(&catalog), false).unwrap();
+    let plan: crate::domain::install::InstallPlan =
+        serde_json::from_value(planned["plan"].clone()).unwrap();
+    assert_eq!(
+        plan.steps
+            .iter()
+            .map(|s| s.name.as_str())
+            .collect::<Vec<_>>(),
+        ["install-host-package", "write-launch-plan"]
+    );
+    // The neighboring preparation test covers real checksum acquisition. Here
+    // isolate the retained launch-plan executor and never invoke a host.
+    let report = InstallService::bundled().execute_plan_with(
+        &plan,
+        true,
+        |action, _| match action {
+            InstallStepAction::HostPackage { .. } => {
+                Ok(super::super::StepExecution::Completed(None))
+            }
+            _ => super::super::execute_action(action),
+        },
+        super::super::execute_rollback,
+    );
+    assert_eq!(report.status, "ok");
+    let published: Value =
+        serde_json::from_slice(&std::fs::read(registry.join("launch-plans/fixture.json")).unwrap())
+            .unwrap();
+    assert_eq!(
+        published["executable"],
+        executable.to_string_lossy().as_ref()
+    );
+    assert_eq!(published["argv"], json!(["{executable}", "--fixture"]));
+    assert!(published.get("project").is_none());
+}
