@@ -75,10 +75,20 @@ pub mod resource_uri;
 /// owns the table that maps gateway ids to [`PendingCall`]s.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct PendingCall {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    /// Canonical ingress origin for caller-scoped activity observations.
+    pub agent_context: Option<serde_json::Value>,
+    #[serde(default = "pending_work_default")]
+    /// False for native lifecycle observations, which must not count themselves as work.
+    pub work: bool,
     /// URL of the backend that is servicing this call.
     pub backend_url: String,
     /// Request id as seen by the backend (may differ from the gateway id).
     pub backend_request_id: String,
+}
+
+fn pending_work_default() -> bool {
+    true
 }
 
 impl PendingCall {
@@ -90,6 +100,8 @@ impl PendingCall {
     #[must_use]
     pub fn new(backend_url: impl Into<String>, backend_request_id: impl Into<String>) -> Self {
         Self {
+            agent_context: None,
+            work: true,
             backend_url: backend_url.into(),
             backend_request_id: backend_request_id.into(),
         }

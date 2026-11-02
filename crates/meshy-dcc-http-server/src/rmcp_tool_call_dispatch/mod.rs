@@ -243,7 +243,7 @@ async fn dispatch_registry_tool(
         state,
         &resolved_name,
         call_params.clone(),
-        None,
+        call_meta.and_then(|meta| serde_json::to_value(meta).ok()),
         action_meta.thread_affinity,
         action_meta.enforce_thread_affinity,
         call_meta

@@ -1,5 +1,6 @@
 use super::*;
 use axum::body::to_bytes;
+use meshy_dcc_gateway_core::policy::GatewayPolicy;
 use meshy_dcc_transport::discovery::file_registry::FileRegistry;
 use serde_json::json;
 use std::collections::HashMap;
@@ -152,6 +153,122 @@ async fn dispatch(req: &JsonRpcRequest) -> Value {
         .expect("request has id")
 }
 
+#[tokio::test]
+async fn lifecycle_mcp_admission_reconciles_across_connections_with_typed_origin() {
+    let gs = test_gateway_state();
+    let project = tempfile::tempdir().unwrap();
+    let metadata = json!({"agent_context":{"agent_name":"fixture-client","session_id":"session-a","turn_id":"run-a"}});
+    let start = request(
+        "tools/call",
+        json!("start"),
+        Some(json!({"name":"lifecycle",
+        "arguments":{"action":"start","dcc_type":"fixture","project":project.path(),"request_id":"stable-start","timeout_ms":500},"_meta":metadata})),
+    );
+    let accepted = dispatch_single_request(&gs, &start, "connection-a", &HeaderMap::new())
+        .await
+        .unwrap();
+    assert_eq!(accepted["result"]["isError"], false);
+    let receipt = &accepted["result"]["structuredContent"];
+    assert_eq!(receipt["state"], "accepted");
+    assert_eq!(receipt["agent_context"]["session_id"], "session-a");
+    assert_eq!(receipt["agent_context"]["turn_id"], "run-a");
+    let query = request(
+        "tools/call",
+        json!("reconnect"),
+        Some(json!({"name":"lifecycle",
+        "arguments":{"action":"operation","request_id":"stable-start"},"_meta":metadata})),
+    );
+    let queried = dispatch_single_request(&gs, &query, "connection-b", &HeaderMap::new())
+        .await
+        .unwrap();
+    assert_eq!(
+        queried["result"]["structuredContent"]["operation_id"],
+        receipt["operation_id"]
+    );
+    let replay = dispatch_single_request(&gs, &start, "connection-b", &HeaderMap::new())
+        .await
+        .unwrap();
+    assert_eq!(
+        replay["result"]["structuredContent"]["operation_id"],
+        receipt["operation_id"]
+    );
+}
+
+#[tokio::test]
+async fn lifecycle_expired_budget_and_read_only_policy_never_dispatch() {
+    let mut gs = test_gateway_state();
+    let project = tempfile::tempdir().unwrap();
+    let params = json!({"name":"lifecycle","arguments":{"action":"start","dcc_type":"fixture",
+        "project":project.path(),"request_id":"no-dispatch"},"_meta":{"meshy-dcc/timeout_ms":0}});
+    let denied = dispatch_single_request(
+        &gs,
+        &request("tools/call", json!(1), Some(params.clone())),
+        "session",
+        &HeaderMap::new(),
+    )
+    .await
+    .unwrap();
+    assert_eq!(denied["result"]["isError"], true);
+    assert!(
+        denied["result"]["structuredContent"]["error"]
+            .as_str()
+            .unwrap()
+            .contains("deadline")
+    );
+    assert!(!gs.registry.registry_dir().join("start-instance").exists());
+    gs.policy = Arc::new(GatewayPolicy {
+        read_only: true,
+        ..Default::default()
+    });
+    let mut params = params;
+    params["_meta"] = json!({});
+    let denied = dispatch_single_request(
+        &gs,
+        &request("tools/call", json!(2), Some(params)),
+        "session",
+        &HeaderMap::new(),
+    )
+    .await
+    .unwrap();
+    assert_eq!(denied["result"]["isError"], true);
+    assert!(!gs.registry.registry_dir().join("start-instance").exists());
+}
+
+#[tokio::test]
+async fn lifecycle_activity_does_not_count_its_own_observation_as_active_work() {
+    let gs = test_gateway_state();
+    let query = request(
+        "tools/call",
+        json!("activity"),
+        Some(json!({"name":"lifecycle","arguments":{"action":"active_work"}})),
+    );
+    let response = dispatch_single_request(&gs, &query, "session", &HeaderMap::new())
+        .await
+        .unwrap();
+    assert_eq!(response["result"]["structuredContent"]["state"], "idle");
+    assert_eq!(response["result"]["structuredContent"]["pending_calls"], 0);
+}
+
+#[tokio::test]
+async fn lifecycle_instructions_cover_workspace_reuse_live_host_and_code_only_exception() {
+    let response = dispatch(&request("initialize", json!("guide"), None)).await;
+    let guide = response["result"]["instructions"].as_str().unwrap();
+    for phrase in [
+        "Blender, Godot, Unity",
+        "use the live host through Core",
+        "native readback",
+        "first inspect the current workspace",
+        "only when none exists",
+        "target is ambiguous",
+        "explicit code-only",
+    ] {
+        assert!(
+            guide.contains(phrase),
+            "missing workflow guidance: {phrase}"
+        );
+    }
+}
+
 const TEST_PNG_BASE64: &str =
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9ZQmcAAAAASUVORK5CYII=";
 
@@ -285,7 +402,7 @@ async fn tools_list_legacy_response_stays_json() {
     let tools = response["result"]["tools"]
         .as_array()
         .expect("legacy tools/list returns tools array");
-    assert_eq!(tools.len(), 4, "gateway tools/list must stay bounded");
+    assert_eq!(tools.len(), 5, "gateway tools/list must stay bounded");
     assert!(response["result"].get("text").is_none());
 }
 
@@ -313,7 +430,7 @@ async fn tools_list_can_return_json_rpc_safe_compact_toon() {
         .expect("compact tools/list decodes to tools array");
     assert_eq!(
         tools.len(),
-        4,
+        5,
         "compact mode must not fan out backend tools"
     );
 }
@@ -330,7 +447,7 @@ async fn explicit_mcp_json_opt_out_wins_over_compact_alias() {
     let tools = response["result"]["tools"]
         .as_array()
         .expect("explicit JSON opt-out keeps the legacy tools/list shape");
-    assert_eq!(tools.len(), 4);
+    assert_eq!(tools.len(), 5);
     assert!(response["result"].get("text").is_none());
     assert!(response["result"].get("response_format").is_none());
 }

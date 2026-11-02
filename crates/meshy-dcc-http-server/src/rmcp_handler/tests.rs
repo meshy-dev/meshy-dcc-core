@@ -60,7 +60,7 @@ async fn invoke(
     let service = serve_directly(ContextPeer, stream, None);
     let peer = service.peer().clone();
     let mut context = RequestContext::<RoleServer>::new(NumberOrString::Number(1), peer.clone());
-    context.meta = meta(context_meta);
+    context.meta = meta(context_meta.clone());
     let mut arguments = json!({"marker":"executed"});
     if let Some(value) = legacy_meta {
         arguments["_meta"] = value;
@@ -77,6 +77,19 @@ async fn invoke(
     let terminal = if let Some(job_id) = initial["job_id"].as_str() {
         assert_eq!(initial["status"], "pending");
         assert_eq!(handler.state.jobs.list().len(), 1);
+        if let Some(expected) = terminal_origin(&context_meta) {
+            assert_eq!(
+                handler
+                    .state
+                    .jobs
+                    .get(job_id)
+                    .unwrap()
+                    .read()
+                    .agent_context
+                    .as_ref(),
+                Some(&expected)
+            );
+        }
         tokio::time::timeout(Duration::from_secs(3), async {
             loop {
                 let request = CallToolRequestParams::new("jobs_get_status").with_arguments(
@@ -117,6 +130,46 @@ async fn direct_typed_request_meta_keeps_explicit_async() {
     let (initial, terminal) = invoke(json!({}), Some(json!({"dcc":{"async":true}})), None).await;
     assert_eq!(initial["status"], "pending");
     assert_eq!(terminal.pointer("/meta/dcc/async"), Some(&json!(true)));
+}
+
+fn terminal_origin(meta: &Value) -> Option<Value> {
+    meshy_dcc_models::job_agent_context(Some(meta))
+}
+
+#[tokio::test]
+async fn asynchronous_admission_retains_canonical_session_run_and_release_origin() {
+    let (_, terminal) = invoke(
+        json!({"dcc":{"async":true},"agent_context":{
+        "agent_name":"fixture-client","session_id":"session-a","turn_id":"run-a",
+        "metadata":{"release":"fixture-release"}}}),
+        None,
+        None,
+    )
+    .await;
+    assert_eq!(
+        terminal.pointer("/meta/agent_context/turn_id"),
+        Some(&json!("run-a"))
+    );
+}
+
+#[tokio::test]
+async fn synchronous_dispatch_keeps_protocol_origin_and_narrows_legacy_budget() {
+    let (_, terminal) = invoke(
+        json!({"agent_context":{"agent_name":"canonical","session_id":"session-a"},
+        "meshy-dcc/timeout_ms":5000}),
+        None,
+        Some(json!({"agent_context":{"agent_name":"legacy"},
+        "meshy-dcc/timeout_ms":3000})),
+    )
+    .await;
+    assert_eq!(
+        terminal.pointer("/meta/agent_context/agent_name"),
+        Some(&json!("canonical"))
+    );
+    assert_eq!(
+        terminal.pointer("/meta/meshy-dcc~1timeout_ms"),
+        Some(&json!(3000))
+    );
 }
 
 #[tokio::test]

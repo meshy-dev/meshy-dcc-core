@@ -147,6 +147,7 @@ const MARKETPLACE_V2_SCHEMA_JSON: &str = r##"{
                   "host": {
                   "type": "object",
                   "properties": {
+                      "software_homepage": { "type": "string", "format": "uri" },
                     "extract": { "type": "boolean" },
                     "steps": { "type": "array", "items": { "type": "array", "minItems": 1, "prefixItems": [{ "type": "string", "pattern": "^(\\{dcc_path\\}|\\{package_dir\\}/.+)$" }], "items": { "type": "string" } } },
                     "project_steps": { "type": "array", "items": { "type": "array", "minItems": 1, "prefixItems": [{ "type": "string", "pattern": "^(\\{dcc_path\\}|\\{package_dir\\}/.+)$" }], "items": { "type": "string" } } },
@@ -181,6 +182,7 @@ const MARKETPLACE_V2_SCHEMA_JSON: &str = r##"{
             "host": {
               "type": "object",
               "properties": {
+                "software_homepage": { "type": "string", "format": "uri" },
                 "extract": { "type": "boolean" },
                 "steps": { "type": "array", "items": { "type": "array", "minItems": 1, "prefixItems": [{ "type": "string", "pattern": "^(\\{dcc_path\\}|\\{package_dir\\}/.+)$" }], "items": { "type": "string" } } },
                 "project_steps": { "type": "array", "items": { "type": "array", "minItems": 1, "prefixItems": [{ "type": "string", "pattern": "^(\\{dcc_path\\}|\\{package_dir\\}/.+)$" }], "items": { "type": "string" } } },

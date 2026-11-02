@@ -26,6 +26,37 @@ pub(crate) fn parse_output_format(s: &str) -> Result<OutputFormat, String> {
 #[allow(clippy::large_enum_variant)]
 #[derive(Debug, Subcommand)]
 pub(crate) enum Command {
+    /// Observe catalog-backed local software paths and adapter preparation, without projects.
+    Software {
+        #[arg(long, env = "MESHY_DCC_CATALOG_PATH")]
+        catalog: Option<PathBuf>,
+        #[arg(long)]
+        json: bool,
+    },
+    /// Verify and prepare an adapter without modifying any project.
+    PrepareAdapter {
+        #[arg(long)]
+        dcc_type: String,
+        #[arg(long)]
+        dcc_path: Option<PathBuf>,
+        #[arg(long, env = "MESHY_DCC_CATALOG_PATH")]
+        catalog: Option<PathBuf>,
+        #[arg(long)]
+        execute: bool,
+        #[arg(long)]
+        json: bool,
+    },
+    /// Read Core lifecycle, in-flight call and pending/running job evidence. Never starts services.
+    ActiveWork {
+        #[arg(long)]
+        agent_name: Option<String>,
+        #[arg(long)]
+        session_id: Option<String>,
+        #[arg(long)]
+        turn_id: Option<String>,
+        #[arg(long)]
+        json: bool,
+    },
     /// Run health + MCP + REST smoke checks against a service.
     Smoke {
         /// MCP URL or base URL. Accepts either http://host:port or http://host:port/mcp.

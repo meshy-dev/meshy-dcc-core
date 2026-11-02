@@ -862,7 +862,7 @@ fn gateway_schemas() -> Vec<(&'static str, Value)> {
                     },
                     "operation": {
                         "type": "string",
-                        "enum": ["search", "describe", "load_skill", "call"]
+                        "enum": ["search", "describe", "load_skill", "call", "lifecycle"]
                     },
                     "message": {"type": "string"},
                     "read_only": {"type": "boolean"},

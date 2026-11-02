@@ -50,8 +50,27 @@ impl LifecycleStore {
         let path = self.operation_path(&operation.operation_id);
         let encoded =
             serde_json::to_string_pretty(operation).context("encoding lifecycle operation")?;
-        std::fs::write(&path, encoded)
+        let mut staging = tempfile::NamedTempFile::new_in(&self.dir)?;
+        std::io::Write::write_all(&mut staging, encoded.as_bytes())?;
+        staging
+            .persist(&path)
             .with_context(|| format!("writing lifecycle operation {}", path.display()))?;
+
+        // Configuration and stop receipts must not replace the original launch owner.
+        if operation
+            .management
+            .as_ref()
+            .is_some_and(|m| m.action != "start" || !operation.launched || !operation.owned)
+        {
+            return Ok(());
+        }
+        let lock = std::fs::OpenOptions::new()
+            .create(true)
+            .read(true)
+            .write(true)
+            .truncate(false)
+            .open(self.dir.join(".index.lock"))?;
+        lock.lock()?;
 
         let mut index = self.read_index()?;
         index.operations.insert(

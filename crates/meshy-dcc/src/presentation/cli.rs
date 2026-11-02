@@ -139,12 +139,17 @@ pub struct Args {
 }
 
 pub async fn run() -> anyhow::Result<()> {
-    if apply_staged_update() {
+    // Keep legacy staged-update quarantine before clap's --version/--help exit,
+    // while valid read-only inspections bypass all update writes.
+    let parsed = Args::try_parse();
+    let inspection = matches!(&parsed, Ok(args) if matches!(args.command,
+        Command::Software { .. } | Command::ActiveWork { .. }));
+    if !inspection && apply_staged_update() {
         let error =
             meshy_dcc_updater::relaunch_current_exe(&[("MESHY_DCC_UPDATE_JUST_APPLIED", "1")]);
         anyhow::bail!("could not start the updated meshy-dcc: {error}");
     }
-    let args = Args::parse();
+    let args = parsed.unwrap_or_else(|error| error.exit());
     let format = output_format(&args.command, args.output);
     if let Err(error) = run_with_args(args).await {
         let envelope = error_envelope(&error);
@@ -158,7 +163,10 @@ pub async fn run() -> anyhow::Result<()> {
 fn output_format(command: &Command, output: Option<OutputFormat>) -> Result<OutputFormat, String> {
     match command {
         Command::Feedback(args) => args.resolve_output(output),
-        Command::Install { json: true, .. } => Ok(OutputFormat::Json),
+        Command::Install { json: true, .. }
+        | Command::Software { json: true, .. }
+        | Command::PrepareAdapter { json: true, .. }
+        | Command::ActiveWork { json: true, .. } => Ok(OutputFormat::Json),
         _ => Ok(output.unwrap_or_else(OutputFormat::auto_detect)),
     }
 }
@@ -254,6 +262,39 @@ async fn run_with_args(args: Args) -> anyhow::Result<()> {
         command,
     } = args;
 
+    // Inspections bypass update, Skill refresh and telemetry writes as well as gateway auto-start.
+    if matches!(
+        command,
+        Command::Software { .. } | Command::ActiveWork { .. }
+    ) {
+        let value = match &command {
+            Command::Software { catalog, .. } => {
+                meshy_dcc_lifecycle::application::install::observe_software(catalog.as_deref())?
+            }
+            Command::ActiveWork {
+                agent_name,
+                session_id,
+                turn_id,
+                ..
+            } => {
+                let default_endpoint =
+                    default_base_url(std::env::var("MESHY_DCC_GATEWAY_PORT").ok().as_deref());
+                meshy_dcc_lifecycle::application::lifecycle::inspect_active_work(
+                    &gateway_ensure::default_registry_dir(),
+                    base_url.as_deref().unwrap_or(&default_endpoint),
+                    &meshy_dcc_models::CallerFilter {
+                        agent_name: agent_name.clone(),
+                        session_id: session_id.clone(),
+                        turn_id: turn_id.clone(),
+                    },
+                )
+                .await
+            }
+            _ => unreachable!(),
+        };
+        return OutputWriter::new(output_format(&command, output).map_err(anyhow::Error::msg)?)
+            .write_data(&value);
+    }
     let transport = transport_args.transport;
     // Repeated in suggested commands so they run the way this one did.
     let mut global_flags: Vec<Vec<String>> = Vec::new();
@@ -347,6 +388,25 @@ async fn run_with_args(args: Args) -> anyhow::Result<()> {
     let mut exit_code = ExitCode::GeneralError;
     let mut explicit_exit_code = None;
     let mut value = match command {
+        Command::Software { .. } | Command::ActiveWork { .. } => unreachable!(),
+        Command::PrepareAdapter {
+            dcc_type,
+            dcc_path,
+            catalog,
+            execute,
+            ..
+        } => {
+            let value = meshy_dcc_lifecycle::application::install::prepare_adapter(
+                &dcc_type,
+                dcc_path,
+                catalog.as_deref(),
+                execute,
+            )?;
+            if value["status"] == "failed" {
+                failed = true;
+            }
+            value
+        }
         Command::Smoke {
             url,
             query,

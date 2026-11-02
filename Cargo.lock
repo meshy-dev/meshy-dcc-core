@@ -2983,6 +2983,7 @@ dependencies = [
  "meshy-dcc-http",
  "meshy-dcc-http-server",
  "meshy-dcc-jsonrpc",
+ "meshy-dcc-lifecycle",
  "meshy-dcc-marketplace",
  "meshy-dcc-models",
  "meshy-dcc-sidecar",
@@ -3160,6 +3161,7 @@ dependencies = [
  "meshy-dcc-gateway-core",
  "meshy-dcc-gateway-ensure",
  "meshy-dcc-jsonrpc",
+ "meshy-dcc-lifecycle",
  "meshy-dcc-marketplace",
  "meshy-dcc-models",
  "meshy-dcc-naming",
@@ -3424,10 +3426,12 @@ dependencies = [
  "chrono",
  "dashmap",
  "fs4",
+ "meshy-dcc-models",
  "parking_lot",
  "rusqlite",
  "serde",
  "serde_json",
+ "tempfile",
  "thiserror",
  "tokio-util",
  "tracing",
@@ -3446,6 +3450,38 @@ dependencies = [
  "serde",
  "serde_json",
  "workspace-hack",
+]
+
+[[package]]
+name = "meshy-dcc-lifecycle"
+version = "0.2.2"
+dependencies = [
+ "anyhow",
+ "axum",
+ "dirs",
+ "glob",
+ "hex",
+ "libc",
+ "meshy-dcc-attestation",
+ "meshy-dcc-catalog",
+ "meshy-dcc-gateway-ensure",
+ "meshy-dcc-jsonrpc",
+ "meshy-dcc-models",
+ "meshy-dcc-test-utils",
+ "meshy-dcc-transport",
+ "meshy-dcc-updater",
+ "reqwest 0.13.4",
+ "semver",
+ "serde",
+ "serde_json",
+ "sha2 0.11.0",
+ "tempfile",
+ "thiserror",
+ "tokio",
+ "toon-format",
+ "uuid",
+ "windows-sys 0.61.2",
+ "zip",
 ]
 
 [[package]]

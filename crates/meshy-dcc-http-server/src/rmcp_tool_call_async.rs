@@ -284,9 +284,11 @@ pub(super) async fn dispatch_async_registry_tool(
     call_meta: Option<Value>,
     cfg: AsyncDispatchConfig,
 ) -> CallToolResult {
-    let job_handle = state
-        .jobs
-        .create_with_parent(resolved_name.clone(), cfg.parent_job_id.clone());
+    let job_handle = state.jobs.create_with_context(
+        resolved_name.clone(),
+        cfg.parent_job_id.clone(),
+        meshy_dcc_models::job_agent_context(call_meta.as_ref()),
+    );
     let (job_id, cancel_token) = {
         let job = job_handle.read();
         (job.id.clone(), job.cancel_token.clone())
@@ -353,6 +355,7 @@ mod admission_tests {
                             ..Default::default()
                         }),
                         timeout_ms: None,
+                        agent_context: None,
                     };
                     let config = async_dispatch_config(Some(&meta), &action);
                     assert_eq!(config.is_some(), execution.is_deferred() || explicit_async);

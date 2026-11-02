@@ -100,6 +100,9 @@ pub struct JobOutputTarget {
 /// A tracked async tool invocation.
 #[derive(Debug, Clone, Serialize)]
 pub struct Job {
+    /// Original trusted ingress identity/release, persisted with this job.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub agent_context: Option<serde_json::Value>,
     pub id: String,
     pub tool_name: String,
     pub status: JobStatus,
@@ -148,6 +151,7 @@ impl Job {
     ) -> Self {
         let now = Utc::now();
         Self {
+            agent_context: None,
             id: Uuid::new_v4().to_string(),
             tool_name,
             status: JobStatus::Pending,

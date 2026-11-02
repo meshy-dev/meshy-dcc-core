@@ -49,6 +49,7 @@ entries:
             - "C:/Program Files/Blender Foundation/Blender */blender.exe"
             - "C:/Program Files (x86)/Steam/steamapps/common/Blender/blender.exe"
       host:
+        software_homepage: "https://www.blender.org/"
         uninstall:
           - ["{dcc_path}", "--command", "extension", "remove", "user_default.meshy_dcc_blender"]
         steps:
@@ -116,10 +117,12 @@ entries:
             - "~/Downloads/Godot_v*_win64.exe"
             - "~/Downloads/Godot_v*_win64_exe/Godot_v*_win64.exe"
           host:
+            software_homepage: "https://godotengine.org/"
             extract: true
             project_steps:
               - ["{package_dir}/python/python.exe", "-m", "meshy_dcc_godot", "install", "{project}", "--dcc-path", "{dcc_path}", "--sidecar", "{package_dir}/bin/meshy-dcc-godot-sidecar.cmd", "--files-only", "--yes", "--json"]
       host:
+        software_homepage: "https://godotengine.org/"
         extract: true
         project_steps:
           - ["{package_dir}/bin/meshy-dcc-godot-sidecar", "install", "{project}", "--dcc-path", "{dcc_path}", "--sidecar", "{package_dir}/bin/meshy-dcc-godot-sidecar", "--files-only", "--yes", "--json"]

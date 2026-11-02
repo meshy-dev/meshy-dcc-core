@@ -20,6 +20,11 @@ that a host cannot be used. Remote inventory cannot grant local ownership.
 Clients can rebuild this view after restarting without copying Core's receipt
 store or maintaining a second instance registry.
 
+Native MCP lifecycle operations also preserve caller origin and may produce
+derived Session associations for an exact reused instance. See the
+[shared lifecycle contract](session-lifecycle.md) for admission handles,
+reconciliation, origin fields and the distinction between association and ownership.
+
 To request a safe stop, pass the returned operation ID to
 `meshy-dcc stop-instance --operation-id <id>` and retain the exact instance ID.
 Core revalidates ownership and invokes the adapter's advertised stop hook.

@@ -8,12 +8,40 @@
 
 ## Use MCP the way the gateway expects
 
-1. **`tools/list`** — Small, stable set: exactly **`search`**, **`describe`**, **`load_skill`**, and **`call`**. Treat it as an **index of gateway verbs**, not the full catalog of every backend action.
+1. **`tools/list`** — Small, stable set: four host verbs **`search`**, **`describe`**, **`load_skill`**, and **`call`**, plus the bounded **`lifecycle`** management tool. Treat it as an **index of gateway verbs**, not the full catalog of every backend action.
 2. **Discover backend work** — `search(kind="tool")` returns compact hits with an executable `next_step`. Follow it: no-schema hits go straight to **`call`** with `{}` only when compact safety hints are already present; otherwise use **`describe`** to read schema, safety hints, **`affinity`**, **`execution`**, and timeouts before **`call`**. On REST, use `/v1/search`, `/v1/describe`, `/v1/call` (or the path-style `POST /v1/dcc/{dcc}/instances/{id}/call` from **REST clients** below). Preserve the returned `next_step.arguments.meta.search_id` (or the same object as MCP `_meta`) on `describe`, `load_skill`, and `call`; this lets the gateway measure selected rank and hit rate without storing full prompts.
 3. **Chaining** — **`call({calls:[...]})`** / **`POST /v1/call_batch`** runs up to **25** ordered calls when you have several **different** validated steps. Prefer fewer, well-formed calls over chatty micro-steps.
 4. **Skills vs tools** — `search(kind="skill")` / `load_skill` load packaged workflows on a host; `search(kind="tool")` resolves a **`tool_slug`** for the dynamic surface. Keep names straight; use `describe` before calling an unfamiliar schema-bearing slug. Unloaded hits carry `load_state`, `available_groups` when known, and `next_step` with both MCP and REST call shapes.
 5. **Progressive groups** — gateway `load_skill` activates declared groups by default (`activate_groups=true` when omitted). Pass `activate_groups=false` for lazy loading, or `load_skill(..., tool_group="...")` when you only want one group.
 6. **Correlated load shortcut** — When you follow a tool search hit whose `next_step.action` is `load_skill`, keep its `target_tool_slug` and `meta.search_id`. After loading, the gateway may include `compact_schema` (`required`, `property_keys`, and compact `properties`) and return `next_step.action="call"`, saving the extra post-load describe round trip.
+
+### Open or reuse a native project before host work
+
+Core can configure and open/reuse Blender, Godot, Unity and other native projects
+without client-specific launch scripts. Adapter preparation is a separate setup
+step (`meshy-dcc prepare-adapter --dcc-type <type> --execute --json`) and has no
+project binding. Create a missing native project with ordinary authorized file
+or code tools first; Core does not manufacture every host's project format.
+
+For an application task, use the live host through Core and verify the result
+with native readback. Reuse the indicated native project, or inspect the current
+workspace for a compatible one before creating anything. Create a project only
+when none exists; ask the user when the target is ambiguous. An explicit
+code-only request may omit host launch.
+
+For project-bound work call `lifecycle` with `action="configure_project"`, the
+existing absolute `project`, `dcc_type` and a stable `request_id`. Query its
+`operation_id` until configuration finishes, then use `action="start"` with the
+same exact project and a new stable request ID. Start opens or reuses the
+project and returns registration/readiness evidence. Query the original handle
+after a lost reply; do not create another process by replaying the work under a
+new identity. A timed-out wait does not cancel the host. Use the resulting exact
+instance for discovery, execution and native readback.
+
+`lifecycle.stop` requires the original caller-owned launch and never discards
+unsaved work. Explicitly confirmed discard stays on the operator CLI stop path.
+`lifecycle.operation`, bounded `wait`, and `active_work` observe existing Core
+records; clients do not create a second job or binding registry.
 
 ### Capability tag taxonomy for pipeline and docs connectors
 

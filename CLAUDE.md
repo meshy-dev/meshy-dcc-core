@@ -20,8 +20,9 @@ plan, and the results of the first Windows run at its end.
 Start new work by inspecting context and stating the intended change and checks.
 A planning request authorizes a plan; implement when the user requests it.
 
-The agent-facing entry is the `meshy-dcc` CLI (built from `crates/meshy-dcc`)
-plus `skills/meshy-dcc/SKILL.md`. No MCP connector is exposed to the agent.
+Agent-facing entries include Core's native MCP gateway and the `meshy-dcc`
+CLI (built from `crates/meshy-dcc`) with `skills/meshy-dcc/SKILL.md`. Their
+software preparation and project lifecycle use shared application services.
 Meshy API calls, authentication, billing, polling and downloads belong to the
 published `meshy-cli`; core only consumes its machine-output contract.
 

@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "software": [
+    {
+      "dcc_type": "godot",
+      "name": "Godot",
+      "detection": "found",
+      "candidates": [
+        {
+          "path": "/Applications/Godot.app/Contents/MacOS/Godot"
+        }
+      ],
+      "adapter": {
+        "available": true,
+        "version": "0.1.1",
+        "prepared": true,
+        "per_project": true
+      },
+      "homepage": "https://godotengine.org/"
+    }
+  ]
+}

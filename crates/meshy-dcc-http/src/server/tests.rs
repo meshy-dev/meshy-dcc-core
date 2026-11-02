@@ -63,12 +63,41 @@ async fn request_id_is_not_invented_when_header_is_absent() {
 
 #[test]
 fn health_payload_surfaces_job_persistence_state() {
-    let payload = health_payload(&crate::job::JobManager::new());
+    let payload = health_payload(&crate::job::JobManager::new(), &Default::default());
 
     assert_eq!(payload["ok"], true);
     assert_eq!(payload["job_persistence"]["state"], "not_configured");
     assert_eq!(payload["job_persistence"]["consecutive_failures"], 0);
     assert!(payload["job_persistence"]["last_error_kind"].is_null());
+}
+
+#[test]
+fn health_activity_reports_pending_jobs_with_exact_caller_scope() {
+    let jobs = crate::job::JobManager::new();
+    jobs.create_with_context(
+        "fixture.pending",
+        None,
+        Some(
+            serde_json::json!({"agent_name":"client-a","session_id":"session-a","turn_id":"run-a"}),
+        ),
+    );
+    jobs.create_with_context(
+        "fixture.other",
+        None,
+        Some(serde_json::json!({"agent_name":"client-b"})),
+    );
+    jobs.create("fixture.legacy");
+    let scope = meshy_dcc_models::CallerFilter {
+        agent_name: Some("client-a".into()),
+        ..Default::default()
+    };
+    let payload = health_payload(&jobs, &scope);
+    assert_eq!(payload["activity"]["pending_jobs"], 1);
+    assert_eq!(payload["activity"]["unattributed_jobs"], 1);
+    assert_eq!(
+        payload["activity"]["scope"],
+        serde_json::to_value(scope).unwrap()
+    );
 }
 
 #[cfg(feature = "job-persist-sqlite")]
@@ -272,7 +301,7 @@ async fn dedicated_health_remains_responsive_while_job_storage_is_blocked() {
             "/health",
             routing::get(move || {
                 let jobs = health_jobs.clone();
-                async move { Json(health_payload(&jobs)) }
+                async move { Json(health_payload(&jobs, &Default::default())) }
             }),
         );
 
@@ -382,7 +411,7 @@ async fn dedicated_health_remains_responsive_while_job_cleanup_is_blocked() {
             "/health",
             routing::get(move || {
                 let jobs = health_jobs.clone();
-                async move { Json(health_payload(&jobs)) }
+                async move { Json(health_payload(&jobs, &Default::default())) }
             }),
         );
 

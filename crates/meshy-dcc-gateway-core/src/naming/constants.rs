@@ -25,6 +25,7 @@ use super::primitives::ID_PREFIX_LEN;
 /// backend work through [`search`] → [`describe`] → [`call`]; skill lifecycle
 /// uses [`load_skill`] / [`unload_skill`]; multi-instance pooling uses [`lease`].
 pub const GATEWAY_LOCAL_TOOLS: &[&str] = &[
+    "lifecycle",
     "lease",
     "search",
     "describe",

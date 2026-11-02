@@ -330,6 +330,9 @@ impl CatalogInstall {
 /// must start with `{executable}`.
 #[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
 pub struct CatalogHostInstall {
+    /// Optional vendor software download/help page. This is distinct from the adapter homepage.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub software_homepage: Option<String>,
     /// Extract the package (a zip) into the Meshy DCC adapters directory and
     /// expose it as `{package_dir}`.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]

@@ -52,6 +52,13 @@ pub struct McpTool {
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct CallToolMeta {
+    /// Canonical caller/session/release correlation, forwarded to dispatch and jobs.
+    #[serde(
+        default,
+        rename = "agent_context",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub agent_context: Option<Value>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub progress_token: Option<Value>,
     /// meshy-dcc-core specific metadata (issue #318).

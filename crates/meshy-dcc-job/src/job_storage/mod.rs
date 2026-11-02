@@ -235,6 +235,7 @@ impl JobStorage for InMemoryStorage {
 /// SQLite backend produce the same JSON for introspection.
 #[derive(Debug, Clone)]
 pub struct PersistedJob {
+    pub agent_context: Option<serde_json::Value>,
     pub id: String,
     pub parent_job_id: Option<String>,
     pub tool_name: String,
@@ -251,6 +252,7 @@ pub struct PersistedJob {
 impl PersistedJob {
     pub fn from_job(job: &Job) -> Self {
         Self {
+            agent_context: job.agent_context.clone(),
             id: job.id.clone(),
             parent_job_id: job.parent_job_id.clone(),
             tool_name: job.tool_name.clone(),
@@ -275,6 +277,7 @@ impl PersistedJob {
             cancel_token.cancel();
         }
         Job {
+            agent_context: self.agent_context.clone(),
             id: self.id.clone(),
             tool_name: self.tool_name.clone(),
             status: self.status,

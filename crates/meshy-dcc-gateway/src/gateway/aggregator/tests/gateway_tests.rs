@@ -296,7 +296,10 @@ async fn gateway_mcp_executes_search_load_call_before_optional_describe() {
         .iter()
         .filter_map(|tool| tool["name"].as_str())
         .collect();
-    assert_eq!(names, ["search", "describe", "load_skill", "call"]);
+    assert_eq!(
+        names,
+        ["search", "describe", "load_skill", "call", "lifecycle"]
+    );
 
     let search = post_mcp_json(
         &client,

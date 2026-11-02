@@ -13,13 +13,14 @@ use crate::domain::start_instance::{
 
 /// Expose only original local launches that still match a live instance.
 /// Missing or unreadable evidence omits the projection, never fails inventory.
-pub(crate) fn project_list_launch_ownership(registry_dir: Option<&Path>, inventory: &mut Value) {
+pub fn project_list_launch_ownership(registry_dir: Option<&Path>, inventory: &mut Value) {
     let Some(rows) = inventory.get_mut("instances").and_then(Value::as_array_mut) else {
         return;
     };
     // A remote payload cannot grant ownership of a process on this machine.
     for row in rows.iter_mut().filter_map(Value::as_object_mut) {
         row.remove("launch");
+        row.remove("associations");
     }
     let Some(registry_dir) = registry_dir else {
         return;
@@ -32,6 +33,11 @@ pub(crate) fn project_list_launch_ownership(registry_dir: Option<&Path>, invento
         let Some(entry) = live.iter().find(|entry| row_matches_entry(row, entry)) else {
             continue;
         };
+        let associations =
+            crate::application::lifecycle::instance_associations(registry_dir, entry);
+        if !associations.is_empty() {
+            row["associations"] = json!(associations);
+        }
         let Some(operation_id) = entry_metadata(entry, OPERATION_METADATA_KEYS) else {
             continue;
         };
@@ -59,6 +65,9 @@ pub(crate) fn project_list_launch_ownership(registry_dir: Option<&Path>, invento
                 "owned": true,
                 "launched": true,
             });
+            if let Some(managed) = operation.management {
+                row["launch"]["agent_context"] = managed.agent_context;
+            }
         }
     }
 }

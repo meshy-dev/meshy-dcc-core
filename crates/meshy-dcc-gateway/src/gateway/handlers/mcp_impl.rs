@@ -442,15 +442,18 @@ async fn handle_initialize(
             },
             "serverInfo": {"name": gs.server_name, "version": gs.server_version},
             "instructions":
-                "Meshy DCC Gateway — unified MCP endpoint across every live DCC.\n\
+                "Meshy DCC Core discovers, opens and controls Blender, Godot, Unity and other DCC apps across projects and processes.\n\
                  \n\
-                 tools/list is intentionally bounded. It returns exactly four gateway\n\
-                 workflow tools: search, describe, load_skill, and call. It never\n\
+                 tools/list is intentionally bounded. It returns four host gateway\n\
+                 workflow tools: search, describe, load_skill, and call, plus lifecycle for project configuration, open/reuse, operation status and safe stop. It never\n\
                  fans out every backend action. Instance registry, diagnostics,\n\
                  and catalog views are MCP resources such as gateway://instances,\n\
                  gateway://diagnostics/*, gateway://catalog, and gateway://docs/agent-workflows.\n\
                  \n\
+                 For an application task, use the live host through Core and verify the result with native readback. Reuse the indicated native project, or first inspect the current workspace for a compatible native project; create one with ordinary authorized file/code tools only when none exists. Ask the user when the target is ambiguous. An explicit code-only request may omit host launch.\n\
+                 \n\
                  Workflow:\n\
+                 0. For project-bound work, use lifecycle configure_project after adapter preparation, then lifecycle start to open or reuse the exact native project. Keep its operation_id and query operation/wait; use the same request_id to reconcile a lost admission reply, never submit duplicate work. Create a missing native project with ordinary authorized file/code tools first.\n\
                  1. Optional: resources/read uri=gateway://instances to inspect live DCCs\n\
                  1b. Optional: resources/read uri=gateway://docs/agent-workflows (MCP+REST patterns, path /v1/dcc/.../call, re-list instances after DCC restart)\n\
                  2. search(kind=\"skill\", ...) then load_skill(skill_name=..., instance_id=... when needed)\n\
@@ -678,6 +681,7 @@ async fn handle_tools_call(
     session_id: &str,
     headers: &HeaderMap,
 ) -> Value {
+    let lifecycle_ingress = Instant::now();
     let tool = req
         .params
         .as_ref()
@@ -742,6 +746,14 @@ async fn handle_tools_call(
         pending.insert(
             id_str.to_string(),
             super::super::state::PendingCall {
+                agent_context: agent_context
+                    .as_ref()
+                    .and_then(|c| serde_json::to_value(c).ok()),
+                work: tool != "lifecycle"
+                    || matches!(
+                        args["action"].as_str(),
+                        Some("configure_project" | "start" | "stop")
+                    ),
                 backend_url: String::new(),
                 backend_request_id: id_str.to_string(),
             },
@@ -844,16 +856,34 @@ async fn handle_tools_call(
         .map(|d| d.as_nanos() as u64)
         .unwrap_or(0);
 
-    let (raw_text, is_error) = aggregator::route_tools_call(
-        gs,
-        tool,
-        &effective_args,
-        meta.as_ref(),
-        Some(session_id),
-        Some(&ctx.trace_context),
-        ctx.agent_context.as_ref(),
-    )
-    .await;
+    let mut lifecycle_value = None;
+    let (raw_text, is_error) = if tool == "lifecycle" {
+        let aged_meta = crate::gateway::request_meta::meta_after_elapsed(
+            meta.clone(),
+            lifecycle_ingress.elapsed(),
+        );
+        let (value, failed) = crate::gateway::lifecycle::dispatch_value(
+            gs,
+            &effective_args,
+            aged_meta.as_ref(),
+            session_id,
+            ctx.agent_context.as_ref(),
+        )
+        .await;
+        lifecycle_value = Some(value.clone());
+        (value.to_string(), failed)
+    } else {
+        aggregator::route_tools_call(
+            gs,
+            tool,
+            &effective_args,
+            meta.as_ref(),
+            Some(session_id),
+            Some(&ctx.trace_context),
+            ctx.agent_context.as_ref(),
+        )
+        .await
+    };
     let (text, native_images) = extract_native_rich_images(raw_text);
 
     crate::gateway::agent_telemetry::emit_mcp_tool_event(
@@ -921,10 +951,15 @@ async fn handle_tools_call(
         pending.remove(id_str);
     }
 
-    let response = json!({
+    let mut response = json!({
         "jsonrpc": "2.0", "id": id,
         "result": {"content": content, "isError": final_is_error}
     });
+    // Preserve the typed lifecycle result. A middleware-redacted response must
+    // never regain its original unredacted values through structuredContent.
+    if retain_native_images && let Some(value) = lifecycle_value {
+        response["result"]["structuredContent"] = value;
+    }
     emit_mcp_traffic_frame(
         gs,
         &ctx,

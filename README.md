@@ -4,7 +4,7 @@ Turn your DCC instances into one creation pipeline, powered by Meshy and your
 agent.
 
 Meshy DCC Core gives an AI agent one local entry point to the 3D apps and game
-engines you have open. Install a connector once per app; every call goes to
+engines you have open. Prepare a connector for each app and configure native projects where required; every call goes to
 the exact running instance, and each app's tools load as skills when they are
 needed, so one agent can carry a Meshy model through every app it touches.
 
@@ -60,8 +60,8 @@ Then add a connector for each app, from `meshy-dcc ui` or with
 
 | Component | Role |
 |---|---|
-| `meshy-dcc` | The CLI agents use, with the `meshy-dcc` agent Skill |
-| `meshy-dcc-server` | The local gateway that routes each call to its app instance |
+| `meshy-dcc` | CLI discovery, adapter preparation and project lifecycle, with the `meshy-dcc` agent Skill |
+| `meshy-dcc-server` | The local MCP gateway for project lifecycle and exact-instance host execution |
 | `meshy_dcc_core` | The Python runtime the connectors are built on |
 
 Connectors live in [meshy-dcc-adapters](https://github.com/meshy-dev/meshy-dcc-adapters).
@@ -70,6 +70,7 @@ Meshy generation and your Meshy account stay with
 
 Gateway and adapter integrations use the [request metadata and deadline
 contract](docs/request-metadata.md).
+MCP and CLI clients use the [software preparation and project lifecycle contract](docs/session-lifecycle.md).
 CLI clients can recover safe-stop ownership through the
 [instance lifecycle contract](docs/instance-lifecycle.md).
 

@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "state": "unknown",
+  "lifecycle_operations": [],
+  "pending_calls": 0,
+  "jobs": {
+    "pending": 0,
+    "running": 0,
+    "unattributed": 0
+  },
+  "unknown_instances": [
+    "752f6e89-dc83-4d99-bbc2-7419ecb57255"
+  ],
+  "scope": {
+    "agent_name": "fixture-client"
+  },
+  "unobserved_instances": [],
+  "unattributed_operations": 0,
+  "unattributed_calls": 0
+}

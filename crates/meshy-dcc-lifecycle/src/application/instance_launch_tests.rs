@@ -498,23 +498,18 @@ async fn spawn_host_fixture() -> u16 {
 
 /// `meshy-dcc stop-instance` as the CLI runs it on this computer.
 async fn stop(registry: &Path, entry: &ServiceEntry) -> Value {
-    use crate::application::control_plane::DccControlPlane;
-    use crate::application::gateway_profile::GatewayTarget;
-    use crate::domain::rest::{Endpoint, StopInstanceRequest};
-    DccControlPlane::new(
-        GatewayTarget::Local,
-        Endpoint::new("http://127.0.0.1:9"),
+    use crate::domain::rest::StopInstanceRequest;
+    local_control::stop_instance_with_tracking(
         registry.to_path_buf(),
-        false,
+        StopInstanceRequest {
+            dcc_type: entry.dcc_type.clone(),
+            instance_id: entry.instance_id.to_string(),
+            expected_owner: None,
+            expected_session: None,
+            operation_id: None,
+            discard_unsaved: false,
+        },
     )
-    .stop_instance(StopInstanceRequest {
-        dcc_type: entry.dcc_type.clone(),
-        instance_id: entry.instance_id.to_string(),
-        expected_owner: None,
-        expected_session: None,
-        operation_id: None,
-        discard_unsaved: false,
-    })
     .await
     .unwrap()
 }

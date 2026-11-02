@@ -34,6 +34,7 @@ members = [
     "crates/meshy-dcc-http-server",
     "crates/meshy-dcc-http-py",
     "crates/meshy-dcc",
+    "crates/meshy-dcc-lifecycle",
     "crates/meshy-dcc-server",
     "crates/meshy-dcc-sidecar",
     "crates/meshy-dcc-workflow",
@@ -91,6 +92,7 @@ meshy-dcc-http-types = { path = "crates/meshy-dcc-http-types" }
 meshy-dcc-http-server = { path = "crates/meshy-dcc-http-server" }
 meshy-dcc-http-py = { path = "crates/meshy-dcc-http-py" }
 meshy-dcc = { path = "crates/meshy-dcc" }
+meshy-dcc-lifecycle = { path = "crates/meshy-dcc-lifecycle" }
 meshy-dcc-server = { path = "crates/meshy-dcc-server" }
 meshy-dcc-sidecar = { path = "crates/meshy-dcc-sidecar" }
 meshy-dcc-workflow = { path = "crates/meshy-dcc-workflow" }

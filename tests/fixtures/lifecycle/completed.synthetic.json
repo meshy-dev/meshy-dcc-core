@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "operation_id": "fc2487d7-3efc-577f-b2b9-ea75a10d667c",
+  "request_id": "request-1",
+  "action": "start",
+  "state": "completed",
+  "dcc_type": "godot",
+  "project": "/example/project",
+  "agent_context": {
+    "session_id": "session-1"
+  },
+  "result": {
+    "ok": true,
+    "ready": true,
+    "launched": true,
+    "owned": true,
+    "reused": false,
+    "instance_id": "752f6e89-dc83-4d99-bbc2-7419ecb57255",
+    "pid": 12345,
+    "project": "/example/project"
+  }
+}
