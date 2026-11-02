@@ -45,6 +45,23 @@ pub const ENV_GATEWAY_ENSURE_TIMEOUT_SECS: &str = "MESHY_DCC_GATEWAY_ENSURE_TIME
 /// provide a value.
 pub const DEFAULT_ENSURE_TIMEOUT_SECS: u64 = 15;
 
+/// UI target selectors belong to one host process, never a child gateway or host.
+pub const HOST_UI_TARGET_ENV: &[&str] = &[
+    "MESHY_DCC_UI_CONTROL_PROCESS_ID",
+    "MESHY_DCC_UI_CONTROL_WINDOW_HANDLE",
+    "MESHY_DCC_UI_CONTROL_PROCESS_NAME",
+    "MESHY_DCC_UI_CONTROL_WINDOW_TITLE",
+    "MESHY_DCC_UI_CONTROL_DCC_TYPE",
+];
+
+/// Let a new process establish its own UI target without transferring its parent's.
+/// Configuration, workspace context and lifecycle correlation remain inherited.
+pub fn remove_inherited_host_ui_target(command: &mut Command) {
+    for key in HOST_UI_TARGET_ENV {
+        command.env_remove(key);
+    }
+}
+
 /// Context recorded in gateway autolaunch manifests and wait-timeout errors.
 #[derive(Debug, Clone, Default, Serialize)]
 pub struct GatewayLaunchContext {
@@ -290,7 +307,14 @@ pub async fn wait_gateway_ready_with_diagnostics(
 
 /// Exit status of the launched gateway, if it has exited already.
 fn launched_process_exit(launch: &GatewayLaunchArtifacts) -> Option<std::process::ExitStatus> {
-    launch.child.as_ref()?.lock().ok()?.try_wait().ok().flatten()
+    launch
+        .child
+        .as_ref()?
+        .lock()
+        .ok()?
+        .try_wait()
+        .ok()
+        .flatten()
 }
 
 /// Build the detailed timeout message used by wait helpers.
@@ -409,6 +433,7 @@ pub fn spawn_detached_gateway_with_context(
     let stderr_log = registry_dir.join(format!("{prefix}-stderr.log"));
     let manifest_path = registry_dir.join(format!("{prefix}.json"));
     let mut cmd = Command::new(exe);
+    remove_inherited_host_ui_target(&mut cmd);
     cmd.args(args)
         .env("MESHY_DCC_REGISTRY_DIR", registry_dir)
         .stdin(Stdio::null())
@@ -1006,7 +1031,97 @@ mod tests {
         .unwrap_err();
 
         assert!(started.elapsed() < Duration::from_secs(20), "{error}");
-        assert!(error.to_string().contains("gateway process exited"), "{error}");
+        assert!(
+            error.to_string().contains("gateway process exited"),
+            "{error}"
+        );
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn gateway_spawn_does_not_inherit_parent_ui_target() {
+        const FIXTURE: &str = "MESHY_DCC_TEST_GATEWAY_UI_TARGET_FIXTURE";
+        if let Some(root) = std::env::var_os(FIXTURE) {
+            let root = PathBuf::from(root);
+            let mut script = HOST_UI_TARGET_ENV
+                .iter()
+                .map(|key| format!("test -z \"${{{key}+x}}\" || exit 91\n"))
+                .collect::<String>();
+            script.push_str(concat!(
+                "printf '%s\\n' \"$MESHY_DCC_REGISTRY_DIR\" \"$MESHY_DCC_DATA_DIR\" ",
+                "\"$MESHY_DCC_CATALOG_PATH\" \"$MESHY_DCC_GATEWAY_PORT\" ",
+                "\"$MESHY_DCC_CONTEXT_BUNDLE\" \"$MESHY_DCC_PROJECT\" ",
+                "\"$MESHY_DCC_PACKAGE_PROVENANCE\" \"$MESHY_DCC_UI_CONTROL_BACKEND\""
+            ));
+            let artifacts = spawn_detached_gateway_with_context(
+                Path::new("/bin/sh"),
+                &[OsString::from("-c"), script.into()],
+                &root,
+                GatewayLaunchContext::default(),
+            )
+            .unwrap();
+            assert!(
+                artifacts
+                    .child
+                    .as_ref()
+                    .unwrap()
+                    .lock()
+                    .unwrap()
+                    .wait()
+                    .unwrap()
+                    .success()
+            );
+            let observed = std::fs::read_to_string(artifacts.stdout_log).unwrap();
+            assert_eq!(
+                observed.lines().collect::<Vec<_>>(),
+                [
+                    root.to_str().unwrap(),
+                    "fixture-data",
+                    "fixture-catalog",
+                    "19866",
+                    "fixture-context",
+                    "fixture-workspace",
+                    "fixture-origin",
+                    "cua"
+                ]
+            );
+            return;
+        }
+        // Inject stale parent identity in an isolated test process, never the
+        // parallel test runner's global environment.
+        let root = tempfile::tempdir().unwrap();
+        let result = Command::new(std::env::current_exe().unwrap())
+            .args([
+                "--exact",
+                "tests::gateway_spawn_does_not_inherit_parent_ui_target",
+            ])
+            .env(FIXTURE, root.path())
+            .envs(
+                HOST_UI_TARGET_ENV
+                    .iter()
+                    .map(|key| (*key, "stale-parent-target")),
+            )
+            .env("MESHY_DCC_DATA_DIR", "fixture-data")
+            .env("MESHY_DCC_CATALOG_PATH", "fixture-catalog")
+            .env("MESHY_DCC_GATEWAY_PORT", "19866")
+            .env("MESHY_DCC_CONTEXT_BUNDLE", "fixture-context")
+            .env("MESHY_DCC_PROJECT", "fixture-workspace")
+            .env("MESHY_DCC_PACKAGE_PROVENANCE", "fixture-origin")
+            .env("MESHY_DCC_UI_CONTROL_BACKEND", "cua")
+            .output()
+            .unwrap();
+        assert!(
+            result.status.success(),
+            "{}",
+            String::from_utf8_lossy(&result.stdout)
+        );
+        assert!(std::fs::read_dir(root.path()).unwrap().any(|entry| {
+            entry
+                .unwrap()
+                .file_name()
+                .to_string_lossy()
+                .ends_with("-stdout.log")
+        }));
     }
 
     #[test]

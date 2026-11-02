@@ -759,6 +759,7 @@ fn spawn_host(
     operation_id: &str,
 ) -> std::io::Result<std::process::Child> {
     let mut command = Command::new(&plan.argv[0]);
+    meshy_dcc_gateway_ensure::remove_inherited_host_ui_target(&mut command);
     command.args(plan.argv.iter().skip(1));
     let cwd = plan
         .cwd

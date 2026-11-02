@@ -12,6 +12,93 @@ use std::sync::{Arc, Mutex, OnceLock};
 
 // ── Fixtures ───────────────────────────────────────────────────────────────
 
+#[test]
+#[cfg(unix)]
+fn host_spawn_rebinds_ui_target_without_losing_launch_context() {
+    const FIXTURE: &str = "MESHY_DCC_TEST_HOST_UI_TARGET_FIXTURE";
+    use meshy_dcc_gateway_ensure::HOST_UI_TARGET_ENV;
+    if let Some(root) = std::env::var_os(FIXTURE) {
+        let root = PathBuf::from(root);
+        let report = root.join("child-context.txt");
+        let mut script = HOST_UI_TARGET_ENV
+            .iter()
+            .map(|key| format!("test -z \"${{{key}+x}}\" || exit 91\n"))
+            .collect::<String>();
+        script.push_str(concat!(
+            "export MESHY_DCC_UI_CONTROL_PROCESS_ID=$$\n",
+            "printf '%s\\n' \"$MESHY_DCC_UI_CONTROL_PROCESS_ID\" ",
+            "\"$MESHY_DCC_START_OPERATION_ID\" \"$MESHY_DCC_START_PROJECT\" ",
+            "\"$MESHY_DCC_START_DCC_TYPE\" \"$MESHY_DCC_REGISTRY_DIR\" ",
+            "\"$MESHY_DCC_DATA_DIR\" \"$MESHY_DCC_CATALOG_PATH\" ",
+            "\"$MESHY_DCC_GATEWAY_PORT\" \"$MESHY_DCC_CONTEXT_BUNDLE\" ",
+            "\"$MESHY_DCC_PROJECT\" \"$MESHY_DCC_PACKAGE_PROVENANCE\" ",
+            "\"$MESHY_DCC_UI_CONTROL_BACKEND\" > \"$1\""
+        ));
+        let plan = LaunchPlan {
+            dcc_type: "custom-host".into(),
+            executable: "/bin/sh".into(),
+            argv: vec![
+                "/bin/sh".into(),
+                "-c".into(),
+                script,
+                "fixture".into(),
+                report.to_str().unwrap().into(),
+            ],
+            version: None,
+            project_markers: vec![],
+            cwd: None,
+            source: crate::domain::start_instance::LaunchPlanSource::Explicit,
+            plan_path: None,
+        };
+        let mut child = spawn_host(&plan, "custom-host", &root, "new-operation").unwrap();
+        let pid = child.id().to_string();
+        assert!(child.wait().unwrap().success());
+        let observed = std::fs::read_to_string(report).unwrap();
+        assert_eq!(
+            observed.lines().collect::<Vec<_>>(),
+            [
+                pid.as_str(),
+                "new-operation",
+                root.to_str().unwrap(),
+                "custom-host",
+                "fixture-registry",
+                "fixture-data",
+                "fixture-catalog",
+                "19866",
+                "fixture-context",
+                "fixture-workspace",
+                "fixture-origin",
+                "cua"
+            ]
+        );
+        return;
+    }
+    let root = tempfile::tempdir().unwrap();
+    let result = Command::new(std::env::current_exe().unwrap())
+        .args(["--exact", "application::instance_launch::tests::host_spawn_rebinds_ui_target_without_losing_launch_context"])
+        .env(FIXTURE, root.path())
+        .envs(HOST_UI_TARGET_ENV.iter().map(|key| (*key, "stale-parent-target")))
+        .env(OPERATION_ID_ENV, "old-operation")
+        .env(PROJECT_ENV, "old-project")
+        .env(DCC_TYPE_ENV, "old-host")
+        .env("MESHY_DCC_REGISTRY_DIR", "fixture-registry")
+        .env("MESHY_DCC_DATA_DIR", "fixture-data")
+        .env("MESHY_DCC_CATALOG_PATH", "fixture-catalog")
+        .env("MESHY_DCC_GATEWAY_PORT", "19866")
+        .env("MESHY_DCC_CONTEXT_BUNDLE", "fixture-context")
+        .env("MESHY_DCC_PROJECT", "fixture-workspace")
+        .env("MESHY_DCC_PACKAGE_PROVENANCE", "fixture-origin")
+        .env("MESHY_DCC_UI_CONTROL_BACKEND", "cua")
+        .output()
+        .unwrap();
+    assert!(
+        result.status.success(),
+        "{}",
+        String::from_utf8_lossy(&result.stdout)
+    );
+    assert!(root.path().join("child-context.txt").is_file());
+}
+
 /// A cross-platform executable that exits immediately. Used to prove the launch
 /// stage really spawns a process without needing a DCC installed.
 fn noop_executable() -> (std::path::PathBuf, &'static str) {

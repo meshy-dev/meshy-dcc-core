@@ -111,6 +111,12 @@ association. Reusing an external or another caller's process never grants
 permission to dispose of it. The gateway does not inherit its process-wide
 environment as a caller's ownership or approval context.
 
+Gateway and host launches remove inherited UI target selectors (process ID,
+window handle, process name, window title and UI application type). Each new
+host establishes its own target; an adapter's current-process validation remains
+in force. Backend preferences, registry/data/catalog settings and workspace
+context remain available, and host launch stamps its own operation/project.
+
 Local `list` preserves the verified owned `launch` projection and adds optional
 `launch.agent_context`. It may also include `associations` with
 `{operation_id, source: "lifecycle", agent_context}` from completed real lifecycle

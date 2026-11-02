@@ -35,6 +35,7 @@ from meshy_dcc_core.constants import ENV_GATEWAY_LAUNCH_LOCK_STALE_SECS
 from meshy_dcc_core.constants import ENV_GATEWAY_PERSIST
 from meshy_dcc_core.constants import ENV_GATEWAY_PORT
 from meshy_dcc_core.constants import ENV_REGISTRY_DIR
+from meshy_dcc_core.constants import HOST_UI_TARGET_ENV
 from meshy_dcc_core.daemon_launch import launch_detached
 from meshy_dcc_core.env import env_float
 
@@ -321,6 +322,8 @@ def build_gateway_daemon_command(
         cmd.extend(["--gateway-idle-timeout-secs", str(idle_timeout)])
 
     env = os.environ.copy()
+    for key in HOST_UI_TARGET_ENV:
+        env.pop(key, None)
     if not env.get(ENV_GATEWAY_PORT):
         env[ENV_GATEWAY_PORT] = str(gateway_port)
     registry_path = _resolve_registry_dir(registry_dir)
