@@ -12,7 +12,9 @@ the checkout path and $HOME; any hit fails the build.
 import base64
 import hashlib
 import os
+import subprocess
 import sys
+import tempfile
 import zipfile
 from pathlib import Path
 
@@ -80,6 +82,25 @@ def path_needles(*paths):
     return needles
 
 
+def verify_native_wheel(wheel):
+    """Install the exact wheel offline and exercise native init, without hosts."""
+    with tempfile.TemporaryDirectory(prefix="meshy-wheel-load-") as scratch:
+        root = Path(scratch)
+        venv = root / "venv"
+        subprocess.run([sys.executable, "-m", "venv", str(venv)], check=True)
+        python = venv / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
+        env = dict(os.environ, PIP_DISABLE_PIP_VERSION_CHECK="1", PYTHONDONTWRITEBYTECODE="1",
+                   MESHY_DCC_DATA_DIR=str(root / "data"), MESHY_DCC_REGISTRY_DIR=str(root / "registry"),
+                   MESHY_DCC_LOG_DIR=str(root / "logs"), MESHY_DCC_LOG_LEVEL="off", MESHY_DCC_TELEMETRY="0",
+                   MESHY_DCC_DISABLE_UPDATE_CHECK="1")
+        subprocess.run([str(python), "-m", "pip", "--isolated", "--disable-pip-version-check", "--no-cache-dir",
+                        "install", "--no-index", "--no-deps", str(wheel.resolve())], env=env, check=True)
+        code = ("import importlib.machinery; import meshy_dcc_core._core as core; "
+                "assert isinstance(core.__loader__, importlib.machinery.ExtensionFileLoader), "
+                "'wheel did not load a native extension'; print('native wheel import passed')")
+        subprocess.run([str(python), "-I", "-B", "-c", code], env=env, check=True)
+
+
 def main(repo_root, out_dir):
     repo = str(Path(repo_root).resolve()).encode()
     out = Path(out_dir)
@@ -90,6 +111,8 @@ def main(repo_root, out_dir):
     if found:
         sys.exit("build-machine paths left in release artifacts:\n  " + "\n  ".join(found))
     print(f"no build-machine paths in {out}")
+    for wheel in sorted(out.glob("*.whl")):
+        verify_native_wheel(wheel)
 
 
 if __name__ == "__main__":

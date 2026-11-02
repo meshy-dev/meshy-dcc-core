@@ -93,6 +93,12 @@ cargo build -p meshy-dcc -p meshy-dcc-server
 cargo test -p meshy-dcc
 ```
 
+Use `scripts/release/build_release.sh <output-directory>` for portable release
+artifacts. It checks for build-machine paths, installs the exact wheel offline
+in a temporary environment and initializes its native extension. With the
+pinned Rust 1.95 toolchain, macOS wheels retain symbols to avoid its Mach-O
+stripping defect; CLI and server executable profiles retain their usual stripping.
+
 ## License
 
 MIT; see [LICENSE](LICENSE) and [NOTICE](NOTICE).
