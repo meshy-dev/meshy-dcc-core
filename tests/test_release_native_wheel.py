@@ -1,6 +1,10 @@
 """The release gate must load the native extension from the produced wheel."""
 
 import importlib.util
+import base64
+import csv
+import hashlib
+import io
 import os
 from pathlib import Path
 import subprocess
@@ -37,6 +41,23 @@ class NativeWheelGateTests(unittest.TestCase):
             wheel = self.wheel(Path(scratch), "_core.py", "value = 'fallback'\n")
             with self.assertRaises(subprocess.CalledProcessError):
                 release.verify_native_wheel(wheel)
+
+    def test_native_member_replacement_updates_the_wheel_record(self):
+        with tempfile.TemporaryDirectory() as scratch:
+            wheel = self.wheel(Path(scratch), "_core.so", b"original native fixture")
+            with zipfile.ZipFile(wheel) as archive:
+                infos = archive.infolist()
+                members = {entry.filename: archive.read(entry) for entry in infos}
+            updated = b"normalized native fixture"
+            name = "meshy_dcc_core/_core.so"
+            release.replace_wheel_members(wheel, infos, members, {name: updated})
+            with zipfile.ZipFile(wheel) as archive:
+                self.assertIsNone(archive.testzip())
+                self.assertEqual(archive.read(name), updated)
+                rows = csv.reader(io.StringIO(archive.read("meshy_dcc_core-0.0.0.dist-info/RECORD").decode()))
+                record = next(row for row in rows if row[0] == name)
+                digest = base64.urlsafe_b64encode(hashlib.sha256(updated).digest()).decode().rstrip("=")
+                self.assertEqual(record[1:], ["sha256=" + digest, str(len(updated))])
 
     def test_invalid_native_library_cannot_pass_by_package_import_alone(self):
         with tempfile.TemporaryDirectory() as scratch:
