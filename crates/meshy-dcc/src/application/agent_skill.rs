@@ -482,11 +482,27 @@ pub fn human_summary(value: &Value) -> String {
 
 /// Bring Skills this CLI installed earlier up to its own version. Release
 /// builds only, so a development build never rewrites an installed Skill.
+/// Package-managed deployments leave standalone agent configurations alone.
 pub fn refresh_installed() {
     if cfg!(debug_assertions) {
         return;
     }
-    for target in detected_targets() {
+    refresh_unmanaged_targets(
+        crate::application::package_manager::detect(),
+        detected_targets,
+    );
+}
+
+fn refresh_unmanaged_targets(
+    manager: Option<crate::application::package_manager::PackageManagerMarker>,
+    targets: impl FnOnce() -> Vec<Target>,
+) {
+    // A component/package manager owns deployment updates; invoking its private
+    // CLI must not also update standalone agents' global Skill directories.
+    if manager.is_some() {
+        return;
+    }
+    for target in targets() {
         let dir = target.skills_dir.join(SKILL_NAME);
         if state(&dir) == State::Outdated
             && let Err(error) = install(&dir)
@@ -529,6 +545,52 @@ mod tests {
             agents: vec!["test".into()],
             skills_dir: dir.to_path_buf(),
         }]
+    }
+
+    #[test]
+    fn package_managed_invocations_leave_global_skills_untouched_but_explicit_updates_work() {
+        let temp = tempfile::tempdir().unwrap();
+        let skill = temp.path().join(SKILL_NAME);
+        fs::create_dir(&skill).unwrap();
+        fs::write(skill.join("SKILL.md"), "old standalone skill").unwrap();
+        fs::write(
+            skill.join(MARKER),
+            serde_json::to_vec(&Marker {
+                digest: "old".into(),
+                files: vec!["SKILL.md".into()],
+            })
+            .unwrap(),
+        )
+        .unwrap();
+        let exe = temp.path().join("managed-cli");
+        fs::write(temp.path().join(crate::application::package_manager::MARKER_FILE_NAME),
+            serde_json::json!({"schema_version":1,"distribution":"meshy-dcc","manager":"fixture-package-manager","version":"1.0.0"}).to_string()).unwrap();
+        let manager = crate::application::package_manager::read_marker_for(&exe);
+        assert!(manager.is_some());
+        refresh_unmanaged_targets(manager, || {
+            panic!("managed invocation must not even discover global agents")
+        });
+        assert_eq!(
+            fs::read_to_string(skill.join("SKILL.md")).unwrap(),
+            "old standalone skill"
+        );
+        // Explicit operator commands keep their original install/update path.
+        assert_eq!(
+            run(&target(temp.path()), false, true).unwrap()["targets"][0]["action"],
+            "update"
+        );
+        assert_eq!(state(&skill), State::Current);
+        fs::write(
+            skill.join(MARKER),
+            serde_json::to_vec(&Marker {
+                digest: "old".into(),
+                files: vec!["SKILL.md".into()],
+            })
+            .unwrap(),
+        )
+        .unwrap();
+        refresh_unmanaged_targets(None, || target(temp.path()));
+        assert_eq!(state(&skill), State::Current);
     }
 
     #[test]

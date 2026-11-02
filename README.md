@@ -51,6 +51,10 @@ npm install -g meshy-dcc
 meshy-dcc agent-skill --execute
 ```
 
+Package-managed deployments leave global agent Skills unchanged on ordinary
+invocations. Run `agent-skill --execute` explicitly to install or update them;
+automatic refresh remains available for direct CLI installations.
+
 In mainland China, use `cdn.meshy.cn` in place of `cdn.meshy.ai`.
 
 Then add a connector for each app, from `meshy-dcc ui` or with
