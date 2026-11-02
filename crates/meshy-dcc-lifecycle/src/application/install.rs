@@ -24,7 +24,7 @@ mod pip;
 mod preparation;
 pub use preparation::{
     configure_prepared_project, configure_prepared_project_before, observe_software,
-    prepare_adapter,
+    prepare_adapter, validate_prepared_project_target,
 };
 mod policy;
 pub mod receipt;

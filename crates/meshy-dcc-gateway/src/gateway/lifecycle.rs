@@ -17,7 +17,7 @@ pub fn tool_definition() -> Value {
                 "action":{"type":"string","enum":["software","configure_project","start","operation","wait","stop","active_work"]},
                 "dcc_type":{"type":"string"},
                 "project":{"type":"string","description":"Absolute existing native project directory; configure_project and start require it."},
-                "dcc_path":{"type":"string","description":"Optional absolute host executable chosen by the user."},
+                "dcc_path":{"type":"string","description":"Optional executable for configure_project only; the adapter must honor the selection, while start uses its published launch plan."},
                 "request_id":{"type":"string","maxLength":128,"description":"Stable identifier for one configure_project, start or stop; reuse only with identical arguments."},
                 "operation_id":{"type":"string","description":"Original handle for operation/wait, or the owned launch handle for stop."},
                 "instance_id":{"type":"string","description":"Optional exact instance UUID to narrow start reuse or validate stop."},

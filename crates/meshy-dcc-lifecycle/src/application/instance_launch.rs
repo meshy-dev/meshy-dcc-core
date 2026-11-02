@@ -579,10 +579,12 @@ fn find_reusable(
     let matched: Vec<ServiceEntry> = entries
         .into_iter()
         .filter(|entry| {
-            entry_metadata(entry, OPERATION_METADATA_KEYS).is_some_and(|id| Some(id) == owned_id)
-                || owned_pid
-                    .is_some_and(|pid| entry.pid == Some(pid) || entry.host_pid == Some(pid))
-                || entry_project(entry).is_some_and(|bound| same_path(&bound, project))
+            !has_contradictory_project(entry, project)
+                && (entry_metadata(entry, OPERATION_METADATA_KEYS)
+                    .is_some_and(|id| Some(id) == owned_id)
+                    || owned_pid
+                        .is_some_and(|pid| entry.pid == Some(pid) || entry.host_pid == Some(pid))
+                    || entry_project(entry).is_some_and(|bound| same_path(&bound, project)))
         })
         .collect();
     if matched.is_empty() {
@@ -671,14 +673,19 @@ async fn wait_for_registration(
     }
 }
 
-/// Prefer the operation ID, then the launched PID, then the project binding.
-/// Operation ID wins because PIDs are reused after a crash.
+/// Contradictory project metadata always wins over prior launch evidence.
+/// Unbound legacy rows may still match the operation ID or launched PID.
 fn select_registration(
     entries: &[ServiceEntry],
     project: &Path,
     operation_id: &str,
     pid: Option<u32>,
 ) -> Option<ServiceEntry> {
+    let entries: Vec<_> = entries
+        .iter()
+        .filter(|entry| !has_contradictory_project(entry, project))
+        .cloned()
+        .collect();
     if let Some(entry) = entries
         .iter()
         .find(|entry| entry_metadata(entry, OPERATION_METADATA_KEYS) == Some(operation_id))
@@ -705,6 +712,13 @@ fn select_registration(
             .or_else(|| many.first())
             .map(|entry| (*entry).clone()),
     }
+}
+
+fn has_contradictory_project(entry: &ServiceEntry, project: &Path) -> bool {
+    PROJECT_METADATA_KEYS
+        .iter()
+        .filter_map(|key| entry_metadata(entry, &[*key]))
+        .any(|bound| !same_path(Path::new(bound), project))
 }
 
 /// Split same-DCC neighbours into instances Core cannot bind to a project and
@@ -1039,7 +1053,8 @@ pub fn entry_metadata<'a>(entry: &'a ServiceEntry, keys: &[&str]) -> Option<&'a 
 }
 
 pub fn entry_project(entry: &ServiceEntry) -> Option<PathBuf> {
-    entry_metadata(entry, PROJECT_METADATA_KEYS).map(PathBuf::from)
+    let project = PathBuf::from(entry_metadata(entry, PROJECT_METADATA_KEYS)?);
+    (!has_contradictory_project(entry, &project)).then_some(project)
 }
 
 /// Redacted operation summary reused by `stop-instance` reports.

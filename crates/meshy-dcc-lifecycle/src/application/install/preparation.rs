@@ -217,7 +217,102 @@ pub fn configure_prepared_project(
     project: &Path,
     dcc_path: Option<PathBuf>,
 ) -> anyhow::Result<Value> {
-    configure_prepared_project_before(dcc, project, dcc_path, None)
+    configure_prepared_project_before(
+        dcc,
+        project,
+        dcc_path,
+        None,
+        &super::super::gateway_ensure::default_registry_dir(),
+    )
+}
+
+pub fn validate_prepared_project_target(
+    dcc: &str,
+    project: &Path,
+    dcc_path: Option<&Path>,
+    registry: &Path,
+) -> anyhow::Result<()> {
+    let prepared = load_prepared(dcc)?;
+    configuration_executable(&prepared, dcc, project, dcc_path, registry)?;
+    Ok(())
+}
+
+fn configuration_executable(
+    prepared: &PreparedAdapter,
+    dcc: &str,
+    project: &Path,
+    requested: Option<&Path>,
+    registry: &Path,
+) -> anyhow::Result<Option<PathBuf>> {
+    let host = prepared
+        .entry
+        .install
+        .as_ref()
+        .and_then(|i| i.host.as_ref())
+        .context("adapter has no host contract")?;
+    let consumes_path = host
+        .project_steps
+        .iter()
+        .flatten()
+        .any(|arg| arg.contains("{dcc_path}"));
+    let requested = requested.map(|p| app_bundle_executable(p.to_path_buf()));
+    if let Some(selected) = &requested {
+        anyhow::ensure!(
+            selected.is_absolute() && selected.is_file(),
+            "host executable is missing"
+        );
+        if !consumes_path {
+            anyhow::ensure!(
+                host.project_steps.is_empty(),
+                "this adapter's project steps cannot select dcc_path; omit it and use the adapter's native project/launch configuration"
+            );
+            use crate::application::instance_launch::{PlanResolution, plan};
+            use crate::domain::start_instance::{Invocation, StartInstanceRequest};
+            let launch = StartInstanceRequest {
+                dcc_type: dcc.into(),
+                project: project.to_path_buf(),
+                launch_plan: None,
+                version: None,
+                wait_ready: false,
+                timeout: std::time::Duration::ZERO,
+                interval: std::time::Duration::ZERO,
+                required: vec![],
+                authorized: false,
+                dry_run: true,
+                registry_dir: registry.to_path_buf(),
+                instance_id: None,
+                invocation: Invocation::default(),
+            };
+            let actual = match plan::resolve(&launch, project) {
+                PlanResolution::Resolved(plan) => Some(plan.executable),
+                PlanResolution::Missing => {
+                    host.launch.as_ref().and_then(|_| prepared.dcc_path.clone())
+                }
+                PlanResolution::Invalid { .. } => bail!(
+                    "published launch executable cannot be verified; repair the adapter configuration before selecting dcc_path"
+                ),
+            };
+            anyhow::ensure!(
+                actual.as_ref().and_then(|p| p.canonicalize().ok())
+                    == Some(selected.canonicalize()?),
+                "this adapter's project steps cannot select dcc_path; use the prepared/published executable or prepare the adapter for the chosen executable first"
+            );
+        }
+    }
+    let path = requested
+        .or_else(|| prepared.dcc_path.clone())
+        .or_else(|| find_dcc_path(&host.dcc_paths).ok());
+    anyhow::ensure!(
+        !consumes_path || path.is_some(),
+        "project configuration requires one known host executable; supply dcc_path when discovery is absent or ambiguous"
+    );
+    if let Some(path) = &path {
+        anyhow::ensure!(
+            path.is_absolute() && path.is_file(),
+            "host executable is missing"
+        );
+    }
+    Ok(path)
 }
 
 pub fn configure_prepared_project_before(
@@ -225,6 +320,7 @@ pub fn configure_prepared_project_before(
     project: &Path,
     dcc_path: Option<PathBuf>,
     deadline: Option<std::time::Instant>,
+    registry: &Path,
 ) -> anyhow::Result<Value> {
     anyhow::ensure!(
         project.is_absolute() && project.is_dir(),
@@ -238,25 +334,7 @@ pub fn configure_prepared_project_before(
         .as_ref()
         .and_then(|i| i.host.as_ref())
         .context("adapter has no host contract")?;
-    let needs_host = host
-        .project_steps
-        .iter()
-        .flatten()
-        .any(|arg| arg.contains("{dcc_path}"));
-    let path = dcc_path
-        .map(app_bundle_executable)
-        .or(prepared.dcc_path)
-        .or_else(|| find_dcc_path(&host.dcc_paths).ok());
-    anyhow::ensure!(
-        !needs_host || path.is_some(),
-        "project configuration requires one known host executable; supply dcc_path when discovery is absent or ambiguous"
-    );
-    if let Some(path) = &path {
-        anyhow::ensure!(
-            path.is_absolute() && path.is_file(),
-            "host executable is missing"
-        );
-    }
+    let path = configuration_executable(&prepared, dcc, &project, dcc_path.as_deref(), registry)?;
     let values = HostPlaceholders {
         targets: HostTargets {
             dcc_path: path.as_deref(),

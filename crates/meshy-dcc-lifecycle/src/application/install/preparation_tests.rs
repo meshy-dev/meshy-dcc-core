@@ -148,4 +148,94 @@ fn global_preparation_publishes_its_existing_launch_recipe_without_a_project() {
     );
     assert_eq!(published["argv"], json!(["{executable}", "--fixture"]));
     assert!(published.get("project").is_none());
+    let prepared = PreparedAdapter {
+        schema_version: 1,
+        entry: plan.adapter.clone(),
+        dcc_path: Some(executable.clone()),
+        package_dir: None,
+        prepared_at_unix: 0,
+    };
+    let receipt = receipt_path("fixture");
+    std::fs::create_dir_all(receipt.parent().unwrap()).unwrap();
+    std::fs::write(&receipt, serde_json::to_vec(&prepared).unwrap()).unwrap();
+    let other = temp.path().join("other-host");
+    std::fs::write(&other, "never launched").unwrap();
+    assert!(
+        validate_prepared_project_target("fixture", temp.path(), Some(&executable), &registry)
+            .is_ok()
+    );
+    assert!(
+        configure_prepared_project_before(
+            "fixture",
+            temp.path(),
+            Some(other.clone()),
+            None,
+            &registry
+        )
+        .unwrap_err()
+        .to_string()
+        .contains("cannot select dcc_path")
+    );
+    let req = serde_json::from_value(json!({"action":"configure_project","dcc_type":"fixture","project":temp.path(),"request_id":"unsupported-selector","dcc_path":other})).unwrap();
+    let caller = crate::application::lifecycle::CallerContext {
+        owner: "fixture".into(),
+        agent_context: json!({"session_id":"fixture"}),
+    };
+    assert!(
+        crate::application::lifecycle::submit(&registry, req, caller)
+            .unwrap_err()
+            .to_string()
+            .contains("cannot select dcc_path")
+    );
+    assert!(
+        !std::fs::read_dir(registry.join("start-instance"))
+            .unwrap()
+            .any(|e| {
+                e.unwrap()
+                    .path()
+                    .file_stem()
+                    .and_then(|s| s.to_str())
+                    .is_some_and(|s| uuid::Uuid::parse_str(s).is_ok())
+            })
+    );
+    let mut no_selector = prepared.clone();
+    no_selector
+        .entry
+        .install
+        .as_mut()
+        .unwrap()
+        .host
+        .as_mut()
+        .unwrap()
+        .project_steps = vec![vec!["{package_dir}/setup".into(), "{project}".into()]];
+    std::fs::write(&receipt, serde_json::to_vec(&no_selector).unwrap()).unwrap();
+    assert!(
+        configure_prepared_project_before(
+            "fixture",
+            temp.path(),
+            Some(other.clone()),
+            None,
+            &registry
+        )
+        .unwrap_err()
+        .to_string()
+        .contains("cannot select dcc_path"),
+        "nonempty project steps must not imply executable selection support"
+    );
+    std::fs::write(&receipt, serde_json::to_vec(&prepared).unwrap()).unwrap();
+    // A newer published recipe wins over an older preparation receipt.
+    let mut changed = published;
+    changed["executable"] = json!(other);
+    std::fs::write(
+        registry.join("launch-plans/fixture.json"),
+        changed.to_string(),
+    )
+    .unwrap();
+    assert!(
+        validate_prepared_project_target("fixture", temp.path(), Some(&executable), &registry)
+            .is_err()
+    );
+    assert!(
+        validate_prepared_project_target("fixture", temp.path(), Some(&other), &registry).is_ok()
+    );
 }

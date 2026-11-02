@@ -72,6 +72,15 @@ async fn expired_admission_and_model_discard_do_not_create_operation_records() {
     let req = request("start", temp.path(), "expired");
     assert!(submit_before(&registry, req, caller("a"), Some(std::time::Instant::now())).is_err());
     assert!(list_operations(&registry).unwrap().is_empty());
+    let mut selected = request("start", temp.path(), "ignored-selector");
+    selected.dcc_path = Some(temp.path().join("chosen-host"));
+    assert!(
+        submit(&registry, selected, caller("a"))
+            .unwrap_err()
+            .to_string()
+            .contains("configure_project")
+    );
+    assert!(list_operations(&registry).unwrap().is_empty());
     let mut req = request("stop", temp.path(), "discard");
     req.discard_unsaved = true;
     assert!(

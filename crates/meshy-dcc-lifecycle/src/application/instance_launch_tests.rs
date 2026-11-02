@@ -119,6 +119,83 @@ fn argv_for(executable: &Path, flag: &str) -> Vec<String> {
 
 // ── Stage: resolve plan ────────────────────────────────────────────────────
 
+#[test]
+fn prior_owned_pid_and_operation_cannot_reuse_a_host_observed_in_another_project() {
+    let temp = tempfile::tempdir().unwrap();
+    let a = temp.path().join("project-a");
+    let b = temp.path().join("project-b");
+    std::fs::create_dir(&a).unwrap();
+    std::fs::create_dir(&b).unwrap();
+    let registry = temp.path().join("registry");
+    let id = uuid::Uuid::new_v4().to_string();
+    let mut entry = ServiceEntry::new("unity", "127.0.0.1", 9);
+    entry.pid = Some(std::process::id());
+    entry
+        .metadata
+        .insert("meshy_dcc_operation_id".into(), id.clone());
+    entry
+        .metadata
+        .insert("meshy_dcc_project".into(), a.display().to_string());
+    entry
+        .metadata
+        .insert("project".into(), b.display().to_string());
+    registry_handle(&registry).register(entry.clone()).unwrap();
+    let mut original = LifecycleOperation::new(&id, "unity", &a, Path::new("fixture"), None);
+    original.pid = entry.pid;
+    original.launched = true;
+    original.owned = true;
+    original.instance_id = Some(entry.instance_id.to_string());
+    let store = LifecycleStore::new(&registry);
+    store.save(&original).unwrap();
+    assert!(matches!(
+        find_reusable(&registry, "unity", &a, &store, None).unwrap(),
+        Reuse::None
+    ));
+    assert!(
+        entry_project(&entry).is_none(),
+        "conflicting project aliases are not ownership evidence"
+    );
+}
+
+#[test]
+fn registration_rejects_contradictory_project_before_operation_or_pid_fallback() {
+    let temp = tempfile::tempdir().unwrap();
+    let other = temp.path().join("other");
+    std::fs::create_dir(&other).unwrap();
+    let mut stale = ServiceEntry::new("unity", "127.0.0.1", 9);
+    stale.pid = Some(1234);
+    stale
+        .metadata
+        .insert("meshy_dcc_operation_id".into(), "original".into());
+    stale
+        .metadata
+        .insert("project".into(), other.display().to_string());
+    assert!(select_registration(&[stale.clone()], temp.path(), "original", Some(1234)).is_none());
+    let mut matching = ServiceEntry::new("unity", "127.0.0.1", 10);
+    matching
+        .metadata
+        .insert("project".into(), temp.path().display().to_string());
+    assert_eq!(
+        select_registration(
+            &[stale.clone(), matching.clone()],
+            temp.path(),
+            "original",
+            Some(1234)
+        )
+        .unwrap()
+        .instance_id,
+        matching.instance_id
+    );
+    stale.metadata.remove("project");
+    assert_eq!(
+        select_registration(&[stale.clone()], temp.path(), "original", Some(1234))
+            .unwrap()
+            .instance_id,
+        stale.instance_id,
+        "unbound legacy rows retain their explicit operation/PID fallback"
+    );
+}
+
 #[tokio::test]
 async fn no_published_plan_fails_closed_with_launch_plan_missing() {
     let dir = tempfile::tempdir().unwrap();

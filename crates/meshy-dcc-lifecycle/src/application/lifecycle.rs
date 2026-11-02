@@ -289,6 +289,10 @@ pub fn submit_before(
         ),
         "unsupported lifecycle action"
     );
+    anyhow::ensure!(
+        request.dcc_path.is_none() || request.action == "configure_project",
+        "dcc_path is supported only by configure_project when the adapter can honor it; start uses the published launch plan"
+    );
     let request_id = request
         .request_id
         .as_deref()
@@ -390,6 +394,18 @@ pub fn submit_before(
         );
         (dcc, project.canonicalize()?)
     };
+    if request.action == "configure_project" {
+        super::install::validate_prepared_project_target(
+            &dcc,
+            &project,
+            request.dcc_path.as_deref(),
+            registry,
+        )?;
+    }
+    anyhow::ensure!(
+        deadline.is_none_or(|d| std::time::Instant::now() < d),
+        "request deadline expired during validation; nothing was dispatched"
+    );
     let mut operation = LifecycleOperation::new(&id, &dcc, &project, Path::new(""), None);
     operation.management = Some(ManagedOperation {
         request_id: request_id.into(),
@@ -456,6 +472,7 @@ async fn execute(registry: PathBuf, operation: LifecycleOperation, request: Life
                         &operation.project,
                         request.dcc_path,
                         Some(deadline),
+                        &work_registry,
                     )
                 })
                 .await?

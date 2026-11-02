@@ -63,6 +63,13 @@ project evidence. A completed stop means its callback returned; inspect the
 instance/process again to establish exit. Host readback still establishes
 scene changes. Configuration success is not registration or readiness.
 
+`dcc_path` is a `configure_project` selector, never a `start` override. Project
+commands must declare that they consume it; otherwise Core refuses the selector
+before admission. A global adapter with no project commands can retain the
+same verified prepared/published launch target. Other choices require the
+adapter's native project/launch configuration or preparation of a supported
+target; start then consumes the resulting launch plan.
+
 Keep one `request_id` for one mutation and repeat it only with identical
 arguments to reconcile a lost response. Core returns the original operation
 without dispatching again; changed arguments are refused. The original caller
@@ -111,6 +118,12 @@ records. Each association must still match the live full instance ID, PID,
 DCC type and canonical project. These are derived views, not another binding
 registry. Absence does not mean a host is unusable, and association is not
 ownership. Remote rows cannot forge local ownership or associations.
+
+Explicit contradictory project metadata defeats an old launch operation or PID
+during reuse and registration. Conflicting project aliases are not ownership
+evidence. Legacy rows with no project metadata retain operation/PID fallback;
+that fallback cannot prove the host's current native project, so native readback
+still establishes the working document before edits.
 
 ## Activity and mode changes
 
