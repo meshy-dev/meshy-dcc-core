@@ -142,8 +142,7 @@ pub async fn run() -> anyhow::Result<()> {
     // Keep legacy staged-update quarantine before clap's --version/--help exit,
     // while valid read-only inspections bypass all update writes.
     let parsed = Args::try_parse();
-    let inspection = matches!(&parsed, Ok(args) if matches!(args.command,
-        Command::Software { .. } | Command::ActiveWork { .. }));
+    let inspection = matches!(&parsed, Ok(args) if is_read_only_inspection(&args.command));
     if !inspection && apply_staged_update() {
         let error =
             meshy_dcc_updater::relaunch_current_exe(&[("MESHY_DCC_UPDATE_JUST_APPLIED", "1")]);
@@ -158,6 +157,15 @@ pub async fn run() -> anyhow::Result<()> {
         std::process::exit(exit_code);
     }
     Ok(())
+}
+
+fn is_read_only_inspection(command: &Command) -> bool {
+    matches!(
+        command,
+        Command::Software { .. }
+            | Command::ActiveWork { .. }
+            | Command::PrepareAdapter { execute: false, .. }
+    )
 }
 
 fn output_format(command: &Command, output: Option<OutputFormat>) -> Result<OutputFormat, String> {
@@ -263,12 +271,7 @@ async fn run_with_args(args: Args) -> anyhow::Result<()> {
     } = args;
 
     // Inspections bypass update, Skill refresh and telemetry writes as well as gateway auto-start.
-    if matches!(
-        command,
-        Command::Software { .. }
-            | Command::ActiveWork { .. }
-            | Command::PrepareAdapter { execute: false, .. }
-    ) {
+    if is_read_only_inspection(&command) {
         let value = match &command {
             Command::Software { catalog, .. } => {
                 meshy_dcc_lifecycle::application::install::observe_software(catalog.as_deref())?

@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use meshy_dcc_catalog::{CatalogAdobeInstall, CatalogEntry, CatalogInstall};
 use serde::{Deserialize, Serialize};
@@ -252,28 +252,96 @@ pub const LOCATE_HOST_STEP: &str = "locate-host";
 /// The one existing file that matches the catalog's `dcc_paths` patterns;
 /// otherwise every match (none, or several to choose from).
 pub(crate) fn find_dcc_path(patterns: &[String]) -> Result<PathBuf, Vec<PathBuf>> {
-    let home = dirs::home_dir();
-    let mut found: Vec<PathBuf> = Vec::new();
-    for pattern in patterns {
-        let pattern = match (pattern.strip_prefix("~/"), &home) {
-            (Some(rest), Some(home)) => home.join(rest).to_string_lossy().into_owned(),
-            (Some(_), None) => continue,
-            (None, _) => pattern.clone(),
-        };
-        let Ok(paths) = glob::glob(&pattern) else {
-            continue;
-        };
-        for path in paths.flatten() {
-            if path.is_file() && !found.contains(&path) {
-                found.push(path);
-            }
-        }
-    }
+    let mut found = observed_dcc_paths(patterns, None);
     if found.len() == 1 {
         Ok(found.remove(0))
     } else {
         Err(found)
     }
+}
+
+/// Catalog locations and an already prepared executable are observation evidence,
+/// not permission to select a different project or running instance.
+pub(crate) fn observed_dcc_paths(patterns: &[String], prepared: Option<&Path>) -> Vec<PathBuf> {
+    let home = dirs::home_dir();
+    let mut found: Vec<PathBuf> = Vec::new();
+    let mut identities = std::collections::HashSet::new();
+    let mut add = |path: PathBuf| {
+        if path.is_file() {
+            let identity = path.canonicalize().unwrap_or_else(|_| path.clone());
+            if identities.insert(identity) {
+                found.push(path);
+            }
+        }
+    };
+    for pattern in patterns {
+        let Some(pattern) = expand_dcc_pattern(pattern, home.as_deref(), |name| {
+            std::env::var_os(name).map(PathBuf::from)
+        }) else {
+            continue;
+        };
+        let Ok(paths) = glob::glob(&pattern) else {
+            continue;
+        };
+        for path in paths.flatten() {
+            add(path);
+        }
+    }
+    if let Some(path) = prepared.filter(|path| path.is_absolute()) {
+        add(path.to_path_buf());
+    }
+    found
+}
+
+/// Expand only documented leading roots. Escape the literal root, leaving the
+/// catalog's suffix glob intact (home/user directory names may contain `[]`).
+fn expand_dcc_pattern(
+    pattern: &str,
+    home: Option<&Path>,
+    environment: impl Fn(&str) -> Option<PathBuf>,
+) -> Option<String> {
+    let (root, rest) = if let Some(rest) = pattern.strip_prefix("~/") {
+        (home?.to_path_buf(), rest)
+    } else if let Some((name, rest)) = pattern.strip_prefix('%').and_then(|p| p.split_once("%/")) {
+        let fallback = || match name {
+            "LOCALAPPDATA" => home.map(|home| home.join("AppData/Local")),
+            "ProgramFiles" | "ProgramFiles(x86)" => {
+                let drive = environment("SystemDrive")
+                    .and_then(|path| path.into_os_string().into_string().ok())
+                    .filter(|drive| {
+                        drive.len() == 2
+                            && drive.as_bytes()[0].is_ascii_alphabetic()
+                            && drive.ends_with(':')
+                    })
+                    .unwrap_or_else(|| "C:".into());
+                let folder = if name == "ProgramFiles" {
+                    "Program Files"
+                } else {
+                    "Program Files (x86)"
+                };
+                Some(PathBuf::from(format!("{drive}/{folder}")))
+            }
+            _ => None,
+        };
+        if !matches!(name, "ProgramFiles" | "ProgramFiles(x86)" | "LOCALAPPDATA") {
+            return None;
+        }
+        let configured = environment(name).or_else(|| {
+            (name == "ProgramFiles")
+                .then(|| environment("ProgramW6432"))
+                .flatten()
+        });
+        let root = match configured {
+            Some(path) if path.is_absolute() => path,
+            Some(_) => return None,
+            None => fallback()?,
+        };
+        (root, rest)
+    } else {
+        return Some(pattern.to_owned());
+    };
+    let root = glob::Pattern::escape(&root.to_string_lossy());
+    Some(format!("{}/{rest}", root.trim_end_matches(['/', '\\'])))
 }
 
 /// A macOS app bundle stands for its main executable (`CFBundleExecutable`
@@ -1134,8 +1202,8 @@ pub fn normalized_dcc_key(value: &str) -> String {
 #[cfg(test)]
 mod host_package_tests {
     use super::{
-        app_bundle_executable, default_adapter_dir, find_dcc_path, host_package_dir,
-        host_package_file_name,
+        app_bundle_executable, default_adapter_dir, expand_dcc_pattern, find_dcc_path,
+        host_package_dir, host_package_file_name, observed_dcc_paths,
     };
 
     #[test]
@@ -1156,6 +1224,123 @@ mod host_package_tests {
                 root.join("meshy-dcc-godot-macos-arm64")
             );
         }
+    }
+
+    #[test]
+    fn install_roots_are_literal_and_only_catalog_suffixes_are_globs() {
+        let root = tempfile::tempdir().unwrap();
+        let home = root.path().join("home[artist]");
+        let roots = [
+            ("ProgramFiles", root.path().join("native[apps]")),
+            ("ProgramFiles(x86)", root.path().join("legacy[apps]")),
+            ("LOCALAPPDATA", root.path().join("profile[apps]")),
+        ];
+        let environment = |name: &str| {
+            roots
+                .iter()
+                .find(|(key, _)| *key == name)
+                .map(|(_, path)| path.clone())
+        };
+        for (prefix, directory) in [
+            ("~/", &home),
+            ("%ProgramFiles%/", &roots[0].1),
+            ("%ProgramFiles(x86)%/", &roots[1].1),
+            ("%LOCALAPPDATA%/", &roots[2].1),
+        ] {
+            let path = directory.join("Editor 1/editor.exe");
+            std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+            std::fs::write(&path, "fixture executable").unwrap();
+            let expanded = expand_dcc_pattern(
+                &format!("{prefix}Editor */editor.exe"),
+                Some(&home),
+                environment,
+            )
+            .unwrap();
+            assert_eq!(find_dcc_path(&[expanded]), Ok(path));
+        }
+        assert!(expand_dcc_pattern("%UNSUPPORTED%/editor.exe", Some(&home), environment).is_none());
+        assert!(expand_dcc_pattern("~/editor", None, environment).is_none());
+        assert!(
+            expand_dcc_pattern("%ProgramFiles%/editor", None, |_| Some("relative".into()))
+                .is_none()
+        );
+        assert_eq!(
+            expand_dcc_pattern(
+                "C:/Program Files/Editor/editor.exe",
+                Some(&home),
+                environment
+            )
+            .as_deref(),
+            Some("C:/Program Files/Editor/editor.exe")
+        );
+    }
+
+    #[test]
+    fn windows_root_fallbacks_keep_system_drive_and_user_profile_locations() {
+        let root = tempfile::tempdir().unwrap();
+        let home = root.path().join("profile[artist]");
+        let environment = |name: &str| (name == "SystemDrive").then(|| "D:".into());
+        assert_eq!(
+            expand_dcc_pattern("%ProgramFiles%/Editor/editor.exe", Some(&home), environment)
+                .as_deref(),
+            Some("D:/Program Files/Editor/editor.exe")
+        );
+        assert_eq!(
+            expand_dcc_pattern(
+                "%ProgramFiles(x86)%/Editor/editor.exe",
+                Some(&home),
+                environment
+            )
+            .as_deref(),
+            Some("D:/Program Files (x86)/Editor/editor.exe")
+        );
+        assert_eq!(
+            expand_dcc_pattern("%ProgramFiles%/editor.exe", None, |_| None).as_deref(),
+            Some("C:/Program Files/editor.exe")
+        );
+        assert_eq!(
+            expand_dcc_pattern("%LOCALAPPDATA%/Editor/editor.exe", Some(&home), environment),
+            Some(format!(
+                "{}/Editor/editor.exe",
+                glob::Pattern::escape(&home.join("AppData/Local").to_string_lossy())
+            ))
+        );
+        assert!(expand_dcc_pattern("%LOCALAPPDATA%/editor", None, |_| None).is_none());
+        let native = root.path().join("native[64]");
+        assert_eq!(
+            expand_dcc_pattern("%ProgramFiles%/editor", Some(&home), |name| (name
+                == "ProgramW6432")
+                .then(|| native.clone())),
+            Some(format!(
+                "{}/editor",
+                glob::Pattern::escape(&native.to_string_lossy())
+            ))
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn executable_aliases_keep_the_first_display_path_without_merging_distinct_files() {
+        let root = tempfile::tempdir().unwrap();
+        let editor = root.path().join("editor");
+        let alias = root.path().join("editor-alias");
+        let other = root.path().join("editor-other");
+        std::fs::write(&editor, "fixture").unwrap();
+        std::os::unix::fs::symlink(&editor, &alias).unwrap();
+        let patterns = [
+            alias.to_string_lossy().into_owned(),
+            editor.to_string_lossy().into_owned(),
+        ];
+        assert_eq!(find_dcc_path(&patterns), Ok(alias.clone()));
+        assert_eq!(
+            observed_dcc_paths(&patterns, Some(&editor)),
+            vec![alias.clone()]
+        );
+        std::fs::write(&other, "another executable").unwrap();
+        assert_eq!(
+            observed_dcc_paths(&patterns, Some(&other)),
+            vec![alias, other]
+        );
     }
 
     #[test]

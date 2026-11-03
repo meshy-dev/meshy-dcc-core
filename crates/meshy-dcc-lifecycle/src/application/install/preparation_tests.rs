@@ -103,6 +103,99 @@ fn missing_scan_patterns_are_unknown_not_software_absence() {
 }
 
 #[test]
+fn observation_keeps_only_valid_matching_prepared_custom_executables() {
+    let root = tempfile::tempdir().unwrap();
+    let data = root.path().join("data");
+    let _env = meshy_dcc_test_utils::EnvVarGuard::set("MESHY_DCC_DATA_DIR", data.to_str());
+    let editor = root.path().join("custom-location/editor");
+    std::fs::create_dir_all(editor.parent().unwrap()).unwrap();
+    std::fs::write(&editor, "fixture executable, never run").unwrap();
+    let package = root.path().join("prepared-package");
+    std::fs::create_dir(&package).unwrap();
+    std::fs::write(package.join("installer"), "fixture installer, never run").unwrap();
+    let checksum = "a".repeat(64);
+    std::fs::write(package.join(".meshy-dcc-package.sha256"), &checksum).unwrap();
+    let entry: CatalogEntry = serde_json::from_value(json!({
+        "name":"fixture-adapter", "description":"fixture", "dcc":["fixture"],
+        "tags":["adapter"], "version":"1", "policy":{"installation":"available"},
+        "install":{"type":"host-package", "url":"https://example.invalid/fixture.zip",
+            "sha256":checksum, "host":{"extract":true,
+                "dcc_paths":[root.path().join("usual-installation/editor")],
+                "project_steps":[["{package_dir}/installer", "{project}", "{dcc_path}"]]}}
+    }))
+    .unwrap();
+    let catalog = root.path().join("catalog.json");
+    std::fs::write(&catalog, json!({"entries": [&entry]}).to_string()).unwrap();
+    let receipt = PreparedAdapter {
+        schema_version: 1,
+        entry,
+        dcc_path: Some(editor.clone()),
+        package_dir: Some(package.clone()),
+        prepared_at_unix: 1,
+    };
+    let path = receipt_path("fixture");
+    std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+    let write = |receipt: &PreparedAdapter| {
+        std::fs::write(&path, serde_json::to_vec(receipt).unwrap()).unwrap()
+    };
+    write(&receipt);
+    let before = std::fs::read(&path).unwrap();
+    let observed = observe_software(Some(&catalog)).unwrap();
+    assert_eq!(observed["software"][0]["detection"], "found");
+    assert_eq!(
+        observed["software"][0]["candidates"],
+        json!([{"path": editor}])
+    );
+    assert_eq!(observed["software"][0]["adapter"]["prepared"], true);
+    assert_eq!(std::fs::read(&path).unwrap(), before);
+
+    for upgrade in ["version", "digest"] {
+        let mut current = receipt.entry.clone();
+        if upgrade == "version" {
+            current.version = Some("2".into());
+        } else {
+            current.install.as_mut().unwrap().sha256 = Some("b".repeat(64));
+        }
+        std::fs::write(&catalog, json!({"entries": [current]}).to_string()).unwrap();
+        let observed = observe_software(Some(&catalog)).unwrap();
+        assert_eq!(observed["software"][0]["detection"], "found", "{upgrade}");
+        assert_eq!(
+            observed["software"][0]["adapter"]["prepared"], false,
+            "{upgrade}"
+        );
+        assert_eq!(std::fs::read(&path).unwrap(), before);
+    }
+    std::fs::write(&catalog, json!({"entries": [&receipt.entry]}).to_string()).unwrap();
+    for mutation in ["name", "dcc", "digest", "relative_path"] {
+        let mut changed = receipt.clone();
+        match mutation {
+            "name" => changed.entry.name = "unrelated-adapter".into(),
+            "dcc" => changed.entry.dcc = vec!["other-host".into()],
+            "digest" => changed.entry.install.as_mut().unwrap().sha256 = Some("b".repeat(64)),
+            "relative_path" => changed.dcc_path = Some("relative/editor".into()),
+            _ => unreachable!(),
+        }
+        write(&changed);
+        assert_eq!(
+            observe_software(Some(&catalog)).unwrap()["software"][0]["detection"],
+            "not_observed",
+            "{mutation}"
+        );
+    }
+    write(&receipt);
+    std::fs::remove_file(&editor).unwrap();
+    assert_eq!(
+        observe_software(Some(&catalog)).unwrap()["software"][0]["detection"],
+        "not_observed"
+    );
+    std::fs::write(&editor, "restored fixture").unwrap();
+    std::fs::remove_file(package.join("installer")).unwrap();
+    let rejected = observe_software(Some(&catalog)).unwrap();
+    assert_eq!(rejected["software"][0]["detection"], "not_observed");
+    assert_eq!(rejected["software"][0]["adapter"]["prepared"], false);
+}
+
+#[test]
 fn refreshed_catalog_drives_new_software_and_preparation_without_a_core_release() {
     use crate::domain::install_catalog::{CatalogProvenance, CatalogSource};
 
@@ -227,9 +320,21 @@ async fn rejected_default_cache_blocks_preparation_but_explicit_catalog_stays_in
     assert!(!data.exists());
 }
 
-#[test]
-fn game_engine_observations_find_all_editors_without_selecting_a_project_version() {
-    for (dcc, platform, first, second) in [
+fn software_observation_fixtures() -> Vec<(&'static str, &'static str, &'static str, &'static str)>
+{
+    vec![
+        (
+            "blender",
+            "macos-arm64",
+            "absolute/Applications/Blender.app/Contents/MacOS/Blender",
+            "home/Applications/Blender.app/Contents/MacOS/Blender",
+        ),
+        (
+            "blender",
+            "windows-x86_64",
+            "drive-c/Program Files/Blender Foundation/Blender 4.5/blender.exe",
+            "drive-c/Program Files/Blender Foundation/Blender 5.0/blender.exe",
+        ),
         (
             "unity",
             "macos-arm64",
@@ -243,6 +348,18 @@ fn game_engine_observations_find_all_editors_without_selecting_a_project_version
             "drive-c/Program Files (x86)/Unity/Hub/Editor/2022.3.46f1c1/Editor/Unity.exe",
         ),
         (
+            "godot",
+            "macos-arm64",
+            "absolute/Applications/Godot.app/Contents/MacOS/Godot",
+            "home/Applications/Godot.app/Contents/MacOS/Godot",
+        ),
+        (
+            "godot",
+            "windows-x86_64",
+            "drive-c/Program Files/Godot/Godot.exe",
+            "home/Downloads/Godot_v4.7-stable_win64.exe",
+        ),
+        (
             "unreal",
             "macos-arm64",
             "absolute/Users/Shared/Epic Games/UE_5.6/Engine/Binaries/Mac/UnrealEditor.app/Contents/MacOS/UnrealEditor",
@@ -254,66 +371,385 @@ fn game_engine_observations_find_all_editors_without_selecting_a_project_version
             "drive-c/Program Files/Epic Games/UE_5.6/Engine/Binaries/Win64/UnrealEditor.exe",
             "drive-c/Program Files/Epic Games/UE_5.7/Engine/Binaries/Win64/UnrealEditor.exe",
         ),
+        (
+            "zbrush",
+            "macos-arm64",
+            "absolute/Applications/Maxon ZBrush 2026.1/ZBrush.app/Contents/MacOS/ZBrush",
+            "home/Applications/Maxon ZBrush 2026.2/ZBrush.app/Contents/MacOS/ZBrush",
+        ),
+        (
+            "zbrush",
+            "windows-x86_64",
+            "drive-c/Program Files/Maxon ZBrush 2026.1/ZBrush.exe",
+            "drive-c/Program Files/Maxon ZBrush 2026.2/ZBrush.exe",
+        ),
+        (
+            "roblox",
+            "macos-arm64",
+            "absolute/Applications/RobloxStudio.app/Contents/MacOS/RobloxStudio",
+            "home/Applications/RobloxStudio.app/Contents/MacOS/RobloxStudio",
+        ),
+        (
+            "roblox",
+            "windows-x86_64",
+            "home/AppData/Local/Roblox/Versions/version-a/RobloxStudioBeta.exe",
+            "drive-c/Program Files (x86)/Roblox/Versions/version-b/RobloxStudioBeta.exe",
+        ),
+        (
+            "maya",
+            "macos-arm64",
+            "absolute/Applications/Autodesk/maya2026/Maya.app/Contents/MacOS/Maya",
+            "absolute/Applications/Autodesk/maya2027/Maya.app/Contents/MacOS/Maya",
+        ),
+        (
+            "maya",
+            "windows-x86_64",
+            "drive-c/Program Files/Autodesk/Maya2026/bin/maya.exe",
+            "drive-c/Program Files/Autodesk/Maya2027/bin/maya.exe",
+        ),
+        (
+            "3dsmax",
+            "windows-x86_64",
+            "drive-c/Program Files/Autodesk/3ds Max 2026/3dsmax.exe",
+            "drive-c/Program Files (x86)/Autodesk/3ds Max 2027/3dsmax.exe",
+        ),
+        (
+            "houdini",
+            "macos-arm64",
+            "absolute/Applications/Houdini/Houdini21.0.app/Contents/MacOS/houdini",
+            "absolute/Applications/Houdini/Houdini21.0.440/Houdini FX 21.0.440.app/Contents/MacOS/houdini",
+        ),
+        (
+            "houdini",
+            "windows-x86_64",
+            "drive-c/Program Files/Side Effects Software/Houdini 20.5.613/bin/houdini.exe",
+            "drive-c/Program Files/Side Effects Software/Houdini 21.0.440/bin/houdini.exe",
+        ),
+        (
+            "substance3d_painter",
+            "macos-arm64",
+            "absolute/Applications/Adobe Substance 3D Painter.app/Contents/MacOS/Adobe Substance 3D Painter",
+            "absolute/Applications/Adobe Substance 3D Painter/Adobe Substance 3D Painter.app/Contents/MacOS/Adobe Substance 3D Painter",
+        ),
+        (
+            "substance3d_painter",
+            "windows-x86_64",
+            "drive-c/Program Files/Adobe/Adobe Substance 3D Painter 2026/Adobe Substance 3D Painter.exe",
+            "drive-c/Program Files (x86)/Steam/steamapps/common/Substance 3D Painter 2026/Adobe Substance 3D Painter.exe",
+        ),
+        (
+            "freecad",
+            "macos-arm64",
+            "absolute/Applications/FreeCAD.app/Contents/MacOS/FreeCAD",
+            "home/Applications/FreeCAD.app/Contents/MacOS/FreeCAD",
+        ),
+        (
+            "freecad",
+            "windows-x86_64",
+            "drive-c/Program Files/FreeCAD/bin/FreeCAD.exe",
+            "home/AppData/Local/Programs/FreeCAD 1.1/bin/FreeCAD.exe",
+        ),
+        (
+            "openscad",
+            "macos-arm64",
+            "absolute/Applications/OpenSCAD.app/Contents/MacOS/OpenSCAD",
+            "home/Applications/OpenSCAD.app/Contents/MacOS/OpenSCAD",
+        ),
+        (
+            "openscad",
+            "windows-x86_64",
+            "drive-c/Program Files/OpenSCAD/openscad.exe",
+            "program-files/OpenSCAD/openscad.exe",
+        ),
+        (
+            "material-maker",
+            "macos-arm64",
+            "absolute/Applications/Material Maker.app/Contents/MacOS/Material Maker",
+            "home/Applications/Material Maker.app/Contents/MacOS/Material Maker",
+        ),
+        (
+            "material-maker",
+            "windows-x86_64",
+            "drive-c/Program Files/Material Maker/material_maker.exe",
+            "home/scoop/apps/material-maker/current/material_maker.exe",
+        ),
+    ]
+}
+
+fn relocate_observation_pattern(pattern: &str, root: &Path) -> String {
+    for (prefix, folder) in [
+        ("~/", "home"),
+        ("%ProgramFiles%/", "program-files"),
+        ("%ProgramFiles(x86)%/", "program-files-x86"),
+        ("%LOCALAPPDATA%/", "local-app-data"),
+        ("C:/", "drive-c"),
+        ("/", "absolute"),
     ] {
+        if let Some(rest) = pattern.strip_prefix(prefix) {
+            return format!(
+                "{}/{rest}",
+                glob::Pattern::escape(&root.join(folder).to_string_lossy())
+            );
+        }
+    }
+    panic!("unhandled catalog root: {pattern}")
+}
+
+#[test]
+fn every_available_host_platform_observes_missing_single_and_multiple_installations() {
+    let entries = meshy_dcc_catalog::load_from_str(super::super::BUNDLED_CATALOG).unwrap();
+    let available: std::collections::BTreeSet<_> = entries
+        .iter()
+        .filter(|entry| crate::domain::install::policy::validate(entry).is_ok())
+        .flat_map(|entry| {
+            entry
+                .install
+                .iter()
+                .flat_map(|install| install.platforms.keys())
+                .map(|platform| (entry.dcc[0].as_str(), platform.as_str()))
+        })
+        .collect();
+    let fixtures = software_observation_fixtures();
+    let covered: std::collections::BTreeSet<_> = fixtures
+        .iter()
+        .map(|(dcc, platform, _, _)| (*dcc, *platform))
+        .collect();
+    assert_eq!(
+        available, covered,
+        "every available catalog platform needs a discovery fixture"
+    );
+    assert_eq!(covered.len(), 25);
+
+    for (dcc, platform, first, second) in fixtures {
         let root = tempfile::tempdir().unwrap();
-        let _env =
-            meshy_dcc_test_utils::EnvVarGuard::set("MESHY_DCC_DATA_DIR", root.path().to_str());
-        let mut entry = meshy_dcc_catalog::load_from_str(super::super::BUNDLED_CATALOG)
-            .unwrap()
-            .into_iter()
+        let data = root.path().join("data");
+        let _env = meshy_dcc_test_utils::EnvVarGuard::set("MESHY_DCC_DATA_DIR", data.to_str());
+        let mut entry = entries
+            .iter()
             .find(|entry| entry.dcc.iter().any(|name| name == dcc))
-            .unwrap();
+            .unwrap()
+            .clone();
         let install = entry.install.as_mut().unwrap();
         install.select_platform(platform).unwrap();
-        // Exercise either platform on the test runner, using only fixture files.
         install.platforms.clear();
-        for pattern in &mut install.host.as_mut().unwrap().dcc_paths {
-            let relative = if let Some(rest) = pattern.strip_prefix("C:/") {
-                format!("drive-c/{rest}")
-            } else {
-                format!("absolute/{}", pattern.trim_start_matches('/'))
-            };
-            *pattern = root.path().join(relative).to_string_lossy().into_owned();
+        let patterns = &mut install.host.as_mut().unwrap().dcc_paths;
+        assert!(
+            !patterns.is_empty(),
+            "{dcc}/{platform} has no observation paths"
+        );
+        let legacy_patterns: Vec<_> = patterns
+            .iter()
+            .filter(|pattern| !pattern.starts_with('%'))
+            .map(|pattern| relocate_observation_pattern(pattern, root.path()))
+            .collect();
+        for pattern in patterns.iter_mut() {
+            *pattern = relocate_observation_pattern(pattern, root.path());
         }
+        let mut legacy = entry.clone();
+        legacy
+            .install
+            .as_mut()
+            .unwrap()
+            .host
+            .as_mut()
+            .unwrap()
+            .dcc_paths = legacy_patterns;
         let catalog = root.path().join("catalog.json");
         std::fs::write(&catalog, json!({"entries": [entry]}).to_string()).unwrap();
-        let missing = observe_software(Some(&catalog)).unwrap();
-        assert_eq!(missing["software"][0]["detection"], "not_observed");
-
-        let editors = [root.path().join(first), root.path().join(second)];
-        for (index, path) in editors.iter().enumerate() {
+        let legacy_catalog = root.path().join("legacy-catalog.json");
+        std::fs::write(&legacy_catalog, json!({"entries": [legacy]}).to_string()).unwrap();
+        assert_eq!(
+            observe_software(Some(&catalog)).unwrap()["software"][0]["detection"],
+            "not_observed",
+            "{dcc}/{platform}"
+        );
+        for (index, relative) in [first, second].into_iter().enumerate() {
+            let path = root.path().join(relative);
             std::fs::create_dir_all(path.parent().unwrap()).unwrap();
-            std::fs::write(path, "fixture editor, never executed").unwrap();
+            std::fs::write(&path, "fixture editor, never executed").unwrap();
+            if index == 0 {
+                assert_eq!(
+                    observe_software(Some(&legacy_catalog)).unwrap()["software"][0]["detection"],
+                    "found",
+                    "older Core must still observe {dcc}/{platform}"
+                );
+                if platform == "windows-x86_64" {
+                    let companion = match dcc {
+                        "freecad" => Some("FreeCADCmd.exe"),
+                        "openscad" => Some("openscad.com"),
+                        _ => None,
+                    };
+                    if let Some(companion) = companion {
+                        std::fs::write(
+                            path.with_file_name(companion),
+                            "same installation's CLI companion",
+                        )
+                        .unwrap();
+                    }
+                }
+            }
             let observed = observe_software(Some(&catalog)).unwrap();
             let row = &observed["software"][0];
             assert_eq!(
                 row["detection"],
-                if index == 0 { "found" } else { "multiple" }
+                if index == 0 { "found" } else { "multiple" },
+                "{dcc}/{platform}"
             );
-            assert_eq!(row["candidates"].as_array().unwrap().len(), index + 1);
+            assert_eq!(
+                row["candidates"].as_array().unwrap().len(),
+                index + 1,
+                "{dcc}/{platform}"
+            );
             assert!(
                 row["candidates"]
                     .as_array()
                     .unwrap()
-                    .contains(&json!({"path": path}))
+                    .iter()
+                    .any(|candidate| Path::new(candidate["path"].as_str().unwrap()) == path),
+                "{dcc}/{platform}"
             );
-            assert_eq!(row["adapter"]["per_project"], true);
         }
+        assert!(
+            !data.exists(),
+            "observations must not create installation state"
+        );
+    }
+}
 
-        // Preparing a project adapter downloads its package, not a chosen editor.
-        // Multiple observed versions must not introduce a global selection gate.
-        let planned = InstallService::bundled()
-            .prepare_adapter(dcc, None, Some(&catalog), false)
-            .unwrap();
-        let plan: crate::domain::install::InstallPlan =
-            serde_json::from_value(planned["plan"].clone()).unwrap();
-        assert!(plan.dcc_path.is_none());
-        assert!(plan.steps.iter().any(|step| matches!(
-            &step.action,
-            Some(InstallStepAction::HostPackage { dcc_path: None, project: None, project_steps, .. })
-                if project_steps.is_empty()
-        )));
-        assert!(!plan.steps.iter().any(|step| step.name == "locate-host"));
+#[test]
+fn catalog_observations_follow_relocated_windows_roots_with_literal_directory_names() {
+    let root = tempfile::tempdir().unwrap();
+    let data = root.path().join("data");
+    let native = root.path().join("native[programs]");
+    let legacy = root.path().join("legacy[programs]");
+    let local = root.path().join("profile[programs]");
+    let _env = meshy_dcc_test_utils::EnvVarsGuard::set(&[
+        ("MESHY_DCC_DATA_DIR", data.to_str()),
+        ("ProgramFiles", native.to_str()),
+        ("ProgramFiles(x86)", legacy.to_str()),
+        ("LOCALAPPDATA", local.to_str()),
+    ]);
+    let entries = meshy_dcc_catalog::load_from_str(super::super::BUNDLED_CATALOG).unwrap();
+    for (dcc, executable) in [
+        ("freecad", native.join("FreeCAD/bin/FreeCAD.exe")),
+        ("3dsmax", legacy.join("Autodesk/3ds Max 2026/3dsmax.exe")),
+        (
+            "roblox",
+            local.join("Roblox/Versions/version-a/RobloxStudioBeta.exe"),
+        ),
+    ] {
+        std::fs::create_dir_all(executable.parent().unwrap()).unwrap();
+        std::fs::write(&executable, "fixture executable, never run").unwrap();
+        let mut entry = entries
+            .iter()
+            .find(|entry| entry.dcc[0] == dcc)
+            .unwrap()
+            .clone();
+        let install = entry.install.as_mut().unwrap();
+        install.select_platform("windows-x86_64").unwrap();
+        install.platforms.clear();
+        // Isolate these real catalog roots from this test runner's native paths.
+        install
+            .host
+            .as_mut()
+            .unwrap()
+            .dcc_paths
+            .retain(|pattern| pattern.starts_with('%'));
+        let catalog = root.path().join(format!("{dcc}.json"));
+        std::fs::write(&catalog, json!({"entries": [entry]}).to_string()).unwrap();
+        let observed = observe_software(Some(&catalog)).unwrap();
+        let row = &observed["software"][0];
+        assert_eq!(row["detection"], "found", "{dcc}");
+        assert_eq!(
+            PathBuf::from(row["candidates"][0]["path"].as_str().unwrap()),
+            executable
+        );
+    }
+    assert!(!data.exists());
+}
+
+#[test]
+fn project_adapter_preparation_does_not_select_an_editor_on_any_published_platform() {
+    let mut checked = std::collections::BTreeSet::new();
+    for entry in meshy_dcc_catalog::load_from_str(super::super::BUNDLED_CATALOG).unwrap() {
+        if crate::domain::install::policy::validate(&entry).is_err() {
+            continue;
+        }
+        for platform in entry.install.as_ref().unwrap().platforms.keys() {
+            let root = tempfile::tempdir().unwrap();
+            let _env =
+                meshy_dcc_test_utils::EnvVarGuard::set("MESHY_DCC_DATA_DIR", root.path().to_str());
+            let mut selected = entry.clone();
+            let install = selected.install.as_mut().unwrap();
+            install.select_platform(platform).unwrap();
+            install.platforms.clear();
+            if install.host.as_ref().unwrap().project_steps.is_empty() {
+                continue;
+            }
+            // No detected executable: package preparation must still work without
+            // selecting an editor. The session later chooses its project/version.
+            install.host.as_mut().unwrap().dcc_paths = vec![
+                root.path()
+                    .join("missing/*/editor")
+                    .to_string_lossy()
+                    .into_owned(),
+            ];
+            let catalog = root.path().join("catalog.json");
+            std::fs::write(&catalog, json!({"entries": [selected]}).to_string()).unwrap();
+            for multiple in [false, true] {
+                if multiple {
+                    for name in ["first", "second"] {
+                        let executable = root.path().join("missing").join(name).join("editor");
+                        std::fs::create_dir_all(executable.parent().unwrap()).unwrap();
+                        std::fs::write(executable, "fixture editor, never run").unwrap();
+                    }
+                }
+                let planned = InstallService::bundled()
+                    .prepare_adapter(&entry.dcc[0], None, Some(&catalog), false)
+                    .unwrap();
+                let plan: crate::domain::install::InstallPlan =
+                    serde_json::from_value(planned["plan"].clone()).unwrap();
+                assert!(plan.dcc_path.is_none());
+                assert!(plan.steps.iter().any(|step| matches!(&step.action,
+                    Some(InstallStepAction::HostPackage { dcc_path: None, project: None, project_steps, .. }) if project_steps.is_empty()
+                )), "{}/{platform}", entry.dcc[0]);
+                assert!(!plan.steps.iter().any(|step| step.name == "locate-host"));
+            }
+            checked.insert((entry.dcc[0].clone(), platform.clone()));
+        }
+    }
+    assert_eq!(
+        checked.len(),
+        16,
+        "eight project adapters on both platforms"
+    );
+}
+
+#[test]
+fn windows_catalog_keeps_legacy_paths_for_older_signed_catalog_consumers() {
+    for entry in meshy_dcc_catalog::load_from_str(super::super::BUNDLED_CATALOG).unwrap() {
+        if crate::domain::install::policy::validate(&entry).is_err() {
+            continue;
+        }
+        let mut install = entry.install.unwrap();
+        install.select_platform("windows-x86_64").unwrap();
+        let patterns = &install.host.unwrap().dcc_paths;
+        for pattern in patterns {
+            for (prefix, old_prefix) in [
+                ("%ProgramFiles%/", "C:/Program Files/"),
+                ("%ProgramFiles(x86)%/", "C:/Program Files (x86)/"),
+                ("%LOCALAPPDATA%/", "~/AppData/Local/"),
+            ] {
+                if let Some(rest) = pattern.strip_prefix(prefix) {
+                    assert!(
+                        patterns.contains(&format!("{old_prefix}{rest}")),
+                        "{} lost the legacy equivalent of {pattern}",
+                        entry.name
+                    );
+                }
+            }
+        }
+        assert!(patterns.iter().any(|pattern| !pattern.starts_with('%')));
     }
 }
 

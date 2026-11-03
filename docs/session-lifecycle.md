@@ -26,6 +26,24 @@ starts a host or infers absence from an empty registry. Versions and custom
 installation paths remain unverified until the adapter checks them. There are
 no projects, instance bindings or project-readiness fields in these rows.
 
+Observation combines the selected platform's catalog paths with an existing
+executable from a valid preparation receipt for the same adapter name and DCC type.
+It does not inspect project or instance registries. A valid older receipt can still
+show a custom installation after the catalog advances; `adapter.prepared` separately
+requires the current version and artifact digest. Unrelated or broken receipts
+cannot supply executable candidates.
+Aliases resolving to the same file count once and retain the first display path.
+
+Catalog globs expand `~/` and the leading Windows roots `%ProgramFiles%`,
+`%ProgramFiles(x86)%` and `%LOCALAPPDATA%`. The roots are literal paths even when
+their directory names contain glob characters. Windows roots use the corresponding
+environment values; absent values use the native Program Files root when supplied,
+the system drive's usual Program Files directories, or the user's
+`AppData/Local`. Literal `C:/Program Files` and `~/AppData/Local` fallbacks remain in
+the published catalog for older Core consumers that do not understand root tokens.
+This is bounded location observation, not an exhaustive disk, PATH or launcher
+metadata search; adapters retain their richer project-specific resolution.
+
 Unity and Unreal observations cover their usual Hub/Launcher install locations.
 They do not select a project editor: the adapters still resolve Unity's project
 version and Unreal's `EngineAssociation`, including launcher metadata and explicit
@@ -47,6 +65,9 @@ or replace the official cache.
 
 Preparation does not run project steps, create a native project or open a project
 session. Global installer commands may invoke a host's installation CLI.
+All currently available project adapters can prepare their package without
+selecting an editor. An adapter with global installer steps or a launch recipe may
+still require an executable; Core's preparation plan determines that requirement.
 Its receipt records the verified package and adapter-owned project commands in
 Core's existing installation state. Later project configuration uses the
 prepared package; the download server need not remain available. `prepared`

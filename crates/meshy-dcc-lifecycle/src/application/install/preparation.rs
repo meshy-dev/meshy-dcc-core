@@ -10,7 +10,7 @@ use serde_json::{Value, json};
 use super::{HostPlaceholders, HostTargets, InstallService};
 use crate::domain::install::{
     InstallPlanner, InstallRequest, InstallStepAction, app_bundle_executable, find_dcc_path,
-    meshy_dcc_data_dir, normalized_dcc_key,
+    meshy_dcc_data_dir, normalized_dcc_key, observed_dcc_paths,
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -110,26 +110,34 @@ impl InstallService {
         {
             let host = entry.install.as_ref().and_then(|i| i.host.as_ref());
             let patterns = host.map(|h| h.dcc_paths.as_slice()).unwrap_or_default();
-            let paths = match find_dcc_path(patterns) {
-                Ok(path) => vec![path],
-                Err(paths) => paths,
-            };
-            let detection = match paths.len() {
-                0 if patterns.is_empty() => "unknown",
-                0 => "not_observed",
-                1 => "found",
-                _ => "multiple",
-            };
             for dcc in &entry.dcc {
-                let prepared = load_prepared(dcc).ok().filter(|prepared| {
-                    prepared.entry.version == entry.version
-                        && prepared
+                let receipt = load_prepared(dcc).ok().filter(|receipt| {
+                    receipt.entry.name == entry.name
+                        && receipt
+                            .entry
+                            .dcc
+                            .iter()
+                            .any(|name| normalized_dcc_key(name) == normalized_dcc_key(dcc))
+                });
+                let prepared = receipt.as_ref().filter(|receipt| {
+                    receipt.entry.version == entry.version
+                        && receipt
                             .entry
                             .install
                             .as_ref()
                             .and_then(|i| i.sha256.as_ref())
                             == entry.install.as_ref().and_then(|i| i.sha256.as_ref())
                 });
+                let paths = observed_dcc_paths(
+                    patterns,
+                    receipt.as_ref().and_then(|value| value.dcc_path.as_deref()),
+                );
+                let detection = match paths.len() {
+                    0 if patterns.is_empty() => "unknown",
+                    0 => "not_observed",
+                    1 => "found",
+                    _ => "multiple",
+                };
                 let mut row = json!({
                     "dcc_type": dcc, "name": meshy_dcc_models::DccName::parse(dcc).display_name(),
                     "detection": detection,

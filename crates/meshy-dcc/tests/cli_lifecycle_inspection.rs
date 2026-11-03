@@ -53,6 +53,82 @@ fn software_and_preparation_plan_are_project_free_and_do_not_create_runtime_stat
 }
 
 #[test]
+fn software_and_preparation_plan_leave_staged_updates_untouched() {
+    let root = tempfile::tempdir().unwrap();
+    let source = std::path::Path::new(env!("CARGO_BIN_EXE_meshy-dcc"));
+    let cli = root.path().join(source.file_name().unwrap());
+    std::fs::copy(source, &cli).unwrap();
+    let home = root.path().join("home");
+    let appdata = root.path().join("appdata");
+    let xdg_data = root.path().join("xdg-data");
+    let data = root.path().join("data");
+    #[cfg(target_os = "windows")]
+    let update_root = appdata.clone();
+    #[cfg(target_os = "linux")]
+    let update_root = xdg_data.clone();
+    #[cfg(target_os = "macos")]
+    let update_root = home.join("Library/Application Support");
+    let staging = update_root.join("update/meshy-dcc");
+    std::fs::create_dir_all(&staging).unwrap();
+    let marker = staging.join("pending.marker");
+    let pending = staging.join("pending.bin");
+    std::fs::write(&marker, "pending").unwrap();
+    std::fs::write(&pending, "unsigned fixture; never executed").unwrap();
+    let catalog = root.path().join("catalog.json");
+    std::fs::write(
+        &catalog,
+        json!({"entries":[{
+            "name":"fixture-adapter", "description":"fixture", "dcc":["fixture"],
+            "tags":["adapter"], "version":"1", "policy":{"installation":"available"},
+            "install":{"type":"host-package", "url":"https://example.invalid/fixture.zip",
+                "sha256":"a".repeat(64), "host":{"extract":true,
+                    "project_steps":[["{package_dir}/installer", "{project}"]]}}
+        }]})
+        .to_string(),
+    )
+    .unwrap();
+    let command = || {
+        let mut command = std::process::Command::new(&cli);
+        command
+            .env("HOME", &home)
+            .env("APPDATA", &appdata)
+            .env("XDG_DATA_HOME", &xdg_data)
+            .env("MESHY_DCC_DATA_DIR", &data)
+            .env("MESHY_DCC_INSTALL_CACHE", root.path().join("cache.json"))
+            .env("MESHY_DCC_REGISTRY_DIR", root.path().join("registry"));
+        command
+    };
+    for args in [
+        vec!["software"],
+        vec!["prepare-adapter", "--dcc-type", "fixture"],
+    ] {
+        let output = command()
+            .args(args)
+            .args(["--catalog", catalog.to_str().unwrap(), "--json"])
+            .output()
+            .unwrap();
+        assert!(
+            output.status.success(),
+            "{}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        assert_eq!(std::fs::read_to_string(&marker).unwrap(), "pending");
+        assert_eq!(
+            std::fs::read_to_string(&pending).unwrap(),
+            "unsigned fixture; never executed"
+        );
+        assert_eq!(std::fs::read_dir(&staging).unwrap().count(), 2);
+        assert!(!data.exists());
+    }
+    // Positive control: this is the real staging location, and ordinary startup
+    // still quarantines unsigned updates. It never executes these fixture bytes.
+    let output = command().arg("--version").output().unwrap();
+    assert!(output.status.success());
+    assert!(!marker.exists());
+    assert!(!pending.exists());
+}
+
+#[test]
 fn software_rejects_an_invalid_default_catalog_without_repairing_or_changing_state() {
     let root = tempfile::tempdir().unwrap();
     let cache = root.path().join("catalog.json");
