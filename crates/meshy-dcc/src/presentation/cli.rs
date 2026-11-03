@@ -265,11 +265,27 @@ async fn run_with_args(args: Args) -> anyhow::Result<()> {
     // Inspections bypass update, Skill refresh and telemetry writes as well as gateway auto-start.
     if matches!(
         command,
-        Command::Software { .. } | Command::ActiveWork { .. }
+        Command::Software { .. }
+            | Command::ActiveWork { .. }
+            | Command::PrepareAdapter { execute: false, .. }
     ) {
         let value = match &command {
             Command::Software { catalog, .. } => {
                 meshy_dcc_lifecycle::application::install::observe_software(catalog.as_deref())?
+            }
+            Command::PrepareAdapter {
+                dcc_type,
+                dcc_path,
+                catalog,
+                ..
+            } => {
+                meshy_dcc_lifecycle::application::install::prepare_adapter(
+                    dcc_type,
+                    dcc_path.clone(),
+                    catalog.as_deref(),
+                    false,
+                )
+                .await?
             }
             Command::ActiveWork {
                 agent_name,
@@ -401,7 +417,8 @@ async fn run_with_args(args: Args) -> anyhow::Result<()> {
                 dcc_path,
                 catalog.as_deref(),
                 execute,
-            )?;
+            )
+            .await?;
             if value["status"] == "failed" {
                 failed = true;
             }

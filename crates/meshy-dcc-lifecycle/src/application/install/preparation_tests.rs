@@ -3,8 +3,8 @@ use sha2::{Digest, Sha256};
 use std::io::{Read, Write};
 
 #[cfg(unix)]
-#[test]
-fn preparation_needs_no_project_and_later_configuration_uses_the_verified_local_package() {
+#[tokio::test]
+async fn preparation_needs_no_project_and_later_configuration_uses_the_verified_local_package() {
     let temp = tempfile::tempdir().unwrap();
     let data = temp.path().join("data");
     let _env = meshy_dcc_test_utils::EnvVarGuard::set("MESHY_DCC_DATA_DIR", data.to_str());
@@ -51,7 +51,9 @@ fn preparation_needs_no_project_and_later_configuration_uses_the_verified_local_
     assert_eq!(observed["software"][0]["detection"], "multiple");
     assert_eq!(observed["software"][0]["adapter"]["prepared"], false);
     assert!(observed["software"][0].get("project").is_none());
-    let result = prepare_adapter("fixture", None, Some(&catalog), true).unwrap();
+    let result = prepare_adapter("fixture", None, Some(&catalog), true)
+        .await
+        .unwrap();
     assert_eq!(result["status"], "prepared");
     server.join().unwrap();
     assert!(temp.path().join("global").is_file());
@@ -101,6 +103,221 @@ fn missing_scan_patterns_are_unknown_not_software_absence() {
 }
 
 #[test]
+fn refreshed_catalog_drives_new_software_and_preparation_without_a_core_release() {
+    use crate::domain::install_catalog::{CatalogProvenance, CatalogSource};
+
+    let root = tempfile::tempdir().unwrap();
+    let data = root.path().join("data");
+    let _env = meshy_dcc_test_utils::EnvVarGuard::set("MESHY_DCC_DATA_DIR", data.to_str());
+    let project_plan = root.path().join("existing-project-launch-plan.json");
+    std::fs::write(&project_plan, "existing project setup remains unchanged").unwrap();
+    let editor = root.path().join("new-editor");
+    std::fs::write(&editor, "fixture, never executed").unwrap();
+    let entry: CatalogEntry = serde_json::from_value(json!({
+        "name":"new-game-editor", "description":"new published adapter", "dcc":["new-editor"],
+        "tags":["adapter"], "version":"9.8.7", "policy":{"installation":"available"},
+        "install":{"type":"host-package", "url":"https://example.invalid/new-editor.zip",
+            "sha256":"a".repeat(64), "host":{"extract":true, "dcc_paths":[editor],
+            "project_steps":[["{package_dir}/installer", "{project}"]]}}
+    }))
+    .unwrap();
+    // The existing resolver verifies signatures before constructing this service snapshot.
+    let mut service = InstallService::bundled();
+    service.require_fresh_catalog = true;
+    service.catalog_snapshot = Some(super::super::catalog::ResolvedCatalog {
+        entries: vec![entry],
+        provenance: CatalogProvenance {
+            source: CatalogSource::Remote,
+            latest_checked: true,
+            issued_at: Some(1),
+            expires_at: Some(u64::MAX),
+            sha256: Some("b".repeat(64)),
+            source_revision: Some("c".repeat(40)),
+        },
+    });
+    let software = service.observe_software(None).unwrap();
+    assert_eq!(software["software"][0]["dcc_type"], "new-editor");
+    assert_eq!(software["software"][0]["detection"], "found");
+    assert_eq!(software["software"][0]["adapter"]["version"], "9.8.7");
+    let planned = service
+        .prepare_adapter("new-editor", None, None, false)
+        .unwrap();
+    assert_eq!(planned["plan"]["catalog"]["source"], "remote");
+    assert_eq!(
+        planned["plan"]["adapter"]["install"]["sha256"],
+        "a".repeat(64)
+    );
+
+    let snapshot = service.catalog_snapshot.as_mut().unwrap();
+    snapshot.provenance.source = CatalogSource::Cache;
+    snapshot.provenance.latest_checked = false;
+    assert_eq!(service.observe_software(None).unwrap(), software);
+    let refused = service
+        .prepare_adapter("new-editor", None, None, true)
+        .unwrap();
+    assert_eq!(refused["status"], "failed");
+    assert_eq!(
+        refused["report"]["error"]["code"],
+        "INSTALL_CATALOG_UNAVAILABLE"
+    );
+
+    let snapshot = service.catalog_snapshot.as_mut().unwrap();
+    snapshot.entries[0].policy.as_mut().unwrap().installation = "not_available".into();
+    assert_eq!(
+        service.observe_software(None).unwrap()["software"][0]["adapter"]["available"],
+        false
+    );
+    assert!(
+        service
+            .prepare_adapter("new-editor", None, None, true)
+            .is_err()
+    );
+    assert!(
+        !data.exists(),
+        "refusal must not acquire or prepare any adapter"
+    );
+    assert_eq!(
+        std::fs::read_to_string(project_plan).unwrap(),
+        "existing project setup remains unchanged"
+    );
+}
+
+#[tokio::test]
+async fn rejected_default_cache_blocks_preparation_but_explicit_catalog_stays_independent() {
+    let root = tempfile::tempdir().unwrap();
+    let cache = root.path().join("catalog-cache.json");
+    let data = root.path().join("data");
+    let _env = meshy_dcc_test_utils::EnvVarsGuard::set(&[
+        ("MESHY_DCC_INSTALL_CACHE", cache.to_str()),
+        ("MESHY_DCC_DATA_DIR", data.to_str()),
+    ]);
+    std::fs::write(&cache, "invalid catalog bytes").unwrap();
+    assert!(observe_software(None).is_err());
+    // Cache authentication precedes any remote refresh or package acquisition.
+    assert!(prepare_adapter("godot", None, None, true).await.is_err());
+    assert!(!data.exists());
+    assert_eq!(
+        std::fs::read_to_string(&cache).unwrap(),
+        "invalid catalog bytes"
+    );
+    assert!(!cache.with_extension("lock").exists());
+
+    let catalog = root.path().join("explicit-catalog.json");
+    std::fs::write(
+        &catalog,
+        json!({"entries":[{
+            "name":"explicit-fixture", "description":"fixture", "dcc":["fixture"],
+            "tags":["adapter"], "version":"1", "policy":{"installation":"available"},
+            "install":{"type":"host-package", "url":"https://example.invalid/fixture.zip",
+                "sha256":"a".repeat(64), "host":{"extract":true}}
+        }]})
+        .to_string(),
+    )
+    .unwrap();
+    assert_eq!(
+        observe_software(Some(&catalog)).unwrap()["software"][0]["dcc_type"],
+        "fixture"
+    );
+    assert_eq!(
+        prepare_adapter("fixture", None, Some(&catalog), false)
+            .await
+            .unwrap()["status"],
+        "planned"
+    );
+    assert!(!data.exists());
+}
+
+#[test]
+fn game_engine_observations_find_all_editors_without_selecting_a_project_version() {
+    for (dcc, platform, first, second) in [
+        (
+            "unity",
+            "macos-arm64",
+            "absolute/Applications/Unity/Hub/Editor/2022.3.46f1c1/Unity.app/Contents/MacOS/Unity",
+            "absolute/Applications/Unity/Hub/Editor/6000.6.5f1/Unity.app/Contents/MacOS/Unity",
+        ),
+        (
+            "unity",
+            "windows-x86_64",
+            "drive-c/Program Files/Unity/Hub/Editor/6000.6.5f1/Editor/Unity.exe",
+            "drive-c/Program Files (x86)/Unity/Hub/Editor/2022.3.46f1c1/Editor/Unity.exe",
+        ),
+        (
+            "unreal",
+            "macos-arm64",
+            "absolute/Users/Shared/Epic Games/UE_5.6/Engine/Binaries/Mac/UnrealEditor.app/Contents/MacOS/UnrealEditor",
+            "absolute/Users/Shared/Epic Games/UE_5.7/Engine/Binaries/Mac/UnrealEditor.app/Contents/MacOS/UnrealEditor",
+        ),
+        (
+            "unreal",
+            "windows-x86_64",
+            "drive-c/Program Files/Epic Games/UE_5.6/Engine/Binaries/Win64/UnrealEditor.exe",
+            "drive-c/Program Files/Epic Games/UE_5.7/Engine/Binaries/Win64/UnrealEditor.exe",
+        ),
+    ] {
+        let root = tempfile::tempdir().unwrap();
+        let _env =
+            meshy_dcc_test_utils::EnvVarGuard::set("MESHY_DCC_DATA_DIR", root.path().to_str());
+        let mut entry = meshy_dcc_catalog::load_from_str(super::super::BUNDLED_CATALOG)
+            .unwrap()
+            .into_iter()
+            .find(|entry| entry.dcc.iter().any(|name| name == dcc))
+            .unwrap();
+        let install = entry.install.as_mut().unwrap();
+        install.select_platform(platform).unwrap();
+        // Exercise either platform on the test runner, using only fixture files.
+        install.platforms.clear();
+        for pattern in &mut install.host.as_mut().unwrap().dcc_paths {
+            let relative = if let Some(rest) = pattern.strip_prefix("C:/") {
+                format!("drive-c/{rest}")
+            } else {
+                format!("absolute/{}", pattern.trim_start_matches('/'))
+            };
+            *pattern = root.path().join(relative).to_string_lossy().into_owned();
+        }
+        let catalog = root.path().join("catalog.json");
+        std::fs::write(&catalog, json!({"entries": [entry]}).to_string()).unwrap();
+        let missing = observe_software(Some(&catalog)).unwrap();
+        assert_eq!(missing["software"][0]["detection"], "not_observed");
+
+        let editors = [root.path().join(first), root.path().join(second)];
+        for (index, path) in editors.iter().enumerate() {
+            std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+            std::fs::write(path, "fixture editor, never executed").unwrap();
+            let observed = observe_software(Some(&catalog)).unwrap();
+            let row = &observed["software"][0];
+            assert_eq!(
+                row["detection"],
+                if index == 0 { "found" } else { "multiple" }
+            );
+            assert_eq!(row["candidates"].as_array().unwrap().len(), index + 1);
+            assert!(
+                row["candidates"]
+                    .as_array()
+                    .unwrap()
+                    .contains(&json!({"path": path}))
+            );
+            assert_eq!(row["adapter"]["per_project"], true);
+        }
+
+        // Preparing a project adapter downloads its package, not a chosen editor.
+        // Multiple observed versions must not introduce a global selection gate.
+        let planned = InstallService::bundled()
+            .prepare_adapter(dcc, None, Some(&catalog), false)
+            .unwrap();
+        let plan: crate::domain::install::InstallPlan =
+            serde_json::from_value(planned["plan"].clone()).unwrap();
+        assert!(plan.dcc_path.is_none());
+        assert!(plan.steps.iter().any(|step| matches!(
+            &step.action,
+            Some(InstallStepAction::HostPackage { dcc_path: None, project: None, project_steps, .. })
+                if project_steps.is_empty()
+        )));
+        assert!(!plan.steps.iter().any(|step| step.name == "locate-host"));
+    }
+}
+
+#[test]
 fn global_preparation_publishes_its_existing_launch_recipe_without_a_project() {
     let temp = tempfile::tempdir().unwrap();
     let registry = temp.path().join("registry");
@@ -115,7 +332,9 @@ fn global_preparation_publishes_its_existing_launch_recipe_without_a_project() {
     std::fs::write(&catalog, json!({"entries":[{"name":"fixture-adapter","description":"fixture","dcc":["fixture"],"tags":["adapter"],"version":"1.0.0",
         "policy":{"installation":"available"},"install":{"type":"host-package","url":"https://example.invalid/fixture.zip","sha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
         "host":{"extract":true,"dcc_paths":[executable],"launch":["{executable}","--fixture"]}}}]}).to_string()).unwrap();
-    let planned = prepare_adapter("fixture", None, Some(&catalog), false).unwrap();
+    let planned = InstallService::bundled()
+        .prepare_adapter("fixture", None, Some(&catalog), false)
+        .unwrap();
     let plan: crate::domain::install::InstallPlan =
         serde_json::from_value(planned["plan"].clone()).unwrap();
     assert_eq!(

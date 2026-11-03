@@ -12,17 +12,38 @@ clients do not implement host-specific installation or launch commands.
 `prepared`, `per_project`). A catalog may supply `homepage` through
 `host.software_homepage`; this is separate from the adapter's website.
 
+Without an explicit catalog, observations use Core's authenticated, unexpired
+installation-catalog cache, or the bundled catalog when no cache exists. Polling
+does not access the network or write the cache. Invalid or expired cache entries
+fail rather than silently restoring older bundled metadata. An explicit
+`meshy-dcc dcc-types` refreshes this same signed catalog without installing an
+adapter, so later observations can show newly published software independently of
+the Core binary release.
+
 Detection means `found` (one catalog path matched), `multiple`, `not_observed`
 (no known path matched), or `unknown` (no platform discovery paths). It never
 starts a host or infers absence from an empty registry. Versions and custom
 installation paths remain unverified until the adapter checks them. There are
 no projects, instance bindings or project-readiness fields in these rows.
 
+Unity and Unreal observations cover their usual Hub/Launcher install locations.
+They do not select a project editor: the adapters still resolve Unity's project
+version and Unreal's `EngineAssociation`, including launcher metadata and explicit
+custom locations. A missing observation does not block an existing project launch
+plan or establish that an adapter cannot connect.
+
 `meshy-dcc prepare-adapter --dcc-type <type> [--dcc-path <executable>]
 [--catalog <file>] --json` returns a plan. Add `--execute` to authorize the
 catalog-pinned download, checksum verification and machine/user-level setup.
 The terminal status is `prepared` or `failed`; a successful response includes
 `adapter_version` and the optional diagnostic `package_dir`.
+
+Planning reads the same local catalog as observations. With `--execute`, Core
+refreshes its existing signed installation feed before planning and acquisition,
+using the same rollback, expiry and withdrawal checks as `install`. An unavailable
+official feed does not authorize acquisition from cached or bundled metadata.
+Explicit `--catalog` files retain their existing local behavior and do not refresh
+or replace the official cache.
 
 Preparation does not run project steps, create a native project or open a project
 session. Global installer commands may invoke a host's installation CLI.
@@ -32,6 +53,8 @@ prepared package; the download server need not remain available. `prepared`
 records successful preparation and the presence of its required package files;
 it does not prove a running host's readiness or continuous integrity of every
 user-level hook. The package manager still owns component updates.
+Older project installation receipts are separate from this preparation receipt;
+`prepared: false` does not invalidate their project configuration or launch plans.
 
 ## MCP lifecycle
 

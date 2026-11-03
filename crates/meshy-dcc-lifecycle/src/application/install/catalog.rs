@@ -73,6 +73,18 @@ fn invalid(message: impl ToString) -> RefreshError {
 }
 
 impl super::InstallService {
+    /// Observe the authenticated local snapshot without network or cache writes.
+    /// An absent cache falls back to bundled metadata; rejected cache bytes do not.
+    pub fn cached() -> Self {
+        let mut service = Self::bundled();
+        service.require_fresh_catalog = true;
+        match resolve_cached() {
+            Ok(snapshot) => service.catalog_snapshot = Some(snapshot),
+            Err(error) => service.catalog_error = Some(error.to_string()),
+        }
+        service
+    }
+
     /// Resolve once; discovery, planning, and execution share these exact bytes.
     pub async fn refreshed(offline: bool) -> Self {
         let mut service = Self::bundled();
@@ -162,41 +174,60 @@ fn select_platform(entry: &mut CatalogEntry, platform: &str) {
     }
 }
 
-pub(super) async fn resolve(offline: bool) -> Result<ResolvedCatalog, RefreshError> {
-    let cache = match std::env::var_os("MESHY_DCC_INSTALL_CACHE") {
+fn cache_path() -> Result<std::path::PathBuf, RefreshError> {
+    Ok(match std::env::var_os("MESHY_DCC_INSTALL_CACHE") {
         Some(path) => std::path::PathBuf::from(path),
         None => dirs::cache_dir()
             .ok_or_else(|| invalid("cache directory is unavailable"))?
             .join("meshy-dcc/install-catalog-v1.json"),
-    };
-    let now = now_seconds()?;
-    let cached_bytes = read_cache(&cache)?;
+    })
+}
+
+fn read_verified_cache(path: &Path, now: u64) -> Result<Option<ResolvedCatalog>, RefreshError> {
     // Authentication and rollback history remain mandatory even if the cached
     // payload has expired. A fresh remote payload may replace an expired one.
-    let cached = cached_bytes
+    read_cache(path)?
         .as_deref()
         .map(|bytes| verify(bytes, now, false))
-        .transpose()?;
-    if !offline {
-        match download().await {
-            Ok(bytes) => {
-                let now = now_seconds()?;
-                let remote = verify(&bytes, now, true)?;
-                if let Some(previous) = &cached {
-                    reject_rollback(previous, &remote)?;
-                }
-                persist_verified(&cache, &bytes, &remote, now)?;
-                return Ok(remote);
-            }
-            Err(RefreshError::Unavailable) => {}
-            Err(error) => return Err(error),
-        }
+        .transpose()
+}
+
+fn resolve_cached() -> Result<ResolvedCatalog, RefreshError> {
+    let cached = read_verified_cache(&cache_path()?, now_seconds()?)?;
+    cached_or_bundled(cached, now_seconds()?)
+}
+
+pub(super) async fn resolve(offline: bool) -> Result<ResolvedCatalog, RefreshError> {
+    if offline {
+        return resolve_cached();
     }
+    let cache = cache_path()?;
+    let cached = read_verified_cache(&cache, now_seconds()?)?;
+    match download().await {
+        Ok(bytes) => {
+            let now = now_seconds()?;
+            let remote = verify(&bytes, now, true)?;
+            if let Some(previous) = &cached {
+                reject_rollback(previous, &remote)?;
+            }
+            persist_verified(&cache, &bytes, &remote, now)?;
+            return Ok(remote);
+        }
+        Err(RefreshError::Unavailable) => {}
+        Err(error) => return Err(error),
+    }
+    cached_or_bundled(cached, now_seconds()?)
+}
+
+fn cached_or_bundled(
+    cached: Option<ResolvedCatalog>,
+    now: u64,
+) -> Result<ResolvedCatalog, RefreshError> {
     if let Some(mut snapshot) = cached {
         if snapshot
             .provenance
             .expires_at
-            .is_none_or(|expires| now_seconds().map_or(true, |now| expires <= now))
+            .is_none_or(|expires| expires <= now)
         {
             return Err(invalid("cached catalog expired; reconnect to refresh"));
         }

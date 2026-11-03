@@ -73,10 +73,16 @@ entries:
           url: "https://cdn.meshy.ai/meshy-dcc-core/adapters/unity/v0-1-1/meshy-dcc-unity-macos-arm64.zip"
           sha256: "8f28048a0a82fcc6ed916daae31caf65b988dd1dc65f801637b0b6e22a053cd1"
           mirrors: ["https://cdn.meshy.cn/meshy-dcc-core/adapters/unity/v0-1-1/meshy-dcc-unity-macos-arm64.zip", "https://github.com/meshy-dev/meshy-dcc-adapters/releases/download/unity-v0.1.1/meshy-dcc-unity-macos-arm64.zip"]
+          # Observation only; the adapter selects the project's editor version.
+          dcc_paths:
+            - "/Applications/Unity/Hub/Editor/*/Unity.app/Contents/MacOS/Unity"
         windows-x86_64:
           url: "https://cdn.meshy.ai/meshy-dcc-core/adapters/unity/v0-1-1/meshy-dcc-unity-windows-x64.zip"
           sha256: "3108af3d2c61105c5c473e6c7affcce970b0d185b3b12211ee1a68a4028fe681"
           mirrors: ["https://cdn.meshy.cn/meshy-dcc-core/adapters/unity/v0-1-1/meshy-dcc-unity-windows-x64.zip", "https://github.com/meshy-dev/meshy-dcc-adapters/releases/download/unity-v0.1.1/meshy-dcc-unity-windows-x64.zip"]
+          dcc_paths:
+            - "C:/Program Files/Unity/Hub/Editor/*/Editor/Unity.exe"
+            - "C:/Program Files (x86)/Unity/Hub/Editor/*/Editor/Unity.exe"
           host:
             extract: true
             project_steps:
@@ -144,10 +150,15 @@ entries:
           url: "https://cdn.meshy.ai/meshy-dcc-core/adapters/unreal/v0-1-1/meshy-dcc-unreal-macos-arm64.zip"
           sha256: "b21ce142d8f21c746cefbacdd9ad7d9849760d27b135eb9aea998de7d780530e"
           mirrors: ["https://cdn.meshy.cn/meshy-dcc-core/adapters/unreal/v0-1-1/meshy-dcc-unreal-macos-arm64.zip", "https://github.com/meshy-dev/meshy-dcc-adapters/releases/download/unreal-v0.1.1/meshy-dcc-unreal-macos-arm64.zip"]
+          # Observation only; the adapter resolves the project's EngineAssociation.
+          dcc_paths:
+            - "/Users/Shared/Epic Games/UE_*/Engine/Binaries/Mac/UnrealEditor.app/Contents/MacOS/UnrealEditor"
         windows-x86_64:
           url: "https://cdn.meshy.ai/meshy-dcc-core/adapters/unreal/v0-1-1/meshy-dcc-unreal-windows-x64.zip"
           sha256: "a7fc9048d0c0193025de1b8b411e6454b265325f06ca32d7df406f1493a62edc"
           mirrors: ["https://cdn.meshy.cn/meshy-dcc-core/adapters/unreal/v0-1-1/meshy-dcc-unreal-windows-x64.zip", "https://github.com/meshy-dev/meshy-dcc-adapters/releases/download/unreal-v0.1.1/meshy-dcc-unreal-windows-x64.zip"]
+          dcc_paths:
+            - "C:/Program Files/Epic Games/UE_*/Engine/Binaries/Win64/UnrealEditor.exe"
           host:
             extract: true
             project_steps:

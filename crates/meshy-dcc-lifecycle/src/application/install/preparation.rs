@@ -60,154 +60,195 @@ fn load_prepared(dcc: &str) -> anyhow::Result<PreparedAdapter> {
     Ok(value)
 }
 
-/// Catalog-backed observations. A missing path match is not proof of absence.
-/// No host process is started, and no project or instance state is returned.
+/// Observe explicit metadata or the last authenticated catalog without refreshing it.
 pub fn observe_software(catalog: Option<&Path>) -> anyhow::Result<Value> {
-    let service = InstallService::bundled();
-    let entries = service.load_entries(catalog)?;
-    let mut rows = Vec::new();
-    for entry in entries
-        .iter()
-        .filter(|e| e.tags.iter().any(|t| t.eq_ignore_ascii_case("adapter")))
-    {
-        let host = entry.install.as_ref().and_then(|i| i.host.as_ref());
-        let patterns = host.map(|h| h.dcc_paths.as_slice()).unwrap_or_default();
-        let paths = match find_dcc_path(patterns) {
-            Ok(path) => vec![path],
-            Err(paths) => paths,
-        };
-        let detection = match paths.len() {
-            0 if patterns.is_empty() => "unknown",
-            0 => "not_observed",
-            1 => "found",
-            _ => "multiple",
-        };
-        for dcc in &entry.dcc {
-            let prepared = load_prepared(dcc).ok().filter(|prepared| {
-                prepared.entry.version == entry.version
-                    && prepared
-                        .entry
-                        .install
-                        .as_ref()
-                        .and_then(|i| i.sha256.as_ref())
-                        == entry.install.as_ref().and_then(|i| i.sha256.as_ref())
-            });
-            let mut row = json!({
-                "dcc_type": dcc, "name": meshy_dcc_models::DccName::parse(dcc).display_name(),
-                "detection": detection,
-                "candidates": paths.iter().map(|p| json!({"path": p})).collect::<Vec<_>>(),
-                "adapter": {
-                    "available": entry.install.as_ref().is_some_and(|i| i.install_type == "host-package") && crate::domain::install::policy::validate(entry).is_ok(),
-                    "version": entry.version,
-                    "prepared": prepared.is_some(),
-                    "per_project": host.is_some_and(|h| !h.project_steps.is_empty()),
-                }
-            });
-            if let Some(homepage) = host.and_then(|h| h.software_homepage.as_ref()) {
-                row["homepage"] = json!(homepage);
-            }
-            if let Some(prepared) = prepared {
-                row["adapter"]["prepared_at_unix"] = json!(prepared.prepared_at_unix);
-            }
-            rows.push(row);
-        }
-    }
-    rows.sort_by(|a, b| a["dcc_type"].as_str().cmp(&b["dcc_type"].as_str()));
-    Ok(json!({"schema_version": 1, "software": rows}))
+    let service = if catalog.is_some() {
+        InstallService::bundled()
+    } else {
+        InstallService::cached()
+    };
+    service.observe_software(catalog)
 }
 
-/// Acquire the pinned package and run only machine/user-level enablement.
-/// Project steps are retained in Core's existing installation state for later
-/// configuration; they do not depend on the download server remaining alive.
-pub fn prepare_adapter(
+/// Refresh the official catalog only for an authorized acquisition. Explicit
+/// catalogs keep their existing local behavior; planning uses cached observations.
+pub async fn prepare_adapter(
     dcc: &str,
     dcc_path: Option<PathBuf>,
     catalog: Option<&Path>,
     execute: bool,
 ) -> anyhow::Result<Value> {
-    let service = InstallService::bundled();
-    let entries = service.load_entries(catalog)?;
-    let key = normalized_dcc_key(dcc);
-    anyhow::ensure!(!key.is_empty(), "dcc_type is required");
-    let matches: Vec<_> = entries
-        .into_iter()
-        .filter(|e| {
-            e.tags.iter().any(|t| t.eq_ignore_ascii_case("adapter"))
-                && e.dcc.iter().any(|d| normalized_dcc_key(d) == key)
-        })
-        .collect();
-    anyhow::ensure!(
-        matches.len() == 1,
-        "expected exactly one catalog adapter for {dcc}"
-    );
-    let entry = matches.into_iter().next().unwrap();
-    crate::domain::install::policy::validate(&entry)?;
-    let install = entry
-        .install
-        .as_ref()
-        .context("adapter has no installation contract")?;
-    anyhow::ensure!(
-        install.install_type == "host-package",
-        "adapter preparation requires a host package"
-    );
-    let mut preparation = entry.clone();
-    if let Some(host) = preparation.install.as_mut().and_then(|i| i.host.as_mut()) {
-        host.project_steps.clear();
-    }
-    let request = InstallRequest {
-        dcc_type: dcc.into(),
-        version: entry.version.clone(),
-        catalog_path: None,
-        python: None,
-        dcc_path: dcc_path.map(app_bundle_executable),
-        plugin_source: None,
-        adobe_debug_root: None,
-        project: None,
+    let service = if catalog.is_some() {
+        InstallService::bundled()
+    } else if execute {
+        InstallService::refreshed(false).await
+    } else {
+        InstallService::cached()
     };
-    let mut plan = InstallPlanner::plan(&[preparation], request)?;
-    // Registration and live verification belong to a project session. Package
-    // acquisition already verifies its checksum inside the host-package step.
-    plan.steps.retain(|step| {
-        step.action.is_none()
-            || matches!(
-                step.action,
-                Some(
-                    InstallStepAction::HostPackage { .. }
-                        | InstallStepAction::WriteLaunchPlan { .. }
-                )
-            )
-    });
-    plan.catalog = Some(service.catalog_provenance(catalog));
-    plan = service.apply_auto_install_policy(plan);
     if !execute {
-        return Ok(json!({"schema_version":1,"status":"planned","dcc_type":dcc,"plan":plan}));
+        return service.prepare_adapter(dcc, dcc_path, catalog, false);
     }
-    let report = service.execute_plan(&plan, true);
-    if report.status != "ok" || report.exit_code != 0 {
-        return Ok(json!({"schema_version":1,"status":"failed","dcc_type":dcc,"report":report}));
+    let dcc = dcc.to_owned();
+    let catalog = catalog.map(Path::to_path_buf);
+    // Acquisition uses blocking HTTP and host installer commands. Keep them off
+    // the async caller's runtime thread, as the ordinary install command does.
+    tokio::task::spawn_blocking(move || {
+        service.prepare_adapter(&dcc, dcc_path, catalog.as_deref(), true)
+    })
+    .await?
+}
+
+impl InstallService {
+    /// Catalog-backed observations. A missing path match is not proof of absence.
+    /// No host process is started, and no project or instance state is returned.
+    pub fn observe_software(&self, catalog: Option<&Path>) -> anyhow::Result<Value> {
+        let entries = self.load_entries(catalog)?;
+        let mut rows = Vec::new();
+        for entry in entries
+            .iter()
+            .filter(|e| e.tags.iter().any(|t| t.eq_ignore_ascii_case("adapter")))
+        {
+            let host = entry.install.as_ref().and_then(|i| i.host.as_ref());
+            let patterns = host.map(|h| h.dcc_paths.as_slice()).unwrap_or_default();
+            let paths = match find_dcc_path(patterns) {
+                Ok(path) => vec![path],
+                Err(paths) => paths,
+            };
+            let detection = match paths.len() {
+                0 if patterns.is_empty() => "unknown",
+                0 => "not_observed",
+                1 => "found",
+                _ => "multiple",
+            };
+            for dcc in &entry.dcc {
+                let prepared = load_prepared(dcc).ok().filter(|prepared| {
+                    prepared.entry.version == entry.version
+                        && prepared
+                            .entry
+                            .install
+                            .as_ref()
+                            .and_then(|i| i.sha256.as_ref())
+                            == entry.install.as_ref().and_then(|i| i.sha256.as_ref())
+                });
+                let mut row = json!({
+                    "dcc_type": dcc, "name": meshy_dcc_models::DccName::parse(dcc).display_name(),
+                    "detection": detection,
+                    "candidates": paths.iter().map(|p| json!({"path": p})).collect::<Vec<_>>(),
+                    "adapter": {
+                        "available": entry.install.as_ref().is_some_and(|i| i.install_type == "host-package") && crate::domain::install::policy::validate(entry).is_ok(),
+                        "version": entry.version,
+                        "prepared": prepared.is_some(),
+                        "per_project": host.is_some_and(|h| !h.project_steps.is_empty()),
+                    }
+                });
+                if let Some(homepage) = host.and_then(|h| h.software_homepage.as_ref()) {
+                    row["homepage"] = json!(homepage);
+                }
+                if let Some(prepared) = prepared {
+                    row["adapter"]["prepared_at_unix"] = json!(prepared.prepared_at_unix);
+                }
+                rows.push(row);
+            }
+        }
+        rows.sort_by(|a, b| a["dcc_type"].as_str().cmp(&b["dcc_type"].as_str()));
+        Ok(json!({"schema_version": 1, "software": rows}))
     }
-    let package_dir = plan.steps.iter().find_map(|step| match &step.action {
-        Some(InstallStepAction::HostPackage { extract_to, .. }) => extract_to.clone(),
-        _ => None,
-    });
-    let prepared = PreparedAdapter {
-        schema_version: 1,
-        entry,
-        dcc_path: plan.dcc_path.clone(),
-        package_dir: package_dir.clone(),
-        prepared_at_unix: std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)?
-            .as_secs(),
-    };
-    let path = receipt_path(dcc);
-    std::fs::create_dir_all(path.parent().unwrap())?;
-    let mut staging = tempfile::NamedTempFile::new_in(path.parent().unwrap())?;
-    std::io::Write::write_all(&mut staging, &serde_json::to_vec_pretty(&prepared)?)?;
-    staging.persist(&path)?;
-    Ok(
-        json!({"schema_version":1,"status":"prepared","dcc_type":dcc,
+
+    /// Acquire the pinned package and run only machine/user-level enablement.
+    /// Project steps are retained in Core's existing installation state for later
+    /// configuration; they do not depend on the download server remaining alive.
+    pub fn prepare_adapter(
+        &self,
+        dcc: &str,
+        dcc_path: Option<PathBuf>,
+        catalog: Option<&Path>,
+        execute: bool,
+    ) -> anyhow::Result<Value> {
+        let entries = self.load_entries(catalog)?;
+        let key = normalized_dcc_key(dcc);
+        anyhow::ensure!(!key.is_empty(), "dcc_type is required");
+        let matches: Vec<_> = entries
+            .into_iter()
+            .filter(|e| {
+                e.tags.iter().any(|t| t.eq_ignore_ascii_case("adapter"))
+                    && e.dcc.iter().any(|d| normalized_dcc_key(d) == key)
+            })
+            .collect();
+        anyhow::ensure!(
+            matches.len() == 1,
+            "expected exactly one catalog adapter for {dcc}"
+        );
+        let entry = matches.into_iter().next().unwrap();
+        crate::domain::install::policy::validate(&entry)?;
+        let install = entry
+            .install
+            .as_ref()
+            .context("adapter has no installation contract")?;
+        anyhow::ensure!(
+            install.install_type == "host-package",
+            "adapter preparation requires a host package"
+        );
+        let mut preparation = entry.clone();
+        if let Some(host) = preparation.install.as_mut().and_then(|i| i.host.as_mut()) {
+            host.project_steps.clear();
+        }
+        let request = InstallRequest {
+            dcc_type: dcc.into(),
+            version: entry.version.clone(),
+            catalog_path: None,
+            python: None,
+            dcc_path: dcc_path.map(app_bundle_executable),
+            plugin_source: None,
+            adobe_debug_root: None,
+            project: None,
+        };
+        let mut plan = InstallPlanner::plan(&[preparation], request)?;
+        // Registration and live verification belong to a project session. Package
+        // acquisition already verifies its checksum inside the host-package step.
+        plan.steps.retain(|step| {
+            step.action.is_none()
+                || matches!(
+                    step.action,
+                    Some(
+                        InstallStepAction::HostPackage { .. }
+                            | InstallStepAction::WriteLaunchPlan { .. }
+                    )
+                )
+        });
+        plan.catalog = Some(self.catalog_provenance(catalog));
+        plan = self.apply_auto_install_policy(plan);
+        if !execute {
+            return Ok(json!({"schema_version":1,"status":"planned","dcc_type":dcc,"plan":plan}));
+        }
+        let report = self.execute_plan(&plan, true);
+        if report.status != "ok" || report.exit_code != 0 {
+            return Ok(
+                json!({"schema_version":1,"status":"failed","dcc_type":dcc,"report":report}),
+            );
+        }
+        let package_dir = plan.steps.iter().find_map(|step| match &step.action {
+            Some(InstallStepAction::HostPackage { extract_to, .. }) => extract_to.clone(),
+            _ => None,
+        });
+        let prepared = PreparedAdapter {
+            schema_version: 1,
+            entry,
+            dcc_path: plan.dcc_path.clone(),
+            package_dir: package_dir.clone(),
+            prepared_at_unix: std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)?
+                .as_secs(),
+        };
+        let path = receipt_path(dcc);
+        std::fs::create_dir_all(path.parent().unwrap())?;
+        let mut staging = tempfile::NamedTempFile::new_in(path.parent().unwrap())?;
+        std::io::Write::write_all(&mut staging, &serde_json::to_vec_pretty(&prepared)?)?;
+        staging.persist(&path)?;
+        Ok(
+            json!({"schema_version":1,"status":"prepared","dcc_type":dcc,
         "adapter_version":prepared.entry.version,"package_dir":package_dir}),
-    )
+        )
+    }
 }
 
 /// Configure an existing native project using only the adapter's recorded
