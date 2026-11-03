@@ -294,6 +294,16 @@ impl JobManager {
         tool_name: impl Into<String>,
         parent_job_id: Option<String>,
     ) -> Arc<RwLock<Job>> {
+        self.create_with_context(tool_name, parent_job_id, None)
+    }
+
+    /// Create and persist caller attribution before a pending job is visible.
+    pub fn create_with_context(
+        &self,
+        tool_name: impl Into<String>,
+        parent_job_id: Option<String>,
+        agent_context: Option<serde_json::Value>,
+    ) -> Arc<RwLock<Job>> {
         let cancel_token = match &parent_job_id {
             Some(pid) => match self.jobs.get(pid) {
                 Some(parent) => parent.read().cancel_token.child_token(),
@@ -301,7 +311,15 @@ impl JobManager {
             },
             None => CancellationToken::new(),
         };
-        let job = Job::new(tool_name.into(), parent_job_id, cancel_token);
+        let agent_context = agent_context.or_else(|| {
+            parent_job_id.as_ref().and_then(|id| {
+                self.jobs
+                    .get(id)
+                    .and_then(|parent| parent.read().agent_context.clone())
+            })
+        });
+        let mut job = Job::new(tool_name.into(), parent_job_id, cancel_token);
+        job.agent_context = agent_context;
         let id = job.id.clone();
         let entry = Arc::new(RwLock::new(job));
         self.jobs.insert(id, Arc::clone(&entry));
@@ -505,6 +523,45 @@ impl JobManager {
     /// Snapshot of all currently tracked jobs.
     pub fn list(&self) -> Vec<Arc<RwLock<Job>>> {
         self.jobs.iter().map(|e| Arc::clone(e.value())).collect()
+    }
+
+    /// Caller-scoped evidence from the authoritative job rows.
+    pub fn activity(&self, scope: &meshy_dcc_models::CallerFilter) -> serde_json::Value {
+        let mut pending = 0_u64;
+        let mut running = 0_u64;
+        let mut unattributed = 0_u64;
+        let mut unknown = 0_u64;
+        for row in self.list() {
+            let job = row.read();
+            let active = matches!(job.status, JobStatus::Pending | JobStatus::Running);
+            let uncertain = job.status == JobStatus::Interrupted
+                || job
+                    .result
+                    .as_ref()
+                    .and_then(|r| meshy_dcc_models::linked_adapter_job_from_result(r, &job.id))
+                    .is_some();
+            if scope.is_scoped() && !scope.attributable(job.agent_context.as_ref()) {
+                if active || uncertain {
+                    unattributed += 1;
+                }
+                continue;
+            }
+            if !scope.matches(job.agent_context.as_ref()) {
+                continue;
+            }
+            match job.status {
+                JobStatus::Pending => pending += 1,
+                JobStatus::Running => running += 1,
+                _ => {
+                    if uncertain {
+                        // A completed Core dispatcher does not prove an adapter-owned job finished.
+                        unknown += 1;
+                    }
+                }
+            }
+        }
+        serde_json::json!({"scope":scope,"pending_jobs":pending,"running_jobs":running,
+            "unattributed_jobs":unattributed,"unknown_jobs":unknown})
     }
 
     /// Purge terminal jobs whose `updated_at` is older than `older_than`.

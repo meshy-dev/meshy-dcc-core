@@ -37,7 +37,8 @@ CREATE TABLE IF NOT EXISTS jobs (
     completed_at TEXT,
     updated_at TEXT NOT NULL,
     error TEXT,
-    result_json TEXT
+    result_json TEXT,
+    agent_context_json TEXT
 );
 CREATE INDEX IF NOT EXISTS jobs_status_idx ON jobs(status);
 CREATE INDEX IF NOT EXISTS jobs_parent_idx ON jobs(parent_job_id);
@@ -303,8 +304,8 @@ impl JobStorage for SqliteStorage {
         }
         conn.execute(
             "INSERT INTO jobs (job_id, parent_job_id, tool, status, \
-                progress_json, created_at, started_at, completed_at, updated_at, error, result_json) \
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11) \
+                progress_json, created_at, started_at, completed_at, updated_at, error, result_json, agent_context_json) \
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12) \
              ON CONFLICT(job_id) DO UPDATE SET \
                 parent_job_id=excluded.parent_job_id, \
                 tool=excluded.tool, \
@@ -314,7 +315,7 @@ impl JobStorage for SqliteStorage {
                 completed_at=excluded.completed_at, \
                 updated_at=excluded.updated_at, \
                 error=excluded.error, \
-                result_json=excluded.result_json",
+                result_json=excluded.result_json, agent_context_json=excluded.agent_context_json",
             params![
                 row.id,
                 row.parent_job_id,
@@ -327,6 +328,7 @@ impl JobStorage for SqliteStorage {
                 row.updated_at.to_rfc3339(),
                 row.error,
                 result_json,
+                row.agent_context.as_ref().map(serde_json::to_string).transpose().map_err(|e| JobStorageError::Decode(e.to_string()))?,
             ],
         )
         .map_err(map_err)?;
@@ -339,7 +341,7 @@ impl JobStorage for SqliteStorage {
         let row = conn
             .query_row(
                 "SELECT job_id, parent_job_id, tool, status, progress_json, \
-                        created_at, started_at, completed_at, updated_at, error, result_json \
+                        created_at, started_at, completed_at, updated_at, error, result_json, agent_context_json \
                  FROM jobs WHERE job_id = ?1",
                 params![job_id],
                 row_to_persisted,
@@ -353,7 +355,7 @@ impl JobStorage for SqliteStorage {
         let _lifecycle = self.ensure_open()?;
         let mut sql = String::from(
             "SELECT job_id, parent_job_id, tool, status, progress_json, \
-                    created_at, started_at, completed_at, updated_at, error, result_json \
+                    created_at, started_at, completed_at, updated_at, error, result_json, agent_context_json \
              FROM jobs WHERE 1=1",
         );
         let mut bound: Vec<String> = Vec::new();
@@ -580,7 +582,7 @@ fn physical_identity(path: &Path) -> Option<String> {
 }
 
 fn ensure_lifecycle_columns(conn: &Connection) -> Result<(), JobStorageError> {
-    for column in ["started_at", "completed_at"] {
+    for column in ["started_at", "completed_at", "agent_context_json"] {
         let exists = conn
             .query_row(
                 "SELECT 1 FROM pragma_table_info('jobs') WHERE name = ?1",
@@ -683,7 +685,15 @@ fn row_to_persisted(row: &rusqlite::Row<'_>) -> rusqlite::Result<PersistedJob> {
         rusqlite::Error::FromSqlConversionFailure(8, rusqlite::types::Type::Text, e.into())
     })?;
 
+    let agent_context_json: Option<String> = row.get(11)?;
+    let agent_context = agent_context_json
+        .map(|s| serde_json::from_str(&s))
+        .transpose()
+        .map_err(|e| {
+            rusqlite::Error::FromSqlConversionFailure(11, rusqlite::types::Type::Text, e.into())
+        })?;
     Ok(PersistedJob {
+        agent_context,
         id,
         parent_job_id,
         tool_name,
@@ -1315,5 +1325,28 @@ mod tests {
         assert_eq!(removed, 1);
         assert!(store.get(&done_id).unwrap().is_none());
         assert!(store.get(&running_id).unwrap().is_some());
+    }
+}
+
+#[cfg(test)]
+mod caller_origin_tests {
+    use super::*;
+    #[test]
+    fn pending_origin_round_trips_and_recovery_does_not_reassign_the_producer() {
+        let temp = tempfile::tempdir().unwrap();
+        let storage = Arc::new(SqliteStorage::open(temp.path().join("jobs.sqlite")).unwrap());
+        let manager = crate::job::JobManager::with_storage(storage.clone());
+        let origin = serde_json::json!({"agent_name":"fixture","session_id":"session-1","turn_id":"run-1","metadata":{"release":"original"}});
+        let job = manager.create_with_context("render", None, Some(origin.clone()));
+        let id = job.read().id.clone();
+        assert_eq!(
+            storage.get(&id).unwrap().unwrap().agent_context,
+            Some(origin.clone())
+        );
+        let recovered = crate::job::JobManager::with_storage(storage);
+        recovered.recover_from_storage().unwrap();
+        let row = recovered.get(&id).unwrap();
+        assert_eq!(row.read().status, JobStatus::Interrupted);
+        assert_eq!(row.read().agent_context, Some(origin));
     }
 }

@@ -27,14 +27,23 @@ if command -v cygpath >/dev/null 2>&1; then
     export CFLAGS="\"/d1trimfile:$(cygpath -w "$cargo_home")\" \"/d1trimfile:$(cygpath -d "$cargo_home")\" ${CFLAGS:-}"
 fi
 
-cargo build --profile dist -p meshy-dcc -p meshy-dcc-server
 exe=""
 python=python3
 # Windows Pythons (python.org, setup-python) have no python3 command.
 case "$(uname -s)" in MINGW* | MSYS* | CYGWIN*) exe=".exe"; python=python ;; esac
-cp "target/dist/meshy-dcc$exe" "target/dist/meshy-dcc-server$exe" "$out/"
-
 # Features come from [tool.maturin] in pyproject.toml.
-uvx --from 'maturin>=1.0,<2.0' maturin build --profile dist --out "$out"
+# Build the wheel first: maturin adds macOS dynamic-lookup rustflags, so doing
+# native builds first invalidates the warm wheel dependency fingerprints.
+if [[ "$(uname -s)" == "Darwin" ]]; then
+    # Rust 1.95's Darwin cdylib stripping can misalign LINKEDIT string tables,
+    # rejected by macOS 27 dyld (rust-lang/rust#158410). Keep the wheel unstripped
+    # until the pinned toolchain includes the fix; executable profiles stay intact.
+    CARGO_PROFILE_DIST_STRIP=none uvx --from 'maturin>=1.0,<2.0' maturin build --profile dist --out "$out"
+else
+    uvx --from 'maturin>=1.0,<2.0' maturin build --profile dist --out "$out"
+fi
+
+cargo build --profile dist -p meshy-dcc -p meshy-dcc-server
+cp "target/dist/meshy-dcc$exe" "target/dist/meshy-dcc-server$exe" "$out/"
 
 "$python" scripts/release/scrub_artifacts.py "$repo" "$out"

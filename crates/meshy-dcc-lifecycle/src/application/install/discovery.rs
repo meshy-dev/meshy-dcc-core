@@ -120,7 +120,7 @@ struct DiscoveryNextAction {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub(crate) struct DccDiscoveryDecision {
+pub struct DccDiscoveryDecision {
     schema_version: u8,
     dcc_type: String,
     live_instances: Option<usize>,
@@ -211,7 +211,7 @@ impl InstallService {
         })
     }
 
-    pub(crate) fn discovery_decision(
+    pub fn discovery_decision(
         &self,
         catalog_path: Option<&std::path::Path>,
         requested_dcc_type: &str,

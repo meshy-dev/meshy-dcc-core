@@ -75,12 +75,16 @@ impl MeshyDccHandler {
             (Some(p), None) => Some(p),
             (None, Some(f)) => Some(f),
             (Some(mut p), Some(f)) => {
+                if p.agent_context.is_none() {
+                    p.agent_context = f.agent_context;
+                }
                 if p.progress_token.is_none() {
                     p.progress_token = f.progress_token;
                 }
-                if p.timeout_ms.is_none() {
-                    p.timeout_ms = f.timeout_ms;
-                }
+                p.timeout_ms = match (p.timeout_ms, f.timeout_ms) {
+                    (Some(a), Some(b)) => Some(a.min(b)),
+                    (a, b) => a.or(b),
+                };
                 match (&mut p.dcc, f.dcc) {
                     (None, fd) => p.dcc = fd,
                     (Some(pd), Some(fd)) => {

@@ -72,9 +72,11 @@ impl ToolInvoker for JobAwareInvoker {
             .and_then(|dcc| dcc.get("parentJobId").or_else(|| dcc.get("parent_job_id")))
             .and_then(Value::as_str)
             .map(ToOwned::to_owned);
-        let handle = self
-            .jobs
-            .create_with_parent(tool_slug.as_str(), parent_job_id.clone());
+        let handle = self.jobs.create_with_context(
+            tool_slug.as_str(),
+            parent_job_id.clone(),
+            meshy_dcc_models::job_agent_context(meta.as_ref()),
+        );
         let (job_id, cancel_token) = {
             let job = handle.read();
             (job.id.clone(), job.cancel_token.clone())

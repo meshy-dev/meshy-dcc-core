@@ -314,7 +314,7 @@ async fn aggregate_tools_list_returns_only_minimal_gateway_surface() {
         !names.contains(&"create_sphere"),
         "bare backend tool name must not appear on the gateway surface: {names:?}"
     );
-    for expected in ["search", "describe", "load_skill", "call"] {
+    for expected in ["search", "describe", "load_skill", "call", "lifecycle"] {
         assert!(
             names.contains(&expected),
             "missing core gateway tool {expected} in: {names:?}",
@@ -322,8 +322,8 @@ async fn aggregate_tools_list_returns_only_minimal_gateway_surface() {
     }
     assert_eq!(
         names.len(),
-        4,
-        "gateway tools/list must expose exactly the four workflow tools: {names:?}"
+        5,
+        "gateway tools/list must expose four host tools plus lifecycle: {names:?}"
     );
 
     let _ = shutdown_tx.send(());

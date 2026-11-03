@@ -19,6 +19,16 @@ pub async fn route_tools_call(
     agent_context: Option<&crate::gateway::admin::trace::AgentContext>,
 ) -> (String, bool) {
     // ── Advertised gateway surface (read-only) ───────────────────────
+    if tool == "lifecycle" {
+        return crate::gateway::lifecycle::dispatch(
+            gs,
+            args,
+            meta,
+            _client_session_id.unwrap_or("legacy"),
+            agent_context,
+        )
+        .await;
+    }
     match tool {
         "search" => {
             return to_text_result(

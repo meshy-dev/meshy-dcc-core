@@ -1,0 +1,7 @@
+{
+  "schema_version": 1,
+  "status": "prepared",
+  "dcc_type": "godot",
+  "adapter_version": "0.1.1",
+  "package_dir": "/example/core-data/adapters/meshy-dcc-godot/0.1.1/meshy-dcc-godot-macos-arm64"
+}

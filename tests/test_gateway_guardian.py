@@ -7,6 +7,7 @@ import logging
 import os
 from pathlib import Path
 import socket
+import subprocess
 import sys
 import threading
 import time
@@ -986,6 +987,44 @@ def test_build_gateway_daemon_command_includes_persist_flags(monkeypatch, tmp_pa
     assert env["MESHY_DCC_GATEWAY_IDLE_TIMEOUT_SECS"] == "0"
     assert env["MESHY_DCC_REGISTRY_DIR"] == str(tmp_path)
     assert env["MESHY_DCC_DCC_TYPE"] == "custom-host"
+
+
+def test_gateway_child_drops_parent_ui_target_but_preserves_configuration(monkeypatch, tmp_path):
+    from meshy_dcc_core.constants import HOST_UI_TARGET_ENV
+
+    for key in HOST_UI_TARGET_ENV:
+        monkeypatch.setenv(key, "stale-parent-target")
+    retained = {
+        "MESHY_DCC_DATA_DIR": str(tmp_path / "data"),
+        "MESHY_DCC_CATALOG_PATH": str(tmp_path / "catalog.json"),
+        "MESHY_DCC_GATEWAY_PORT": "19866",
+        "MESHY_DCC_PROJECT": str(tmp_path / "workspace"),
+        "MESHY_DCC_CONTEXT_BUNDLE": "fixture-context",
+        "MESHY_DCC_PACKAGE_PROVENANCE": "fixture-origin",
+        "MESHY_DCC_UI_CONTROL_BACKEND": "cua",
+    }
+    for key, value in retained.items():
+        monkeypatch.setenv(key, value)
+    _cmd, env = gg.build_gateway_daemon_command(
+        gateway_host="127.0.0.1",
+        gateway_port=19866,
+        registry_dir=str(tmp_path),
+        dcc_type="custom-host",
+        server_bin="fixture-gateway",
+    )
+    output_keys = (*retained, "MESHY_DCC_REGISTRY_DIR", "MESHY_DCC_UI_CONTROL_PROCESS_ID")
+    code = (
+        "import json,os; "
+        f"assert not any(key in os.environ for key in {HOST_UI_TARGET_ENV!r}); "
+        "os.environ['MESHY_DCC_UI_CONTROL_PROCESS_ID']=str(os.getpid()); "
+        f"print(json.dumps({{key:os.environ[key] for key in {output_keys!r}}}))"
+    )
+    result = subprocess.run([sys.executable, "-I", "-c", code], env=env, check=True, text=True, capture_output=True)
+    observed = json.loads(result.stdout)
+    assert {key: observed[key] for key in retained} == retained
+    assert observed["MESHY_DCC_REGISTRY_DIR"] == str(tmp_path)
+    assert int(observed["MESHY_DCC_UI_CONTROL_PROCESS_ID"]) > 0
+    assert all(os.environ[key] == "stale-parent-target" for key in HOST_UI_TARGET_ENV)
 
 
 def test_build_gateway_daemon_command_uses_adapter_idle_timeout_by_default(monkeypatch, tmp_path):

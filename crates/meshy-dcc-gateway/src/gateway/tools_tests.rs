@@ -102,13 +102,16 @@ fn gateway_tool_defs_advertise_canonical_workflow_tools_only() {
         .filter_map(|tool| tool.get("name").and_then(Value::as_str))
         .collect();
 
-    assert_eq!(names, ["search", "describe", "load_skill", "call"]);
+    assert_eq!(
+        names,
+        ["search", "describe", "load_skill", "call", "lifecycle"]
+    );
 }
 
 #[test]
 fn gateway_tool_defs_all_have_annotations() {
     let annotations = annotations_by_tool();
-    assert_eq!(annotations.len(), 4);
+    assert_eq!(annotations.len(), 5);
 
     for (name, value) in annotations {
         let hints = value

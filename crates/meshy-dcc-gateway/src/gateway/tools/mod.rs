@@ -1208,10 +1208,10 @@ fn attach_search_meta(arguments: &mut Value, search_id: &str, index_generation: 
 /// invoked by `call`; older wrapper names remain callable as hidden
 /// compatibility routes but do not consume model context in `tools/list`.
 pub fn gateway_tool_defs() -> serde_json::Value {
-    json!([
+    let mut definitions = json!([
         {
             "name": "search",
-            "description": "Discover backend capabilities and/or skills. Default `kind=tool` runs the \
+            "description": "Discover tools and skills across live Blender, Godot, Unity and other DCC applications. Default `kind=tool` runs the \
                 capability index (`search_tools` semantics): compact hits with `tool_slug` and \
                 executable `next_step`. Follow `next_step`: no-schema tools with compact safety \
                 hints can go straight to `call`; other tools use `describe` first to fetch \
@@ -1334,7 +1334,12 @@ pub fn gateway_tool_defs() -> serde_json::Value {
                 "openWorldHint": true
             }
         }
-    ])
+    ]);
+    definitions
+        .as_array_mut()
+        .unwrap()
+        .push(crate::gateway::lifecycle::tool_definition());
+    definitions
 }
 
 /// Persist a [`meshy_dcc_models::ToolCallEvent`] to the admin SQLite database

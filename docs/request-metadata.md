@@ -12,6 +12,12 @@ at ingress, records the trust source of individual fields, and derives network
 fields from the server's request context. Self-reported identifiers are
 attribution, not authorization or proof of identity.
 
+The native rmcp ingress preserves optional `agent_context` on both synchronous
+dispatch and asynchronous admission. Core jobs retain bounded identity/release
+origin in their existing store before the pending row becomes visible; legacy
+rows without it remain unattributed. [Lifecycle operations](session-lifecycle.md)
+preserve the originating session and turn in the existing launch store.
+
 The gateway's `call` wrapper merges per-call `arguments.meta` with protocol
 `params._meta`. Batch items use the same rule with each item's `meta`. Per-call
 hints such as `lease_owner` may supplement protocol metadata. They cannot

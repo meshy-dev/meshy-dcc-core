@@ -1490,3 +1490,47 @@ fn persistence_status_does_not_wait_for_a_blocked_storage_write() {
     let status = status.expect("persistence health blocked behind storage I/O");
     assert_eq!(status.state, JobPersistenceState::Healthy);
 }
+
+#[test]
+fn activity_preserves_caller_origin_before_pending_admission_and_inherits_it() {
+    let jobs = JobManager::new();
+    let origin = serde_json::json!({"agent_name":"client-a","session_id":"session-a","turn_id":"run-a","metadata":{"release":"fixture"}});
+    let parent = jobs.create_with_context("render", None, Some(origin.clone()));
+    let parent_id = parent.read().id.clone();
+    let child = jobs.create_with_parent("render-child", Some(parent_id.clone()));
+    assert_eq!(child.read().agent_context, Some(origin));
+    jobs.create_with_context(
+        "other",
+        None,
+        Some(serde_json::json!({"agent_name":"client-b"})),
+    );
+    jobs.create("legacy");
+    let scope = meshy_dcc_models::CallerFilter {
+        agent_name: Some("client-a".into()),
+        ..Default::default()
+    };
+    let value = jobs.activity(&scope);
+    assert_eq!(value["pending_jobs"], 2);
+    assert_eq!(value["running_jobs"], 0);
+    assert_eq!(value["unattributed_jobs"], 1);
+    jobs.start(&parent_id).unwrap();
+    assert_eq!(jobs.activity(&scope)["running_jobs"], 1);
+    assert_eq!(jobs.activity(&scope)["pending_jobs"], 1);
+    jobs.complete(
+        &parent_id,
+        serde_json::json!({"adapter_job_id":"native-job"}),
+    )
+    .unwrap();
+    assert_eq!(jobs.activity(&scope)["unknown_jobs"], 1);
+    let legacy = jobs.create("legacy-handoff");
+    let legacy_id = legacy.read().id.clone();
+    jobs.start(&legacy_id).unwrap();
+    jobs.complete(
+        &legacy_id,
+        serde_json::json!({"adapter_job_id":"legacy-native-job"}),
+    )
+    .unwrap();
+    assert_eq!(jobs.activity(&scope)["unattributed_jobs"], 2);
+    child.write().status = JobStatus::Interrupted;
+    assert_eq!(jobs.activity(&scope)["unknown_jobs"], 2);
+}

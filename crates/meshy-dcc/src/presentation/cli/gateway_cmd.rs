@@ -66,6 +66,9 @@ pub(crate) fn gateway_endpoint_for_command(
     _gateway_target: &GatewayTarget,
 ) -> Option<Endpoint> {
     match command {
+        Command::Software { .. } | Command::PrepareAdapter { .. } | Command::ActiveWork { .. } => {
+            None
+        }
         Command::Smoke { url: None, .. } => Some(Endpoint::new(base_url)),
         Command::Smoke { url: Some(_), .. } => None,
         Command::Health | Command::Ui { .. } | Command::Stats { .. } | Command::Update { .. } => {

@@ -98,3 +98,38 @@ fn cache_replacement_is_atomic_and_invalid_cache_cannot_be_promoted() {
     assert_eq!(error.to_string(), expected);
     assert_eq!(std::fs::read(&path).unwrap(), b"new");
 }
+
+#[test]
+fn cached_resolution_is_read_only_and_rejects_untrusted_cache_instead_of_falling_back() {
+    let root = tempfile::tempdir().unwrap();
+    let cache = root.path().join("missing-parent/catalog.json");
+    let _env = meshy_dcc_test_utils::EnvVarGuard::set("MESHY_DCC_INSTALL_CACHE", cache.to_str());
+    assert_eq!(
+        resolve_cached().unwrap().provenance.source,
+        CatalogSource::Bundled
+    );
+    assert!(!cache.parent().unwrap().exists());
+
+    std::fs::create_dir(cache.parent().unwrap()).unwrap();
+    let unsigned = br#"{"catalog":"{}","attestation":{}}"#;
+    std::fs::write(&cache, unsigned).unwrap();
+    assert!(resolve_cached().is_err());
+    assert_eq!(std::fs::read(&cache).unwrap(), unsigned);
+    assert!(!cache.with_extension("lock").exists());
+}
+
+#[test]
+fn authenticated_cached_metadata_preserves_revocations_and_refuses_expiry() {
+    // This boundary takes authenticated snapshots; signature rejection is covered above.
+    let mut accepted = snapshot(1000, "trusted-digest");
+    accepted.provenance.expires_at = Some(2000);
+    accepted.entries[0].policy = Some(meshy_dcc_catalog::CatalogPolicy {
+        installation: "not_available".into(),
+        reason: Some("withdrawn release".into()),
+    });
+    let observed = cached_or_bundled(Some(accepted.clone()), 1500).unwrap();
+    assert_eq!(observed.provenance.source, CatalogSource::Cache);
+    assert!(!observed.provenance.latest_checked);
+    assert_eq!(observed.entries[0].policy, accepted.entries[0].policy);
+    assert!(cached_or_bundled(Some(accepted), 2000).is_err());
+}

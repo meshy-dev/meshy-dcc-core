@@ -9,6 +9,7 @@ repository.workspace = true
 description = "Multi-Meshy DCC gateway: aggregation, routing, capability index, REST/MCP dynamic-capability surface (#653/#654/#655) — extracted from meshy-dcc-http"
 
 [dependencies]
+meshy-dcc-lifecycle.workspace = true
 # Internal
 meshy-dcc-attestation = { workspace = true }
 # Keep path overrides where this crate intentionally disables dependency defaults;

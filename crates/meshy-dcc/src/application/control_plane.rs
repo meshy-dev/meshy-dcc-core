@@ -76,14 +76,23 @@ impl DccControlPlane {
     }
 
     pub async fn list_instances(&self) -> anyhow::Result<Value> {
-        if self.uses_direct_local() {
-            local_registry::list_local_instances(self.registry_dir.clone())
+        let direct_local = self.uses_direct_local();
+        let mut value = if direct_local {
+            local_registry::list_local_instances(self.registry_dir.clone())?
         } else {
             self.gateway_client()
                 .list_instances()
                 .await
-                .map_err(Into::into)
-        }
+                .map_err(anyhow::Error::from)?
+        };
+        let local = direct_local
+            || crate::application::gateway_ctrl::local_auto_gateway_target(&self.endpoint)
+                .is_some();
+        crate::application::instance_launch::project_list_launch_ownership(
+            local.then_some(self.registry_dir.as_path()),
+            &mut value,
+        );
+        Ok(value)
     }
 
     pub async fn stats(&self, request: StatsRequest) -> anyhow::Result<Value> {
@@ -609,7 +618,7 @@ impl DccControlPlane {
         // ownership lives in the local operation record, which the gateway
         // never sees, so it stays local even when calls must use the gateway.
         let result = if stop_runs_locally(&self.target, &request) {
-            local_control::stop_instance_local(self.registry_dir.clone(), request).await?
+            local_control::stop_instance_with_tracking(self.registry_dir.clone(), request).await?
         } else {
             self.gateway_client().stop_instance(request).await?
         };

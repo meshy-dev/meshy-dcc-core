@@ -9,6 +9,7 @@ repository.workspace = true
 description = "In-process async job tracker + pluggable persistence (issues #316, #328) — extracted from meshy-dcc-http"
 
 [dependencies]
+meshy-dcc-models.workspace = true
 serde = { workspace = true }
 serde_json = { workspace = true }
 chrono = { version = "0.4", features = ["serde"] }
@@ -31,3 +32,6 @@ default = []
 # Persist tracked Jobs in a SQLite database so they survive a server
 # restart (issue #328). Pulls in the bundled `rusqlite` driver.
 job-persist-sqlite = ["dep:rusqlite", "dep:fs4", "dep:windows-sys"]
+
+[dev-dependencies]
+tempfile.workspace = true

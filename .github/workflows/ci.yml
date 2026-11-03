@@ -42,8 +42,8 @@ jobs:
             target
           key: cargo-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml', 'Cargo.lock') }}
           restore-keys: cargo-${{ runner.os }}-
-      - name: cargo test -p meshy-dcc -p meshy-dcc-updater
-        run: cargo test -p meshy-dcc -p meshy-dcc-updater
+      - name: Test CLI, shared lifecycle and job attribution
+        run: cargo test -p meshy-dcc -p meshy-dcc-updater -p meshy-dcc-lifecycle -p meshy-dcc-http-server -p meshy-dcc-job --features meshy-dcc-job/job-persist-sqlite
       - name: cargo test -p meshy-dcc-gateway --features admin
         run: cargo test -p meshy-dcc-gateway --features admin
 

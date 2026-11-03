@@ -10,9 +10,13 @@ The wheel's CycloneDX SBOM names workspace crates by their cargo package ID,
 the checkout path and $HOME; any hit fails the build.
 """
 import base64
+import csv
 import hashlib
+import io
 import os
+import subprocess
 import sys
+import tempfile
 import zipfile
 from pathlib import Path
 
@@ -34,21 +38,49 @@ def scrub_wheel(wheel, repo):
             changed[name] = data.replace(repo, NEUTRAL)
     if not changed:
         return 0
+    replace_wheel_members(wheel, infos, members, changed)
+    return len(changed)
+
+
+def replace_wheel_members(wheel, infos, members, changed):
     record_name = next(name for name in members if name.endswith(".dist-info/RECORD"))
-    lines = []
-    for line in members[record_name].decode().splitlines():
-        name = line.split(",", 1)[0]
+    records = list(csv.reader(io.StringIO(members[record_name].decode())))
+    for row in records:
+        name = row[0]
         if name in changed:
             data = changed[name]
-            line = f"{name},{record_hash(data)},{len(data)}"
-        lines.append(line)
-    changed[record_name] = ("\n".join(lines) + "\n").encode()
+            row[:] = [name, record_hash(data), str(len(data))]
+    output = io.StringIO()
+    csv.writer(output, lineterminator="\n").writerows(records)
+    updates = dict(changed)
+    updates[record_name] = output.getvalue().encode()
     tmp = wheel.with_suffix(".tmp")
     with zipfile.ZipFile(tmp, "w") as zout:
         for info in infos:
-            zout.writestr(info, changed.get(info.filename, members[info.filename]))
+            zout.writestr(info, updates.get(info.filename, members[info.filename]))
     tmp.replace(wheel)
-    return len(changed) - 1
+
+
+def normalize_macos_symbols(wheel, needles):
+    """Apple strip removes local/debug paths without LLVM's malformed layout."""
+    if sys.platform != "darwin":
+        return 0
+    with zipfile.ZipFile(wheel) as archive:
+        infos = archive.infolist()
+        members = {info.filename: archive.read(info) for info in infos}
+    changed = {}
+    for name, data in members.items():
+        if not name.endswith((".so", ".dylib")) or not any(n in data for n in needles.values()):
+            continue
+        with tempfile.TemporaryDirectory(prefix="meshy-wheel-symbols-") as scratch:
+            native = Path(scratch) / Path(name).name
+            native.write_bytes(data)
+            subprocess.run(["/usr/bin/strip", "-x", str(native)], check=True)
+            subprocess.run(["/usr/bin/codesign", "--force", "--sign", "-", str(native)], check=True)
+            changed[name] = native.read_bytes()
+    if changed:
+        replace_wheel_members(wheel, infos, members, changed)
+    return len(changed)
 
 
 def leaks(path, needles):
@@ -80,16 +112,38 @@ def path_needles(*paths):
     return needles
 
 
+def verify_native_wheel(wheel):
+    """Install the exact wheel offline and exercise native init, without hosts."""
+    with tempfile.TemporaryDirectory(prefix="meshy-wheel-load-") as scratch:
+        root = Path(scratch)
+        venv = root / "venv"
+        subprocess.run([sys.executable, "-m", "venv", str(venv)], check=True)
+        python = venv / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
+        env = dict(os.environ, PIP_DISABLE_PIP_VERSION_CHECK="1", PYTHONDONTWRITEBYTECODE="1",
+                   MESHY_DCC_DATA_DIR=str(root / "data"), MESHY_DCC_REGISTRY_DIR=str(root / "registry"),
+                   MESHY_DCC_LOG_DIR=str(root / "logs"), MESHY_DCC_LOG_LEVEL="off", MESHY_DCC_TELEMETRY="0",
+                   MESHY_DCC_DISABLE_UPDATE_CHECK="1")
+        subprocess.run([str(python), "-m", "pip", "--isolated", "--disable-pip-version-check", "--no-cache-dir",
+                        "install", "--no-index", "--no-deps", str(wheel.resolve())], env=env, check=True)
+        code = ("import importlib.machinery; import meshy_dcc_core._core as core; "
+                "assert isinstance(core.__loader__, importlib.machinery.ExtensionFileLoader), "
+                "'wheel did not load a native extension'; print('native wheel import passed')")
+        subprocess.run([str(python), "-I", "-B", "-c", code], env=env, check=True)
+
+
 def main(repo_root, out_dir):
     repo = str(Path(repo_root).resolve()).encode()
     out = Path(out_dir)
-    for wheel in sorted(out.glob("*.whl")):
-        print(f"{wheel.name}: rewrote {scrub_wheel(wheel, repo)} SBOM file(s)")
     needles = path_needles(repo.decode(), os.environ["HOME"])
+    for wheel in sorted(out.glob("*.whl")):
+        print(f"{wheel.name}: normalized {normalize_macos_symbols(wheel, needles)} native file(s)")
+        print(f"{wheel.name}: rewrote {scrub_wheel(wheel, repo)} SBOM file(s)")
     found = [hit for path in sorted(out.iterdir()) if path.is_file() for hit in leaks(path, needles)]
     if found:
         sys.exit("build-machine paths left in release artifacts:\n  " + "\n  ".join(found))
     print(f"no build-machine paths in {out}")
+    for wheel in sorted(out.glob("*.whl")):
+        verify_native_wheel(wheel)
 
 
 if __name__ == "__main__":

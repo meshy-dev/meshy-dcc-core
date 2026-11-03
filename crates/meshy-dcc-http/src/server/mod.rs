@@ -125,12 +125,12 @@ impl ClassifyResponse for HttpResponseClassifier {
     }
 }
 
-fn health_payload(jobs: &crate::job::JobManager) -> serde_json::Value {
-    json!({
-        "ok": true,
-        "service": "meshy-dcc-http",
-        "job_persistence": jobs.persistence_status(),
-    })
+fn health_payload(
+    jobs: &crate::job::JobManager,
+    scope: &meshy_dcc_models::CallerFilter,
+) -> serde_json::Value {
+    json!({"ok":true,"service":"meshy-dcc-http","job_persistence":jobs.persistence_status(),
+        "activity":jobs.activity(scope)})
 }
 
 /// Live DCC instance metadata that is propagated to `FileRegistry` on every
@@ -774,10 +774,14 @@ impl McpHttpServer {
         let mut router = Router::new()
             .route(
                 "/health",
-                routing::get(move || {
-                    let jobs = health_jobs.clone();
-                    async move { Json(health_payload(&jobs)) }
-                }),
+                routing::get(
+                    move |axum::extract::Query(scope): axum::extract::Query<
+                        meshy_dcc_models::CallerFilter,
+                    >| {
+                        let jobs = health_jobs.clone();
+                        async move { Json(health_payload(&jobs, &scope)) }
+                    },
+                ),
             )
             .with_state(state)
             .merge(rest_router)

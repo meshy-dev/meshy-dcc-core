@@ -131,10 +131,9 @@ jobs:
           if-no-files-found: error
 
   load-check:
-    # A wheel stripped by a newer Xcode once failed to load ("mis-aligned
-    # LINKEDIT string pool") while CI builds load fine, so load the CI build on
-    # the newest macOS runner. No offset check: CI binaries have
-    # stroff % 8 == 4 and load fine.
+    # Exercise the exact wheel on a second macOS runtime. Rust 1.95's stripped
+    # cdylib layout can pass macOS 26 and fail macOS 27; build_release.sh avoids
+    # that producer defect and checks native init before artifacts reach here.
     needs: build
     runs-on: macos-26
     timeout-minutes: 15

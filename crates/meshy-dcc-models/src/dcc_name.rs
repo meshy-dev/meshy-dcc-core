@@ -86,6 +86,39 @@ impl DccName {
         }
     }
 
+    /// Human application name for presentation; custom wire names remain unchanged.
+    /// This does not participate in routing or imply adapter availability.
+    pub fn display_name(&self) -> &str {
+        match self.as_str() {
+            "maya" => "Maya",
+            "blender" => "Blender",
+            "houdini" => "Houdini",
+            "3dsmax" => "3ds Max",
+            "c4d" => "Cinema 4D",
+            "photoshop" => "Photoshop",
+            "zbrush" => "ZBrush",
+            "unreal" => "Unreal Engine",
+            "unity" => "Unity",
+            "godot" => "Godot",
+            "roblox" => "Roblox Studio",
+            "freecad" => "FreeCAD",
+            "openscad" => "OpenSCAD",
+            "material-maker" => "Material Maker",
+            "substance3d_painter" => "Substance 3D Painter",
+            "substance3d_designer" => "Substance 3D Designer",
+            "omniverse" => "Omniverse",
+            "marmoset" => "Marmoset",
+            "mari" => "Mari",
+            "openusd" => "OpenUSD",
+            "katana" => "Katana",
+            "mobu" => "MotionBuilder",
+            "sketchup" => "SketchUp",
+            "figma" => "Figma",
+            "nuke" => "Nuke",
+            other => other,
+        }
+    }
+
     /// `true` if this is one of the canonical (well-known) variants.
     pub fn is_known(&self) -> bool {
         !matches!(self, Self::Other(_))
@@ -126,6 +159,17 @@ impl From<DccName> for String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn application_labels_do_not_change_wire_identity_and_unknown_names_stay_honest() {
+        assert_eq!(DccName::parse("godot").display_name(), "Godot");
+        assert_eq!(DccName::parse("blender").display_name(), "Blender");
+        assert_eq!(DccName::parse("Krita").display_name(), "krita");
+        assert_eq!(
+            serde_json::to_value(DccName::parse("godot")).unwrap(),
+            "godot"
+        );
+    }
 
     #[test]
     fn parses_canonical_lowercase() {

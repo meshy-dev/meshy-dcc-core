@@ -1,6 +1,6 @@
 //! `gateway://docs/agent-workflows` — static, **platform-agnostic** guidance for
 //! agents using the Meshy DCC **gateway**: MCP tools vs `resources/*` / `prompts/*`,
-//! `describe` (schema, affinity, timeouts), `gateway://instances`, and
+//! `describe` (schema, affinity, timeouts), native project `lifecycle`, `gateway://instances`, and
 //! reading host help URIs from `resources/list`.
 //!
 //! Embeds `agent_workflows.md` in this directory; no dependency on any single

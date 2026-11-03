@@ -12,6 +12,93 @@ use std::sync::{Arc, Mutex, OnceLock};
 
 // ── Fixtures ───────────────────────────────────────────────────────────────
 
+#[test]
+#[cfg(unix)]
+fn host_spawn_rebinds_ui_target_without_losing_launch_context() {
+    const FIXTURE: &str = "MESHY_DCC_TEST_HOST_UI_TARGET_FIXTURE";
+    use meshy_dcc_gateway_ensure::HOST_UI_TARGET_ENV;
+    if let Some(root) = std::env::var_os(FIXTURE) {
+        let root = PathBuf::from(root);
+        let report = root.join("child-context.txt");
+        let mut script = HOST_UI_TARGET_ENV
+            .iter()
+            .map(|key| format!("test -z \"${{{key}+x}}\" || exit 91\n"))
+            .collect::<String>();
+        script.push_str(concat!(
+            "export MESHY_DCC_UI_CONTROL_PROCESS_ID=$$\n",
+            "printf '%s\\n' \"$MESHY_DCC_UI_CONTROL_PROCESS_ID\" ",
+            "\"$MESHY_DCC_START_OPERATION_ID\" \"$MESHY_DCC_START_PROJECT\" ",
+            "\"$MESHY_DCC_START_DCC_TYPE\" \"$MESHY_DCC_REGISTRY_DIR\" ",
+            "\"$MESHY_DCC_DATA_DIR\" \"$MESHY_DCC_CATALOG_PATH\" ",
+            "\"$MESHY_DCC_GATEWAY_PORT\" \"$MESHY_DCC_CONTEXT_BUNDLE\" ",
+            "\"$MESHY_DCC_PROJECT\" \"$MESHY_DCC_PACKAGE_PROVENANCE\" ",
+            "\"$MESHY_DCC_UI_CONTROL_BACKEND\" > \"$1\""
+        ));
+        let plan = LaunchPlan {
+            dcc_type: "custom-host".into(),
+            executable: "/bin/sh".into(),
+            argv: vec![
+                "/bin/sh".into(),
+                "-c".into(),
+                script,
+                "fixture".into(),
+                report.to_str().unwrap().into(),
+            ],
+            version: None,
+            project_markers: vec![],
+            cwd: None,
+            source: crate::domain::start_instance::LaunchPlanSource::Explicit,
+            plan_path: None,
+        };
+        let mut child = spawn_host(&plan, "custom-host", &root, "new-operation").unwrap();
+        let pid = child.id().to_string();
+        assert!(child.wait().unwrap().success());
+        let observed = std::fs::read_to_string(report).unwrap();
+        assert_eq!(
+            observed.lines().collect::<Vec<_>>(),
+            [
+                pid.as_str(),
+                "new-operation",
+                root.to_str().unwrap(),
+                "custom-host",
+                "fixture-registry",
+                "fixture-data",
+                "fixture-catalog",
+                "19866",
+                "fixture-context",
+                "fixture-workspace",
+                "fixture-origin",
+                "cua"
+            ]
+        );
+        return;
+    }
+    let root = tempfile::tempdir().unwrap();
+    let result = Command::new(std::env::current_exe().unwrap())
+        .args(["--exact", "application::instance_launch::tests::host_spawn_rebinds_ui_target_without_losing_launch_context"])
+        .env(FIXTURE, root.path())
+        .envs(HOST_UI_TARGET_ENV.iter().map(|key| (*key, "stale-parent-target")))
+        .env(OPERATION_ID_ENV, "old-operation")
+        .env(PROJECT_ENV, "old-project")
+        .env(DCC_TYPE_ENV, "old-host")
+        .env("MESHY_DCC_REGISTRY_DIR", "fixture-registry")
+        .env("MESHY_DCC_DATA_DIR", "fixture-data")
+        .env("MESHY_DCC_CATALOG_PATH", "fixture-catalog")
+        .env("MESHY_DCC_GATEWAY_PORT", "19866")
+        .env("MESHY_DCC_CONTEXT_BUNDLE", "fixture-context")
+        .env("MESHY_DCC_PROJECT", "fixture-workspace")
+        .env("MESHY_DCC_PACKAGE_PROVENANCE", "fixture-origin")
+        .env("MESHY_DCC_UI_CONTROL_BACKEND", "cua")
+        .output()
+        .unwrap();
+    assert!(
+        result.status.success(),
+        "{}",
+        String::from_utf8_lossy(&result.stdout)
+    );
+    assert!(root.path().join("child-context.txt").is_file());
+}
+
 /// A cross-platform executable that exits immediately. Used to prove the launch
 /// stage really spawns a process without needing a DCC installed.
 fn noop_executable() -> (std::path::PathBuf, &'static str) {
@@ -118,6 +205,83 @@ fn argv_for(executable: &Path, flag: &str) -> Vec<String> {
 }
 
 // ── Stage: resolve plan ────────────────────────────────────────────────────
+
+#[test]
+fn prior_owned_pid_and_operation_cannot_reuse_a_host_observed_in_another_project() {
+    let temp = tempfile::tempdir().unwrap();
+    let a = temp.path().join("project-a");
+    let b = temp.path().join("project-b");
+    std::fs::create_dir(&a).unwrap();
+    std::fs::create_dir(&b).unwrap();
+    let registry = temp.path().join("registry");
+    let id = uuid::Uuid::new_v4().to_string();
+    let mut entry = ServiceEntry::new("unity", "127.0.0.1", 9);
+    entry.pid = Some(std::process::id());
+    entry
+        .metadata
+        .insert("meshy_dcc_operation_id".into(), id.clone());
+    entry
+        .metadata
+        .insert("meshy_dcc_project".into(), a.display().to_string());
+    entry
+        .metadata
+        .insert("project".into(), b.display().to_string());
+    registry_handle(&registry).register(entry.clone()).unwrap();
+    let mut original = LifecycleOperation::new(&id, "unity", &a, Path::new("fixture"), None);
+    original.pid = entry.pid;
+    original.launched = true;
+    original.owned = true;
+    original.instance_id = Some(entry.instance_id.to_string());
+    let store = LifecycleStore::new(&registry);
+    store.save(&original).unwrap();
+    assert!(matches!(
+        find_reusable(&registry, "unity", &a, &store, None).unwrap(),
+        Reuse::None
+    ));
+    assert!(
+        entry_project(&entry).is_none(),
+        "conflicting project aliases are not ownership evidence"
+    );
+}
+
+#[test]
+fn registration_rejects_contradictory_project_before_operation_or_pid_fallback() {
+    let temp = tempfile::tempdir().unwrap();
+    let other = temp.path().join("other");
+    std::fs::create_dir(&other).unwrap();
+    let mut stale = ServiceEntry::new("unity", "127.0.0.1", 9);
+    stale.pid = Some(1234);
+    stale
+        .metadata
+        .insert("meshy_dcc_operation_id".into(), "original".into());
+    stale
+        .metadata
+        .insert("project".into(), other.display().to_string());
+    assert!(select_registration(&[stale.clone()], temp.path(), "original", Some(1234)).is_none());
+    let mut matching = ServiceEntry::new("unity", "127.0.0.1", 10);
+    matching
+        .metadata
+        .insert("project".into(), temp.path().display().to_string());
+    assert_eq!(
+        select_registration(
+            &[stale.clone(), matching.clone()],
+            temp.path(),
+            "original",
+            Some(1234)
+        )
+        .unwrap()
+        .instance_id,
+        matching.instance_id
+    );
+    stale.metadata.remove("project");
+    assert_eq!(
+        select_registration(&[stale.clone()], temp.path(), "original", Some(1234))
+            .unwrap()
+            .instance_id,
+        stale.instance_id,
+        "unbound legacy rows retain their explicit operation/PID fallback"
+    );
+}
 
 #[tokio::test]
 async fn no_published_plan_fails_closed_with_launch_plan_missing() {
@@ -498,23 +662,18 @@ async fn spawn_host_fixture() -> u16 {
 
 /// `meshy-dcc stop-instance` as the CLI runs it on this computer.
 async fn stop(registry: &Path, entry: &ServiceEntry) -> Value {
-    use crate::application::control_plane::DccControlPlane;
-    use crate::application::gateway_profile::GatewayTarget;
-    use crate::domain::rest::{Endpoint, StopInstanceRequest};
-    DccControlPlane::new(
-        GatewayTarget::Local,
-        Endpoint::new("http://127.0.0.1:9"),
+    use crate::domain::rest::StopInstanceRequest;
+    local_control::stop_instance_with_tracking(
         registry.to_path_buf(),
-        false,
+        StopInstanceRequest {
+            dcc_type: entry.dcc_type.clone(),
+            instance_id: entry.instance_id.to_string(),
+            expected_owner: None,
+            expected_session: None,
+            operation_id: None,
+            discard_unsaved: false,
+        },
     )
-    .stop_instance(StopInstanceRequest {
-        dcc_type: entry.dcc_type.clone(),
-        instance_id: entry.instance_id.to_string(),
-        expected_owner: None,
-        expected_session: None,
-        operation_id: None,
-        discard_unsaved: false,
-    })
     .await
     .unwrap()
 }

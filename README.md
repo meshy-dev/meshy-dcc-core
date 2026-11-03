@@ -4,7 +4,7 @@ Turn your DCC instances into one creation pipeline, powered by Meshy and your
 agent.
 
 Meshy DCC Core gives an AI agent one local entry point to the 3D apps and game
-engines you have open. Install a connector once per app; every call goes to
+engines you have open. Prepare a connector for each app and configure native projects where required; every call goes to
 the exact running instance, and each app's tools load as skills when they are
 needed, so one agent can carry a Meshy model through every app it touches.
 
@@ -51,6 +51,10 @@ npm install -g meshy-dcc
 meshy-dcc agent-skill --execute
 ```
 
+Package-managed deployments leave global agent Skills unchanged on ordinary
+invocations. Run `agent-skill --execute` explicitly to install or update them;
+automatic refresh remains available for direct CLI installations.
+
 In mainland China, use `cdn.meshy.cn` in place of `cdn.meshy.ai`.
 
 Then add a connector for each app, from `meshy-dcc ui` or with
@@ -60,8 +64,8 @@ Then add a connector for each app, from `meshy-dcc ui` or with
 
 | Component | Role |
 |---|---|
-| `meshy-dcc` | The CLI agents use, with the `meshy-dcc` agent Skill |
-| `meshy-dcc-server` | The local gateway that routes each call to its app instance |
+| `meshy-dcc` | CLI discovery, adapter preparation and project lifecycle, with the `meshy-dcc` agent Skill |
+| `meshy-dcc-server` | The local MCP gateway for project lifecycle and exact-instance host execution |
 | `meshy_dcc_core` | The Python runtime the connectors are built on |
 
 Connectors live in [meshy-dcc-adapters](https://github.com/meshy-dev/meshy-dcc-adapters).
@@ -70,6 +74,9 @@ Meshy generation and your Meshy account stay with
 
 Gateway and adapter integrations use the [request metadata and deadline
 contract](docs/request-metadata.md).
+MCP and CLI clients use the [software preparation and project lifecycle contract](docs/session-lifecycle.md).
+CLI clients can recover safe-stop ownership through the
+[instance lifecycle contract](docs/instance-lifecycle.md).
 
 ## Usage telemetry
 
@@ -85,6 +92,14 @@ Requires Rust 1.95.
 cargo build -p meshy-dcc -p meshy-dcc-server
 cargo test -p meshy-dcc
 ```
+
+Use `scripts/release/build_release.sh <output-directory>` for portable release
+artifacts. It checks for build-machine paths, installs the exact wheel offline
+in a temporary environment and initializes its native extension. With the
+pinned Rust 1.95 toolchain, macOS wheel builds avoid its defective Mach-O
+stripping pass; Apple's strip tool removes local/debug paths and the native
+member is re-signed before its wheel checksum is updated. CLI and server
+executable profiles retain their usual stripping.
 
 ## License
 

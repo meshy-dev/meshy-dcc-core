@@ -3,7 +3,7 @@
 ## Scope and current stage
 
 `meshy-dcc-core` is a private, independent Meshy product repository, developed
-as a submodule of `meshy-dev/meshy-integrations`. Version 0.2.2: one version
+as a submodule of `meshy-dev/meshy-integrations`. Version 0.2.3: one version
 line for crates, the Python wheel and the product.
 
 The code began as a fork of an MIT-licensed project and has fully diverged
@@ -20,8 +20,9 @@ plan, and the results of the first Windows run at its end.
 Start new work by inspecting context and stating the intended change and checks.
 A planning request authorizes a plan; implement when the user requests it.
 
-The agent-facing entry is the `meshy-dcc` CLI (built from `crates/meshy-dcc`)
-plus `skills/meshy-dcc/SKILL.md`. No MCP connector is exposed to the agent.
+Agent-facing entries include Core's native MCP gateway and the `meshy-dcc`
+CLI (built from `crates/meshy-dcc`) with `skills/meshy-dcc/SKILL.md`. Their
+software preparation and project lifecycle use shared application services.
 Meshy API calls, authentication, billing, polling and downloads belong to the
 published `meshy-cli`; core only consumes its machine-output contract.
 

@@ -4,7 +4,7 @@ use semver::Version;
 use super::InstallPlanError;
 
 /// Check catalog revocation and core compatibility before advertising or planning an install.
-pub(crate) fn validate(entry: &CatalogEntry) -> Result<(), InstallPlanError> {
+pub fn validate(entry: &CatalogEntry) -> Result<(), InstallPlanError> {
     if let Some(policy) = &entry.policy {
         match policy.installation.as_str() {
             "available" => {}

@@ -133,6 +133,10 @@ pub fn build_gateway_router_with_admin(
 
 fn build_base_router(state: GatewayState) -> Router {
     Router::new()
+        .route(
+            "/v1/activity",
+            axum::routing::get(super::lifecycle::activity_endpoint),
+        )
         .route("/health", routing::get(handle_health))
         .route("/instances", routing::get(handle_instances))
         // GET /mcp → SSE stream; POST /mcp → JSON-RPC handler
