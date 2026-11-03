@@ -3,6 +3,38 @@
 Meshy DCC Core release notes. Crates, the Python wheel and the product share
 one version line.
 
+## 0.2.3 (2026-11-03)
+
+### Added
+
+- Native MCP project lifecycle shares the CLI implementation: prepare an
+  adapter, configure a native project, open or reuse its exact host, observe
+  the original launch, and safely close a verified owned instance. Projects
+  remain ordinary files; unknown outcomes are not replayed.
+- Software detection and project-free adapter preparation for all 13 released
+  connectors. Observations cover known installation layouts, multiple editor
+  versions and valid custom paths retained from previous preparation.
+- MCP resources and request context for managed clients, including original
+  Session/Run association, bounded call deadlines and scoped active-work
+  observations. Cross-application calls retain exact instance routing.
+
+### Changed
+
+- Externally package-managed deployments leave global Agent Skills unchanged
+  until explicitly installed or updated with `agent-skill --execute`.
+- Passive software and lifecycle inspection reads the authenticated local
+  catalog without network refresh or staged-update side effects. Explicit
+  preparation retains catalog expiry, rollback and withdrawal checks.
+
+### Fixed
+
+- Clear inherited UI target selectors when launching a gateway or host, so a
+  new process is not accidentally bound to its parent application. Preserve
+  explicit editor choices and reject contradictory project metadata.
+- Build macOS native wheels with Apple strip/sign tooling and repaired wheel
+  RECORD metadata, avoiding invalid Mach-O layouts from the pinned Rust
+  toolchain. Release validation loads the exact wheel in a fresh interpreter.
+
 ## 0.2.2 (2026-10-28)
 
 ### Upgrading from 0.2.1
