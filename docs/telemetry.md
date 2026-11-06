@@ -197,10 +197,11 @@ the project's **Discard client IP data** setting.
 
 ### Statsig
 
-Statsig receives your IP address as the source of the request and may store
-it and derive a rough location from it. Its event API has no per-event switch
-that turns this off, and Meshy DCC Core does not set `user.ip`. Everything
-else in the event stays as described above: no account, no names, no paths.
+Statsig receives your IP address as the source of the request and records a
+city and country derived from it, along with the `meshy-dcc/<version>` user
+agent. Its event API has no per-event switch that turns this off, and Meshy DCC
+Core does not set `user.ip`. Everything else in the event stays as described
+above: no account, no names, no paths.
 
 ## Testing
 
