@@ -1230,9 +1230,11 @@ fn suggested_post_load_next_step(
             });
         }
 
-        if let Ok(record) =
-            crate::gateway::capability_service::describe_service(&gs.capability_index, tool_slug)
-            && !record.has_schema
+        if let Ok(record) = crate::gateway::capability_service::describe_service(
+            &gs.capability_index,
+            tool_slug,
+            &gs.policy,
+        ) && !record.has_schema
             && crate::gateway::capability_service::capability_has_safety_hints(&record)
         {
             let mut arguments = json!({ "tool_slug": tool_slug, "arguments": {} });
@@ -1314,9 +1316,12 @@ async fn inline_compact_schema_for_correlated_load(
 ) -> Option<Value> {
     let tool_slug = tool_slug?;
     search_id?;
-    let record =
-        crate::gateway::capability_service::describe_service(&gs.capability_index, tool_slug)
-            .ok()?;
+    let record = crate::gateway::capability_service::describe_service(
+        &gs.capability_index,
+        tool_slug,
+        &gs.policy,
+    )
+    .ok()?;
     if !record.has_schema {
         return Some(compact_schema_payload(
             tool_slug,
