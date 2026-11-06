@@ -24,6 +24,11 @@ pub fn is_newer_version(candidate: &str, current: &str) -> bool {
     parse_semver(candidate) > parse_semver(current)
 }
 
+/// `adapter_dcc` marker the machine-wide standalone gateway daemon stamps on
+/// its sentinel. The daemon has no adapter package and no DCC, so only a newer
+/// crate version may replace it.
+pub const STANDALONE_GATEWAY_DCC: &str = "gateway";
+
 /// Election metadata describing one side of a gateway tiebreak (issue maya#137).
 ///
 /// The comparison happens in three layers, each only consulted when the
@@ -78,6 +83,15 @@ pub fn is_newer_election(candidate: ElectionInfo<'_>, current: ElectionInfo<'_>)
     let cur_crate = parse_semver(current.crate_version);
     if cand_crate != cur_crate {
         return cand_crate > cur_crate;
+    }
+
+    // A standalone daemon carries no adapter version, so layers 2 and 3 would
+    // let any same-crate sidecar take it over and drop its connected clients.
+    if current
+        .adapter_dcc
+        .is_some_and(|dcc| dcc.eq_ignore_ascii_case(STANDALONE_GATEWAY_DCC))
+    {
+        return false;
     }
 
     // Layer 2 — adapter version.  `None` is below any concrete value.
