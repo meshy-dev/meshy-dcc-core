@@ -3,6 +3,22 @@
 Meshy DCC Core release notes. Crates, the Python wheel and the product share
 one version line.
 
+## Unreleased
+
+### Changed
+
+- Usage statistics now go to Statsig as well as PostHog. Each destination is
+  tracked on its own: a day one of them accepted is never sent to it again, and
+  one that can't be reached doesn't hold up the other. Statsig receives the
+  request's IP address; see `docs/telemetry.md`. `meshy-dcc telemetry preview`
+  shows both requests, and `telemetry status` lists `destinations` in place of
+  `host`.
+
+### Fixed
+
+- A gateway started with `--no-admin` no longer skips the daily rollup; it
+  sends it without tool-call counts.
+
 ## 0.2.3 (2026-11-03)
 
 ### Added
