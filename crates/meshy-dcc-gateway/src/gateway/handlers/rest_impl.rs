@@ -316,6 +316,11 @@ pub async fn handle_v1_readyz(State(gs): State<GatewayState>) -> impl IntoRespon
                     .and_then(|diag| diag.get("readiness"))
                     .cloned()
                     .unwrap_or(Value::Null),
+                "probe_failure": row
+                    .get("diagnostics")
+                    .and_then(|diag| diag.get("probe_failure"))
+                    .cloned()
+                    .unwrap_or(Value::Null),
                 "dispatch": row["dispatch"].clone(),
                 "gateway": row["gateway"].clone(),
                 "lifecycle": row["lifecycle"].clone(),
