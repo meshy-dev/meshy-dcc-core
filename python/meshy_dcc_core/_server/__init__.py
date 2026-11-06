@@ -6,6 +6,10 @@ underscore-prefixed because they are an implementation detail; the public
 contract remains :class:`meshy_dcc_core.server_base.DccServerBase`.
 """
 
+from __future__ import annotations
+
+from meshy_dcc_core._lazy import lazy_dir
+from meshy_dcc_core._lazy import resolve_lazy_symbol
 from meshy_dcc_core._server.callable_dispatcher import AdaptivePumpPolicy
 from meshy_dcc_core._server.callable_dispatcher import AdaptivePumpStats
 from meshy_dcc_core._server.callable_dispatcher import Affinity
@@ -69,7 +73,6 @@ from meshy_dcc_core._server.options import InlineExecution
 from meshy_dcc_core._server.options import ObservabilityOptions
 from meshy_dcc_core._server.options import StandaloneMainThreadExecution
 from meshy_dcc_core._server.runtime import ServerRuntimeController
-from meshy_dcc_core._server.skill_discovery import SkillDiscoveryController
 from meshy_dcc_core._server.skill_query import SkillQueryClient
 from meshy_dcc_core._server.tools_list_policy import ENV_EXCLUDE_STUBS_FROM_TOOLS_LIST
 from meshy_dcc_core._server.tools_list_policy import ToolsListStubPolicy
@@ -78,6 +81,22 @@ from meshy_dcc_core._server.tools_list_policy import dcc_exclude_stubs_env_name
 from meshy_dcc_core._server.tools_list_policy import env_truthy
 from meshy_dcc_core._server.tools_list_policy import resolve_tools_list_stub_policy
 from meshy_dcc_core._server.window_resolver import WindowResolver
+
+# Resolved on first access: skill_discovery imports skills.builtin, which
+# imports dcc_server, which imports this package. Importing it eagerly made
+# ``import meshy_dcc_core.dcc_server`` fail as a first import.
+_LAZY_EXPORTS: dict[str, str] = {
+    "SkillDiscoveryController": "meshy_dcc_core._server.skill_discovery",
+}
+
+
+def __getattr__(name: str) -> object:
+    return resolve_lazy_symbol(name, _LAZY_EXPORTS, module_name=__name__)
+
+
+def __dir__() -> list[str]:
+    return sorted({*globals(), *lazy_dir(_LAZY_EXPORTS)})
+
 
 __all__ = [
     "CONTEXT_METADATA_ENV",
