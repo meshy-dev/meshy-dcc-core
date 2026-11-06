@@ -2,9 +2,9 @@
 
 ## Scope and current stage
 
-`meshy-dcc-core` is a private, independent Meshy product repository, developed
-as a submodule of `meshy-dev/meshy-integrations`. Version 0.2.3: one version
-line for crates, the Python wheel and the product.
+`meshy-dcc-core` is a public Meshy product repository (`meshy-dev/meshy-dcc-core`),
+checked out on its own. Version 0.2.3: one version line for crates, the Python
+wheel and the product.
 
 The code began as a fork of an MIT-licensed project and has fully diverged
 from it. There is no upstream to track: no patches, no shared names, no
@@ -15,7 +15,7 @@ Read `docs/plan.md` before proposing changes; it lists the confirmed direction,
 DCC scope and phases.
 
 On a Windows machine, start from `docs/windows-validation.md`: the Windows test
-plan, and the results of the first Windows run at its end.
+plan, and the results of each Windows round at its end.
 
 Start new work by inspecting context and stating the intended change and checks.
 A planning request authorizes a plan; implement when the user requests it.
@@ -47,7 +47,8 @@ each one on a real host before porting it as a Rust test.
 - Other hosts reach users as opt-in Meshy marketplace packages, built the same
   way when someone needs them; add hosts to the bundled catalog only when the
   user decides.
-- The Meshy Send To plugins stay separate; take only their import rules and
+- Folding the webapp's Send To into core is planned (`docs/plan.md`, R4). Until
+  then the Meshy Send To plugins stay separate; take only their import rules and
   host-side processing logic (as Meshy skill packs), not their transport code.
 
 ## Design constraints
@@ -92,5 +93,9 @@ UUIDs and private task logs out of tracked files.
 
 Use the authenticated `gh` CLI for GitHub operations. Local commits are allowed;
 do not push, publish, open PRs or change repository visibility unless the user
-explicitly asks for that task. Keep this repository's commits separate from the
-superproject.
+explicitly asks for that task. `main` takes changes only through pull requests
+with squash merge.
+
+The repository is public. Commit messages, PR titles and bodies, code comments,
+tests and docs carry no internal ticket IDs, private repository or backend
+names, internal hosts or people, and no AI attribution lines.

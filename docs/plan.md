@@ -1,6 +1,6 @@
 # Meshy DCC Core 计划
 
-日期：2026-09-28。版本：0.2.0。本仓库是独立的 Meshy 产品。代码最初 fork 自一个 MIT 项目，
+日期：2026-11-06。版本：0.2.3。本仓库是独立的 Meshy 产品（公开仓库 `meshy-dev/meshy-dcc-core`）。代码最初 fork 自一个 MIT 项目，
 0.2.0 起已完全分叉：不再跟进来源项目，不共享任何名字，也不与其运行时兼容。
 署名只保留在 `LICENSE` 和 `NOTICE` 里。
 
@@ -8,8 +8,9 @@
 
 - **技术栈**：Rust。2026-09-22 至 28 的 Node.js 原型（0.3.30）只作为行为参考，归档在本地分支
   `archive/js-prototype-0.3.30`，不继续开发。
-- **Agent 入口**：`meshy-dcc` CLI + `skills/meshy-dcc/SKILL.md`。不向 Agent 暴露 MCP
-  connector。Meshy API、认证、计费和下载仍由外部已发布的 `meshy-cli` 负责。
+- **Agent 入口**：`meshy-dcc` CLI + `skills/meshy-dcc/SKILL.md`；0.2.3 起另有 gateway 的原生 MCP 入口
+  （`http://127.0.0.1:19765/mcp`），带工程生命周期（准备 adapter、配置工程、打开或复用确切实例、安全关闭）。
+  两条入口共用同一套实现。Meshy API、认证、计费和下载仍由外部已发布的 `meshy-cli` 负责。
 - **全部 Meshy 命名**：
   - CLI：`meshy-dcc`（二进制、crate、安装脚本、release 资产、PyPI 包统一这一个名字）；其余 crate 为 `meshy-dcc-*`；
   - Python 包：`meshy_dcc_core`；
@@ -25,12 +26,17 @@
     Mari、OpenUSD、Katana、MotionBuilder、SketchUp、FreeCAD、OpenSCAD、Material Maker、Photoshop。
   - adapter 发布前，条目为 `not_available`。
   - 其他宿主以后作为 Meshy marketplace 的可选包提供，有需要时按同样方式制作，不进内置 catalog。
-- **Send To 与 core 分开**：webapp 的 Send To 仍由现有 Meshy DCC 插件负责，core 不接管
-  `/import` 和 5324–5332 端口。
-  - 从那些插件只取导入规则（PBR 通道、色彩空间、宿主的坑）和宿主侧处理逻辑，
-    做成 Meshy skill 包；不复用传输代码。
-  - 两者端口不冲突：core adapter 用动态端口和 19765，Send To 插件用 5324–5332。
-    同一宿主内能否共存，在接入各宿主时验证。
+- **Send To 并入 core（2026-10-19 定方向，待做，见第 6 节 R4）**：core 的目标是统一的 Meshy
+  DCC 集成平台，0.2.0 先服务 Agent 用户，之后把 webapp 的 Send To 也并进来。
+  - 做法：给 webapp 开一条精简的、只做素材导入的本地发送路径（webapp → 本机 gateway →
+    对应实例的 adapter 导入并读回）。用户装一次 core 就能往已连接的软件发送，不再每个软件
+    单独装一个 Send To 插件；更新也跟着 core 走。
+  - 并入之前，现有 Send To 插件照常可用：core 不接管 `/import` 和 5324–5332 端口；core adapter
+    用动态端口和 19765，两者不冲突。同一宿主内能否共存，在接入各宿主时验证。
+  - 从那些插件取导入规则（PBR 通道、色彩空间、宿主的坑）和宿主侧处理逻辑，做成 Meshy
+    skill 包；不复用传输代码。
+  - 待定：网页调用本机 gateway 的放行与鉴权（gateway 目前拦截跨站请求）；未装 core 或
+    软件没开时网页怎么引导；现有插件的迁移和下线节奏；与 Send To 负责同学对齐。
 - **Gateway 与 marketplace**：保留，作为 Meshy 本地 hub 和 Meshy marketplace（见第 2 节）。
 
 ## 2. 已有能力
@@ -47,8 +53,8 @@ CLI（`crates/meshy-dcc`）已具备本产品需要的主体能力：
 
 ### Gateway：Meshy 本地 hub
 
-Agent 的所有调用都经 gateway（CLI 默认如此）：gateway 按 agent 指名的实例
-路由，集中做批量调用、异步 job、错误归类和审计，agent 只面对 CLI。
+Agent 的所有调用都经 gateway（CLI 默认如此，MCP 入口本身就在 gateway 上）：gateway 按 agent
+指名的实例路由，集中做批量调用、异步 job、错误归类和审计。
 
 - gateway 是一个常驻进程，占 19765：CLI 同目录有 `meshy-dcc-server` 时用它，否则 CLI 自己以
   `meshy-dcc gateway` 运行同一个 gateway。CLI 在 agent 命令和 `start-instance` 之前按需拉起；
@@ -58,8 +64,8 @@ Agent 的所有调用都经 gateway（CLI 默认如此）：gateway 按 agent �
 - 跨实例搜索、事件推送、平台管理 UI 也在 gateway；以后 Meshy 网页端或托管 Agent 访问本机时，
   gateway（配合 tunnel）是固定入口。
 - 只有显式 `--gateway local` 才直连宿主（常配 `--no-auto-gateway`），保留给诊断，Skill 不用。
-- 启停宿主（`start-instance`、`stop-instance`）是本机生命周期操作，所有权记在本地操作记录里，
-  不经 gateway。
+- 启停宿主是本机生命周期操作，所有权记在本地操作记录里：CLI 的 `start-instance`、`stop-instance`
+  在本机直接执行；MCP 客户端经 gateway 的 `lifecycle` 工具调用同一套实现（`meshy-dcc-lifecycle`）。
 
 ### Marketplace：Meshy marketplace
 
@@ -94,7 +100,7 @@ Agent → skills/meshy-dcc (SKILL.md，编进 CLI，`agent-skill` 写入各 agen
 
 工作流层面的 Meshy 能力放在 skill 包里。adapter 缺少的基础能力在 adapter 里补，例如 Unity 的
 模型导入与材质、Godot 的外部模型导入。PBR 通道与色彩空间规则参考 Send To 插件仓库的
-`docs/pipeline-contract.md` §6 和 Unity SUP-3544 等修复。
+`docs/pipeline-contract.md` §6 和其中 Unity 贴图通道等修复。
 
 ORM 打包图要按 glTF 约定取通道：G = roughness，B = metallic。现有 Unity、Maya、Unreal
 插件在这里有误。
@@ -116,22 +122,22 @@ ORM 打包图要按 glTF 约定取通道：G = roughness，B = metallic。现有
 
 ## 5. DCC 覆盖
 
-| DCC | Meshy adapter 状态 | 主要改造 | 阶段 |
+| DCC | Meshy adapter 状态（连接器 0.1.2 基于 core 0.2.3） | 主要改造 | 阶段 |
 |---|---|---|---|
-| Blender | `meshy-dcc-blender`，本地已建，真机验证过 | 基于 0.2.0 core 重建；Meshy 导入/PBR、3D 打印 skill | R1 首个 |
-| Unity | `meshy-dcc-unity`，本地已建，真机验证过（6000.4.10f1） | 按工程安装、自带 Python 的 sidecar；Meshy 模型导入/PBR 材质 skill | R1 |
-| Godot | `meshy-dcc-godot`，本地已建，真机验证过（4.7.2） | 按工程安装、自带 Python 的 sidecar；Meshy GLB 导入与导入就绪、PBR 读回 | R1 |
-| Unreal | `meshy-dcc-unreal`，本地已建，真机验证过（5.7.2） | 按工程安装，安装时用本机工具链编译 C++ 编辑器模块，安装器自带 Python；Meshy GLB/FBX 导入、FBX 贴图组转 PBR 材质、读回与渲染截图 | R2 |
-| OpenSCAD | `meshy-dcc-openscad` 0.1.0，真机验证过（2026.10.15 快照） | 按项目安装、自带 Python 的 sidecar 调 OpenSCAD 命令行；导出后读回；Meshy STL 加打印底座 | day-0 |
-| Material Maker | `meshy-dcc-material-maker` 0.1.0，真机验证过（1.7） | 按材质文件夹安装的 sidecar 直接编辑 `.ptex`，导出时调官方 `--export-material`（会短暂抢前台） | day-0 |
-| Roblox | `meshy-dcc-roblox` 0.1.0（新写），真机验证过（Studio 0.743；导入的模型只活在会话里） | Studio 插件作 WebSocket 客户端连包内 sidecar，按 place 路由；GLB 经 EditableMesh 重建（默认只活在会话里） | day-0 |
-| Houdini | `meshy-dcc-houdini` 0.1.0，真机：Windows 21.0.440（macOS 未跑） | 用户偏好 `packages/` 下一个包文件指向解开的包，`uiready.py` 自启；safe stop 读 `hasUnsavedChanges` | day-0 |
-| Substance 3D Painter | `meshy-dcc-substance3d-painter` 0.1.0，真机：Windows 12.1.5（macOS 未跑） | 用户 profile 的 `python/startup` 放一个 loader；主线程派发 | day-0 |
+| Blender | `meshy-dcc-blender` 0.1.2 已发布，真机验证过 | Meshy 导入/PBR、3D 打印 skill | R1 首个 |
+| Unity | `meshy-dcc-unity` 0.1.2 已发布，真机验证过（6000.4.10f1） | 按工程安装、自带 Python 的 sidecar；Meshy 模型导入/PBR 材质 skill | R1 |
+| Godot | `meshy-dcc-godot` 0.1.2 已发布，真机验证过（4.7.2） | 按工程安装、自带 Python 的 sidecar；Meshy GLB 导入与导入就绪、PBR 读回 | R1 |
+| Unreal | `meshy-dcc-unreal` 0.1.2 已发布，真机验证过（5.7.2） | 按工程安装，安装时用本机工具链编译 C++ 编辑器模块，安装器自带 Python；Meshy GLB/FBX 导入、FBX 贴图组转 PBR 材质、读回与渲染截图 | R2 |
+| OpenSCAD | `meshy-dcc-openscad` 0.1.2 已发布，真机验证过（2026.10.15 快照） | 按项目安装、自带 Python 的 sidecar 调 OpenSCAD 命令行；导出后读回；Meshy STL 加打印底座 | day-0 |
+| Material Maker | `meshy-dcc-material-maker` 0.1.2 已发布，真机验证过（1.7） | 按材质文件夹安装的 sidecar 直接编辑 `.ptex`，导出时调官方 `--export-material`（会短暂抢前台） | day-0 |
+| Roblox | `meshy-dcc-roblox` 0.1.2 已发布，真机验证过（Studio 0.743；导入的模型只活在会话里） | Studio 插件作 WebSocket 客户端连包内 sidecar，按 place 路由；GLB 经 EditableMesh 重建（默认只活在会话里） | day-0 |
+| Houdini | `meshy-dcc-houdini` 0.1.2 已发布，真机：Windows 21.0.440（macOS 未跑） | 用户偏好 `packages/` 下一个包文件指向解开的包，`uiready.py` 自启；safe stop 读 `hasUnsavedChanges` | day-0 |
+| Substance 3D Painter | `meshy-dcc-substance3d-painter` 0.1.2 已发布，真机：Windows 12.1.5（macOS 未跑） | 用户 profile 的 `python/startup` 放一个 loader；主线程派发 | day-0 |
 | Cinema 4D | `meshy-dcc-c4d` 0.1.0，**本期不支持**（Windows 上 `c4dpy` 启动即崩，未能实测） | 上游是 headless：每次操作起授权的 `c4dpy` 改项目文件夹里的 `.c4d`，不进 GUI | day-0 |
-| 3ds Max | `meshy-dcc-3dsmax` 0.1.0，真机：Windows 2027（只有 Windows 包） | 用户 startup 目录的启动脚本 + 3ds Max 自带 Python 跑进程内 server | day-0 |
-| FreeCAD | `meshy-dcc-freecad` 0.1.0，真机验证过（1.1.4） | 按项目安装的服务每次调用起 FreeCADCmd（safe mode，不写用户目录）；Meshy GLB 转 Mesh::Feature 读回 | day-0 |
-| Maya | `meshy-dcc-maya` 0.1.0，真机：Windows 2027.2（macOS 未跑） | 用户 modules 目录一个 `.mod` 指向解开的包；Meshy FBX 导入建 standardSurface（G=roughness、B=metalness） | day-0 |
-| ZBrush | `meshy-dcc-zbrush` 0.1.0，真机：Windows 2026.2.1（macOS 本机企业限制不能启动） | 按项目：`ZBrush -script <包内 bridge>`，只认 start-instance 启动的；每次启动一个 token；OBJ 导入、.zpr/.ztl 存取 | day-0 |
+| 3ds Max | `meshy-dcc-3dsmax` 0.1.2 已发布，真机：Windows 2027（只有 Windows 包） | 用户 startup 目录的启动脚本 + 3ds Max 自带 Python 跑进程内 server | day-0 |
+| FreeCAD | `meshy-dcc-freecad` 0.1.2 已发布，真机验证过（1.1.4） | 按项目安装的服务每次调用起 FreeCADCmd（safe mode，不写用户目录）；Meshy GLB 转 Mesh::Feature 读回 | day-0 |
+| Maya | `meshy-dcc-maya` 0.1.2 已发布，真机：Windows 2027.2（macOS 未跑） | 用户 modules 目录一个 `.mod` 指向解开的包；Meshy FBX 导入建 standardSurface（G=roughness、B=metalness） | day-0 |
+| ZBrush | `meshy-dcc-zbrush` 0.1.2 已发布，真机：Windows 2026.2.1（macOS 本机企业限制不能启动） | 按项目：`ZBrush -script <包内 bridge>`，只认 start-instance 启动的；每次启动一个 token；OBJ 导入、.zpr/.ztl 存取 | day-0 |
 | Marmoset、Substance 3D Designer、Mari、OpenUSD、Katana、MotionBuilder、SketchUp、Photoshop | 待建 | 改造为 Meshy adapter；本机无宿主的只做构建与单测，标 experimental | 以后 |
 | Omniverse | 新做 | Kit 扩展加载 wheel；参考 Send To 版 Kit 扩展 | 暂缓 |
 
@@ -149,6 +155,11 @@ request id 关联并拒绝错位的响应。
 | R1 对等 | Meshy Blender / Unity / Godot adapter；平台开启/关闭；Meshy marketplace 首批包 | 达到 0.3.30 的主矩阵验收；三个宿主导入、读回、保存重开 |
 | R2 扩宿主 | ZBrush、Unreal、Roblox 及其余内置宿主 | 各宿主导入、读回、保存重开（有宿主的） |
 | R3 评估 | 与既有 v2 对照同任务 | 单次调用延迟、turn 数、token、耗时；不夸大为质量结论 |
+| R4 统一 DCC 集成（待做） | webapp Send To 走 core 的精简导入路径（见第 1 节）；与 meshy-cli、Meshy Agent Desktop 进一步打通 | 网页一键发送到指定的已连接实例并读回；未装 core 时有引导；与现有 Send To 插件并存不冲突 |
+
+进度：R0、0.2.0 分叉已完成；0.2.0 于 2026-10-19 随 13 个连接器发布。R1 除 Meshy marketplace 首批包外已完成；
+R2 已发布 ZBrush、Unreal、Roblox 等 10 个宿主，其余内置宿主以后做；R3 做过一轮内部评测；0.2.3 加了原生 MCP
+入口和工程生命周期。R4 待做。
 
 ## 7. 版本
 

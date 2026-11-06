@@ -5,20 +5,21 @@
 
 > 读 `docs/windows-validation.md`，按它做 Windows 验证。先检查环境并告诉我缺什么，装软件前先问我。
 
-本轮是第二轮（0.2.2），重点在第 6 节；第 4、5 节是每轮都走的基本流程。
+已做过两轮：第一轮（2026-10-18）和第二轮（0.2.2，2026-10-28），结果都在文末。下一轮按当时的改动补第 6 节；
+第 4、5 节是每轮都走的基本流程。
 
 ## 1. 背景（一屏）
 
 - **Meshy DCC Core**：一个本地 CLI（`meshy-dcc`）+ 常驻 gateway（`meshy-dcc-server`，端口 19765）+ 编进 CLI 的 agent Skill。
   每个 DCC 软件装一个 Meshy 连接器（adapter），实例注册到本机，agent 通过 CLI 点名实例调用工具。
   定位、架构、命令见 `README.md`、`docs/plan.md`、`skills/meshy-dcc/SKILL.md` 与 `skills/meshy-dcc/references/`。
-- **两个仓库**（都在 `meshy-dev`，private）：
+- **两个仓库**（都在 `meshy-dev`，公开）：
   - `meshy-dcc-core`（本仓库）：Rust core、Python wheel `meshy_dcc_core`、`meshy-dcc-catalog.yml`（内置安装目录）、release workflow。
-  - `meshy-dcc-adapters`：14 个宿主的 adapter，一个宿主一个目录 `meshy-dcc-<host>/`，`scripts/build_release.py <host>` 打包。
-- **现状**：0.2.1 已发布（2026-10-27：npm、CDN、GitHub Release）。main 上是 0.2.2 候选，版本号已是 0.2.2，还没发布。
-  13 个连接器已发布（catalog 里 `available`），0.2.2 发布后会全部用 0.2.2 的 wheel 重新打包发布。
-  第一轮 Windows 验证（2026-10-18）的结果在文末，那一轮的 core 与 adapter 修复都已合入。
-- **0.2.2 改了什么**（详见 `CHANGELOG.md` 的 Unreleased）：
+  - `meshy-dcc-adapters`：14 个宿主的 adapter（发布 13 个，Cinema 4D 不支持），一个宿主一个目录 `meshy-dcc-<host>/`，`scripts/build_release.py <host>` 打包。
+- **现状**：core 0.2.3 已发布（2026-11-03：npm、CDN、GitHub Release），13 个连接器 0.1.2 基于它重新打包发布。
+  前两轮 Windows 验证的 core 与 adapter 修复都已合入。0.2.3 新增原生 MCP 入口与工程生命周期、13 个宿主的软件检测，
+  见 `CHANGELOG.md`。
+- **第二轮（0.2.2）改了什么**：
   - rmcp 2.1、PyO3 0.29 安全升级（连接器里的 MCP 服务端也换了）；
   - 一次 `update apply --yes` 更新 CLI 和 server 并重启 gateway；`meshy-dcc gateway restart`；窗口里的"立即更新"；
   - 超时的主线程调用不再晚执行（没开始的丢弃，已在跑的返回 `status: unknown`）；`doctor` 只读；

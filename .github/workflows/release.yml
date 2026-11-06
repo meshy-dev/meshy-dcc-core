@@ -11,8 +11,7 @@ name: release
 # at refs/heads/main, and a release-triggered run would sign from the tag.
 #
 # No credentials live in GitHub. The publish and finish jobs assume the AWS role
-# meshy-dcc-github-deploy through GitHub OIDC (as meshyd's msctl release
-# does); that role may only write s3://meshy-cdn/meshy-dcc-core/* (served by
+# meshy-dcc-github-deploy through GitHub OIDC; that role may only write s3://meshy-cdn/meshy-dcc-core/* (served by
 # cdn.meshy.ai and cdn.meshy.cn) and read the npm token from AWS Secrets
 # Manager (meshy-dcc/release/npm-token). Setup: scripts/release/aws/.
 #
