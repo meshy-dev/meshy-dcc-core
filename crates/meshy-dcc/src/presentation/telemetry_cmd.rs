@@ -11,7 +11,7 @@ use serde_json::{Value, json};
 pub(crate) enum TelemetryAction {
     /// Show whether anonymous usage telemetry is on, and why.
     Status,
-    /// Print the exact JSON the next daily send would post. Sends nothing.
+    /// Print the exact requests the next daily send would post. Sends nothing.
     Preview,
     /// Turn telemetry on.
     On,
@@ -30,7 +30,7 @@ fn status() -> Value {
         "disabled_reason": telemetry::disabled_reason(),
         "setting": meshy_dcc_updater::settings::get_bool(telemetry::SETTING, true),
         "install_id": install_id,
-        "host": telemetry::host(),
+        "destinations": telemetry::SINKS.iter().map(|sink| sink.url()).collect::<Vec<_>>(),
         "docs": telemetry::DOCS_URL,
         "turn_off": ["meshy-dcc telemetry off", "DO_NOT_TRACK=1", "MESHY_DCC_TELEMETRY=0"],
     })

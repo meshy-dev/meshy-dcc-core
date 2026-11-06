@@ -89,6 +89,14 @@ fn switches_persist_in_settings_and_reset_makes_a_new_id() {
     let status = json(&cli(home.path(), &[], &["telemetry", "status"]));
     assert_eq!(status["enabled"], true);
     assert_eq!(status["install_id"], Value::Null);
+    // Both destinations, both redirected to the test stub.
+    assert_eq!(
+        status["destinations"],
+        serde_json::json!([
+            "http://127.0.0.1:9/batch/",
+            "http://127.0.0.1:9/v1/log_event"
+        ])
+    );
 
     let first = json(&cli(home.path(), &[], &["telemetry", "reset"]));
     let id = first["install_id"].as_str().unwrap().to_string();
