@@ -484,8 +484,8 @@ pub async fn handle_settings_update(Json(body): Json<SettingsBody>) -> Response 
     }
 }
 
-/// `GET /admin/api/telemetry/preview`: the exact body the next daily send
-/// would post. Sends nothing.
+/// `GET /admin/api/telemetry/preview`: the exact requests (one per
+/// destination) the next daily send would post. Sends nothing.
 pub async fn handle_telemetry_preview(
     axum::extract::State(s): axum::extract::State<super::super::state::AdminState>,
 ) -> Response {
@@ -493,8 +493,7 @@ pub async fn handle_telemetry_preview(
     Json(json!({
         "enabled": telemetry::enabled(),
         "disabled_reason": telemetry::disabled_reason(),
-        "host": telemetry::host(),
-        "body": telemetry::preview(&s, telemetry::now_ms()).await,
+        "requests": telemetry::preview(&s, telemetry::now_ms()).await,
     }))
     .into_response()
 }

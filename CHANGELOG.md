@@ -5,6 +5,15 @@ one version line.
 
 ## Unreleased
 
+### Changed
+
+- Usage statistics now go to Statsig as well as PostHog. Each destination is
+  tracked on its own: a day one of them accepted is never sent to it again, and
+  one that can't be reached doesn't hold up the other. Statsig receives the
+  request's IP address; see `docs/telemetry.md`. `meshy-dcc telemetry preview`
+  shows both requests, and `telemetry status` lists `destinations` in place of
+  `host`.
+
 ### Fixed
 
 - A DCC app's sidecar of the same Core version no longer takes over the
@@ -34,6 +43,8 @@ one version line.
 - `meshy-dcc install` no longer fails a connector package that takes more
   than 30 seconds to download. Downloads now allow up to 10 minutes, and give
   up on a source that does not connect within 15 seconds.
+- A gateway started with `--no-admin` no longer skips the daily rollup; it
+  sends it without tool-call counts.
 
 ### Security
 

@@ -66,8 +66,9 @@ each one on a real host before porting it as a Rust test.
   window) after seeing it; its intake (`scripts/reports/`) holds no GitHub
   credentials. And anonymous usage telemetry (`docs/telemetry.md`): on by
   default, off with `meshy-dcc telemetry off`, `DO_NOT_TRACK=1`,
-  `MESHY_DCC_TELEMETRY=0` or in CI. The gateway posts one aggregate event a day
-  to Meshy's PostHog: counts, versions, OS, host types and known skill names
+  `MESHY_DCC_TELEMETRY=0` or in CI. The gateway posts one aggregate rollup a day
+  to Meshy's PostHog and Statsig (the `SINKS` list in the telemetry module;
+  each tracked on its own): counts, versions, OS, host types and known skill names
   only, never arguments, outputs, paths, scene/project/instance names, IDs or
   prompts. The CLI only appends local counters. Its random install ID never
   goes into a bug report or the `MESHY_CLI_CLIENT` tag. Any new field must be

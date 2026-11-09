@@ -1198,6 +1198,12 @@ pub(crate) async fn start_gateway_tasks(
             crate::gateway::telemetry::spawn(admin_state.clone(), yield_rx.clone());
             Some(admin_state)
         } else {
+            // Without admin there is no call history, so tool-call counts stay
+            // at zero; the rest of the rollup still goes out.
+            crate::gateway::telemetry::spawn(
+                crate::gateway::admin::state::AdminState::new(gw_state.clone()),
+                yield_rx.clone(),
+            );
             None
         };
         build_gateway_router_with_admin(gw_state, admin_state_opt, &admin_path)
