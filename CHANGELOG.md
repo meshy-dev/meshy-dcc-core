@@ -31,6 +31,9 @@ one version line.
   `/v1/readyz` reports why each instance's probe failed.
 - Tool handlers no longer receive an empty `_meta` when the caller sent no
   metadata.
+- `meshy-dcc install` no longer fails a connector package that takes more
+  than 30 seconds to download. Downloads now allow up to 10 minutes, and give
+  up on a source that does not connect within 15 seconds.
 
 ## 0.2.3 (2026-11-03)
 
