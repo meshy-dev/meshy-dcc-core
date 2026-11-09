@@ -3,20 +3,19 @@
 # (account 133081291590, us-west-2): the role meshy-dcc-github-deploy, which
 # only the main branches of meshy-dev/meshy-dcc-core and
 # meshy-dev/meshy-dcc-adapters (whose release workflow copies adapter builds to
-# the CDN) can assume through GitHub OIDC, and the npm token in Secrets Manager.
+# the CDN) can assume through GitHub OIDC. npm needs nothing here: the workflow
+# publishes through npm trusted publishing.
 # The repositories use GitHub's immutable OIDC subjects, which carry the owner
 # and repository IDs (repo:meshy-dev@<id>/<repo>@<id>:ref:...); see
 # `gh api repos/meshy-dev/<repo>/actions/oidc/customization/sub`.
 #
 #   AWS_PROFILE=SRE-133081291590 scripts/release/aws/setup.sh
-#   AWS_PROFILE=SRE-133081291590 scripts/release/aws/setup.sh --npm-token < token-file
 #
-# Safe to rerun. The token is read from stdin and never passed as an argument.
+# Safe to rerun.
 set -euo pipefail
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 export AWS_REGION=us-west-2
 role=meshy-dcc-github-deploy
-secret=meshy-dcc/release/npm-token
 
 if aws iam get-role --role-name "$role" > /dev/null 2>&1; then
     aws iam update-assume-role-policy --role-name "$role" --policy-document "file://$here/trust-policy.json"
@@ -29,13 +28,3 @@ aws iam put-role-policy --role-name "$role" --policy-name meshy-dcc-release \
     --policy-document "file://$here/permissions-policy.json"
 echo "role $role is ready"
 
-if [ "${1:-}" = "--npm-token" ]; then
-    if aws secretsmanager describe-secret --secret-id "$secret" > /dev/null 2>&1; then
-        aws secretsmanager put-secret-value --secret-id "$secret" --secret-string file:///dev/stdin > /dev/null
-    else
-        aws secretsmanager create-secret --name "$secret" \
-            --description "npm automation token for meshy-dcc and @meshy-ai/meshy-dcc-*" \
-            --secret-string file:///dev/stdin > /dev/null
-    fi
-    echo "secret $secret is set"
-fi
