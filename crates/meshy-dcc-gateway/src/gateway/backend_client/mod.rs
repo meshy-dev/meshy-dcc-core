@@ -35,9 +35,12 @@ pub(crate) use http::BACKEND_TIMEOUT_MARKER;
 
 #[cfg(test)]
 pub(crate) use probe::probe_mcp_health;
+#[cfg(test)]
+pub(crate) use probe::probe_readiness;
 #[allow(unused_imports)]
 pub(crate) use probe::{
-    ProbeOutcome, probe_mcp_readiness, probe_mcp_readiness_once, probe_readiness,
+    ProbeOutcome, probe_mcp_readiness, probe_mcp_readiness_once, probe_mcp_readiness_with_reason,
+    readiness_probe_url,
 };
 
 #[allow(unused_imports)]

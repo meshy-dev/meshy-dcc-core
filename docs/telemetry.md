@@ -24,8 +24,9 @@ Development (debug) builds send nothing unless `MESHY_DCC_TELEMETRY=1`.
 Other commands:
 
 - `meshy-dcc telemetry status`: whether it is on, and what turned it off.
-- `meshy-dcc telemetry preview`: the exact JSON the next send would post (only
-  the timestamps differ). Nothing is sent.
+- `meshy-dcc telemetry preview`: the exact requests (URL, headers, body) the
+  next send would post to each destination (only the timestamps differ).
+  Nothing is sent.
 - `meshy-dcc telemetry on`
 - `meshy-dcc telemetry reset`: a new random install ID; unsent data is deleted.
 
@@ -37,11 +38,17 @@ to turn it off, and link here.
 
 ## What is sent
 
-Once a day the local gateway posts one request to PostHog
-(`https://us.i.posthog.com/batch/`, Meshy's project) with these events. Every
-event name starts with `meshy_dcc_`.
+Once a day the local gateway posts the same events to two destinations, one
+request each:
 
-### Every event
+- PostHog (`https://us.i.posthog.com/batch/`, Meshy's project), in the shape
+  below.
+- Statsig (`https://events.statsigapi.net/v1/log_event`, Meshy's project), in
+  Statsig's shape: see [Statsig](#statsig).
+
+Every event name starts with `meshy_dcc_`.
+
+### Every event (PostHog)
 
 | Field | Example | Notes |
 |---|---|---|
@@ -110,6 +117,29 @@ Not recognized, so their skills are `custom`:
 - `meshy_dcc_updated`: the gateway version changed since the last rollup.
   `from_version`, `server_version`, `os`, `arch`.
 
+### Statsig
+
+The request carries the headers `statsig-api-key` (Meshy's public client key,
+the one its web app ships to browsers) and `statsig-client-time` (time of the
+rollup, in milliseconds), and the body `{"events": [...]}`. Each event:
+
+| Field | Example | Notes |
+|---|---|---|
+| `eventName` | `meshy_dcc_daily_usage` | The PostHog event name, or `meshy_dcc_tool_calls` (below) |
+| `time` | `1800000000000` | Time of the rollup, in milliseconds |
+| `value` | `12` | Only on `meshy_dcc_tool_calls`: the row's `count` |
+| `user.customIDs.dcc_install_id` | `ff812f9c-…` | The same random install ID as PostHog's `distinct_id`. No `userID`, `email`, `ip` or `userAgent` is set. |
+| `user.appVersion` | `0.2.3` | Gateway version |
+| `user.statsigEnvironment.tier` | `production` | |
+| `metadata` | | The PostHog event's properties (without the `$` ones), every value as a string; lists such as `connectors` as JSON text, empty values left out |
+| `metadata.client_type` | `meshy_dcc` | |
+| `metadata.meta` | `{"event_id":"…","schema_version":1}` | JSON text. `event_id` is a UUID v5 of the install ID, UTC day, event name and row, so a day sent again keeps its IDs and duplicates can be dropped. |
+
+Statsig limits each event's metadata, so `meshy_dcc_daily_usage` goes without
+`tool_calls`, and each `tool_calls` row is its own `meshy_dcc_tool_calls`
+event: metadata `dcc_type`, `skill`, `outcome`, `p50`, `p95` (plus
+`client_type` and `meta`), `value` the count. Still at most 200 rows a day.
+
 ### Never sent
 
 Tool arguments or outputs, file paths, project, scene or instance names,
@@ -131,12 +161,20 @@ names, Meshy account data.
 ## Cadence and failures
 
 The gateway rolls up 10 minutes after it starts, then checks every hour and
-rolls up once per UTC day. The request has a 10-second timeout. If it fails,
-the day stays queued in `~/.meshy-dcc/telemetry/state.json` and goes with the
-next day's request; at most 3 days are kept, the oldest is dropped. Failures
-are silent. Nothing happens while no gateway runs.
+rolls up once per UTC day. The two requests go out side by side, each with a
+10-second timeout, so one destination that does not answer never holds up the
+other. Each destination keeps its own queue in
+`~/.meshy-dcc/telemetry/state.json`: if its request fails (no answer, a server
+error, 408 or 429), the day stays queued there and goes with that
+destination's next request, and is never sent again to the destination that
+accepted it. At most 3 days are kept per destination, the oldest is dropped. A
+request the destination rejects (any other 4xx) is not retried. Failures are
+silent. Nothing happens while no gateway runs. A gateway started without the
+window (`--no-admin`) keeps no call history, so its tool-call counts are zero.
 
 ## IP address and location
+
+### PostHog
 
 The PostHog project that receives these events does not discard client IPs
 (it also holds Meshy web app events), so Meshy DCC Core sets these per event:
@@ -157,8 +195,17 @@ the source of the HTTPS request, as with any web request, and their logs are
 outside our control. The only documented way to drop it on PostHog's side is
 the project's **Discard client IP data** setting.
 
+### Statsig
+
+Statsig receives your IP address as the source of the request and records a
+city and country derived from it, along with the `meshy-dcc/<version>` user
+agent. Its event API has no per-event switch that turns this off, and Meshy DCC
+Core does not set `user.ip`. Everything else in the event stays as described
+above: no account, no names, no paths.
+
 ## Testing
 
-`MESHY_DCC_TELEMETRY_HOST` (send to a local stub instead of PostHog) and
+`MESHY_DCC_TELEMETRY_HOST` (send every destination to a local stub, at the
+same paths) and
 `MESHY_DCC_TELEMETRY_DELAY_SECS` (seconds before the first rollup) are for
 tests only.

@@ -22,6 +22,7 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 use uuid::Uuid;
 
+use meshy_dcc_gateway_core::naming::SKILL_TOOL_SEP;
 use meshy_dcc_gateway_core::policy::{GatewayPolicy, GatewayPolicyDenial, GatewayPolicyOperation};
 use meshy_dcc_jsonrpc::McpTool;
 use meshy_dcc_transport::discovery::{
@@ -83,7 +84,7 @@ pub struct ServiceError {
     pub kind: String,
     /// Human-readable message. Safe to display to end users.
     pub message: String,
-    /// Candidate slugs for `ambiguous` errors, empty otherwise.
+    /// Candidate records for `ambiguous` and `unknown-slug` errors.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub candidates: Vec<CapabilityRecord>,
     /// Why a prior instance is no longer routable (`deregistered`,
@@ -443,12 +444,17 @@ pub fn index_generation(index: &CapabilityIndex) -> String {
 }
 
 /// Resolve `slug` to its record. Returns a structured error when the
-/// slug is malformed, unknown, or matches more than one row (the
-/// ambiguous case can happen if callers pass a record that has since
-/// been evicted but an older one with the same backend tool remains).
+/// slug is malformed, unknown, or matches more than one row.
+///
+/// An exact match wins. Otherwise a unique bare/`<skill>__<tool>` alias on the
+/// same instance resolves to that record; several aliases are `ambiguous`. A
+/// miss on an instance that still has indexed capabilities is `unknown-slug`,
+/// not `instance-offline`. Candidates named in an error pass the `Describe`
+/// policy, so hidden capabilities never appear in an error body.
 pub fn describe_service(
     index: &CapabilityIndex,
     slug: &str,
+    policy: &GatewayPolicy,
 ) -> Result<CapabilityRecord, ServiceError> {
     let Some((dcc, instance_hint, tool)) = parse_slug(slug) else {
         return Err(ServiceError::new(
@@ -460,47 +466,116 @@ pub fn describe_service(
     let matches: Vec<&CapabilityRecord> = snap
         .records
         .iter()
-        .filter(|r| record_matches_slug(r, dcc, instance_hint, tool))
+        .filter(|r| r.callable_id == tool && record_instance_matches(r, dcc, instance_hint))
         .collect();
     match matches.as_slice() {
-        [] => {
-            if let Some(previous) = index.instance_tombstone(dcc, instance_hint) {
-                return Err(ServiceError::new(
-                    "instance-offline",
-                    format!(
-                        "instance {} ({}) referenced by slug {slug:?} is now {}",
-                        previous.instance_id, previous.dcc_type, previous.previous_status,
-                    ),
-                )
-                .with_instance_provenance(
-                    previous.previous_status,
-                    Some(previous.instance_id),
-                )
-                .with_actionability(
-                    false,
-                    "Refresh instances and search for a replacement; do not replay a non-idempotent call.",
-                ));
-            }
-            Err(ServiceError::new(
-                "instance-offline",
-                format!("no capability registered with slug {slug:?}"),
-            )
-            .with_instance_provenance("never-registered", parse_instance_uuid(instance_hint))
-            .with_actionability(false, "Run search and use a returned tool slug."))
-        }
-        [one] => Ok((*one).clone()),
-        many => {
-            let candidates: Vec<CapabilityRecord> = many.iter().map(|r| (*r).clone()).collect();
-            Err(ServiceError::new(
-                "ambiguous",
-                format!(
-                    "slug {slug:?} matches {} capability records — pick an instance by UUID",
-                    candidates.len(),
-                ),
-            )
-            .with_candidates(candidates))
-        }
+        [] => {}
+        [one] => return Ok((*one).clone()),
+        many => return Err(ambiguous_error(many, slug, policy)),
     }
+
+    let wanted = tool.to_ascii_lowercase();
+    let aliases: Vec<&CapabilityRecord> = snap
+        .records
+        .iter()
+        .filter(|r| {
+            record_instance_matches(r, dcc, instance_hint)
+                && is_skill_alias(&r.callable_id, &wanted)
+        })
+        .collect();
+    match aliases.as_slice() {
+        [one] if one.is_callable() => return Ok((*one).clone()),
+        [] | [_] => {}
+        many => return Err(ambiguous_error(many, slug, policy)),
+    }
+
+    if let Some(previous) = index.instance_tombstone(dcc, instance_hint) {
+        return Err(ServiceError::new(
+            "instance-offline",
+            format!(
+                "instance {} ({}) referenced by slug {slug:?} is now {}",
+                previous.instance_id, previous.dcc_type, previous.previous_status,
+            ),
+        )
+        .with_instance_provenance(previous.previous_status, Some(previous.instance_id))
+        .with_actionability(
+            false,
+            "Refresh instances and search for a replacement; do not replay a non-idempotent call.",
+        ));
+    }
+    if !snap
+        .records
+        .iter()
+        .any(|r| record_instance_matches(r, dcc, instance_hint))
+    {
+        return Err(ServiceError::new(
+            "instance-offline",
+            format!("no capability registered with slug {slug:?}"),
+        )
+        .with_instance_provenance("never-registered", parse_instance_uuid(instance_hint))
+        .with_actionability(false, "Run search and use a returned tool slug."));
+    }
+
+    // Only an indexed but not yet callable alias can reach here.
+    let candidates: Vec<CapabilityRecord> = aliases
+        .iter()
+        .filter(|r| policy_allows_candidate(policy, r))
+        .map(|r| (*r).clone())
+        .collect();
+    let next = match candidates.first() {
+        Some(record) => format!(
+            "{:?} is indexed but its skill is not loaded on {dcc} instance {instance_hint}. Load skill {:?}, then retry {:?}.",
+            record.tool_slug,
+            record.skill_name.as_deref().unwrap_or_default(),
+            record.tool_slug,
+        ),
+        None => format!(
+            "No capability with this name is indexed on {dcc} instance {instance_hint}. Run search filtered to this instance and use a returned tool slug."
+        ),
+    };
+    Err(ServiceError::new(
+        "unknown-slug",
+        format!("no capability registered with slug {slug:?} on {dcc} instance {instance_hint}"),
+    )
+    .with_candidates(candidates)
+    .with_actionability(false, next))
+}
+
+/// Upper bound on candidates carried by an error, so an ambiguous slug on a
+/// large instance cannot turn an error into a capability dump.
+const MAX_SLUG_CANDIDATES: usize = 5;
+
+fn ambiguous_error(
+    matches: &[&CapabilityRecord],
+    slug: &str,
+    policy: &GatewayPolicy,
+) -> ServiceError {
+    let total = matches.len();
+    let mut candidates: Vec<CapabilityRecord> = matches
+        .iter()
+        .filter(|r| policy_allows_candidate(policy, r))
+        .map(|r| (*r).clone())
+        .collect();
+    candidates.truncate(MAX_SLUG_CANDIDATES);
+    ServiceError::new(
+        "ambiguous",
+        format!("slug {slug:?} matches {total} capability records — pick an instance by UUID"),
+    )
+    .with_candidates(candidates)
+}
+
+/// `true` when `callable` is `<skill>__<wanted>` or `wanted` is
+/// `<skill>__<callable>`. Names shorter than three characters never alias.
+fn is_skill_alias(callable: &str, wanted: &str) -> bool {
+    let callable = callable.to_ascii_lowercase();
+    if callable == wanted || callable.len() < 3 || wanted.len() < 3 {
+        return false;
+    }
+    let qualifies = |long: &str, short: &str| {
+        let suffix = format!("{SKILL_TOOL_SEP}{short}");
+        long.len() > suffix.len() && long.ends_with(&suffix)
+    };
+    qualifies(&callable, wanted) || qualifies(wanted, &callable)
 }
 
 fn unroutable_instance_error(
@@ -540,13 +615,9 @@ fn unroutable_instance_error(
     )
 }
 
-fn record_matches_slug(
-    record: &CapabilityRecord,
-    dcc: &str,
-    instance_hint: &str,
-    tool: &str,
-) -> bool {
-    if !record.dcc_type.eq_ignore_ascii_case(dcc) || record.callable_id != tool {
+/// Match the `<dcc>.<instance>` half of a slug.
+fn record_instance_matches(record: &CapabilityRecord, dcc: &str, instance_hint: &str) -> bool {
+    if !record.dcc_type.eq_ignore_ascii_case(dcc) {
         return false;
     }
     if let Ok(uuid) = Uuid::parse_str(instance_hint) {
@@ -569,7 +640,7 @@ pub async fn describe_tool_full(
     gs: &GatewayState,
     slug: &str,
 ) -> Result<(CapabilityRecord, McpTool), ServiceError> {
-    let record = describe_service(&gs.capability_index, slug)?;
+    let record = describe_service(&gs.capability_index, slug, &gs.policy)?;
     enforce_record_policy(&gs.policy, GatewayPolicyOperation::Describe, &record)?;
     let reg = &gs.registry;
     let all = gs.live_instances_async().await;
@@ -671,7 +742,7 @@ pub async fn call_service(
     agent_context: Option<&AgentContext>,
 ) -> Result<Value, ServiceError> {
     let started = Instant::now();
-    let record = describe_service(&gs.capability_index, slug)?;
+    let record = describe_service(&gs.capability_index, slug, &gs.policy)?;
     enforce_record_policy(&gs.policy, GatewayPolicyOperation::Call, &record)?;
     // Discovery-only tools (e.g. dcc_capability_manifest) must not be
     // dispatched via sidecar tools/call — they are served by the discovery
@@ -1392,7 +1463,7 @@ pub async fn refresh_all_live_backends_now(gs: &GatewayState, reason: RefreshRea
 /// only that backend. Malformed, stale, or ambiguous ownership falls back to a
 /// full refresh because no narrower route is trustworthy.
 pub async fn refresh_for_describe(gs: &GatewayState, slug: &str) {
-    if describe_service(&gs.capability_index, slug).is_ok() {
+    if describe_service(&gs.capability_index, slug, &gs.policy).is_ok() {
         return;
     }
 
@@ -1534,6 +1605,11 @@ pub fn service_error_to_json(err: &ServiceError) -> Value {
 pub(crate) fn policy_denied_error(denial: GatewayPolicyDenial) -> ServiceError {
     crate::gateway::metrics::record_gateway_governance_event("policy", denial.reason.as_str());
     ServiceError::new("policy-denied", denial.message.clone()).with_policy_denial(denial)
+}
+
+/// `true` when `record` may be named in an error body (same verdict as describe).
+fn policy_allows_candidate(policy: &GatewayPolicy, record: &CapabilityRecord) -> bool {
+    enforce_record_policy(policy, GatewayPolicyOperation::Describe, record).is_ok()
 }
 
 fn enforce_record_policy(
@@ -1896,7 +1972,8 @@ mod unit_tests {
         let iid = Uuid::from_u128(0xabcd);
         push(&idx, "maya", iid, "create_sphere", true);
         let slug = tool_slug("maya", &iid, "create_sphere");
-        let rec = describe_service(&idx, &slug).expect("slug should resolve");
+        let rec =
+            describe_service(&idx, &slug, &GatewayPolicy::default()).expect("slug should resolve");
         assert_eq!(rec.backend_tool, "create_sphere");
         assert_eq!(rec.dcc_type, "maya");
     }
@@ -1908,16 +1985,70 @@ mod unit_tests {
         push(&idx, "maya", iid, "create_sphere", true);
         let slug = format!("maya.{iid}.create_sphere");
 
-        let rec = describe_service(&idx, &slug).expect("full UUID slug should resolve");
+        let rec = describe_service(&idx, &slug, &GatewayPolicy::default())
+            .expect("full UUID slug should resolve");
 
         assert_eq!(rec.instance_id, iid);
         assert_eq!(rec.backend_tool, "create_sphere");
     }
 
     #[test]
+    fn describe_bridges_skill_aliases_and_reports_unknown_slug() {
+        let idx = CapabilityIndex::new();
+        let iid = Uuid::from_u128(0xbeef);
+        let rec = |callable: &str, skill: &str, loaded: bool| {
+            CapabilityRecord::new(
+                tool_slug("maya", &iid, callable),
+                callable.to_string(),
+                callable.to_string(),
+                Some(skill.to_string()),
+                "",
+                Vec::new(),
+                "maya".to_string(),
+                iid,
+                false,
+                loaded,
+                None,
+            )
+        };
+        idx.upsert_instance(
+            iid,
+            vec![
+                rec("scene__create_sphere", "scene", true),
+                rec("a__dup_tool", "a", true),
+                rec("b__dup_tool", "b", true),
+                rec("hidden__peek", "hidden", false),
+            ],
+            InstanceFingerprint(1),
+        );
+        let open = GatewayPolicy::default();
+        let slug = |tool: &str| tool_slug("maya", &iid, tool);
+
+        let hit = describe_service(&idx, &slug("create_sphere"), &open).unwrap();
+        assert_eq!(hit.callable_id, "scene__create_sphere");
+
+        let err = describe_service(&idx, &slug("dup_tool"), &open).unwrap_err();
+        assert_eq!(err.kind, "ambiguous");
+        assert_eq!(err.candidates.len(), 2);
+
+        let err = describe_service(&idx, &slug("nothing_here"), &open).unwrap_err();
+        assert_eq!(err.kind, "unknown-slug");
+
+        let err = describe_service(&idx, &slug("peek"), &open).unwrap_err();
+        assert_eq!(err.kind, "unknown-slug");
+        assert_eq!(err.candidates.len(), 1);
+        let scoped = GatewayPolicy {
+            allowed_skill_names: vec!["scene".to_string()],
+            ..GatewayPolicy::default()
+        };
+        let err = describe_service(&idx, &slug("peek"), &scoped).unwrap_err();
+        assert_eq!(err.candidates.len(), 0);
+    }
+
+    #[test]
     fn describe_rejects_malformed_slug() {
         let idx = CapabilityIndex::new();
-        let err = describe_service(&idx, "not-a-slug").unwrap_err();
+        let err = describe_service(&idx, "not-a-slug", &GatewayPolicy::default()).unwrap_err();
         assert_eq!(err.kind, "unknown-slug");
         // The malformed-slug error points at the expected shape so
         // the agent can fix its input instead of retrying blind.
@@ -1928,7 +2059,12 @@ mod unit_tests {
     fn describe_returns_unknown_for_live_but_unindexed_slug() {
         let idx = CapabilityIndex::new();
         // Shape is valid but nothing is indexed.
-        let err = describe_service(&idx, "maya.abcdef01.create_sphere").unwrap_err();
+        let err = describe_service(
+            &idx,
+            "maya.abcdef01.create_sphere",
+            &GatewayPolicy::default(),
+        )
+        .unwrap_err();
         assert_eq!(err.kind, "instance-offline");
         assert_eq!(err.previous_status.as_deref(), Some("never-registered"));
         assert_eq!(err.retryable, Some(false));
@@ -1945,8 +2081,12 @@ mod unit_tests {
         push(&idx, "houdini", iid, "get_render_job", true);
         idx.remove_instance_with_status(iid, "exited");
 
-        let err =
-            describe_service(&idx, "houdini.04fccb17.get_render_job").expect_err("instance exited");
+        let err = describe_service(
+            &idx,
+            "houdini.04fccb17.get_render_job",
+            &GatewayPolicy::default(),
+        )
+        .expect_err("instance exited");
 
         assert_eq!(err.kind, "instance-offline");
         assert_eq!(err.previous_status.as_deref(), Some("exited"));
@@ -2625,7 +2765,8 @@ mod unit_tests {
         rec.discovery_only = true;
         idx.upsert_instance(iid, vec![rec], InstanceFingerprint(1));
         let slug = tool_slug("maya", &iid, "dcc_capability_manifest");
-        let found = describe_service(&idx, &slug).expect("should find record");
+        let found =
+            describe_service(&idx, &slug, &GatewayPolicy::default()).expect("should find record");
         assert!(found.discovery_only);
         assert!(!found.is_callable());
     }

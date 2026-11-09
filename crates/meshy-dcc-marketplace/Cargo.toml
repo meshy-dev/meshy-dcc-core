@@ -20,7 +20,9 @@ sha2.workspace = true
 thiserror.workspace = true
 tokio = { workspace = true, features = ["fs"] }
 workspace-hack = { version = "0.1", path = "../workspace-hack" }
-zip = { version = "2", default-features = false, features = ["deflate"] }
+# Deflate backend for zip: flate2's default (miniz_oxide).
+flate2 = "1"
+zip = { version = "9.5", default-features = false, features = ["deflate-flate2"] }
 
 [dev-dependencies]
 tempfile.workspace = true

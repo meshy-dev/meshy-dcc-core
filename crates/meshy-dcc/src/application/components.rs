@@ -408,14 +408,17 @@ fn extract_zip(archive: &Path, destination: &Path) -> anyhow::Result<()> {
     if zip.len() > MAX_ARCHIVE_ENTRIES {
         bail!("dcc-cua archive contains too many entries");
     }
+    zip.validate_header_consistency()
+        .context("dcc-cua archive headers are inconsistent")?;
     let mut total = 0_u64;
     for index in 0..zip.len() {
         let mut entry = zip.by_index(index)?;
+        // `enclosed_name` normalises `/a` and `a/../b`; the stored name itself
+        // must already be plain relative components.
+        validate_relative_path(Path::new(&*entry.name()?))?;
         let relative = entry
             .enclosed_name()
-            .context("dcc-cua archive contains an unsafe path")?
-            .to_path_buf();
-        validate_relative_path(&relative)?;
+            .context("dcc-cua archive contains an unsafe path")?;
         if entry
             .unix_mode()
             .is_some_and(|mode| mode & 0o170000 == 0o120000)
@@ -676,5 +679,48 @@ mod tests {
         assert!(validate_relative_path(Path::new("assets/profile.json")).is_ok());
         assert!(validate_relative_path(Path::new("../dcc-cua")).is_err());
         assert!(validate_relative_path(Path::new("/dcc-cua")).is_err());
+    }
+
+    #[test]
+    fn zip_extraction_refuses_entries_that_leave_the_destination() {
+        use std::io::Write as _;
+        let root = tempfile::tempdir().unwrap();
+        let outside = root.path().join("outside");
+        std::fs::create_dir(&outside).unwrap();
+        let options = zip::write::SimpleFileOptions::default();
+        let absolute = outside.join("absolute.txt").to_string_lossy().into_owned();
+        type WriteEntries<'a> = &'a dyn Fn(&mut zip::ZipWriter<std::fs::File>);
+        let cases: [(&str, WriteEntries); 4] = [
+            ("parent", &|zip| {
+                zip.start_file("../parent.txt", options).unwrap()
+            }),
+            ("absolute", &|zip| {
+                zip.start_file(absolute.as_str(), options).unwrap()
+            }),
+            ("normalised", &|zip| {
+                zip.start_file("assets/../normalised.txt", options).unwrap()
+            }),
+            ("symlink", &|zip| {
+                zip.add_symlink("escape", outside.to_string_lossy(), options)
+                    .unwrap();
+                zip.start_file("escape/symlink.txt", options).unwrap();
+            }),
+        ];
+        for (case, write) in cases {
+            let archive = root.path().join(format!("{case}.zip"));
+            let mut zip = zip::ZipWriter::new(std::fs::File::create(&archive).unwrap());
+            write(&mut zip);
+            zip.write_all(b"escaped").unwrap();
+            zip.finish().unwrap();
+            let destination = root.path().join("extracted").join(case);
+            std::fs::create_dir_all(&destination).unwrap();
+            assert!(
+                extract_zip(&archive, &destination).is_err(),
+                "{case} archive was accepted"
+            );
+            assert!(!destination.join("escape").exists());
+        }
+        assert!(!root.path().join("extracted").join("parent.txt").exists());
+        assert_eq!(std::fs::read_dir(&outside).unwrap().count(), 0);
     }
 }

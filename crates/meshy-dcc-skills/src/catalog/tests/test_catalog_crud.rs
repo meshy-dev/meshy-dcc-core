@@ -202,7 +202,7 @@ fn test_rediscover_keeps_highest_priority_root_for_duplicate_names() {
     );
 
     // The refresh path must agree with the initial discovery path.
-    catalog.rediscover(Some(&paths), Some("maya"));
+    catalog.rediscover(Some(&paths), Some("maya")).unwrap();
     assert_eq!(
         catalog
             .get_skill_info("shared-name")
@@ -235,7 +235,7 @@ fn test_rediscover_removes_missing_skill_and_registered_tools() {
     assert_eq!(catalog.registry().len(), 1);
 
     let paths = vec![tmp.path().to_string_lossy().to_string()];
-    let changed = catalog.rediscover(Some(&paths), Some("maya"));
+    let changed = catalog.rediscover(Some(&paths), Some("maya")).unwrap();
 
     assert!(
         changed >= 2,
@@ -247,6 +247,38 @@ fn test_rediscover_removes_missing_skill_and_registered_tools() {
     assert_eq!(catalog.registry().len(), 0);
 }
 
+/// A dependency cycle fails the scan: rediscover reports the error and keeps
+/// the previous catalog instead of reporting zero changes.
+#[test]
+fn test_rediscover_reports_hard_scan_failure_and_keeps_catalog() {
+    let tmp = tempfile::tempdir().unwrap();
+    write_skill_dir(tmp.path(), "stable-skill", "maya");
+    let catalog = make_test_catalog();
+    let good = vec![tmp.path().to_string_lossy().to_string()];
+    catalog.rediscover(Some(&good), Some("maya")).unwrap();
+    let len_before = catalog.len();
+
+    let cyclic = tempfile::tempdir().unwrap();
+    for (name, dep) in [("cycle-a", "cycle-b"), ("cycle-b", "cycle-a")] {
+        let dir = cyclic.path().join(name);
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(
+            dir.join(crate::constants::SKILL_METADATA_FILE),
+            format!(
+                "---\nname: {name}\ndescription: test skill\nmetadata:\n  meshy-dcc:\n    dcc: maya\n    depends: \"{dep}\"\n---\n# {name}\n"
+            ),
+        )
+        .unwrap();
+    }
+    let bad = vec![cyclic.path().to_string_lossy().to_string()];
+    assert!(matches!(
+        catalog.rediscover(Some(&bad), Some("maya")),
+        Err(crate::resolver::ResolveError::CyclicDependency { .. })
+    ));
+    assert_eq!(catalog.len(), len_before);
+    assert!(catalog.get_skill_info("stable-skill").is_some());
+}
+
 #[test]
 fn test_rediscover_refreshes_changed_loaded_skill_tools() {
     let tmp = tempfile::tempdir().unwrap();
@@ -254,7 +286,7 @@ fn test_rediscover_refreshes_changed_loaded_skill_tools() {
 
     let catalog = make_test_catalog();
     let paths = vec![tmp.path().to_string_lossy().to_string()];
-    assert!(catalog.rediscover(Some(&paths), Some("maya")) >= 1);
+    assert!(catalog.rediscover(Some(&paths), Some("maya")).unwrap() >= 1);
     catalog.load_skill("lookdev-turntable").unwrap();
 
     write_tool_skill_dir(
@@ -263,7 +295,7 @@ fn test_rediscover_refreshes_changed_loaded_skill_tools() {
         "maya",
         "recommend_hdr_preset",
     );
-    assert!(catalog.rediscover(Some(&paths), Some("maya")) >= 1);
+    assert!(catalog.rediscover(Some(&paths), Some("maya")).unwrap() >= 1);
 
     let info = catalog.get_skill_info("lookdev-turntable").unwrap();
     assert_eq!(info.state, "loaded");
@@ -1179,7 +1211,7 @@ fn test_get_skill_info_includes_skill_markdown() {
 
     let catalog = make_test_catalog();
     let paths = vec![tmp.path().to_string_lossy().to_string()];
-    assert!(catalog.rediscover(Some(&paths), Some("maya")) >= 1);
+    assert!(catalog.rediscover(Some(&paths), Some("maya")).unwrap() >= 1);
 
     let info = catalog.get_skill_info("review-skill").unwrap();
     assert!(

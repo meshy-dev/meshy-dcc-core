@@ -44,6 +44,14 @@ pub(crate) fn call_meta_from_rmcp(meta: Option<&rmcp::model::Meta>) -> Option<Ca
     meta.and_then(|m| serde_json::from_value(Value::Object(m.0.clone())).ok())
 }
 
+/// The `_meta` value handed to the tool handler. Metadata with no known
+/// field is no metadata, so handlers never receive `_meta: {}`.
+fn handler_meta(call_meta: Option<&CallToolMeta>) -> Option<Value> {
+    call_meta
+        .and_then(|meta| serde_json::to_value(meta).ok())
+        .filter(|value| value.as_object().is_none_or(|object| !object.is_empty()))
+}
+
 /// Central entry — mirrors JSON-RPC [`resolve_tool_call`] + registry dispatch (#727736b-era).
 pub async fn dispatch_rmcp_tool_call(
     state: &ServerState,
@@ -233,7 +241,7 @@ async fn dispatch_registry_tool(
             session_id,
             resolved_name,
             call_params,
-            call_meta.and_then(|meta| serde_json::to_value(meta).ok()),
+            handler_meta(call_meta),
             cfg,
         )
         .await);
@@ -243,7 +251,7 @@ async fn dispatch_registry_tool(
         state,
         &resolved_name,
         call_params.clone(),
-        call_meta.and_then(|meta| serde_json::to_value(meta).ok()),
+        handler_meta(call_meta),
         action_meta.thread_affinity,
         action_meta.enforce_thread_affinity,
         call_meta

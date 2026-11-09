@@ -2,7 +2,7 @@
 //!
 //! The CLI only appends a line to `counters.log`; the long-lived gateway rolls
 //! the day up from what it already keeps (persisted tool-call traces, live
-//! instances, install receipts) and posts one PostHog `/batch/` request a day.
+//! instances, install receipts) and posts it once a day to each of [`SINKS`].
 //! Nothing here sends content: every field is a count, a version, an OS/arch,
 //! a host type, or a skill name whose folder is inside an installed connector's
 //! package folder or that was installed from the marketplace (anything else is
@@ -25,8 +25,12 @@ use serde_json::{Value, json};
 
 /// Meshy's PostHog project. A public client ingestion key, meant to be embedded.
 pub const PROJECT_KEY: &str = "phc_h7d2h1ThCh7D4aAjWRXHKw3WkjVWLBES1C7ZJrR29cm";
-pub const DEFAULT_HOST: &str = "https://us.i.posthog.com";
-/// Test-only: send to a local stub instead of PostHog.
+pub const POSTHOG_HOST: &str = "https://us.i.posthog.com";
+/// Meshy's Statsig client SDK key, the one its web app ships to browsers.
+/// Public by design; a server secret never goes here.
+pub const STATSIG_CLIENT_KEY: &str = "client-R6Mroa01eoB5HcNS9bbwH6WGALoYn1ZVTS0Jn3WkELw";
+pub const STATSIG_HOST: &str = "https://events.statsigapi.net";
+/// Test-only: send to this local stub instead of every destination.
 pub const HOST_ENV: &str = "MESHY_DCC_TELEMETRY_HOST";
 /// Test-only: seconds the gateway waits after start before its first rollup.
 pub const DELAY_ENV: &str = "MESHY_DCC_TELEMETRY_DELAY_SECS";
@@ -117,13 +121,66 @@ pub fn enabled() -> bool {
     disabled_reason().is_none()
 }
 
-pub fn host() -> String {
-    std::env::var(HOST_ENV)
-        .ok()
-        .filter(|h| !h.trim().is_empty())
-        .unwrap_or_else(|| DEFAULT_HOST.to_string())
-        .trim_end_matches('/')
-        .to_string()
+/// Where the events go. Each one keeps its own queue, so a send that fails at
+/// one is never repeated at another.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Sink {
+    Posthog,
+    Statsig,
+}
+
+/// Every destination of the daily send. Stopping one is deleting its entry;
+/// what was queued for it is then dropped.
+pub const SINKS: &[Sink] = &[Sink::Posthog, Sink::Statsig];
+
+impl Sink {
+    pub fn url(self) -> String {
+        let (default, path) = match self {
+            Sink::Posthog => (POSTHOG_HOST, "/batch/"),
+            Sink::Statsig => (STATSIG_HOST, "/v1/log_event"),
+        };
+        let host = std::env::var(HOST_ENV)
+            .ok()
+            .filter(|h| !h.trim().is_empty())
+            .unwrap_or_else(|| default.to_string());
+        format!("{}{path}", host.trim_end_matches('/'))
+    }
+
+    fn headers(self, now_ms: u64) -> Value {
+        match self {
+            Sink::Posthog => json!({}),
+            Sink::Statsig => json!({
+                "statsig-api-key": STATSIG_CLIENT_KEY,
+                "statsig-client-time": now_ms.to_string(),
+            }),
+        }
+    }
+
+    /// The request body for the queued days.
+    pub fn body(self, queue: &[Vec<Value>]) -> Value {
+        let events: Vec<&Value> = queue.iter().flatten().collect();
+        match self {
+            Sink::Posthog => json!({ "api_key": PROJECT_KEY, "batch": events }),
+            Sink::Statsig => json!({ "events": events }),
+        }
+    }
+
+    /// Today's events in this destination's shape.
+    pub fn events(
+        self,
+        today: &[(&'static str, Value)],
+        install_id: &str,
+        now_ms: u64,
+    ) -> Vec<Value> {
+        today
+            .iter()
+            .flat_map(|(name, props)| match self {
+                Sink::Posthog => vec![event(name, install_id, now_ms, props.clone())],
+                Sink::Statsig => statsig_events(name, props, install_id, now_ms),
+            })
+            .collect()
+    }
 }
 
 /// Turn telemetry on or off. Off also drops anything not yet sent.
@@ -133,7 +190,7 @@ pub fn set_enabled(on: bool) -> anyhow::Result<()> {
         let _ = std::fs::remove_file(dir().join(COUNTERS));
         let _ = std::fs::remove_file(dir().join(SENDING));
         let mut state = State::load();
-        state.queue.clear();
+        state.queues.clear();
         state.save();
     }
     Ok(())
@@ -175,7 +232,7 @@ pub fn reset() -> String {
     let _ = std::fs::remove_file(dir().join(COUNTERS));
     let _ = std::fs::remove_file(dir().join(SENDING));
     let mut state = State::load();
-    state.queue.clear();
+    state.queues.clear();
     state.save();
     install_id()
 }
@@ -267,17 +324,30 @@ pub struct State {
     /// Connector-shipped or marketplace skill names seen on any instance.
     #[serde(default)]
     pub known_skills: BTreeSet<String>,
-    /// Unsent events, one entry per day.
+    /// Unsent events per destination, one entry per day.
     #[serde(default)]
-    pub queue: Vec<Vec<Value>>,
+    pub queues: BTreeMap<Sink, Vec<Vec<Value>>>,
+    /// Up to 0.2.3: PostHog's unsent days. Moved into `queues` on load.
+    #[serde(default, skip_serializing)]
+    queue: Vec<Vec<Value>>,
 }
 
 impl State {
     pub fn load() -> Self {
-        std::fs::read(dir().join(STATE))
-            .ok()
-            .and_then(|bytes| serde_json::from_slice(&bytes).ok())
-            .unwrap_or_default()
+        Self::parse(&std::fs::read(dir().join(STATE)).unwrap_or_default())
+    }
+
+    fn parse(bytes: &[u8]) -> Self {
+        let mut state: Self = serde_json::from_slice(bytes).unwrap_or_default();
+        let legacy = std::mem::take(&mut state.queue);
+        if !legacy.is_empty() {
+            state
+                .queues
+                .entry(Sink::Posthog)
+                .or_default()
+                .extend(legacy);
+        }
+        state
     }
 
     pub fn save(&self) {
@@ -507,54 +577,126 @@ pub fn event(name: &str, distinct_id: &str, now_ms: u64, mut properties: Value) 
     })
 }
 
-/// Today's events: lifecycle (`installed` / `updated`) then the daily rollup.
-pub fn today_events(
-    state: &State,
-    input: &RollupInput,
-    distinct_id: &str,
-    now_ms: u64,
-) -> Vec<Value> {
-    let platform = json!({"server_version": VERSION, "os": std::env::consts::OS, "arch": std::env::consts::ARCH});
-    let mut events = Vec::new();
-    match state.last_version.as_deref() {
-        None => events.push(event("meshy_dcc_installed", distinct_id, now_ms, platform)),
-        Some(previous) if previous != VERSION => {
-            let mut props = platform;
-            props["from_version"] = json!(version_text(previous));
-            events.push(event("meshy_dcc_updated", distinct_id, now_ms, props));
-        }
-        Some(_) => {}
+/// Payload version, sent to Statsig as `meta.schema_version`.
+const SCHEMA_VERSION: u64 = 1;
+
+/// One event in the shape of Statsig's `log_event`. Metadata values are
+/// strings (lists as JSON text, `null` left out). Each `tool_calls` row becomes
+/// its own `meshy_dcc_tool_calls` event with its count as `value`, which keeps
+/// every event's metadata small.
+fn statsig_events(name: &str, props: &Value, install_id: &str, now_ms: u64) -> Vec<Value> {
+    let mut props = props.clone();
+    let rows = props
+        .as_object_mut()
+        .and_then(|map| map.remove("tool_calls"))
+        .and_then(|rows| rows.as_array().cloned())
+        .unwrap_or_default();
+    let mut events = vec![statsig_event(name, None, &props, "", install_id, now_ms)];
+    for mut row in rows {
+        let count = row.as_object_mut().and_then(|map| map.remove("count"));
+        let key = format!("{}/{}/{}", row["dcc_type"], row["skill"], row["outcome"]);
+        events.push(statsig_event(
+            "meshy_dcc_tool_calls",
+            count,
+            &row,
+            &key,
+            install_id,
+            now_ms,
+        ));
     }
-    events.push(event(
-        "meshy_dcc_daily_usage",
-        distinct_id,
-        now_ms,
-        daily_properties(input),
-    ));
     events
 }
 
-/// The exact `/batch/` body for the queued days.
-pub fn batch_body(queue: &[Vec<Value>]) -> Value {
-    let batch: Vec<&Value> = queue.iter().flatten().collect();
-    json!({ "api_key": PROJECT_KEY, "batch": batch })
+/// `meta.event_id` is a UUID v5 of the install ID, day, event and row, so a
+/// day sent again keeps its IDs and the warehouse can drop the duplicates.
+fn statsig_event(
+    name: &str,
+    value: Option<Value>,
+    props: &Value,
+    row: &str,
+    install_id: &str,
+    now_ms: u64,
+) -> Value {
+    let seed = format!("meshy-dcc:{install_id}:{}:{name}:{row}", day(now_ms));
+    let event_id = uuid::Uuid::new_v5(&uuid::Uuid::NAMESPACE_URL, seed.as_bytes());
+    let mut metadata: serde_json::Map<String, Value> = props
+        .as_object()
+        .into_iter()
+        .flatten()
+        .filter(|(_, v)| !v.is_null())
+        .map(|(k, v)| {
+            let text = v.as_str().map_or_else(|| v.to_string(), str::to_string);
+            (k.clone(), Value::String(text))
+        })
+        .collect();
+    metadata.insert("client_type".into(), json!("meshy_dcc"));
+    let meta = json!({"event_id": event_id, "schema_version": SCHEMA_VERSION});
+    metadata.insert("meta".into(), json!(meta.to_string()));
+    let mut event = json!({
+        "eventName": name,
+        "time": now_ms,
+        "metadata": metadata,
+        "user": {
+            "customIDs": {"dcc_install_id": install_id},
+            "appVersion": VERSION,
+            "statsigEnvironment": {"tier": "production"},
+        },
+    });
+    if let Some(value) = value {
+        event["value"] = value;
+    }
+    event
 }
 
-/// Queue today's events as rolled up at `now`, dropping the oldest days past
-/// the cap, and return the body to post. Preview runs this on a copy.
-pub fn enqueue(st: &mut State, today: Vec<Value>, now: u64) -> Value {
-    st.queue.push(today);
-    let overflow = st.queue.len().saturating_sub(MAX_QUEUED_DAYS);
-    st.queue.drain(..overflow);
+/// Today's events before they are shaped for a destination: lifecycle
+/// (`installed` / `updated`) then the daily rollup.
+pub fn today_events(state: &State, input: &RollupInput) -> Vec<(&'static str, Value)> {
+    let platform = json!({"server_version": VERSION, "os": std::env::consts::OS, "arch": std::env::consts::ARCH});
+    let mut events = Vec::new();
+    match state.last_version.as_deref() {
+        None => events.push(("meshy_dcc_installed", platform)),
+        Some(previous) if previous != VERSION => {
+            let mut props = platform;
+            props["from_version"] = json!(version_text(previous));
+            events.push(("meshy_dcc_updated", props));
+        }
+        Some(_) => {}
+    }
+    events.push(("meshy_dcc_daily_usage", daily_properties(input)));
+    events
+}
+
+/// Queue today's events at every destination as rolled up at `now`, dropping
+/// the oldest days past the cap, and return one request per destination
+/// (`sink`, `url`, `headers`, `body`). Preview runs this on a copy.
+pub fn enqueue(
+    st: &mut State,
+    today: &[(&'static str, Value)],
+    install_id: &str,
+    now: u64,
+) -> Vec<Value> {
+    st.queues.retain(|sink, _| SINKS.contains(sink));
+    let requests = SINKS
+        .iter()
+        .map(|&sink| {
+            let queue = st.queues.entry(sink).or_default();
+            queue.push(sink.events(today, install_id, now));
+            let overflow = queue.len().saturating_sub(MAX_QUEUED_DAYS);
+            queue.drain(..overflow);
+            json!({"sink": sink, "url": sink.url(), "headers": sink.headers(now), "body": sink.body(queue)})
+        })
+        .collect();
     st.last_day = Some(day(now));
     st.last_rollup_ms = Some(now);
     st.last_version = Some(VERSION.to_string());
-    batch_body(&st.queue)
+    requests
 }
 
-/// POST once with a short timeout. Any failure is silent; the caller keeps the
-/// queue and tries again the next day.
-pub async fn post(host: &str, body: &Value) -> bool {
+/// POST one request from [`enqueue`] once, with a short timeout. True when it
+/// is done with: accepted, or rejected as a request (4xx other than 408/429),
+/// which sending again would not change. Any failure is silent; that
+/// destination keeps its queue and tries again the next day.
+pub async fn post(request: &Value) -> bool {
     let Ok(client) = reqwest::Client::builder()
         .timeout(SEND_TIMEOUT)
         .user_agent(format!("meshy-dcc/{VERSION}"))
@@ -562,14 +704,31 @@ pub async fn post(host: &str, body: &Value) -> bool {
     else {
         return false;
     };
-    match client
-        .post(format!("{host}/batch/"))
-        .json(body)
-        .send()
-        .await
-    {
-        Ok(response) => response.status().is_success(),
+    let mut builder = client
+        .post(request["url"].as_str().unwrap_or_default())
+        .json(&request["body"]);
+    for (key, value) in request["headers"].as_object().into_iter().flatten() {
+        builder = builder.header(key, value.as_str().unwrap_or_default());
+    }
+    match builder.send().await {
+        Ok(response) => {
+            let status = response.status();
+            status.is_success()
+                || (status.is_client_error() && !matches!(status.as_u16(), 408 | 429))
+        }
         Err(_) => false,
+    }
+}
+
+/// Post the requests from [`enqueue`] side by side, so a destination that does
+/// not answer never holds up another. A destination's queue is cleared only
+/// when its own request is done with.
+pub async fn send(st: &mut State, requests: &[Value]) {
+    let done = futures::future::join_all(requests.iter().map(post)).await;
+    for (sink, done) in SINKS.iter().zip(done) {
+        if done {
+            st.queues.remove(sink);
+        }
     }
 }
 
@@ -800,7 +959,7 @@ mod gateway_side {
     }
 
     /// What the next send would post, without changing anything.
-    pub async fn preview(state: &AdminState, now: u64) -> Value {
+    pub async fn preview(state: &AdminState, now: u64) -> Vec<Value> {
         let st = State::load();
         let mut known = st.known_skills.clone();
         known.extend(current_known_skills(state, &st.known_skills).await);
@@ -812,13 +971,17 @@ mod gateway_side {
             read_counters(false),
         )
         .await;
-        let today = today_events(&st, &input, &install_id(), now);
-        enqueue(&mut st.clone(), today, now)
+        enqueue(
+            &mut st.clone(),
+            &today_events(&st, &input),
+            &install_id(),
+            now,
+        )
     }
 
-    /// Roll up and send if today has not been rolled up yet. Returns the body
-    /// posted, if any.
-    pub async fn tick(state: &AdminState, now: u64) -> Option<Value> {
+    /// Roll up and send if today has not been rolled up yet. Returns the
+    /// requests posted, if any.
+    pub async fn tick(state: &AdminState, now: u64) -> Option<Vec<Value>> {
         if !enabled() {
             return None;
         }
@@ -837,14 +1000,12 @@ mod gateway_side {
             read_counters(true),
         )
         .await;
-        let today = today_events(&st, &input, &install_id(), now);
-        let body = enqueue(&mut st, today, now);
+        let today = today_events(&st, &input);
+        let requests = enqueue(&mut st, &today, &install_id(), now);
         st.save();
-        if post(&host(), &body).await {
-            st.queue.clear();
-            st.save();
-        }
-        Some(body)
+        send(&mut st, &requests).await;
+        st.save();
+        Some(requests)
     }
 
     /// The gateway's background loop: first rollup after a delay, then hourly
@@ -1038,6 +1199,97 @@ mod tests {
                 .iter()
                 .any(|r| r["version"] == "0.3.1")
         );
+
+        // The Statsig payload: same content, nothing more, within its limits.
+        let id = "11111111-2222-4333-8444-555555555555";
+        let today = today_events(&State::default(), &seeded());
+        let events = Sink::Statsig.events(&today, id, 1_800_000_000_000);
+        let text = serde_json::to_string(&events).unwrap();
+        for secret in [
+            "artist", "secret", "Users", "scene", "rig", "macbook", "Hero", "9f1c2d3e", "req-",
+            "dragon", "/", "\\\\",
+        ] {
+            assert!(!text.contains(secret), "{secret} leaked: {text}");
+        }
+        let rows = props["tool_calls"].as_array().unwrap();
+        assert_eq!(events.len(), 2 + rows.len());
+        for e in &events {
+            let metadata = e["metadata"].as_object().unwrap();
+            assert!(metadata.values().all(Value::is_string), "{e}");
+            assert!(serde_json::to_string(metadata).unwrap().len() <= 4096);
+            assert!(e["eventName"].as_str().unwrap().len() <= 64);
+            assert_eq!(metadata["client_type"], "meshy_dcc");
+            let user = e["user"].as_object().unwrap();
+            assert_eq!(
+                user.keys().map(String::as_str).collect::<BTreeSet<_>>(),
+                BTreeSet::from(["appVersion", "customIDs", "statsigEnvironment"])
+            );
+            assert_eq!(user["customIDs"], json!({"dcc_install_id": id}));
+        }
+        assert!(
+            !events[1]["metadata"]
+                .as_object()
+                .unwrap()
+                .contains_key("tool_calls")
+        );
+        let calls: Vec<&Value> = events
+            .iter()
+            .filter(|e| e["eventName"] == "meshy_dcc_tool_calls")
+            .collect();
+        assert_eq!(calls.len(), rows.len());
+        let counted: u64 = calls.iter().map(|e| e["value"].as_u64().unwrap()).sum();
+        assert_eq!(counted, 15);
+        assert_eq!(
+            calls[0]["metadata"]
+                .as_object()
+                .unwrap()
+                .keys()
+                .map(String::as_str)
+                .collect::<BTreeSet<_>>(),
+            BTreeSet::from([
+                "client_type",
+                "dcc_type",
+                "meta",
+                "outcome",
+                "p50",
+                "p95",
+                "skill"
+            ])
+        );
+    }
+
+    /// A day sent again keeps its event IDs; every event has its own.
+    #[test]
+    fn statsig_event_ids_are_stable_and_distinct() {
+        let today = today_events(&State::default(), &seeded());
+        let ids = |now| -> Vec<String> {
+            Sink::Statsig
+                .events(&today, "id-1", now)
+                .iter()
+                .map(|e| {
+                    let meta: Value =
+                        serde_json::from_str(e["metadata"]["meta"].as_str().unwrap()).unwrap();
+                    assert_eq!(meta["schema_version"], 1);
+                    meta["event_id"].as_str().unwrap().to_string()
+                })
+                .collect()
+        };
+        let now = 1_800_000_000_000;
+        let first = ids(now);
+        assert_eq!(first, ids(now + 60_000));
+        assert_eq!(first.iter().collect::<BTreeSet<_>>().len(), first.len());
+        assert!(first.iter().all(|id| !ids(now + 86_400_000).contains(id)));
+    }
+
+    /// State written by 0.2.3 and earlier still loads; its queue was PostHog's.
+    #[test]
+    fn old_state_queue_moves_to_posthog() {
+        let st = State::parse(br#"{"last_version":"0.2.3","queue":[[{"event":"x"}]]}"#);
+        assert_eq!(st.queues[&Sink::Posthog], vec![vec![json!({"event": "x"})]]);
+        let saved = serde_json::to_value(&st).unwrap();
+        assert!(saved.get("queue").is_none());
+        assert_eq!(saved["queues"]["posthog"][0][0]["event"], "x");
+        assert_eq!(State::parse(b"not json").queues.len(), 0);
     }
 
     /// A skill's name leaves the machine only when its folder is inside an
@@ -1188,7 +1440,8 @@ mod tests {
     #[test]
     fn events_carry_the_privacy_properties() {
         let st = State::default();
-        let events = today_events(&st, &seeded(), "id-1", 1_800_000_000_000);
+        let now = 1_800_000_000_000;
+        let events = Sink::Posthog.events(&today_events(&st, &seeded()), "id-1", now);
         assert_eq!(events[0]["event"], "meshy_dcc_installed");
         assert_eq!(events[1]["event"], "meshy_dcc_daily_usage");
         for e in &events {
@@ -1201,10 +1454,20 @@ mod tests {
             last_version: Some("0.2.1".into()),
             ..State::default()
         };
-        let events = today_events(&updated, &seeded(), "id-1", 1_800_000_000_000);
+        let today = today_events(&updated, &seeded());
+        let events = Sink::Posthog.events(&today, "id-1", now);
+        let statsig = Sink::Statsig.events(&today, "id-1", now);
         if VERSION != "0.2.1" {
             assert_eq!(events[0]["event"], "meshy_dcc_updated");
             assert_eq!(events[0]["properties"]["from_version"], "0.2.1");
+            assert_eq!(statsig[0]["eventName"], "meshy_dcc_updated");
+            assert_eq!(statsig[0]["metadata"]["from_version"], "0.2.1");
+        }
+        for e in &statsig {
+            assert_eq!(e["time"], now);
+            assert_eq!(e["user"]["appVersion"], VERSION);
+            assert_eq!(e["user"]["statsigEnvironment"]["tier"], "production");
+            assert!(e["eventName"].as_str().unwrap().starts_with("meshy_dcc_"));
         }
     }
 
@@ -1242,49 +1505,142 @@ mod tests {
     }
 
     /// Preview and send share `enqueue`; the stub captures what `post` sends.
+    /// Each destination keeps its own queue: one failing never resends to the other.
     #[tokio::test]
-    async fn preview_matches_what_is_sent_and_queue_is_capped() {
+    async fn preview_matches_what_is_sent_and_each_sink_is_tracked_alone() {
+        use std::sync::atomic::{AtomicBool, Ordering};
         use std::sync::{Arc, Mutex};
-        let captured: Arc<Mutex<Vec<Value>>> = Arc::default();
-        let sink = captured.clone();
-        let app = axum::Router::new().route(
-            "/batch/",
-            axum::routing::post(move |axum::Json(body): axum::Json<Value>| {
-                let sink = sink.clone();
-                async move {
-                    sink.lock().unwrap().push(body);
-                    "ok"
-                }
-            }),
-        );
+        type Seen = Arc<Mutex<Vec<(String, Option<String>, Value)>>>;
+        let captured: Seen = Arc::default();
+        let statsig_down = Arc::new(AtomicBool::new(true));
+        let handler = |path: &'static str, captured: Seen, down: Option<Arc<AtomicBool>>| {
+            axum::routing::post(
+                move |headers: axum::http::HeaderMap, axum::Json(body): axum::Json<Value>| async move {
+                    let key = headers
+                        .get("statsig-api-key")
+                        .map(|v| v.to_str().unwrap().to_string());
+                    captured.lock().unwrap().push((path.into(), key, body));
+                    if down.is_some_and(|d| d.load(Ordering::SeqCst)) {
+                        axum::http::StatusCode::SERVICE_UNAVAILABLE
+                    } else {
+                        axum::http::StatusCode::ACCEPTED
+                    }
+                },
+            )
+        };
+        let app = axum::Router::new()
+            .route("/batch/", handler("/batch/", captured.clone(), None))
+            .route(
+                "/v1/log_event",
+                handler(
+                    "/v1/log_event",
+                    captured.clone(),
+                    Some(statsig_down.clone()),
+                ),
+            )
+            .route(
+                "/status/{code}",
+                axum::routing::post(
+                    |axum::extract::Path(code): axum::extract::Path<u16>| async move {
+                        axum::http::StatusCode::from_u16(code).unwrap()
+                    },
+                ),
+            );
         let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
         let host = format!("http://{}", listener.local_addr().unwrap());
         tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
+        let to_stub = |mut requests: Vec<Value>| {
+            for r in &mut requests {
+                let url = r["url"].as_str().unwrap().to_string();
+                assert!(url.starts_with("https://"), "{url}");
+                let path = &url[url[8..].find('/').unwrap() + 8..];
+                r["url"] = json!(format!("{host}{path}"));
+            }
+            requests
+        };
 
         let now = 1_800_000_000_000;
         let mut st = State {
             last_version: Some(VERSION.into()),
-            queue: (0..MAX_QUEUED_DAYS)
-                .map(|d| vec![json!({"event": format!("day{d}")})])
-                .collect(),
+            queues: BTreeMap::from([(
+                Sink::Posthog,
+                (0..MAX_QUEUED_DAYS)
+                    .map(|d| vec![json!({"event": format!("day{d}")})])
+                    .collect(),
+            )]),
             ..State::default()
         };
         let input = seeded();
-        let preview = enqueue(&mut st.clone(), today_events(&st, &input, "id-1", now), now);
-        let today = today_events(&st, &input, "id-1", now);
-        let body = enqueue(&mut st, today, now);
-        assert!(post(&host, &body).await);
+        let today = today_events(&st, &input);
+        let preview = enqueue(&mut st.clone(), &today, "id-1", now);
+        let requests = enqueue(&mut st, &today, "id-1", now);
+        assert_eq!(preview, requests);
+        assert_eq!(preview[0]["url"], "https://us.i.posthog.com/batch/");
         assert_eq!(
-            captured.lock().unwrap().as_slice(),
-            std::slice::from_ref(&preview)
+            preview[1]["url"],
+            "https://events.statsigapi.net/v1/log_event"
         );
-        // The oldest day fell off; three days remain, today last.
-        let batch = preview["batch"].as_array().unwrap();
+        assert_eq!(preview[1]["headers"]["statsig-api-key"], STATSIG_CLIENT_KEY);
+        assert_eq!(
+            preview[1]["headers"]["statsig-client-time"],
+            now.to_string()
+        );
+        // PostHog: the oldest day fell off; three days remain, today last.
+        let batch = preview[0]["body"]["batch"].as_array().unwrap();
         assert_eq!(batch.len(), MAX_QUEUED_DAYS);
         assert_eq!(batch[0]["event"], "day1");
         assert_eq!(batch[MAX_QUEUED_DAYS - 1]["event"], "meshy_dcc_daily_usage");
-        assert_eq!(preview["api_key"], PROJECT_KEY);
-        // A host that does not answer is a silent failure.
-        assert!(!post("http://127.0.0.1:9", &body).await);
+        assert_eq!(preview[0]["body"]["api_key"], PROJECT_KEY);
+        let events = preview[1]["body"]["events"].as_array().unwrap();
+        assert_eq!(events[0]["eventName"], "meshy_dcc_daily_usage");
+
+        // PostHog accepts, Statsig is down.
+        send(&mut st, &to_stub(requests)).await;
+        {
+            let mut seen = captured.lock().unwrap();
+            seen.sort_by(|a, b| a.0.cmp(&b.0));
+            assert_eq!(seen.len(), 2);
+            assert_eq!(
+                seen[0],
+                ("/batch/".into(), None, preview[0]["body"].clone())
+            );
+            assert_eq!(
+                seen[1],
+                (
+                    "/v1/log_event".into(),
+                    Some(STATSIG_CLIENT_KEY.into()),
+                    preview[1]["body"].clone()
+                )
+            );
+        }
+        assert!(!st.queues.contains_key(&Sink::Posthog));
+        assert_eq!(st.queues[&Sink::Statsig].len(), 1);
+
+        // The next day PostHog gets only that day; Statsig both, unchanged.
+        let next = now + 86_400_000;
+        let today = today_events(&st, &input);
+        let requests = enqueue(&mut st, &today, "id-1", next);
+        let batch = requests[0]["body"]["batch"].as_array().unwrap();
+        assert!(batch.iter().all(|e| e["timestamp"] == iso(next)));
+        let both = requests[1]["body"]["events"].as_array().unwrap();
+        assert_eq!(both.len(), 2 * events.len());
+        assert_eq!(&both[..events.len()], events.as_slice());
+        statsig_down.store(false, Ordering::SeqCst);
+        send(&mut st, &to_stub(requests.clone())).await;
+        assert!(st.queues.is_empty());
+
+        // A host that does not answer is a silent failure; a rejected request
+        // is done with, except for 408 and 429.
+        let at = |path: &str| {
+            let mut r = requests[0].clone();
+            r["url"] = json!(format!("{host}{path}"));
+            r
+        };
+        let mut dead = requests[0].clone();
+        dead["url"] = json!("http://127.0.0.1:9/batch/");
+        assert!(!post(&dead).await);
+        assert!(post(&at("/status/400")).await);
+        assert!(!post(&at("/status/429")).await);
+        assert!(!post(&at("/status/503")).await);
     }
 }

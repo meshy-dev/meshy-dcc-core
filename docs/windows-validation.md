@@ -177,7 +177,7 @@ python -m http.server 8765 --bind 127.0.0.1 --directory <builds>     # 另一个
 **统计与报告（都发到本地接收端）**
 
 - 统计：首次运行的提示只出现一次；`meshy-dcc telemetry status|preview|off|on|reset`；窗口横幅（好的 / 关闭）和设置开关；
-  `DO_NOT_TRACK=1` 生效且设置页说明原因。在宿主上调用过几个工具后看 `telemetry preview`：`tool_calls[].skill` 应是真实的技能名
+  `DO_NOT_TRACK=1` 生效且设置页说明原因。在宿主上调用过几个工具后看 `telemetry preview`：PostHog 请求里的 `tool_calls[].skill`、Statsig 请求里 `meshy_dcc_tool_calls` 事件的 `skill` 应是真实的技能名
   （例如 `blender-scene`），不应全是 `custom`（取决于连接器上报 `rankPathSource: bundled`）；预览里不能出现路径、工程名、实例 ID。
 - 报告：`meshy-dcc report --summary "..."` 只预览；加 `--yes` 发到本地接收端；窗口里的 Report a problem 走同样流程；
   报告内容里没有本机路径、端口、PID、实例 ID、主机名。

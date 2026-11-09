@@ -51,11 +51,23 @@ impl ProbeOutcome {
 /// with a parseable JSON body (on either `200` or `503`), and `None`
 /// when the REST surface is absent — callers should then fall back to
 /// the legacy `/health` / `/healthz` checks.
+#[cfg(test)]
 pub(crate) async fn probe_readiness(
     client: &reqwest::Client,
     mcp_url: &str,
     timeout: Duration,
 ) -> Option<ReadinessReport> {
+    probe_readiness_detailed(client, mcp_url, timeout)
+        .await
+        .ok()
+}
+
+/// Like [`probe_readiness`], but say why no report was read.
+async fn probe_readiness_detailed(
+    client: &reqwest::Client,
+    mcp_url: &str,
+    timeout: Duration,
+) -> Result<ReadinessReport, String> {
     let url = readyz_url_from_mcp_url(mcp_url);
     let resp = client
         .get(&url)
@@ -63,7 +75,7 @@ pub(crate) async fn probe_readiness(
         .header("accept", "application/json, text/event-stream")
         .send()
         .await
-        .ok()?;
+        .map_err(|err| format!("GET {url} failed: {err}"))?;
 
     // `/v1/readyz` returns 200 when base routing bits are green and 503
     // when any base bit is red — in **both** cases the body is a full
@@ -72,9 +84,11 @@ pub(crate) async fn probe_readiness(
     // surface", not "backend is red".
     let status = resp.status();
     if !status.is_success() && status.as_u16() != 503 {
-        return None;
+        return Err(format!("GET {url} answered HTTP {status}"));
     }
-    resp.json::<ReadinessReport>().await.ok()
+    resp.json::<ReadinessReport>()
+        .await
+        .map_err(|err| format!("GET {url} body is not a readiness report: {err}"))
 }
 
 /// Map a parsed `/v1/readyz` body to a [`ProbeOutcome`] without another HTTP hop.
@@ -97,19 +111,45 @@ pub(crate) async fn probe_mcp_readiness_once(
     mcp_url: &str,
     timeout: Duration,
 ) -> (Option<ReadinessReport>, ProbeOutcome) {
-    if let Some(report) = probe_readiness(client, mcp_url, timeout).await {
-        let outcome = probe_outcome_from_report(&report);
-        return (Some(report), outcome);
-    }
+    let (report, outcome, _) = probe_mcp_readiness_with_reason(client, mcp_url, timeout).await;
+    (report, outcome)
+}
+
+/// Like [`probe_mcp_readiness_once`], plus the reason when the outcome is
+/// [`ProbeOutcome::Unreachable`].
+pub(crate) async fn probe_mcp_readiness_with_reason(
+    client: &reqwest::Client,
+    mcp_url: &str,
+    timeout: Duration,
+) -> (Option<ReadinessReport>, ProbeOutcome, Option<String>) {
+    let readyz_error = match probe_readiness_detailed(client, mcp_url, timeout).await {
+        Ok(report) => {
+            let outcome = probe_outcome_from_report(&report);
+            return (Some(report), outcome, None);
+        }
+        Err(err) => err,
+    };
 
     let ok = legacy_health_ok(client, &health_url_from_mcp_url(mcp_url), timeout).await
         || legacy_health_ok(client, &healthz_url_from_mcp_url(mcp_url), timeout).await;
-    let outcome = if ok {
-        ProbeOutcome::Ready
+    if ok {
+        return (None, ProbeOutcome::Ready, None);
+    }
+    let reason = format!("{readyz_error}; /health and /healthz did not answer 2xx");
+    (None, ProbeOutcome::Unreachable, Some(reason))
+}
+
+/// The MCP URL a readiness probe should use for `entry`: the one dispatch
+/// uses, so a row is never marked ready on a different endpoint. Unsafe
+/// advertised targets keep the raw `host:port` URL, as dispatch refuses them.
+pub(crate) fn readiness_probe_url(
+    entry: &meshy_dcc_transport::discovery::types::ServiceEntry,
+) -> String {
+    if crate::gateway::capability_service::safe_discovery_target(entry) {
+        crate::gateway::http_registration::entry_mcp_url(entry)
     } else {
-        ProbeOutcome::Unreachable
-    };
-    (None, outcome)
+        format!("http://{}:{}/mcp", entry.host, entry.port)
+    }
 }
 
 async fn legacy_health_ok(client: &reqwest::Client, url: &str, timeout: Duration) -> bool {

@@ -1045,3 +1045,65 @@ async fn host_specific_entry_still_installs_into_its_own_directory() {
     assert!(root.join("maya").join("meshy-dcc-maya-skills").is_dir());
     assert!(!root.join("any").exists());
 }
+
+/// One archive per escape: a `../` entry, an absolute entry, and a symlink
+/// to a directory outside the destination followed by a file written through it.
+fn escaping_zip_archives(outside: &Path) -> Vec<(&'static str, Vec<u8>)> {
+    use std::io::Write as _;
+    let options = zip::write::SimpleFileOptions::default();
+    type Writer = zip::ZipWriter<std::io::Cursor<Vec<u8>>>;
+    let build = |write: &dyn Fn(&mut Writer)| {
+        let mut zip = zip::ZipWriter::new(std::io::Cursor::new(Vec::new()));
+        write(&mut zip);
+        zip.finish().unwrap().into_inner()
+    };
+    let absolute = outside.join("absolute.txt").to_string_lossy().into_owned();
+    let target = outside.to_string_lossy().into_owned();
+    vec![
+        (
+            "parent",
+            build(&|zip| {
+                zip.start_file("../parent.txt", options).unwrap();
+                zip.write_all(b"escaped").unwrap();
+            }),
+        ),
+        (
+            "absolute",
+            build(&|zip| {
+                zip.start_file(absolute.as_str(), options).unwrap();
+                zip.write_all(b"escaped").unwrap();
+            }),
+        ),
+        (
+            "symlink",
+            build(&|zip| {
+                zip.add_symlink("escape", target.as_str(), options).unwrap();
+                zip.start_file("escape/symlink.txt", options).unwrap();
+                zip.write_all(b"escaped").unwrap();
+            }),
+        ),
+    ]
+}
+
+#[test]
+fn zip_extraction_never_writes_outside_the_install_root() {
+    let temp = tempfile::tempdir().unwrap();
+    let outside = temp.path().join("outside");
+    fs::create_dir(&outside).unwrap();
+    for (case, bytes) in escaping_zip_archives(&outside) {
+        let dest = temp.path().join("root").join(case);
+        assert!(
+            extract_zip_archive(&bytes, &dest).is_err(),
+            "{case} archive was accepted"
+        );
+        let escape = dest.join("escape");
+        assert!(
+            !escape
+                .symlink_metadata()
+                .is_ok_and(|meta| meta.file_type().is_symlink()),
+            "{case} archive created a symlink"
+        );
+    }
+    assert!(!temp.path().join("root").join("parent.txt").exists());
+    assert_eq!(fs::read_dir(&outside).unwrap().count(), 0);
+}

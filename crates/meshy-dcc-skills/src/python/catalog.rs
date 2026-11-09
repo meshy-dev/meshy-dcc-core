@@ -68,8 +68,12 @@ impl SkillCatalog {
     /// loaded tools whose declarations changed on disk.
     #[pyo3(name = "rediscover")]
     #[pyo3(signature = (extra_paths=None, dcc_name=None))]
-    fn py_rediscover(&self, extra_paths: Option<Vec<String>>, dcc_name: Option<&str>) -> usize {
-        self.rediscover(extra_paths.as_deref(), dcc_name)
+    fn py_rediscover(
+        &self,
+        extra_paths: Option<Vec<String>>,
+        dcc_name: Option<&str>,
+    ) -> Option<usize> {
+        self.rediscover(extra_paths.as_deref(), dcc_name).ok()
     }
 
     /// Register a Python callable as the in-process script executor.

@@ -16,6 +16,7 @@ this module supplies its executor closure and dispatcher protocol.
 # Import built-in modules
 from __future__ import annotations
 
+import collections.abc
 from dataclasses import dataclass
 from dataclasses import field
 import importlib.machinery
@@ -28,6 +29,8 @@ from pathlib import Path
 import sys
 import threading
 import time
+import types
+import typing
 from typing import Any
 from typing import Callable
 from typing import Mapping
@@ -45,6 +48,7 @@ from meshy_dcc_core._server._inprocess_contracts import is_host_queue_dispatcher
 from meshy_dcc_core._server._inprocess_contracts import resolve_sandbox_action_name as _resolve_sandbox_action_name
 from meshy_dcc_core._server._inprocess_contracts import sandbox_denied_envelope
 from meshy_dcc_core._server._inprocess_contracts import timeout_hint_secs_to_ms
+from meshy_dcc_core.cancellation import MeshyDccCancelledError
 from meshy_dcc_core.cancellation import _reset_current_job_id
 from meshy_dcc_core.cancellation import _set_current_job_id
 from meshy_dcc_core.cancellation import check_cancelled
@@ -652,9 +656,44 @@ def _call_script_main(main: Callable[..., Any], params: Mapping[str, Any]) -> An
         )
     ]
     if len(positional) == 1 and len(required) <= 1:
+        parameter = positional[0]
+        annotation = parameter.annotation
+        if isinstance(annotation, str):
+            # Unresolvable string hints keep the mapping convention.
+            try:
+                target = inspect.unwrap(main)
+                hints = type("_ParameterHint", (), {"__annotations__": {parameter.name: annotation}})
+                annotation = typing.get_type_hints(hints, globalns=getattr(target, "__globals__", None))[parameter.name]
+            except MeshyDccCancelledError:
+                raise
+            except Exception:
+                pass
+        options = (
+            annotation.__args__
+            if getattr(annotation, "__origin__", None) is typing.Union
+            or isinstance(annotation, getattr(types, "UnionType", ()))
+            else (annotation,)
+        )
+        if options and all(_rejects_mapping_payload(option) for option in options):
+            # A scalar/sequence parameter never receives the whole request:
+            # bind first so unknown keys fail before the script runs.
+            signature.bind_partial(**params_dict)
+            return main(**params_dict)
         return main(params_dict)
 
     return main(**params_dict)
+
+
+def _rejects_mapping_payload(annotation: Any) -> bool:
+    origin = getattr(annotation, "__origin__", None) or annotation
+    literal = getattr(typing, "Literal", None)
+    if literal is not None and origin is literal:
+        values = getattr(annotation, "__args__", ())
+        return bool(values) and all(_rejects_mapping_payload(type(value)) for value in values)
+    return isinstance(origin, type) and issubclass(
+        origin,
+        (bool, int, float, complex, str, bytes, collections.abc.Sequence, collections.abc.Set, type(None)),
+    )
 
 
 def _script_package_name(script_dir: Path, package_owner: str | None = None) -> str:
