@@ -16,8 +16,42 @@ one version line.
 
 ### Fixed
 
+- A DCC app's sidecar of the same Core version no longer takes over the
+  standalone gateway and drops its connected clients. The gateway's boolean
+  environment variables accept `1/0`, `true/false`, `yes/no` and `on/off`.
+- Calling a tool that a live instance doesn't have returns `unknown-slug` with
+  candidates instead of reporting the instance as offline. A bare tool name and
+  `<skill>__<tool>` resolve to each other; more than one match is `ambiguous`.
+  Candidates never include capabilities the gateway policy hides.
+- A bridge call that may already have reached the plugin is reported as an
+  unknown outcome and never replayed on another channel; a request that timed
+  out while queued is never sent.
+- A server that declines the readiness probe is no longer reported as having
+  published it.
+- A skill script whose `main` takes one scalar parameter fails with a clear
+  error on unknown arguments instead of receiving the whole request.
+- A failed skill rescan (for example a dependency cycle) is reported and keeps
+  the previous catalog instead of counting as no change.
+- Importing `meshy_dcc_core.dcc_server` first in a fresh interpreter no longer
+  fails with a circular import.
+- A package-managed install reached through a symbolic link is recognized and
+  not self-updated.
+- Gateway readiness probes use the address calls are dispatched to, and
+  `/v1/readyz` reports why each instance's probe failed.
+- Tool handlers no longer receive an empty `_meta` when the caller sent no
+  metadata.
+- `meshy-dcc install` no longer fails a connector package that takes more
+  than 30 seconds to download. Downloads now allow up to 10 minutes, and give
+  up on a source that does not connect within 15 seconds.
 - A gateway started with `--no-admin` no longer skips the daily rollup; it
   sends it without tool-call counts.
+
+### Security
+
+- zip 9.5 (from 2.4) fixes the advisories in archive parsing, symlink
+  extraction and AES entry authentication. Adapter, host-package, marketplace
+  and component archives must now have matching local and central headers, and
+  an absolute or escaping entry name still refuses the whole archive.
 
 ## 0.2.3 (2026-11-03)
 

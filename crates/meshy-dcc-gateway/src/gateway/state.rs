@@ -442,17 +442,16 @@ impl GatewayState {
                     && !crate::gateway::is_own_instance(e, &self.own_host, self.own_port)
             });
         futures::future::join_all(booting.map(|entry| async move {
-            let url = format!("http://{}:{}/mcp", entry.host, entry.port);
-            let (report, outcome) = crate::gateway::backend_client::probe_mcp_readiness_once(
-                &self.http_client,
-                &url,
-                Duration::from_secs(1),
-            )
-            .await;
-            if let Some(report) = report {
-                self.instance_diagnostics
-                    .record_readiness(entry.instance_id, report);
-            }
+            let url = crate::gateway::backend_client::readiness_probe_url(&entry);
+            let (report, outcome, failure) =
+                crate::gateway::backend_client::probe_mcp_readiness_with_reason(
+                    &self.http_client,
+                    &url,
+                    Duration::from_secs(1),
+                )
+                .await;
+            self.instance_diagnostics
+                .record_probe(entry.instance_id, report, failure);
             if outcome.is_ready()
                 && self
                     .registry

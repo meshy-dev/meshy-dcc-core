@@ -291,6 +291,11 @@ class SkillDiscoveryController:
         except Exception as exc:
             logger.warning("[%s] reload_skill_paths failed: %s", owner._dcc_name, exc)
             return 0
+        if count is None:
+            # Native rediscover returns None when the scan failed and the
+            # catalog was left unchanged.
+            logger.warning("[%s] reload_skill_paths: skill scan failed; catalog unchanged", owner._dcc_name)
+            return 0
         logger.info(
             "[%s] reload_skill_paths: %d skill(s) total from %d path(s)",
             owner._dcc_name,

@@ -34,6 +34,9 @@ pub struct InstanceDiagnostics {
     pub last_error: Option<LastCallError>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub probed_at_unix_secs: Option<u64>,
+    /// Why the last readiness probe read nothing, with the URL it probed.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub probe_failure: Option<String>,
 }
 
 /// In-memory store keyed by `instance_id` (not persisted to `services.json`).
@@ -53,7 +56,29 @@ impl InstanceDiagnosticsStore {
         let mut map = self.inner.write();
         let entry = map.entry(instance_id).or_default();
         entry.readiness = Some(report);
+        entry.probe_failure = None;
         entry.probed_at_unix_secs = Some(now);
+    }
+
+    /// Record a probe outcome: a report, a failure reason, or neither (a
+    /// legacy health endpoint answered). A failure drops the cached report so
+    /// a stale green snapshot never sits beside it.
+    pub fn record_probe(
+        &self,
+        instance_id: Uuid,
+        report: Option<ReadinessReport>,
+        failure: Option<String>,
+    ) {
+        if let Some(report) = report {
+            return self.record_readiness(instance_id, report);
+        }
+        let mut map = self.inner.write();
+        let entry = map.entry(instance_id).or_default();
+        if failure.is_some() {
+            entry.readiness = None;
+        }
+        entry.probe_failure = failure;
+        entry.probed_at_unix_secs = Some(unix_now_secs());
     }
 
     pub fn record_call_error(
@@ -250,6 +275,48 @@ mod tests {
             diag.last_error.as_ref().unwrap().kind,
             "thread-affinity-violation"
         );
+    }
+
+    #[test]
+    fn probe_failure_replaces_stale_readiness_until_next_report() {
+        let store = InstanceDiagnosticsStore::new();
+        let id = Uuid::new_v4();
+        let report = ReadinessReport {
+            process: true,
+            dcc: true,
+            skill_catalog: true,
+            dispatcher: true,
+            host_execution_bridge: true,
+            main_thread_executor: true,
+        };
+        store.record_readiness(id, report.clone());
+        store.record_probe(id, None, Some("GET http://x/v1/readyz failed".into()));
+        let diag = store.get(&id).unwrap();
+        assert!(diag.readiness.is_none());
+        assert_eq!(
+            diag.probe_failure.as_deref(),
+            Some("GET http://x/v1/readyz failed")
+        );
+        let json = InstanceDiagnosticsStore::to_json_value(&diag);
+        assert!(json["probe_failure"].is_string());
+
+        store.record_probe(id, Some(report), None);
+        let diag = store.get(&id).unwrap();
+        assert!(diag.readiness.is_some() && diag.probe_failure.is_none());
+    }
+
+    #[test]
+    fn readiness_probe_uses_the_dispatch_url() {
+        let mut entry = ServiceEntry::new("maya", "127.0.0.1", 18000);
+        entry.metadata.insert(
+            crate::gateway::http_registration::MCP_URL_METADATA_KEY.to_string(),
+            "http://127.0.0.1:18001/mcp".to_string(),
+        );
+        assert_eq!(
+            crate::gateway::backend_client::readiness_probe_url(&entry),
+            entry_mcp_url(&entry)
+        );
+        assert_eq!(entry_mcp_url(&entry), "http://127.0.0.1:18001/mcp");
     }
 
     // ── HostExecutionStatus (issue #1331) ─────────────────────────────────

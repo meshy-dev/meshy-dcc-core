@@ -83,8 +83,12 @@ pub fn marker_path_for(current_exe: &Path) -> Option<PathBuf> {
 }
 
 /// Read and validate the marker beside `current_exe`, if it exists.
+///
+/// The path is resolved first, so a package manager that exposes the binary
+/// through a symlink is still detected from the marker beside the real binary.
 pub fn read_marker_for(current_exe: &Path) -> Option<PackageManagerMarker> {
-    let path = marker_path_for(current_exe)?;
+    let resolved = fs::canonicalize(current_exe).unwrap_or_else(|_| current_exe.to_path_buf());
+    let path = marker_path_for(&resolved)?;
     let raw = fs::read_to_string(&path).ok()?;
     let marker: PackageManagerMarker = serde_json::from_str(&raw).ok()?;
     (marker.schema_version == MARKER_SCHEMA_VERSION).then_some(marker)
@@ -109,6 +113,29 @@ mod tests {
             "binary": "meshy-dcc-bin.exe",
         })
         .to_string()
+    }
+
+    #[test]
+    fn marker_is_detected_through_a_symlinked_executable() {
+        let root = tempfile::tempdir().unwrap();
+        let package_dir = root.path().join("package");
+        let links_dir = root.path().join("links");
+        fs::create_dir_all(&package_dir).unwrap();
+        fs::create_dir_all(&links_dir).unwrap();
+        let real_exe = package_dir.join("meshy-dcc");
+        fs::write(&real_exe, b"binary").unwrap();
+        fs::write(package_dir.join(MARKER_FILE_NAME), marker_json("winget")).unwrap();
+        let link_exe = links_dir.join("meshy-dcc");
+        #[cfg(unix)]
+        let linked = std::os::unix::fs::symlink(&real_exe, &link_exe);
+        #[cfg(windows)]
+        let linked = std::os::windows::fs::symlink_file(&real_exe, &link_exe);
+        if linked.is_err() {
+            // Windows needs Developer Mode or admin rights for symlinks.
+            return;
+        }
+        let marker = read_marker_for(&link_exe).expect("marker must survive the symlink");
+        assert_eq!(marker.manager, "winget");
     }
 
     #[test]
