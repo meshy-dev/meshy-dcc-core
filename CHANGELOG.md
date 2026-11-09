@@ -35,6 +35,13 @@ one version line.
   than 30 seconds to download. Downloads now allow up to 10 minutes, and give
   up on a source that does not connect within 15 seconds.
 
+### Security
+
+- zip 9.5 (from 2.4) fixes the advisories in archive parsing, symlink
+  extraction and AES entry authentication. Adapter, host-package, marketplace
+  and component archives must now have matching local and central headers, and
+  an absolute or escaping entry name still refuses the whole archive.
+
 ## 0.2.3 (2026-11-03)
 
 ### Added
