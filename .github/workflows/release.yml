@@ -81,13 +81,16 @@ jobs:
       fail-fast: true
       matrix:
         include:
-          - os: macos-14
+          - os: macos-15
             platform: macos-arm64
             ext: ""
           - os: windows-latest
             platform: windows-x86_64
             ext: ".exe"
     runs-on: ${{ matrix.os }}
+    env:
+      # Keep the macOS builds loadable on macOS 11 whatever the runner's SDK.
+      MACOSX_DEPLOYMENT_TARGET: "11.0"
     defaults:
       run:
         shell: bash
@@ -243,7 +246,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: macos-14
+          - os: macos-15
             label: macos-arm64
           - os: windows-latest
             label: windows-x64
