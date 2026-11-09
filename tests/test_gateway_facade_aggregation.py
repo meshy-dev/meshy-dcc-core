@@ -250,9 +250,9 @@ class TestFacadeToolsAggregation:
             )
 
         # Tier 2 — advertised gateway canonical workflow tools.
-        for mgmt in ("search", "describe", "load_skill", "call"):
+        for mgmt in ("search", "describe", "load_skill", "call", "lifecycle"):
             assert mgmt in names, f"missing skill-management tool {mgmt!r}"
-        assert names == {"search", "describe", "load_skill", "call"}, (
+        assert names == {"search", "describe", "load_skill", "call", "lifecycle"}, (
             f"gateway tools/list should advertise only canonical workflow tools; got {sorted(names)!r}"
         )
 

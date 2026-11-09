@@ -746,7 +746,14 @@ fn download_first_verified(
 }
 
 fn download_verified(url: &str, expected: &str) -> Result<Vec<u8>, InstallError> {
-    let bytes = reqwest::blocking::get(url)
+    // `reqwest::blocking::get` gives up after 30 s in total, which fails a
+    // large connector package on an ordinary connection.
+    // ponytail: fixed 10-minute cap; use a stall timeout if slower links need more.
+    let bytes = reqwest::blocking::Client::builder()
+        .connect_timeout(std::time::Duration::from_secs(15))
+        .timeout(std::time::Duration::from_secs(600))
+        .build()
+        .and_then(|client| client.get(url).send())
         .and_then(reqwest::blocking::Response::error_for_status)
         .and_then(|response| response.bytes())
         .map_err(|e| InstallError::StepFailed {

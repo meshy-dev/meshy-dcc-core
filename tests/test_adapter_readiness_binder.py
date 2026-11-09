@@ -76,6 +76,17 @@ def test_inline_binder_publishes_probe_and_marks_bits_ready(tmp_path: Path) -> N
     }
 
 
+def test_binder_respects_server_rejecting_probe(tmp_path: Path) -> None:
+    server = _make_base_server(tmp_path)
+    server._server.set_readiness_probe = lambda probe: False
+
+    binder = AdapterReadinessBinder(server)
+
+    assert binder.publish() is False
+    assert binder.published is False
+    assert server.set_readiness_probe(binder.probe) is False
+
+
 def test_queue_dispatcher_waits_for_first_pump_before_dcc_ready(tmp_path: Path) -> None:
     server = _make_base_server(tmp_path)
     dispatcher = QueueDispatcher()

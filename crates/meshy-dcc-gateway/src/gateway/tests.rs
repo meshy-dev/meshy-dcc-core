@@ -78,6 +78,17 @@ fn test_is_newer_election_missing_adapter_loses_to_present() {
     assert!(!is_newer_election(cur, cand));
 }
 
+// A same-crate sidecar must not take over the standalone daemon; only a newer
+// crate version may.
+#[test]
+fn test_is_newer_election_standalone_daemon_yields_only_to_newer_crate() {
+    let daemon = ElectionInfo::new("0.14.0", None, Some(STANDALONE_GATEWAY_DCC));
+    let same = ElectionInfo::new("0.14.0", Some("0.3.0"), Some("maya"));
+    let newer = ElectionInfo::new("0.15.0", Some("0.3.0"), Some("maya"));
+    assert!(!is_newer_election(same, daemon));
+    assert!(is_newer_election(newer, daemon));
+}
+
 // Regression test for issue #228: Maya's host version ("2024") must not
 // be mistaken for a newer gateway-crate version. Only the __gateway__
 // sentinel row contributes to the self-yield decision.

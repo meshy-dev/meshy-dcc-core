@@ -6,6 +6,11 @@ from __future__ import annotations
 # Import built-in modules
 import importlib
 import pkgutil
+import subprocess
+import sys
+
+# Import third-party modules
+import pytest
 
 # Import local modules
 import meshy_dcc_core
@@ -45,6 +50,16 @@ def assert_import_smoke() -> None:
 def test_meshy_dcc_core_import_smoke() -> None:
     """Every importable package module should load without side effects."""
     assert_import_smoke()
+
+
+@pytest.mark.parametrize(
+    "module_name",
+    ["meshy_dcc_core.dcc_server", "meshy_dcc_core._server", "meshy_dcc_core.skills.builtin"],
+)
+def test_module_imports_cleanly_as_first_import(module_name: str) -> None:
+    """A fresh interpreter must import each entry point without an import cycle."""
+    result = subprocess.run([sys.executable, "-c", f"import {module_name}"], capture_output=True, text=True)
+    assert result.returncode == 0, result.stderr
 
 
 if __name__ == "__main__":

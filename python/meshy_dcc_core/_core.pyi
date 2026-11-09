@@ -2506,7 +2506,7 @@ class SkillCatalog:
 
         Returns the number of newly discovered skills.
         """
-    def rediscover(self, extra_paths: typing.Optional[typing.Sequence[builtins.str]] = None, dcc_name: typing.Optional[builtins.str] = None) -> builtins.int:
+    def rediscover(self, extra_paths: typing.Optional[typing.Sequence[builtins.str]] = None, dcc_name: typing.Optional[builtins.str] = None) -> typing.Optional[builtins.int]:
         r"""
         Re-scan search paths, replace changed skill metadata, and refresh any
         loaded tools whose declarations changed on disk.

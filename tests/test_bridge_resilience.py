@@ -22,8 +22,11 @@ from meshy_dcc_core import ReverseBridgeSession
 
 
 class _Strategy(BridgeTransportStrategy):
-    def __init__(self, name: str, *, connect_failures: int = 0, call_failure: bool = False) -> None:
+    def __init__(
+        self, name: str, *, connect_failures: int = 0, call_failure: bool = False, call_outcome: str = "not_dispatched"
+    ) -> None:
         self.name = name
+        self.call_outcome = call_outcome
         self.connect_failures = connect_failures
         self.call_failure = call_failure
         self.connect_attempts = 0
@@ -48,7 +51,7 @@ class _Strategy(BridgeTransportStrategy):
         if self.call_failure:
             self.connected = False
             self.call_failure = False
-            raise BridgeConnectionError("lost connection")
+            raise BridgeConnectionError("lost connection", outcome=self.call_outcome)
         return {"strategy": self.name, "method": method, "params": params}
 
 
@@ -188,6 +191,28 @@ def test_fallback_client_reconnects_when_active_call_loses_connection() -> None:
 
     assert result["strategy"] == "secondary"
     assert result["params"] == {"verbose": True}
+
+
+def test_fallback_client_does_not_replay_unknown_outcome() -> None:
+    primary = _Strategy("primary", call_failure=True, call_outcome="unknown")
+    secondary = _Strategy("secondary")
+    client = BridgeFallbackClient([primary, secondary], retry_policy=BridgeRetryPolicy(attempts=1))
+    client.connect()
+
+    with pytest.raises(BridgeConnectionError) as info:
+        client.call("scene.delete", name="cube")
+
+    assert info.value.outcome == "unknown"
+    assert secondary.calls == []
+
+
+def test_reverse_bridge_session_drops_expired_queued_request() -> None:
+    session = ReverseBridgeSession(timeout=0.05)
+
+    with pytest.raises(meshy_dcc_core.BridgeTimeoutError):
+        session.call("scene.delete", name="cube")
+
+    assert session.next_request(timeout=0.05) is None
 
 
 def test_reverse_bridge_session_round_trips_request() -> None:

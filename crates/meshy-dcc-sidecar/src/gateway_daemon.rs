@@ -6,7 +6,9 @@ use std::str::FromStr;
 use std::time::Duration;
 
 use clap::Args;
-use meshy_dcc_gateway::{AdminPersistConfig, GatewayConfig, GatewayRunner, RelaySourceConfig};
+use meshy_dcc_gateway::{
+    AdminPersistConfig, GatewayConfig, GatewayRunner, RelaySourceConfig, STANDALONE_GATEWAY_DCC,
+};
 
 const DAEMONIZED_ENV: &str = "MESHY_DCC__DAEMONIZED";
 
@@ -87,7 +89,14 @@ pub struct GatewayArgs {
     pub registry_dir: Option<PathBuf>,
 
     /// Disable the Admin UI.
-    #[arg(long, env = "MESHY_DCC_NO_ADMIN", default_value = "false")]
+    #[arg(
+        long,
+        env = "MESHY_DCC_NO_ADMIN",
+        default_value = "false",
+        num_args = 0..=1,
+        default_missing_value = "true",
+        value_parser = clap::builder::BoolishValueParser::new()
+    )]
     pub no_admin: bool,
 
     /// URL prefix for the Admin UI.
@@ -100,7 +109,14 @@ pub struct GatewayArgs {
 
     /// Discover LAN-local Meshy DCC endpoints via mDNS/DNS-SD.
     #[cfg(feature = "mdns")]
-    #[arg(long, env = "MESHY_DCC_DISCOVER_MDNS", default_value = "false")]
+    #[arg(
+        long,
+        env = "MESHY_DCC_DISCOVER_MDNS",
+        default_value = "false",
+        num_args = 0..=1,
+        default_missing_value = "true",
+        value_parser = clap::builder::BoolishValueParser::new()
+    )]
     pub discover_mdns: bool,
 
     /// Tunnel relay discovery source, as `ADMIN_URL=PUBLIC_BASE_URL`.
@@ -116,7 +132,14 @@ pub struct GatewayArgs {
 
     /// Keep the gateway daemon alive even when no backends remain.
     /// Default: false. Use for studio/headless deployments.
-    #[arg(long, env = "MESHY_DCC_GATEWAY_PERSIST", default_value = "false")]
+    #[arg(
+        long,
+        env = "MESHY_DCC_GATEWAY_PERSIST",
+        default_value = "false",
+        num_args = 0..=1,
+        default_missing_value = "true",
+        value_parser = clap::builder::BoolishValueParser::new()
+    )]
     pub gateway_persist: bool,
 
     /// Seconds to wait after the last backend exits before shutting down
@@ -135,7 +158,10 @@ pub struct GatewayArgs {
     #[arg(
         long,
         env = "MESHY_DCC_SEMANTIC_SEARCH_ENABLED",
-        default_value = "false"
+        default_value = "false",
+        num_args = 0..=1,
+        default_missing_value = "true",
+        value_parser = clap::builder::BoolishValueParser::new()
     )]
     pub semantic_search_enabled: bool,
 
@@ -143,7 +169,14 @@ pub struct GatewayArgs {
     /// On Unix this respawns a fresh child in a new session; on Windows
     /// the process respawns itself with DETACHED_PROCESS and
     /// CREATE_NEW_PROCESS_GROUP flags.
-    #[arg(long, env = "MESHY_DCC_DAEMON", default_value = "false")]
+    #[arg(
+        long,
+        env = "MESHY_DCC_DAEMON",
+        default_value = "false",
+        num_args = 0..=1,
+        default_missing_value = "true",
+        value_parser = clap::builder::BoolishValueParser::new()
+    )]
     pub daemon: bool,
 
     /// Write the daemon process ID to this file. Implicitly enables
@@ -345,7 +378,7 @@ pub fn build_gateway_config(args: &GatewayArgs, gateway_name: &str) -> GatewayCo
         gateway_name: Some(gateway_name.to_string()),
         server_version: env!("CARGO_PKG_VERSION").to_string(),
         registry_dir: args.registry_dir.clone(),
-        adapter_dcc: Some("gateway".to_string()),
+        adapter_dcc: Some(STANDALONE_GATEWAY_DCC.to_string()),
         #[cfg(feature = "mdns")]
         discover_mdns: args.discover_mdns,
         relay_sources: args
@@ -601,6 +634,21 @@ mod tests {
     use super::*;
     use meshy_dcc_transport::discovery::types::{ServiceEntry, ServiceStatus};
     use serde_json::json;
+
+    #[test]
+    fn bool_flags_accept_boolish_values() {
+        #[derive(clap::Parser)]
+        struct Cli {
+            #[command(flatten)]
+            args: GatewayArgs,
+        }
+        use clap::Parser;
+        let cli = Cli::try_parse_from(["gw", "--gateway-persist=1", "--daemon=no", "--no-admin"])
+            .expect("boolish flag values must parse");
+        assert!(cli.args.gateway_persist);
+        assert!(!cli.args.daemon);
+        assert!(cli.args.no_admin);
+    }
 
     #[test]
     fn relay_source_arg_maps_into_gateway_config() {

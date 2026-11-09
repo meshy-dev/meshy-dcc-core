@@ -852,9 +852,17 @@ impl PyMcpHttpServer {
 
     /// Re-scan search paths and replace changed or removed skill definitions.
     /// Loaded skills with changed declarations are refreshed in place.
+    ///
+    /// Returns ``None`` when the scan failed and the catalog was not rebuilt.
     #[pyo3(signature = (extra_paths=None, dcc_name=None))]
-    fn rediscover(&self, extra_paths: Option<Vec<String>>, dcc_name: Option<&str>) -> usize {
-        self.catalog.rediscover(extra_paths.as_deref(), dcc_name)
+    fn rediscover(
+        &self,
+        extra_paths: Option<Vec<String>>,
+        dcc_name: Option<&str>,
+    ) -> Option<usize> {
+        self.catalog
+            .rediscover(extra_paths.as_deref(), dcc_name)
+            .ok()
     }
 
     /// Load a skill by name — registers its tools in the ToolRegistry.

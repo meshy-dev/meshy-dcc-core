@@ -133,7 +133,8 @@ class AdapterReadinessBinder:
         return binder
 
     def publish(self) -> bool:
-        """Install the probe on ``server`` if it exposes ``set_readiness_probe``."""
+        """Install the probe on ``server``; an explicit ``False`` from the setter rejects it."""
+        self.published = False
         setter = getattr(self.server, "set_readiness_probe", None)
         if not callable(setter):
             inner = getattr(self.server, "_server", None)
@@ -142,7 +143,9 @@ class AdapterReadinessBinder:
             logger.debug("readiness probe cannot be published: server has no set_readiness_probe")
             return False
         try:
-            setter(self.probe)
+            if setter(self.probe) is False:
+                logger.debug("readiness probe publication rejected by server")
+                return False
         except Exception as exc:
             logger.debug("readiness probe publication failed: %s", exc)
             return False

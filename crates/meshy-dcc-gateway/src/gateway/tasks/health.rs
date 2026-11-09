@@ -69,11 +69,11 @@ pub(crate) fn spawn_health_check_task(
                 let client = &http_client;
                 futures::future::join_all(entries.iter().filter(|e| e.port != 0).map(|e| {
                     let key = format!("{}:{}", e.dcc_type, e.instance_id);
-                    let url = format!("http://{}:{}/mcp", e.host, e.port);
+                    let url = crate::gateway::backend_client::readiness_probe_url(e);
                     async move {
                         (
                             key,
-                            crate::gateway::backend_client::probe_mcp_readiness_once(
+                            crate::gateway::backend_client::probe_mcp_readiness_with_reason(
                                 client,
                                 &url,
                                 Duration::from_secs(5),
@@ -119,12 +119,14 @@ pub(crate) fn spawn_health_check_task(
                     continue;
                 }
                 port_zero_seen.remove(&key);
-                let Some((readiness_report, outcome)) = probe_results.get(&key) else {
+                let Some((readiness_report, outcome, failure)) = probe_results.get(&key) else {
                     continue;
                 };
-                if let Some(report) = readiness_report {
-                    instance_diagnostics.record_readiness(entry.instance_id, report.clone());
-                }
+                instance_diagnostics.record_probe(
+                    entry.instance_id,
+                    readiness_report.clone(),
+                    failure.clone(),
+                );
 
                 if outcome.is_ready() {
                     let recovered_from_failure = failure_counts.remove(&key).is_some();
