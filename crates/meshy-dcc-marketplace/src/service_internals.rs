@@ -457,14 +457,25 @@ pub fn extract_zip_archive(bytes: &[u8], dest: &Path) -> Result<(), MarketplaceE
     let cursor = Cursor::new(bytes);
     let mut archive = zip::ZipArchive::new(cursor)
         .map_err(|err| MarketplaceError::Archive("zip".into(), err.to_string()))?;
+    // Every local header must match its central directory entry, so the
+    // files written here are the ones other zip readers would see.
+    archive
+        .validate_header_consistency()
+        .map_err(|err| MarketplaceError::Archive("zip".into(), err.to_string()))?;
 
     for index in 0..archive.len() {
         let mut file = archive
             .by_index(index)
             .map_err(|err| MarketplaceError::Archive("zip".into(), err.to_string()))?;
-        let Some(enclosed_name) = file.enclosed_name() else {
+        // `enclosed_name` turns `/a` into `a`; an absolute or drive-qualified
+        // name is refused rather than unpacked somewhere it did not name.
+        let raw = String::from_utf8_lossy(file.name_raw()).into_owned();
+        let rooted = raw.starts_with(['/', '\\'])
+            || matches!(raw.as_bytes(), [drive, b':', ..] if drive.is_ascii_alphabetic());
+        let (false, Ok(_), Some(enclosed_name)) = (rooted, file.name(), file.enclosed_name())
+        else {
             return Err(MarketplaceError::Archive(
-                file.name().to_string(),
+                raw,
                 "archive entry escapes install root".into(),
             ));
         };

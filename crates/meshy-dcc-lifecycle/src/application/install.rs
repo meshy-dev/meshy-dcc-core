@@ -680,15 +680,45 @@ fn execute_zip_extract(
         step: "zip-extract".into(),
         message: format!("failed to open zip archive: {e}"),
     })?;
+    check_zip_entry_names(&mut archive).map_err(|message| InstallError::StepFailed {
+        step: "zip-extract".into(),
+        message,
+    })?;
 
     archive
-        .extract(dest)
+        .extract_with_options(dest, verified_extract_options())
         .map_err(|e| InstallError::StepFailed {
             step: "zip-extract".into(),
             message: format!("failed to extract to {}: {e}", dest.display()),
         })?;
 
     Ok(Some(StepRollback::RemovePath(dest.to_path_buf())))
+}
+
+/// Extraction rules for downloaded archives: entries outside the destination
+/// and symlinks resolving outside it are refused, and every local header must
+/// agree with its central directory entry, so other zip readers see the same
+/// files we unpack.
+fn verified_extract_options() -> zip::read::ExtractOptions {
+    zip::read::ExtractOptions::default().enforce_header_consistency(true)
+}
+
+/// Refuse an archive with an absolute, drive-qualified or escaping entry name.
+/// The zip reader turns `/a` into `a` when extracting; such an archive is
+/// refused here instead of being unpacked somewhere it did not name.
+fn check_zip_entry_names<R: std::io::Read + std::io::Seek>(
+    archive: &mut zip::ZipArchive<R>,
+) -> Result<(), String> {
+    for index in 0..archive.len() {
+        let entry = archive.by_index(index).map_err(|e| e.to_string())?;
+        let raw = String::from_utf8_lossy(entry.name_raw()).into_owned();
+        let rooted = raw.starts_with(['/', '\\'])
+            || matches!(raw.as_bytes(), [drive, b':', ..] if drive.is_ascii_alphabetic());
+        if rooted || entry.name().is_err() || entry.enclosed_name().is_none() {
+            return Err(format!("archive entry escapes the destination: {raw}"));
+        }
+    }
+    Ok(())
 }
 
 /// Download `url` and return its bytes only if they match `expected` (lowercase hex).
@@ -798,10 +828,14 @@ fn extract_host_package(bytes: &[u8], sha256: &str, dest: &Path) -> Result<bool,
     fs::create_dir_all(parent).map_err(|e| e.to_string())?;
     let mut archive = zip::ZipArchive::new(std::io::Cursor::new(bytes))
         .map_err(|e| format!("failed to open zip archive: {e}"))?;
+    check_zip_entry_names(&mut archive)?;
     for index in 0..archive.len() {
         let entry = archive.by_index(index).map_err(|e| e.to_string())?;
         if entry.is_symlink() {
-            return Err(format!("package contains a symlink: {}", entry.name()));
+            return Err(format!(
+                "package contains a symlink: {}",
+                String::from_utf8_lossy(entry.name_raw())
+            ));
         }
     }
     let staging = tempfile::Builder::new()
@@ -809,7 +843,7 @@ fn extract_host_package(bytes: &[u8], sha256: &str, dest: &Path) -> Result<bool,
         .tempdir_in(parent)
         .map_err(|e| e.to_string())?;
     archive
-        .extract(staging.path())
+        .extract_with_options(staging.path(), verified_extract_options())
         .map_err(|e| format!("failed to extract package: {e}"))?;
     fs::write(staging.path().join(MARKER), sha256).map_err(|e| e.to_string())?;
     if dest.exists() {
@@ -1504,6 +1538,97 @@ mod tests {
             required_archive_sha256(Some(&format!("sha256:{}", "A".repeat(64)))).unwrap(),
             "a".repeat(64)
         );
+    }
+
+    /// One archive per escape: a `../` entry, an absolute entry, and a symlink
+    /// to a directory outside the destination followed by a file written through it.
+    fn escaping_zip_archives(outside: &Path) -> Vec<(&'static str, Vec<u8>)> {
+        use std::io::Write as _;
+        let options = zip::write::SimpleFileOptions::default();
+        let absolute = outside.join("absolute.txt").to_string_lossy().into_owned();
+        let target = outside.to_string_lossy().into_owned();
+        type WriteEntries<'a> = &'a dyn Fn(&mut zip::ZipWriter<std::io::Cursor<Vec<u8>>>);
+        let cases: [(&'static str, WriteEntries); 3] = [
+            ("parent", &|zip| {
+                zip.start_file("../parent.txt", options).unwrap()
+            }),
+            ("absolute", &|zip| {
+                zip.start_file(absolute.as_str(), options).unwrap()
+            }),
+            ("symlink", &|zip| {
+                zip.add_symlink("escape", target.as_str(), options).unwrap();
+                zip.start_file("escape/symlink.txt", options).unwrap();
+            }),
+        ];
+        cases
+            .into_iter()
+            .map(|(case, write)| {
+                let mut zip = zip::ZipWriter::new(std::io::Cursor::new(Vec::new()));
+                write(&mut zip);
+                zip.write_all(b"escaped").unwrap();
+                (case, zip.finish().unwrap().into_inner())
+            })
+            .collect()
+    }
+
+    fn sha256_of(bytes: &[u8]) -> String {
+        use sha2::Digest;
+        hex::encode(sha2::Sha256::digest(bytes))
+    }
+
+    /// Serve `body` to one loopback HTTP request and return its URL.
+    fn serve_once(body: Vec<u8>) -> String {
+        use std::io::{Read as _, Write as _};
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let url = format!("http://{}/archive.zip", listener.local_addr().unwrap());
+        std::thread::spawn(move || {
+            let (mut socket, _) = listener.accept().unwrap();
+            let _ = socket.read(&mut [0; 4096]);
+            let _ = write!(
+                socket,
+                "HTTP/1.1 200 OK\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+                body.len()
+            );
+            let _ = socket.write_all(&body);
+        });
+        url
+    }
+
+    fn assert_nothing_escaped(root: &Path, outside: &Path, dest: &Path) {
+        assert!(!dest.join("escape").exists());
+        assert!(!root.join("parent.txt").exists());
+        assert_eq!(fs::read_dir(outside).unwrap().count(), 0);
+    }
+
+    #[test]
+    fn zip_extract_refuses_entries_that_leave_the_destination() {
+        let root = tempfile::tempdir().unwrap();
+        let outside = root.path().join("outside");
+        fs::create_dir(&outside).unwrap();
+        for (case, bytes) in escaping_zip_archives(&outside) {
+            let sha = sha256_of(&bytes);
+            let dest = root.path().join(case);
+            let result = execute_zip_extract(&serve_once(bytes), Some(&sha), &dest);
+            assert!(
+                matches!(&result, Err(InstallError::StepFailed { step, .. }) if step == "zip-extract"),
+                "{case} archive was not refused at extraction"
+            );
+            assert_nothing_escaped(root.path(), &outside, &dest);
+        }
+    }
+
+    #[test]
+    fn host_package_refuses_entries_that_leave_the_destination() {
+        let root = tempfile::tempdir().unwrap();
+        let outside = root.path().join("outside");
+        fs::create_dir(&outside).unwrap();
+        for (case, bytes) in escaping_zip_archives(&outside) {
+            let dest = root.path().join(case);
+            let result = extract_host_package(&bytes, &sha256_of(&bytes), &dest);
+            assert!(result.is_err(), "{case} archive was accepted");
+            assert!(!dest.exists());
+            assert_nothing_escaped(root.path(), &outside, &dest);
+        }
     }
 
     #[test]
