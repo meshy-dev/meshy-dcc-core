@@ -3,7 +3,7 @@
 Meshy DCC Core release notes. Crates, the Python wheel and the product share
 one version line.
 
-## Unreleased
+## 0.2.4 (2026-11-09)
 
 ### Changed
 
