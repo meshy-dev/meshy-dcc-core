@@ -7,7 +7,8 @@ description: Work inside a creator's running DCC application through the local m
 
 `meshy-dcc` is a local CLI. DCC hosts running a Meshy DCC adapter register themselves on
 the machine; the CLI lists them, searches their tools and runs a tool inside the instance
-you choose. No MCP connector is involved.
+you choose. This path needs no MCP connector; MCP clients can use the gateway's
+native MCP entry instead.
 
 **Supported hosts.** Read the host's reference before working in it:
 
