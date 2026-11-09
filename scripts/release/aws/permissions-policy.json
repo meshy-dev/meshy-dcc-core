@@ -6,12 +6,6 @@
       "Effect": "Allow",
       "Action": ["s3:PutObject", "s3:GetObject", "s3:AbortMultipartUpload"],
       "Resource": "arn:aws:s3:::meshy-cdn/meshy-dcc-core/*"
-    },
-    {
-      "Sid": "NpmToken",
-      "Effect": "Allow",
-      "Action": "secretsmanager:GetSecretValue",
-      "Resource": "arn:aws:secretsmanager:us-west-2:133081291590:secret:meshy-dcc/release/npm-token-*"
     }
   ]
 }
