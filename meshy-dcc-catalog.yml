@@ -29,7 +29,7 @@ entries:
     dcc: ["blender"]
     url: "https://www.meshy.ai"
     tags: ["adapter", "meshy", "blender"]
-    version: "0.1.2"
+    version: "0.1.3"
     maintainer: "Meshy"
     policy:
       installation: available
@@ -37,17 +37,17 @@ entries:
       type: host-package
       platforms:
         macos-arm64:
-          url: "https://cdn.meshy.ai/meshy-dcc-core/adapters/blender/v0-1-2/meshy-dcc-blender-macos-arm64.zip"
-          sha256: "fe810169f6e371b54c32f0fe3d9722ebc6b8facb2dac09dbe04113d0e5b11276"
-          mirrors: ["https://cdn.meshy.cn/meshy-dcc-core/adapters/blender/v0-1-2/meshy-dcc-blender-macos-arm64.zip", "https://github.com/meshy-dev/meshy-dcc-adapters/releases/download/blender-v0.1.2/meshy-dcc-blender-macos-arm64.zip"]
+          url: "https://cdn.meshy.ai/meshy-dcc-core/adapters/blender/v0-1-3/meshy-dcc-blender-macos-arm64.zip"
+          sha256: "d868d75037ec3b0acd0cb235077c302b8e482e1f0f2b701c3698840b2f32fd18"
+          mirrors: ["https://cdn.meshy.cn/meshy-dcc-core/adapters/blender/v0-1-3/meshy-dcc-blender-macos-arm64.zip", "https://github.com/meshy-dev/meshy-dcc-adapters/releases/download/blender-v0.1.3/meshy-dcc-blender-macos-arm64.zip"]
           dcc_paths:
             - "/Applications/Blender.app/Contents/MacOS/Blender"
             - "~/Applications/Blender.app/Contents/MacOS/Blender"
             - "~/Library/Application Support/Steam/steamapps/common/Blender/Blender.app/Contents/MacOS/Blender"
         windows-x86_64:
-          url: "https://cdn.meshy.ai/meshy-dcc-core/adapters/blender/v0-1-2/meshy-dcc-blender-windows-x64.zip"
-          sha256: "04f22468f7d76c7beed73a7bb58ad83c319722b802ab569fa1a6c53fdac76d18"
-          mirrors: ["https://cdn.meshy.cn/meshy-dcc-core/adapters/blender/v0-1-2/meshy-dcc-blender-windows-x64.zip", "https://github.com/meshy-dev/meshy-dcc-adapters/releases/download/blender-v0.1.2/meshy-dcc-blender-windows-x64.zip"]
+          url: "https://cdn.meshy.ai/meshy-dcc-core/adapters/blender/v0-1-3/meshy-dcc-blender-windows-x64.zip"
+          sha256: "979660dbdbea13f95f3263087cc8ce57515c60351003aa982f3850f5bc05ec7d"
+          mirrors: ["https://cdn.meshy.cn/meshy-dcc-core/adapters/blender/v0-1-3/meshy-dcc-blender-windows-x64.zip", "https://github.com/meshy-dev/meshy-dcc-adapters/releases/download/blender-v0.1.3/meshy-dcc-blender-windows-x64.zip"]
           dcc_paths:
             - "%ProgramFiles%/Blender Foundation/Blender */blender.exe"
             - "C:/Program Files/Blender Foundation/Blender */blender.exe"
@@ -66,7 +66,7 @@ entries:
     dcc: ["unity"]
     url: "https://www.meshy.ai"
     tags: ["adapter", "meshy", "unity"]
-    version: "0.1.2"
+    version: "0.1.3"
     maintainer: "Meshy"
     policy:
       installation: available
@@ -75,16 +75,16 @@ entries:
       type: host-package
       platforms:
         macos-arm64:
-          url: "https://cdn.meshy.ai/meshy-dcc-core/adapters/unity/v0-1-2/meshy-dcc-unity-macos-arm64.zip"
-          sha256: "03d912c7efe304c1fe50ae9c19824fc3433e8cc9c64a842da7033895d5ac1802"
-          mirrors: ["https://cdn.meshy.cn/meshy-dcc-core/adapters/unity/v0-1-2/meshy-dcc-unity-macos-arm64.zip", "https://github.com/meshy-dev/meshy-dcc-adapters/releases/download/unity-v0.1.2/meshy-dcc-unity-macos-arm64.zip"]
+          url: "https://cdn.meshy.ai/meshy-dcc-core/adapters/unity/v0-1-3/meshy-dcc-unity-macos-arm64.zip"
+          sha256: "2f4bd800ed8e187c6a3aa01c0f8dee256f28bed92b282806c69fbc6ae81ce615"
+          mirrors: ["https://cdn.meshy.cn/meshy-dcc-core/adapters/unity/v0-1-3/meshy-dcc-unity-macos-arm64.zip", "https://github.com/meshy-dev/meshy-dcc-adapters/releases/download/unity-v0.1.3/meshy-dcc-unity-macos-arm64.zip"]
           # Observation only; the adapter selects the project's editor version.
           dcc_paths:
             - "/Applications/Unity/Hub/Editor/*/Unity.app/Contents/MacOS/Unity"
         windows-x86_64:
-          url: "https://cdn.meshy.ai/meshy-dcc-core/adapters/unity/v0-1-2/meshy-dcc-unity-windows-x64.zip"
-          sha256: "58790406ac7dccaef664543b77f0c18224a8e048466f49d413089e8dab0f828a"
-          mirrors: ["https://cdn.meshy.cn/meshy-dcc-core/adapters/unity/v0-1-2/meshy-dcc-unity-windows-x64.zip", "https://github.com/meshy-dev/meshy-dcc-adapters/releases/download/unity-v0.1.2/meshy-dcc-unity-windows-x64.zip"]
+          url: "https://cdn.meshy.ai/meshy-dcc-core/adapters/unity/v0-1-3/meshy-dcc-unity-windows-x64.zip"
+          sha256: "2e5b1eaa8a43e523089b957f8105f0de3dc39bd490c7945ca3464a0c407b60b7"
+          mirrors: ["https://cdn.meshy.cn/meshy-dcc-core/adapters/unity/v0-1-3/meshy-dcc-unity-windows-x64.zip", "https://github.com/meshy-dev/meshy-dcc-adapters/releases/download/unity-v0.1.3/meshy-dcc-unity-windows-x64.zip"]
           dcc_paths:
             - "%ProgramFiles%/Unity/Hub/Editor/*/Editor/Unity.exe"
             - "C:/Program Files/Unity/Hub/Editor/*/Editor/Unity.exe"
@@ -104,7 +104,7 @@ entries:
     dcc: ["godot"]
     url: "https://www.meshy.ai"
     tags: ["adapter", "meshy", "godot"]
-    version: "0.1.2"
+    version: "0.1.3"
     maintainer: "Meshy"
     policy:
       installation: available
@@ -113,16 +113,16 @@ entries:
       type: host-package
       platforms:
         macos-arm64:
-          url: "https://cdn.meshy.ai/meshy-dcc-core/adapters/godot/v0-1-2/meshy-dcc-godot-macos-arm64.zip"
-          sha256: "2eb9b434e5663a7f712fd63e2d3b2708cef158bc46b0be2da4d8d34ff7f4c262"
-          mirrors: ["https://cdn.meshy.cn/meshy-dcc-core/adapters/godot/v0-1-2/meshy-dcc-godot-macos-arm64.zip", "https://github.com/meshy-dev/meshy-dcc-adapters/releases/download/godot-v0.1.2/meshy-dcc-godot-macos-arm64.zip"]
+          url: "https://cdn.meshy.ai/meshy-dcc-core/adapters/godot/v0-1-3/meshy-dcc-godot-macos-arm64.zip"
+          sha256: "f3324cee62b7ccac9066911f52df4d3ef3456bf103f1176da94ae5b21eb453fc"
+          mirrors: ["https://cdn.meshy.cn/meshy-dcc-core/adapters/godot/v0-1-3/meshy-dcc-godot-macos-arm64.zip", "https://github.com/meshy-dev/meshy-dcc-adapters/releases/download/godot-v0.1.3/meshy-dcc-godot-macos-arm64.zip"]
           dcc_paths:
             - "/Applications/Godot.app/Contents/MacOS/Godot"
             - "~/Applications/Godot.app/Contents/MacOS/Godot"
         windows-x86_64:
-          url: "https://cdn.meshy.ai/meshy-dcc-core/adapters/godot/v0-1-2/meshy-dcc-godot-windows-x64.zip"
-          sha256: "672eb98a547bcdfbc03766faf07f882588ed5c9aed95453bda8f2e5f9b12f355"
-          mirrors: ["https://cdn.meshy.cn/meshy-dcc-core/adapters/godot/v0-1-2/meshy-dcc-godot-windows-x64.zip", "https://github.com/meshy-dev/meshy-dcc-adapters/releases/download/godot-v0.1.2/meshy-dcc-godot-windows-x64.zip"]
+          url: "https://cdn.meshy.ai/meshy-dcc-core/adapters/godot/v0-1-3/meshy-dcc-godot-windows-x64.zip"
+          sha256: "18f975799fbb7229d559caa136b8e2783885b51cc236599dd4344af9db558beb"
+          mirrors: ["https://cdn.meshy.cn/meshy-dcc-core/adapters/godot/v0-1-3/meshy-dcc-godot-windows-x64.zip", "https://github.com/meshy-dev/meshy-dcc-adapters/releases/download/godot-v0.1.3/meshy-dcc-godot-windows-x64.zip"]
           # Godot's Windows editor is portable; other locations use --dcc-path.
           dcc_paths:
             - "%ProgramFiles%/Godot/Godot.exe"
@@ -147,7 +147,7 @@ entries:
     dcc: ["unreal"]
     url: "https://www.meshy.ai"
     tags: ["adapter", "meshy", "unreal"]
-    version: "0.1.2"
+    version: "0.1.3"
     maintainer: "Meshy"
     policy:
       installation: available
@@ -156,16 +156,16 @@ entries:
       type: host-package
       platforms:
         macos-arm64:
-          url: "https://cdn.meshy.ai/meshy-dcc-core/adapters/unreal/v0-1-2/meshy-dcc-unreal-macos-arm64.zip"
-          sha256: "20ac888978c8416efb281d907f0b47458626a3d0ecc2fc5dfa756d1097249588"
-          mirrors: ["https://cdn.meshy.cn/meshy-dcc-core/adapters/unreal/v0-1-2/meshy-dcc-unreal-macos-arm64.zip", "https://github.com/meshy-dev/meshy-dcc-adapters/releases/download/unreal-v0.1.2/meshy-dcc-unreal-macos-arm64.zip"]
+          url: "https://cdn.meshy.ai/meshy-dcc-core/adapters/unreal/v0-1-3/meshy-dcc-unreal-macos-arm64.zip"
+          sha256: "dab7f5b03266ac0f63ce910c2a47805b4272395150d08afb3e040f1e2b0db8e6"
+          mirrors: ["https://cdn.meshy.cn/meshy-dcc-core/adapters/unreal/v0-1-3/meshy-dcc-unreal-macos-arm64.zip", "https://github.com/meshy-dev/meshy-dcc-adapters/releases/download/unreal-v0.1.3/meshy-dcc-unreal-macos-arm64.zip"]
           # Observation only; the adapter resolves the project's EngineAssociation.
           dcc_paths:
             - "/Users/Shared/Epic Games/UE_*/Engine/Binaries/Mac/UnrealEditor.app/Contents/MacOS/UnrealEditor"
         windows-x86_64:
-          url: "https://cdn.meshy.ai/meshy-dcc-core/adapters/unreal/v0-1-2/meshy-dcc-unreal-windows-x64.zip"
-          sha256: "205f27afa8f686f3ee63131531f08237f292e27c0cf1dfab25437d32786b7166"
-          mirrors: ["https://cdn.meshy.cn/meshy-dcc-core/adapters/unreal/v0-1-2/meshy-dcc-unreal-windows-x64.zip", "https://github.com/meshy-dev/meshy-dcc-adapters/releases/download/unreal-v0.1.2/meshy-dcc-unreal-windows-x64.zip"]
+          url: "https://cdn.meshy.ai/meshy-dcc-core/adapters/unreal/v0-1-3/meshy-dcc-unreal-windows-x64.zip"
+          sha256: "620d95f9256409fa86218b3951e400fdc763b72f7a4197f5b0d62fc66ebf712e"
+          mirrors: ["https://cdn.meshy.cn/meshy-dcc-core/adapters/unreal/v0-1-3/meshy-dcc-unreal-windows-x64.zip", "https://github.com/meshy-dev/meshy-dcc-adapters/releases/download/unreal-v0.1.3/meshy-dcc-unreal-windows-x64.zip"]
           dcc_paths:
             - "%ProgramFiles%/Epic Games/UE_*/Engine/Binaries/Win64/UnrealEditor.exe"
             - "C:/Program Files/Epic Games/UE_*/Engine/Binaries/Win64/UnrealEditor.exe"
@@ -183,7 +183,7 @@ entries:
     dcc: ["zbrush"]
     url: "https://www.meshy.ai"
     tags: ["adapter", "meshy", "zbrush"]
-    version: "0.1.2"
+    version: "0.1.3"
     maintainer: "Meshy"
     policy:
       installation: available
@@ -194,16 +194,16 @@ entries:
       type: host-package
       platforms:
         macos-arm64:
-          url: "https://cdn.meshy.ai/meshy-dcc-core/adapters/zbrush/v0-1-2/meshy-dcc-zbrush-macos-arm64.zip"
-          sha256: "0e7d0de22b6e1327457af6dba3163c73575b89828bf3d7b81330d13bd4a6ace2"
-          mirrors: ["https://cdn.meshy.cn/meshy-dcc-core/adapters/zbrush/v0-1-2/meshy-dcc-zbrush-macos-arm64.zip", "https://github.com/meshy-dev/meshy-dcc-adapters/releases/download/zbrush-v0.1.2/meshy-dcc-zbrush-macos-arm64.zip"]
+          url: "https://cdn.meshy.ai/meshy-dcc-core/adapters/zbrush/v0-1-3/meshy-dcc-zbrush-macos-arm64.zip"
+          sha256: "01a945ed42d99429d86209d3b64513f64813f089615843a97b7282cbb4f3aeb7"
+          mirrors: ["https://cdn.meshy.cn/meshy-dcc-core/adapters/zbrush/v0-1-3/meshy-dcc-zbrush-macos-arm64.zip", "https://github.com/meshy-dev/meshy-dcc-adapters/releases/download/zbrush-v0.1.3/meshy-dcc-zbrush-macos-arm64.zip"]
           dcc_paths:
             - "/Applications/Maxon ZBrush 20*/ZBrush.app/Contents/MacOS/ZBrush"
             - "~/Applications/Maxon ZBrush 20*/ZBrush.app/Contents/MacOS/ZBrush"
         windows-x86_64:
-          url: "https://cdn.meshy.ai/meshy-dcc-core/adapters/zbrush/v0-1-2/meshy-dcc-zbrush-windows-x64.zip"
-          sha256: "4d4eaac7625823abe3ef3d83de277e5ee65080cd5ccd4f646522bf8424eb88c8"
-          mirrors: ["https://cdn.meshy.cn/meshy-dcc-core/adapters/zbrush/v0-1-2/meshy-dcc-zbrush-windows-x64.zip", "https://github.com/meshy-dev/meshy-dcc-adapters/releases/download/zbrush-v0.1.2/meshy-dcc-zbrush-windows-x64.zip"]
+          url: "https://cdn.meshy.ai/meshy-dcc-core/adapters/zbrush/v0-1-3/meshy-dcc-zbrush-windows-x64.zip"
+          sha256: "fa8ea01ce82831a3b76132f11aa8191f6b7702183b2955868f99d9122f2a6ce1"
+          mirrors: ["https://cdn.meshy.cn/meshy-dcc-core/adapters/zbrush/v0-1-3/meshy-dcc-zbrush-windows-x64.zip", "https://github.com/meshy-dev/meshy-dcc-adapters/releases/download/zbrush-v0.1.3/meshy-dcc-zbrush-windows-x64.zip"]
           dcc_paths:
             - "%ProgramFiles%/Maxon ZBrush 20*/ZBrush.exe"
             - "C:/Program Files/Maxon ZBrush 20*/ZBrush.exe"
@@ -221,7 +221,7 @@ entries:
     dcc: ["roblox"]
     url: "https://www.meshy.ai"
     tags: ["adapter", "meshy", "roblox"]
-    version: "0.1.2"
+    version: "0.1.3"
     maintainer: "Meshy"
     policy:
       installation: available
@@ -232,16 +232,16 @@ entries:
       type: host-package
       platforms:
         macos-arm64:
-          url: "https://cdn.meshy.ai/meshy-dcc-core/adapters/roblox/v0-1-2/meshy-dcc-roblox-macos-arm64.zip"
-          sha256: "5c29e6cd8e308bbc9dfb9d0642d583bbd34099f0a3b54bd40daa9e735e936346"
-          mirrors: ["https://cdn.meshy.cn/meshy-dcc-core/adapters/roblox/v0-1-2/meshy-dcc-roblox-macos-arm64.zip", "https://github.com/meshy-dev/meshy-dcc-adapters/releases/download/roblox-v0.1.2/meshy-dcc-roblox-macos-arm64.zip"]
+          url: "https://cdn.meshy.ai/meshy-dcc-core/adapters/roblox/v0-1-3/meshy-dcc-roblox-macos-arm64.zip"
+          sha256: "d0ed5e5c80b466ee5e2dd7591b9324400552ed862ac0126cf2509610745b7bd1"
+          mirrors: ["https://cdn.meshy.cn/meshy-dcc-core/adapters/roblox/v0-1-3/meshy-dcc-roblox-macos-arm64.zip", "https://github.com/meshy-dev/meshy-dcc-adapters/releases/download/roblox-v0.1.3/meshy-dcc-roblox-macos-arm64.zip"]
           dcc_paths:
             - "/Applications/RobloxStudio.app/Contents/MacOS/RobloxStudio"
             - "~/Applications/RobloxStudio.app/Contents/MacOS/RobloxStudio"
         windows-x86_64:
-          url: "https://cdn.meshy.ai/meshy-dcc-core/adapters/roblox/v0-1-2/meshy-dcc-roblox-windows-x64.zip"
-          sha256: "18e036e7b9f70331b3735859974b188b80eb3ce86ea7ac950ee3e0d12f541ad5"
-          mirrors: ["https://cdn.meshy.cn/meshy-dcc-core/adapters/roblox/v0-1-2/meshy-dcc-roblox-windows-x64.zip", "https://github.com/meshy-dev/meshy-dcc-adapters/releases/download/roblox-v0.1.2/meshy-dcc-roblox-windows-x64.zip"]
+          url: "https://cdn.meshy.ai/meshy-dcc-core/adapters/roblox/v0-1-3/meshy-dcc-roblox-windows-x64.zip"
+          sha256: "bcc489639a8a5e02e27c4709c2e1b143168d375cdce8f3a898b21f0ed6392894"
+          mirrors: ["https://cdn.meshy.cn/meshy-dcc-core/adapters/roblox/v0-1-3/meshy-dcc-roblox-windows-x64.zip", "https://github.com/meshy-dev/meshy-dcc-adapters/releases/download/roblox-v0.1.3/meshy-dcc-roblox-windows-x64.zip"]
           dcc_paths:
             - "%LOCALAPPDATA%/Roblox/Versions/*/RobloxStudioBeta.exe"
             - "~/AppData/Local/Roblox/Versions/*/RobloxStudioBeta.exe"
@@ -261,7 +261,7 @@ entries:
     dcc: ["maya"]
     url: "https://www.meshy.ai"
     tags: ["adapter", "meshy", "maya"]
-    version: "0.1.2"
+    version: "0.1.3"
     maintainer: "Meshy"
     policy:
       installation: available
@@ -273,15 +273,15 @@ entries:
       type: host-package
       platforms:
         macos-arm64:
-          url: "https://cdn.meshy.ai/meshy-dcc-core/adapters/maya/v0-1-2/meshy-dcc-maya-macos-arm64.zip"
-          sha256: "6e586199daeb0a276f4390c219c8383f4d8575e5d83d46de9abca829cd6a26d4"
-          mirrors: ["https://cdn.meshy.cn/meshy-dcc-core/adapters/maya/v0-1-2/meshy-dcc-maya-macos-arm64.zip", "https://github.com/meshy-dev/meshy-dcc-adapters/releases/download/maya-v0.1.2/meshy-dcc-maya-macos-arm64.zip"]
+          url: "https://cdn.meshy.ai/meshy-dcc-core/adapters/maya/v0-1-3/meshy-dcc-maya-macos-arm64.zip"
+          sha256: "df33ad01219205b67a34fc303ab9d425298a7b3c9fd10f2e73ee095ebbc82a2c"
+          mirrors: ["https://cdn.meshy.cn/meshy-dcc-core/adapters/maya/v0-1-3/meshy-dcc-maya-macos-arm64.zip", "https://github.com/meshy-dev/meshy-dcc-adapters/releases/download/maya-v0.1.3/meshy-dcc-maya-macos-arm64.zip"]
           dcc_paths:
             - "/Applications/Autodesk/maya*/Maya.app/Contents/MacOS/Maya"
         windows-x86_64:
-          url: "https://cdn.meshy.ai/meshy-dcc-core/adapters/maya/v0-1-2/meshy-dcc-maya-windows-x64.zip"
-          sha256: "d03a3496712c70efdaa00dd6f9b12ba34ff740c13d19f96baf693972c7fc290a"
-          mirrors: ["https://cdn.meshy.cn/meshy-dcc-core/adapters/maya/v0-1-2/meshy-dcc-maya-windows-x64.zip", "https://github.com/meshy-dev/meshy-dcc-adapters/releases/download/maya-v0.1.2/meshy-dcc-maya-windows-x64.zip"]
+          url: "https://cdn.meshy.ai/meshy-dcc-core/adapters/maya/v0-1-3/meshy-dcc-maya-windows-x64.zip"
+          sha256: "087ad2d9b7c33a8a0b7208679bfff63aa9f8c044347c2361fdd2c054fdf45d08"
+          mirrors: ["https://cdn.meshy.cn/meshy-dcc-core/adapters/maya/v0-1-3/meshy-dcc-maya-windows-x64.zip", "https://github.com/meshy-dev/meshy-dcc-adapters/releases/download/maya-v0.1.3/meshy-dcc-maya-windows-x64.zip"]
           dcc_paths:
             - "%ProgramFiles%/Autodesk/Maya*/bin/maya.exe"
             - "C:/Program Files/Autodesk/Maya*/bin/maya.exe"
@@ -305,7 +305,7 @@ entries:
     dcc: ["3dsmax"]
     url: "https://www.meshy.ai"
     tags: ["adapter", "meshy", "3dsmax"]
-    version: "0.1.2"
+    version: "0.1.3"
     maintainer: "Meshy"
     policy:
       installation: available
@@ -315,9 +315,9 @@ entries:
       type: host-package
       platforms:
         windows-x86_64:
-          url: "https://cdn.meshy.ai/meshy-dcc-core/adapters/3dsmax/v0-1-2/meshy-dcc-3dsmax-windows-x64.zip"
-          sha256: "f031f0661c016615ea72f2497d8884bf95108f00876d5dbda56f2ed36a2902fe"
-          mirrors: ["https://cdn.meshy.cn/meshy-dcc-core/adapters/3dsmax/v0-1-2/meshy-dcc-3dsmax-windows-x64.zip", "https://github.com/meshy-dev/meshy-dcc-adapters/releases/download/3dsmax-v0.1.2/meshy-dcc-3dsmax-windows-x64.zip"]
+          url: "https://cdn.meshy.ai/meshy-dcc-core/adapters/3dsmax/v0-1-3/meshy-dcc-3dsmax-windows-x64.zip"
+          sha256: "d21eb42c6ae76ff20e6a09ebb0d311b19354a0d3017ea6146347b60eee4cd19b"
+          mirrors: ["https://cdn.meshy.cn/meshy-dcc-core/adapters/3dsmax/v0-1-3/meshy-dcc-3dsmax-windows-x64.zip", "https://github.com/meshy-dev/meshy-dcc-adapters/releases/download/3dsmax-v0.1.3/meshy-dcc-3dsmax-windows-x64.zip"]
           dcc_paths:
             - "%ProgramFiles%/Autodesk/3ds Max */3dsmax.exe"
             - "C:/Program Files/Autodesk/3ds Max */3dsmax.exe"
@@ -346,7 +346,7 @@ entries:
     dcc: ["houdini"]
     url: "https://www.meshy.ai"
     tags: ["adapter", "meshy", "houdini"]
-    version: "0.1.2"
+    version: "0.1.3"
     maintainer: "Meshy"
     policy:
       installation: available
@@ -356,17 +356,17 @@ entries:
       type: host-package
       platforms:
         macos-arm64:
-          url: "https://cdn.meshy.ai/meshy-dcc-core/adapters/houdini/v0-1-2/meshy-dcc-houdini-macos-arm64.zip"
-          sha256: "c32c55a83297c53c123248ce86d3c99fdcb4b3d8b702a3f0318b086922a3c212"
-          mirrors: ["https://cdn.meshy.cn/meshy-dcc-core/adapters/houdini/v0-1-2/meshy-dcc-houdini-macos-arm64.zip", "https://github.com/meshy-dev/meshy-dcc-adapters/releases/download/houdini-v0.1.2/meshy-dcc-houdini-macos-arm64.zip"]
+          url: "https://cdn.meshy.ai/meshy-dcc-core/adapters/houdini/v0-1-3/meshy-dcc-houdini-macos-arm64.zip"
+          sha256: "af3026eeb240f2a8e1061568799cc7eea3e184914e4b8373571accd33f8ed2ac"
+          mirrors: ["https://cdn.meshy.cn/meshy-dcc-core/adapters/houdini/v0-1-3/meshy-dcc-houdini-macos-arm64.zip", "https://github.com/meshy-dev/meshy-dcc-adapters/releases/download/houdini-v0.1.3/meshy-dcc-houdini-macos-arm64.zip"]
           dcc_paths:
             - "/Applications/Houdini/Houdini*/Frameworks/Houdini.framework/Versions/Current/Resources/bin/houdini"
             - "/Applications/Houdini/Houdini*.app/Contents/MacOS/houdini"
             - "/Applications/Houdini/Houdini*/Houdini*.app/Contents/MacOS/houdini"
         windows-x86_64:
-          url: "https://cdn.meshy.ai/meshy-dcc-core/adapters/houdini/v0-1-2/meshy-dcc-houdini-windows-x64.zip"
-          sha256: "fec59a7a66225ffa1d6009fc17f50d4f6ad295d90f85af927ed46b84aa42b5f0"
-          mirrors: ["https://cdn.meshy.cn/meshy-dcc-core/adapters/houdini/v0-1-2/meshy-dcc-houdini-windows-x64.zip", "https://github.com/meshy-dev/meshy-dcc-adapters/releases/download/houdini-v0.1.2/meshy-dcc-houdini-windows-x64.zip"]
+          url: "https://cdn.meshy.ai/meshy-dcc-core/adapters/houdini/v0-1-3/meshy-dcc-houdini-windows-x64.zip"
+          sha256: "3eba028b7458b89c53324be2d7b347fb2029cea5376672de716731c50812a5a7"
+          mirrors: ["https://cdn.meshy.cn/meshy-dcc-core/adapters/houdini/v0-1-3/meshy-dcc-houdini-windows-x64.zip", "https://github.com/meshy-dev/meshy-dcc-adapters/releases/download/houdini-v0.1.3/meshy-dcc-houdini-windows-x64.zip"]
           dcc_paths:
             - "%ProgramFiles%/Side Effects Software/Houdini */bin/houdini.exe"
             - "C:/Program Files/Side Effects Software/Houdini */bin/houdini.exe"
@@ -437,7 +437,7 @@ entries:
     dcc: ["substance3d_painter"]
     url: "https://www.meshy.ai"
     tags: ["adapter", "meshy", "substance3d-painter"]
-    version: "0.1.2"
+    version: "0.1.3"
     maintainer: "Meshy"
     policy:
       installation: available
@@ -447,17 +447,17 @@ entries:
       type: host-package
       platforms:
         macos-arm64:
-          url: "https://cdn.meshy.ai/meshy-dcc-core/adapters/substance3d-painter/v0-1-2/meshy-dcc-substance3d-painter-macos-arm64.zip"
-          sha256: "778b1a88f0d6ce0ca2b80e85dc47964dee81b22c20e7e52a6c429db25edcad5b"
-          mirrors: ["https://cdn.meshy.cn/meshy-dcc-core/adapters/substance3d-painter/v0-1-2/meshy-dcc-substance3d-painter-macos-arm64.zip", "https://github.com/meshy-dev/meshy-dcc-adapters/releases/download/substance3d-painter-v0.1.2/meshy-dcc-substance3d-painter-macos-arm64.zip"]
+          url: "https://cdn.meshy.ai/meshy-dcc-core/adapters/substance3d-painter/v0-1-3/meshy-dcc-substance3d-painter-macos-arm64.zip"
+          sha256: "1fd900fdca04cab9c8306906088ef2311ebf22441c7001125345fd8262eade3b"
+          mirrors: ["https://cdn.meshy.cn/meshy-dcc-core/adapters/substance3d-painter/v0-1-3/meshy-dcc-substance3d-painter-macos-arm64.zip", "https://github.com/meshy-dev/meshy-dcc-adapters/releases/download/substance3d-painter-v0.1.3/meshy-dcc-substance3d-painter-macos-arm64.zip"]
           dcc_paths:
             - "/Applications/Adobe Substance 3D Painter.app/Contents/MacOS/Adobe Substance 3D Painter"
             - "/Applications/Adobe Substance 3D Painter/Adobe Substance 3D Painter.app/Contents/MacOS/Adobe Substance 3D Painter"
             - "~/Library/Application Support/Steam/steamapps/common/Substance 3D Painter */Adobe Substance 3D Painter.app/Contents/MacOS/Adobe Substance 3D Painter"
         windows-x86_64:
-          url: "https://cdn.meshy.ai/meshy-dcc-core/adapters/substance3d-painter/v0-1-2/meshy-dcc-substance3d-painter-windows-x64.zip"
-          sha256: "e87177cb3223a23ca31995219fae40ceb45ece35258e737323e0c32eb289f4ac"
-          mirrors: ["https://cdn.meshy.cn/meshy-dcc-core/adapters/substance3d-painter/v0-1-2/meshy-dcc-substance3d-painter-windows-x64.zip", "https://github.com/meshy-dev/meshy-dcc-adapters/releases/download/substance3d-painter-v0.1.2/meshy-dcc-substance3d-painter-windows-x64.zip"]
+          url: "https://cdn.meshy.ai/meshy-dcc-core/adapters/substance3d-painter/v0-1-3/meshy-dcc-substance3d-painter-windows-x64.zip"
+          sha256: "ac0fc333c2eb0d835e8c860b9cc86d357b548503d5673ee034d9a63ce8fcc2f7"
+          mirrors: ["https://cdn.meshy.cn/meshy-dcc-core/adapters/substance3d-painter/v0-1-3/meshy-dcc-substance3d-painter-windows-x64.zip", "https://github.com/meshy-dev/meshy-dcc-adapters/releases/download/substance3d-painter-v0.1.3/meshy-dcc-substance3d-painter-windows-x64.zip"]
           dcc_paths:
             - "%ProgramFiles%/Adobe/Adobe Substance 3D Painter*/Adobe Substance 3D Painter.exe"
             - "C:/Program Files/Adobe/Adobe Substance 3D Painter*/Adobe Substance 3D Painter.exe"
@@ -543,7 +543,7 @@ entries:
     dcc: ["freecad"]
     url: "https://www.meshy.ai"
     tags: ["adapter", "meshy", "freecad"]
-    version: "0.1.2"
+    version: "0.1.3"
     maintainer: "Meshy"
     policy:
       installation: available
@@ -554,16 +554,16 @@ entries:
       type: host-package
       platforms:
         macos-arm64:
-          url: "https://cdn.meshy.ai/meshy-dcc-core/adapters/freecad/v0-1-2/meshy-dcc-freecad-macos-arm64.zip"
-          sha256: "03e08cb5ac854be489a11717e6ceb269211bdc06285d5ed617a92c92b32b90d0"
-          mirrors: ["https://cdn.meshy.cn/meshy-dcc-core/adapters/freecad/v0-1-2/meshy-dcc-freecad-macos-arm64.zip", "https://github.com/meshy-dev/meshy-dcc-adapters/releases/download/freecad-v0.1.2/meshy-dcc-freecad-macos-arm64.zip"]
+          url: "https://cdn.meshy.ai/meshy-dcc-core/adapters/freecad/v0-1-3/meshy-dcc-freecad-macos-arm64.zip"
+          sha256: "97af23c2e2402cb5d579683497b01de05ba9ea20efcf26e0ebc02b45c3224ad5"
+          mirrors: ["https://cdn.meshy.cn/meshy-dcc-core/adapters/freecad/v0-1-3/meshy-dcc-freecad-macos-arm64.zip", "https://github.com/meshy-dev/meshy-dcc-adapters/releases/download/freecad-v0.1.3/meshy-dcc-freecad-macos-arm64.zip"]
           dcc_paths:
             - "/Applications/FreeCAD.app/Contents/MacOS/FreeCAD"
             - "~/Applications/FreeCAD.app/Contents/MacOS/FreeCAD"
         windows-x86_64:
-          url: "https://cdn.meshy.ai/meshy-dcc-core/adapters/freecad/v0-1-2/meshy-dcc-freecad-windows-x64.zip"
-          sha256: "7336448a015e8abaf0a33e31b232a9da77e2203c19818d0bf9df03f93887705a"
-          mirrors: ["https://cdn.meshy.cn/meshy-dcc-core/adapters/freecad/v0-1-2/meshy-dcc-freecad-windows-x64.zip", "https://github.com/meshy-dev/meshy-dcc-adapters/releases/download/freecad-v0.1.2/meshy-dcc-freecad-windows-x64.zip"]
+          url: "https://cdn.meshy.ai/meshy-dcc-core/adapters/freecad/v0-1-3/meshy-dcc-freecad-windows-x64.zip"
+          sha256: "fafc1e8049c8a1412934504738aa033dd5f798e702faa4b639651e2858fd71f3"
+          mirrors: ["https://cdn.meshy.cn/meshy-dcc-core/adapters/freecad/v0-1-3/meshy-dcc-freecad-windows-x64.zip", "https://github.com/meshy-dev/meshy-dcc-adapters/releases/download/freecad-v0.1.3/meshy-dcc-freecad-windows-x64.zip"]
           dcc_paths:
             - "%ProgramFiles%/FreeCAD/bin/FreeCAD.exe"
             - "C:/Program Files/FreeCAD/bin/FreeCAD.exe"
@@ -585,7 +585,7 @@ entries:
     dcc: ["openscad"]
     url: "https://www.meshy.ai"
     tags: ["adapter", "meshy", "openscad"]
-    version: "0.1.2"
+    version: "0.1.3"
     maintainer: "Meshy"
     policy:
       installation: available
@@ -594,16 +594,16 @@ entries:
       type: host-package
       platforms:
         macos-arm64:
-          url: "https://cdn.meshy.ai/meshy-dcc-core/adapters/openscad/v0-1-2/meshy-dcc-openscad-macos-arm64.zip"
-          sha256: "daccaed2667b69accabfe30fb4594118131e08399f617ca536a21d55c8faafd7"
-          mirrors: ["https://cdn.meshy.cn/meshy-dcc-core/adapters/openscad/v0-1-2/meshy-dcc-openscad-macos-arm64.zip", "https://github.com/meshy-dev/meshy-dcc-adapters/releases/download/openscad-v0.1.2/meshy-dcc-openscad-macos-arm64.zip"]
+          url: "https://cdn.meshy.ai/meshy-dcc-core/adapters/openscad/v0-1-3/meshy-dcc-openscad-macos-arm64.zip"
+          sha256: "f7ae3c56c3b4aa38f99ac7171f6443fe1f5d6cfd66efce11ebc2bd98c31d0e0e"
+          mirrors: ["https://cdn.meshy.cn/meshy-dcc-core/adapters/openscad/v0-1-3/meshy-dcc-openscad-macos-arm64.zip", "https://github.com/meshy-dev/meshy-dcc-adapters/releases/download/openscad-v0.1.3/meshy-dcc-openscad-macos-arm64.zip"]
           dcc_paths:
             - "/Applications/OpenSCAD.app/Contents/MacOS/OpenSCAD"
             - "~/Applications/OpenSCAD.app/Contents/MacOS/OpenSCAD"
         windows-x86_64:
-          url: "https://cdn.meshy.ai/meshy-dcc-core/adapters/openscad/v0-1-2/meshy-dcc-openscad-windows-x64.zip"
-          sha256: "3ecb7bb305e61ec2aef38f1640ce90c8f4fc5180e933d0dea47e91d126d6e84d"
-          mirrors: ["https://cdn.meshy.cn/meshy-dcc-core/adapters/openscad/v0-1-2/meshy-dcc-openscad-windows-x64.zip", "https://github.com/meshy-dev/meshy-dcc-adapters/releases/download/openscad-v0.1.2/meshy-dcc-openscad-windows-x64.zip"]
+          url: "https://cdn.meshy.ai/meshy-dcc-core/adapters/openscad/v0-1-3/meshy-dcc-openscad-windows-x64.zip"
+          sha256: "1cb7c50aba4c15678284ad44263cf2aaff328a725187ed6611f348d6d1aa8c6a"
+          mirrors: ["https://cdn.meshy.cn/meshy-dcc-core/adapters/openscad/v0-1-3/meshy-dcc-openscad-windows-x64.zip", "https://github.com/meshy-dev/meshy-dcc-adapters/releases/download/openscad-v0.1.3/meshy-dcc-openscad-windows-x64.zip"]
           dcc_paths:
             - "%ProgramFiles%/OpenSCAD/openscad.exe"
             - "C:/Program Files/OpenSCAD/openscad.exe"
@@ -621,7 +621,7 @@ entries:
     dcc: ["material-maker"]
     url: "https://www.meshy.ai"
     tags: ["adapter", "meshy", "material-maker"]
-    version: "0.1.2"
+    version: "0.1.3"
     maintainer: "Meshy"
     policy:
       installation: available
@@ -630,16 +630,16 @@ entries:
       type: host-package
       platforms:
         macos-arm64:
-          url: "https://cdn.meshy.ai/meshy-dcc-core/adapters/material-maker/v0-1-2/meshy-dcc-material-maker-macos-arm64.zip"
-          sha256: "185e79d5ffdde127f5140cd1793a7fc380e2eff800de6f8b384bc69846c3c1d1"
-          mirrors: ["https://cdn.meshy.cn/meshy-dcc-core/adapters/material-maker/v0-1-2/meshy-dcc-material-maker-macos-arm64.zip", "https://github.com/meshy-dev/meshy-dcc-adapters/releases/download/material-maker-v0.1.2/meshy-dcc-material-maker-macos-arm64.zip"]
+          url: "https://cdn.meshy.ai/meshy-dcc-core/adapters/material-maker/v0-1-3/meshy-dcc-material-maker-macos-arm64.zip"
+          sha256: "939210a9f1e270565215360564ec2e65cd5c962881e8cb346796c36991dbde0e"
+          mirrors: ["https://cdn.meshy.cn/meshy-dcc-core/adapters/material-maker/v0-1-3/meshy-dcc-material-maker-macos-arm64.zip", "https://github.com/meshy-dev/meshy-dcc-adapters/releases/download/material-maker-v0.1.3/meshy-dcc-material-maker-macos-arm64.zip"]
           dcc_paths:
             - "/Applications/Material Maker.app/Contents/MacOS/Material Maker"
             - "~/Applications/Material Maker.app/Contents/MacOS/Material Maker"
         windows-x86_64:
-          url: "https://cdn.meshy.ai/meshy-dcc-core/adapters/material-maker/v0-1-2/meshy-dcc-material-maker-windows-x64.zip"
-          sha256: "0b9f45608057e7bd0b015292c8e19179dfacba8c63223e08553903ea8f196358"
-          mirrors: ["https://cdn.meshy.cn/meshy-dcc-core/adapters/material-maker/v0-1-2/meshy-dcc-material-maker-windows-x64.zip", "https://github.com/meshy-dev/meshy-dcc-adapters/releases/download/material-maker-v0.1.2/meshy-dcc-material-maker-windows-x64.zip"]
+          url: "https://cdn.meshy.ai/meshy-dcc-core/adapters/material-maker/v0-1-3/meshy-dcc-material-maker-windows-x64.zip"
+          sha256: "e82ae9734c58d5ab01c23ce5ebfd9d47912e0773b56e6e68aeb90cf2447fffda"
+          mirrors: ["https://cdn.meshy.cn/meshy-dcc-core/adapters/material-maker/v0-1-3/meshy-dcc-material-maker-windows-x64.zip", "https://github.com/meshy-dev/meshy-dcc-adapters/releases/download/material-maker-v0.1.3/meshy-dcc-material-maker-windows-x64.zip"]
           dcc_paths:
             - "%ProgramFiles%/Material Maker/material_maker.exe"
             - "C:/Program Files/Material Maker/material_maker.exe"
