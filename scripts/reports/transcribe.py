@@ -156,6 +156,8 @@ def footer(stored: dict) -> str:
 def ask_model(stored: dict, open_issues: list[dict]) -> str:
     listing = "\n".join(f"#{issue['number']} {issue['title']}" for issue in open_issues) or "(none)"
     report = json.dumps(stored["report"], ensure_ascii=False, indent=1)[:MAX_PROMPT_REPORT]
+    # A lone surrogate would make the request body invalid JSON, so the API rejects it on every run.
+    report = report.encode("utf-8", "replace").decode()
     request = urllib.request.Request(
         os.environ["LLM_BASE_URL"].rstrip("/") + "/chat/completions",
         data=json.dumps({

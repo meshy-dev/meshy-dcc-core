@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import base64
+import io
 import json
 import os
 from pathlib import Path
@@ -72,6 +73,8 @@ class IntakeTest(unittest.TestCase):
             (post(json.dumps(report(findings=[{}] * 21)).encode()), 400),
             ({**post(b"{}"), "body": "not base64!", "isBase64Encoded": True}, 400),
             (post(b"[" * 100_000), 400),
+            (post(json.dumps(report(summary="probe \ud800")).encode()), 400),
+            (post(json.dumps(report(environment={"n": float("inf")})).encode()), 400),
         ]
         for event, status in cases:
             self.assertEqual(intake.handler(event, None)["statusCode"], status)
@@ -167,6 +170,23 @@ class TranscribeTest(unittest.TestCase):
                 transcribe.ask_model({"report": report()}, [])
         finally:
             transcribe.urllib.request.urlopen = original
+
+    def test_a_lone_surrogate_in_a_stored_report_still_makes_valid_json(self):
+        sent = []
+
+        def fake_urlopen(request, **_):
+            sent.append(request.data)
+            return io.BytesIO(b'{"choices": [{"message": {"content": "{}"}}]}')
+
+        os.environ.update(LLM_BASE_URL="https://models.example", LLM_MODEL="m", LLM_API_KEY="k")
+        original = transcribe.urllib.request.urlopen
+        transcribe.urllib.request.urlopen = fake_urlopen
+        try:
+            transcribe.ask_model({"report": report(summary="probe \ud800 surrogate")}, [])
+        finally:
+            transcribe.urllib.request.urlopen = original
+        self.assertNotIn(b"\\ud800", sent[0])
+        json.dumps(json.loads(sent[0]), ensure_ascii=False).encode()
 
 
 if __name__ == "__main__":
