@@ -36,7 +36,9 @@ def handler(event: dict, _context: object) -> dict:
         raw = base64.b64decode(body, validate=True) if event.get("isBase64Encoded") else body.encode()
         if len(raw) > MAX_BYTES:
             return reply(413, {"error": "report too large"})
-        report = json.loads(raw)
+        report = json.loads(raw, parse_constant=not_json)
+        # Strict JSON parsers downstream reject lone surrogates such as "\ud800".
+        json.dumps(report, ensure_ascii=False).encode()
     except (ValueError, RecursionError):
         return reply(400, {"error": "invalid report: not JSON"})
     problem = check(report)
@@ -52,6 +54,11 @@ def handler(event: dict, _context: object) -> dict:
         ContentType="application/json",
     )
     return reply(202, {"report_id": report_id})
+
+
+def not_json(name: str) -> float:
+    """Refuse NaN and Infinity, which Python's parser accepts and JSON does not have."""
+    raise ValueError(f"{name} is not JSON")
 
 
 def check(report: object) -> str | None:
