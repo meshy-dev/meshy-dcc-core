@@ -8,9 +8,10 @@ oldest first, asks an LLM to transcribe each report into a maintainer-facing iss
 and files it in this repository with the labels ``user-report`` and ``host/<app>``,
 or comments on the open report it duplicates. The report then moves to ``filed/``,
 ``rejected/`` (not a bug report) or ``failed/`` (the model's answer was unusable
-twice). It moves to ``sending/`` before anything is posted, so a post whose
-outcome is unknown leaves it there for a person to check instead of posting it
-twice. At most 30 issues and comments a day. The bucket deletes every object
+twice, or the model API refused this report but still answers a plain request,
+so one report cannot hold up the rest). It moves to ``sending/`` before anything
+is posted, so a post whose outcome is unknown leaves it there for a person to
+check instead of posting it twice. At most 30 issues and comments a day. The bucket deletes every object
 after 90 days.
 
 A report is untrusted input. The model sees it as data, its answer is checked
@@ -99,6 +100,14 @@ class Retry(Exception):
     """The model API is unavailable for now; try again on the next run."""
 
 
+class Refused(Exception):
+    """The model API refused the request (a 4xx other than 429)."""
+
+
+# Sent when a report's request is refused, to tell a bad report from wrong API settings.
+PING = [{"role": "user", "content": 'Answer with the JSON object {"ok": true}.'}]
+
+
 def scrub(text: str) -> str:
     """Remove what must never reach a public issue, and defuse @mentions."""
     for pattern, replacement in PRIVATE_PATTERNS:
@@ -158,16 +167,21 @@ def ask_model(stored: dict, open_issues: list[dict]) -> str:
     report = json.dumps(stored["report"], ensure_ascii=False, indent=1)[:MAX_PROMPT_REPORT]
     # A lone surrogate would make the request body invalid JSON, so the API rejects it on every run.
     report = report.encode("utf-8", "replace").decode()
+    return chat([
+        {"role": "system", "content": SYSTEM_PROMPT},
+        {"role": "user", "content": f"Open user reports:\n{listing}\n\nReport:\n```json\n{report}\n```"},
+    ])
+
+
+def chat(messages: list[dict]) -> str:
+    """Send one chat completion request and return the answer's text."""
     request = urllib.request.Request(
         os.environ["LLM_BASE_URL"].rstrip("/") + "/chat/completions",
         data=json.dumps({
             "model": os.environ["LLM_MODEL"],
             "temperature": 0,
             "response_format": {"type": "json_object"},
-            "messages": [
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": f"Open user reports:\n{listing}\n\nReport:\n```json\n{report}\n```"},
-            ],
+            "messages": messages,
         }).encode(),
         headers={"Authorization": f"Bearer {os.environ['LLM_API_KEY'].strip()}", "Content-Type": "application/json"},
     )
@@ -177,7 +191,7 @@ def ask_model(stored: dict, open_issues: list[dict]) -> str:
     except urllib.error.HTTPError as error:
         if error.code == 429 or error.code >= 500:
             raise Retry(f"model API returned {error.code}") from None
-        raise SystemExit(f"model API returned {error.code}: {error.read()[:500]!r}")
+        raise Refused(f"model API returned {error.code}: {error.read()[:500]!r}") from None
     except (urllib.error.URLError, TimeoutError) as error:
         raise Retry(f"model API unreachable: {error}") from None
     try:
@@ -246,6 +260,9 @@ def main() -> int:
             except Unusable as error:
                 print(f"{key}: {error}; asking once more")
                 decision = decide(ask_model(stored, open_issues), {issue["number"] for issue in open_issues})
+            except Refused as error:
+                chat(PING)  # refused as well: the API settings are wrong, not this report
+                raise Unusable(f"{error}, though a plain request works") from None
         except Unusable as error:
             print(f"{key}: {error}; moved to failed/")
             move(bucket, key, "failed")
@@ -253,6 +270,8 @@ def main() -> int:
         except Retry as error:
             print(f"{key}: {error}; stopping until the next run")
             return 0
+        except Refused as error:
+            raise SystemExit(f"{error}; a plain request is refused too, so check the API settings") from None
 
         if decision["action"] == "spam":
             print(f"{key}: not a bug report; moved to rejected/")

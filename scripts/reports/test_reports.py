@@ -188,6 +188,54 @@ class TranscribeTest(unittest.TestCase):
         self.assertNotIn(b"\\ud800", sent[0])
         json.dumps(json.loads(sent[0]), ensure_ascii=False).encode()
 
+    def run_main_with_api(self, refuses) -> tuple[list[tuple[str, str]], bool]:
+        """Run main() over reports a and b against an API that refuses the bodies ``refuses`` picks.
+
+        Returns the folder moves and whether the run failed.
+        """
+        calls = []
+        stored = {"pending/a.json": report(summary="refuse me"), "pending/b.json": report()}
+
+        def fake_run(*argv, stdin=None):
+            calls.append(argv)
+            if argv[:2] == ("aws", "s3api"):
+                return json.dumps(sorted(stored))
+            if argv[:3] == ("aws", "s3", "cp"):
+                return json.dumps({"report_id": "r", "report": stored[argv[4].split("/", 3)[3]]})
+            if argv[:3] == ("gh", "issue", "create"):
+                return "https://github.com/o/r/issues/5\n"
+            return "[]" if argv[0] == "gh" else ""
+
+        def fake_urlopen(request, **_):
+            if refuses(request.data):
+                raise transcribe.urllib.error.HTTPError("u", 400, "Bad Request", None, io.BytesIO(b"bad"))
+            answer = json.dumps({"action": "create", "host": "blender", "title": "GLB import freezes", "body": "x"})
+            return io.BytesIO(json.dumps({"choices": [{"message": {"content": answer}}]}).encode())
+
+        os.environ.update(REPORTS_BUCKET="reports", GITHUB_REPOSITORY="o/r",
+                          LLM_BASE_URL="https://models.example", LLM_MODEL="m", LLM_API_KEY="k")
+        original = transcribe.run, transcribe.urllib.request.urlopen
+        transcribe.run, transcribe.urllib.request.urlopen = fake_run, fake_urlopen
+        failed = False
+        try:
+            transcribe.main()
+        except SystemExit:
+            failed = True
+        finally:
+            transcribe.run, transcribe.urllib.request.urlopen = original
+        moves = [call[4:6] for call in calls if call[:3] == ("aws", "s3", "mv")]
+        return [(source.rsplit("/", 2)[1], target.rsplit("/", 2)[1]) for source, target in moves], failed
+
+    def test_a_refused_report_moves_to_failed_and_the_queue_goes_on(self):
+        moves, failed = self.run_main_with_api(lambda body: b"refuse me" in body)
+        self.assertEqual(moves, [("pending", "failed"), ("pending", "sending"), ("sending", "filed")])
+        self.assertFalse(failed)
+
+    def test_wrong_api_settings_stop_the_run_and_keep_reports_pending(self):
+        moves, failed = self.run_main_with_api(lambda body: True)
+        self.assertEqual(moves, [])
+        self.assertTrue(failed)
+
 
 if __name__ == "__main__":
     unittest.main()
