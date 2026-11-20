@@ -29,9 +29,6 @@ ignore = [
     # anyhow 1.0.x (≤1.0.102): `Error::downcast_mut()` UB with nested context.
     # Tracked in https://github.com/dtolnay/anyhow/issues/451; fix expected in 1.0.103+.
     "RUSTSEC-2026-0190",
-    # lru 0.15.0: `IterMut` violates Stacked Borrows (unsound).
-    # Upstream fix tracked at https://github.com/jeromefroe/lru-rs/issues/203.
-    "RUSTSEC-2026-0002",
 ]
 
 [licenses]
